@@ -4,20 +4,12 @@ __pycache__/
 *$py.class
 *.so
 .Python
+# Python envs
 env/
 venv/
 .venv/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
+!frontend/src/lib/
+!frontend/src/lib/**
 wheels/
 *.egg-info/
 .installed.cfg
