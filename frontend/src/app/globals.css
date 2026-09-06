@@ -1,0 +1,287 @@
+@import "maplibre-gl/dist/maplibre-gl.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #fafafa;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-border: #e5e7eb;
+  --foreground: #111827;
+  --muted: #6b7280;
+  --accent: #ea580c;
+}
+
+html, body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Minimalist Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1aa;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* MapLibre Canvas Container Fixes */
+.maplibregl-map {
+  width: 100% !important;
+  height: 100% !important;
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.maplibregl-canvas-container {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.maplibregl-canvas {
+  width: 100% !important;
+  height: 100% !important;
+  outline: none;
+}
+
+/* Strict Map Marker Positioning */
+.maplibregl-marker {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  will-change: transform !important;
+  backface-visibility: hidden !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+@keyframes pingAura {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.85;
+  }
+  70% {
+    transform: scale(2.3);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(2.3);
+    opacity: 0;
+  }
+}
+
+@keyframes floatBubble {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes ragdollArmWave {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-22deg);
+  }
+  50% {
+    transform: rotate(-6deg);
+  }
+  75% {
+    transform: rotate(-20deg);
+  }
+}
+
+@keyframes ragdollBreathe {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-3px) scale(1.02);
+  }
+}
+
+.ragdoll-waving-arm {
+  transform-origin: 36px 32px;
+  animation: ragdollArmWave 2.4s ease-in-out infinite;
+}
+
+.ragdoll-character-body {
+  animation: ragdollBreathe 3s ease-in-out infinite alternate;
+}
+
+@keyframes ragdollBlink {
+  0%, 93%, 100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.12);
+  }
+  97% {
+    transform: scaleY(1);
+  }
+}
+
+.ragdoll-eyes {
+  transform-origin: 27px 17px;
+  animation: ragdollBlink 4.2s ease-in-out infinite;
+}
+
+@keyframes avatar3DFloat {
+  0% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(1deg);
+  }
+  100% {
+    transform: translateY(-8px) rotate(-1deg);
+  }
+}
+
+@keyframes avatarShadowScale {
+  0% {
+    transform: translateX(-50%) scale(1);
+    opacity: 0.35;
+  }
+  100% {
+    transform: translateX(-50%) scale(0.72);
+    opacity: 0.18;
+  }
+}
+
+@keyframes avatarPillFloat {
+  0% {
+    transform: translateX(-50%) translateY(0);
+  }
+  100% {
+    transform: translateX(-50%) translateY(-3px);
+  }
+}
+
+/* Option 4: Blush Open Peeps Animations */
+@keyframes openPeepsWave {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(-26deg);
+  }
+  40% {
+    transform: rotate(-4deg);
+  }
+  60% {
+    transform: rotate(-24deg);
+  }
+  80% {
+    transform: rotate(-8deg);
+  }
+}
+
+@keyframes openPeepsNod {
+  0%, 100% {
+    transform: rotate(0deg) translateY(0);
+  }
+  50% {
+    transform: rotate(4deg) translateY(-2px);
+  }
+}
+
+@keyframes openPeepsBlink {
+  0%, 92%, 100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+  97% {
+    transform: scaleY(1);
+  }
+}
+
+/* Option 2: Lordicon Barista & Sipper Animations */
+@keyframes lordiconSipArm {
+  0%, 20% {
+    transform: rotate(0deg) translateY(0px);
+  }
+  38%, 65% {
+    transform: rotate(-18deg) translateY(-8px);
+  }
+  82%, 100% {
+    transform: rotate(0deg) translateY(0px);
+  }
+}
+
+@keyframes lordiconEyeSip {
+  0%, 30% {
+    transform: scaleY(1);
+  }
+  38%, 65% {
+    transform: scaleY(0.15);
+  }
+  75%, 100% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes lordiconSteamRise {
+  0% {
+    transform: translateY(0) scale(0.8);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.85;
+  }
+  80% {
+    transform: translateY(-12px) scale(1.15);
+    opacity: 0.3;
+  }
+  100% {
+    transform: translateY(-16px) scale(1.3);
+    opacity: 0;
+  }
+}
+
+@keyframes reactionPop {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-4px) scale(1.12);
+  }
+}
+
+
+
