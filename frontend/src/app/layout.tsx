@@ -5,9 +5,28 @@ import { QuickCheckInModal } from "@/components/checkin/QuickCheckInModal";
 import { SpeedTestWidget } from "@/components/checkin/SpeedTestWidget";
 
 export const metadata: Metadata = {
-  title: "Smakr 🥐 Oslo Food Discovery & Live Foodie Radar",
+  metadataBase: new URL("https://smakr.vercel.app"),
+  title: "Smakr — Oslo Food Discovery & Live Foodie Radar",
   description:
     "Discover trending meals, authentic Vietnamese coconut coffee, cardamom buns, artisan ramen, and real-time food spots across Oslo.",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
+  openGraph: {
+    title: "Smakr — Oslo Food Discovery & Live Foodie Radar",
+    description:
+      "Discover viral coconut coffee, sourdough cardamom buns, and artisan street food spots across Oslo.",
+    siteName: "Smakr",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Smakr — Oslo Food Discovery & Live Foodie Radar",
+    description:
+      "Discover viral coconut coffee, sourdough cardamom buns, and artisan street food spots across Oslo.",
+  },
 };
 
 export default function RootLayout({

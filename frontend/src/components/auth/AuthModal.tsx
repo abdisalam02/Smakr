@@ -3,6 +3,7 @@
 import React from "react";
 import { X, Sparkles, ArrowRight, UserCheck } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
+import { SmakrSIcon } from "@/components/ui/SmakrSIcon";
 
 export function AuthModal() {
   const isAuthModalOpen = useCityPulseStore((state) => state.isAuthModalOpen);
@@ -37,11 +38,11 @@ export function AuthModal() {
 
         {/* Header */}
         <div className="space-y-1.5 text-center pt-2">
-          <div className="w-10 h-10 rounded-2xl bg-zinc-900 text-white font-extrabold flex items-center justify-center mx-auto text-base shadow-sm">
-            P
+          <div className="flex items-center justify-center mx-auto mb-1">
+            <SmakrSIcon className="w-9 h-9" />
           </div>
           <h2 className="text-base font-extrabold text-zinc-900 tracking-tight">
-            Sign in to post on Pulse
+            Sign in to post on Smakr
           </h2>
           <p className="text-xs text-zinc-500 max-w-xs mx-auto leading-relaxed">
             Anyone can browse the feed and map freely. Sign in to log dishes and share recommendations.

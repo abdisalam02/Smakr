@@ -6,6 +6,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Search, Plus, LayoutGrid, Map, Columns, LogOut } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
+import { SmakrSIcon } from "@/components/ui/SmakrSIcon";
 
 export function Header() {
   const pathname = usePathname();
@@ -32,10 +33,8 @@ export function Header() {
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
         {/* Brand */}
         <div className="flex items-center gap-3 pointer-events-auto">
-          <Link href="/" className="flex items-center gap-1.5 group select-none bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-2xl border border-white/80 shadow-sm hover:bg-white transition-all">
-            <span className="text-[#ff5500] font-black text-2xl tracking-tighter leading-none">
-              S
-            </span>
+          <Link href="/" className="flex items-center gap-1 group select-none bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-2xl border border-white/80 shadow-sm hover:bg-white transition-all">
+            <SmakrSIcon className="w-5 h-5 shrink-0 -mr-0.5" />
             <span className="text-zinc-950 font-black text-lg tracking-tight leading-none">
               makr
             </span>

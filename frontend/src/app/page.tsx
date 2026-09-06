@@ -13,6 +13,7 @@ import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { useLiveVibeSync } from "@/hooks/useLiveVibeSync";
 import { INITIAL_FOOD_SPOTS, FOOD_CATEGORIES } from "@/lib/foodSeeds";
 import { AuthModal } from "@/components/auth/AuthModal";
+import { SmakrSIcon } from "@/components/ui/SmakrSIcon";
 import { ChevronUp, ChevronDown, UtensilsCrossed, Plus, Map as MapIcon, LayoutGrid, X } from "lucide-react";
 
 export default function PulseFoodRadarPage() {
@@ -224,8 +225,9 @@ export default function PulseFoodRadarPage() {
           <div className="flex-1 overflow-y-auto p-5 space-y-4 no-scrollbar">
             <div className="flex items-center justify-between pb-1 border-b border-zinc-100">
               <div>
-                <h2 className="text-sm font-bold text-zinc-900 tracking-tight">
-                  {activeCategoryDef.label} in Oslo
+                <h2 className="text-sm font-bold text-zinc-900 tracking-tight flex items-center gap-1.5">
+                  <SmakrSIcon className="w-3.5 h-3.5 text-[#ff5500] shrink-0" />
+                  <span>{activeCategoryDef.label} in Oslo</span>
                 </h2>
                 <p className="text-xs text-zinc-500">
                   {activeCategoryDef.shortDesc}
@@ -307,8 +309,9 @@ export default function PulseFoodRadarPage() {
             <div className="w-12 h-1.5 rounded-full bg-zinc-300 hover:bg-zinc-400 transition-colors mb-2" />
 
             <div className="w-full flex items-center justify-between text-xs px-1">
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-zinc-900">Smakr Food Feed</span>
+              <div className="flex items-center gap-1.5">
+                <SmakrSIcon className="w-4 h-4 text-[#ff5500] shrink-0" />
+                <span className="font-bold text-zinc-900">Smakr Feed</span>
                 <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-orange-50 text-[#ff5500] border border-orange-200/60">
                   {filteredPosts.length}
                 </span>
