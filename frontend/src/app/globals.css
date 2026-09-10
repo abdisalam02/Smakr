@@ -622,13 +622,13 @@ html, body {
 /* ========================================================================= */
 
 .smakr-glass-slider {
-  background-color: var(--surface);
-  background-color: color-mix(in srgb, var(--surface, #ffffff) 84%, transparent);
-  border: 1px solid var(--surface-border);
+  background-color: var(--surface, #ffffff);
+  background-color: color-mix(in srgb, var(--surface, #ffffff) 86%, transparent);
+  border: 1px solid var(--surface-border, rgba(0, 0, 0, 0.1));
   border-color: color-mix(in srgb, var(--surface-border, #e4e4e7) 80%, transparent);
-  box-shadow: 0 12px 36px -6px rgba(0, 0, 0, 0.22), 0 4px 14px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--surface-border);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 12px 36px -6px rgba(0, 0, 0, 0.22), 0 4px 14px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--surface-border, rgba(0, 0, 0, 0.06));
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   transform: translate3d(0, 0, 0);
   -webkit-transform: translate3d(0, 0, 0);
   -webkit-touch-callout: none;
@@ -639,8 +639,8 @@ html, body {
 
 @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   .smakr-glass-slider {
-    background-color: var(--surface) !important;
-    opacity: 0.97;
+    background-color: var(--surface, #ffffff) !important;
+    opacity: 0.98;
   }
 }
 

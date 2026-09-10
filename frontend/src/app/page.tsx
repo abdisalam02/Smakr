@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { FoodCategoryBar } from "@/components/food/FoodCategoryBar";
 import { FoodFeed } from "@/components/food/FoodFeed";
 import { FoodPostCard } from "@/components/food/FoodPostCard";
@@ -50,45 +50,49 @@ export default function PulseFoodRadarPage() {
     }
   }, [venues, setVenues]);
 
-  // Filter food posts
-  const filteredPosts = foodPosts.filter((post) => {
-    if (currentCategory !== "all" && post.category !== currentCategory) {
-      return false;
-    }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const matchName = post.dish_name.toLowerCase().includes(q);
-      const matchSpot = post.spot_name.toLowerCase().includes(q);
-      const matchTags = post.taste_tags.some((t) => t.toLowerCase().includes(q));
-      if (!matchName && !matchSpot && !matchTags) return false;
-    }
-    return true;
-  });
-
-  // Filter food spots / venues
-  const filteredVenues = venues
-    .filter((venue) => {
-      if (currentCategory !== "all") {
-        if (currentCategory === "coffee" && venue.place_type === "cafe") {
-          // match coffee
-        } else if (venue.food_category !== currentCategory) {
-          return false;
-        }
+  // Memoized food posts filtering to prevent unnecessary re-renders during mobile drag
+  const filteredPosts = useMemo(() => {
+    return foodPosts.filter((post) => {
+      if (currentCategory !== "all" && post.category !== currentCategory) {
+        return false;
       }
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const matchName = venue.name.toLowerCase().includes(q);
-        const matchAddress = venue.address.toLowerCase().includes(q);
-        const matchCity = venue.city.toLowerCase().includes(q);
-        const matchDishes = venue.signature_dishes?.some((d) =>
-          d.toLowerCase().includes(q)
-        );
-        if (!matchName && !matchAddress && !matchCity && !matchDishes)
-          return false;
+        const matchName = post.dish_name.toLowerCase().includes(q);
+        const matchSpot = post.spot_name.toLowerCase().includes(q);
+        const matchTags = post.taste_tags.some((t) => t.toLowerCase().includes(q));
+        if (!matchName && !matchSpot && !matchTags) return false;
       }
       return true;
-    })
-    .sort((a, b) => (a.distance_meters || 9999) - (b.distance_meters || 9999));
+    });
+  }, [foodPosts, currentCategory, searchQuery]);
+
+  // Memoized food spots / venues filtering
+  const filteredVenues = useMemo(() => {
+    return venues
+      .filter((venue) => {
+        if (currentCategory !== "all") {
+          if (currentCategory === "coffee" && venue.place_type === "cafe") {
+            // match coffee
+          } else if (venue.food_category !== currentCategory) {
+            return false;
+          }
+        }
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          const matchName = venue.name.toLowerCase().includes(q);
+          const matchAddress = venue.address.toLowerCase().includes(q);
+          const matchCity = venue.city.toLowerCase().includes(q);
+          const matchDishes = venue.signature_dishes?.some((d) =>
+            d.toLowerCase().includes(q)
+          );
+          if (!matchName && !matchAddress && !matchCity && !matchDishes)
+            return false;
+        }
+        return true;
+      })
+      .sort((a, b) => (a.distance_meters || 9999) - (b.distance_meters || 9999));
+  }, [venues, currentCategory, searchQuery]);
 
   const activeCategoryDef = FOOD_CATEGORIES.find((c) => c.id === currentCategory) || FOOD_CATEGORIES[0];
 
@@ -112,98 +116,140 @@ export default function PulseFoodRadarPage() {
     return Math.max(0, sheetHeight - 136);
   };
 
-  // Fluid translateY drag state
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragCurrentY, setDragCurrentY] = useState<number | null>(null);
-  const headerTouchStartY = useRef<number | null>(null);
-  const headerTouchStartTranslateY = useRef<number>(0);
-  const headerTouchStartTime = useRef<number>(0);
+  // Direct GPU-accelerated Sheet Ref (Zero React re-renders during touch drag = pure 60/120fps)
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef<boolean>(false);
+  const hasDraggedRef = useRef<boolean>(false);
+  const dragStartYRef = useRef<number>(0);
+  const dragStartTranslateYRef = useRef<number>(0);
+  const lastTouchYRef = useRef<number>(0);
+  const lastTouchTimeRef = useRef<number>(0);
+  const currentVelocityRef = useRef<number>(0);
+  const currentYRef = useRef<number>(0);
 
   // Content scroll container ref & pull-to-minimize tracker
   const feedScrollRef = useRef<HTMLDivElement>(null);
   const contentTouchStartY = useRef<number | null>(null);
-  const contentTouchStartTime = useRef<number>(0);
-  const contentStartTranslateY = useRef<number>(0);
   const isContentPulling = useRef<boolean>(false);
 
-  // 1. Header Grab Bar Handlers (Direct 1:1 translation with spring momentum)
+  // Synchronize external sheet changes (buttons, pin clicks) to the DOM ref
+  useEffect(() => {
+    if (sheetRef.current && !isDraggingRef.current) {
+      const targetY = getSnapTranslateY(mobileSheet);
+      sheetRef.current.style.transition = "transform 0.38s cubic-bezier(0.16, 1, 0.3, 1)";
+      sheetRef.current.style.transform = `translate3d(0, ${targetY}px, 0)`;
+      currentYRef.current = targetY;
+    }
+  }, [mobileSheet, sheetHeight]);
+
+  // 1. Header Grab Bar Handlers (Direct GPU transform with zero thread blocking)
   const handleHeaderTouchStart = (e: React.TouchEvent) => {
+    const startY = e.touches[0].clientY;
     const currentTranslateY = getSnapTranslateY(mobileSheet);
-    headerTouchStartY.current = e.touches[0].clientY;
-    headerTouchStartTranslateY.current = currentTranslateY;
-    headerTouchStartTime.current = Date.now();
-    setDragCurrentY(currentTranslateY);
-    setIsDragging(true);
+    isDraggingRef.current = true;
+    hasDraggedRef.current = false;
+    dragStartYRef.current = startY;
+    dragStartTranslateYRef.current = currentTranslateY;
+    lastTouchYRef.current = startY;
+    lastTouchTimeRef.current = Date.now();
+    currentVelocityRef.current = 0;
+    currentYRef.current = currentTranslateY;
+
+    if (sheetRef.current) {
+      sheetRef.current.style.transition = "none";
+    }
   };
 
   const handleHeaderTouchMove = (e: React.TouchEvent) => {
-    if (headerTouchStartY.current === null) return;
-    const delta = e.touches[0].clientY - headerTouchStartY.current;
-    let nextY = headerTouchStartTranslateY.current + delta;
+    if (!isDraggingRef.current) return;
+    const currentTouchY = e.touches[0].clientY;
+    const delta = currentTouchY - dragStartYRef.current;
+    if (Math.abs(delta) > 4) {
+      hasDraggedRef.current = true;
+    }
+    let nextY = dragStartTranslateYRef.current + delta;
+
+    const now = Date.now();
+    const timeDelta = Math.max(1, now - lastTouchTimeRef.current);
+    currentVelocityRef.current = (currentTouchY - lastTouchYRef.current) / timeDelta;
+    lastTouchYRef.current = currentTouchY;
+    lastTouchTimeRef.current = now;
 
     const peekY = sheetHeight - 136;
-    // Apply elastic resistance past boundaries
+    // Apply smooth rubber-band resistance beyond limits
     if (nextY < 0) {
-      nextY = nextY * 0.25;
+      nextY = nextY * 0.22;
     } else if (nextY > peekY) {
       const overflow = nextY - peekY;
-      nextY = peekY + overflow * 0.25;
+      nextY = peekY + overflow * 0.22;
     }
 
-    setDragCurrentY(nextY);
+    currentYRef.current = nextY;
+    if (sheetRef.current) {
+      sheetRef.current.style.transform = `translate3d(0, ${nextY}px, 0)`;
+    }
   };
 
-  const handleHeaderTouchEnd = (e: React.TouchEvent) => {
-    if (headerTouchStartY.current === null) return;
-    const endY = e.changedTouches[0].clientY;
-    const deltaY = endY - headerTouchStartY.current;
-    const deltaTime = Math.max(1, Date.now() - headerTouchStartTime.current);
-    const velocityY = deltaY / deltaTime;
-    const finalY = dragCurrentY ?? (headerTouchStartTranslateY.current + deltaY);
+  const handleHeaderTouchEnd = () => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
 
-    headerTouchStartY.current = null;
-    setIsDragging(false);
-    setDragCurrentY(null);
+    const finalY = currentYRef.current;
+    const velocity = currentVelocityRef.current;
 
     const halfY = Math.round(sheetHeight * 0.46);
     const peekY = sheetHeight - 136;
 
-    // Velocity-driven momentum snapping
-    if (velocityY < -0.3) {
-      // Swiped UP fast
+    let nextSnap: "peek" | "half" | "full" = "peek";
+
+    // Fast flick UP (negative velocity)
+    if (velocity < -0.28) {
       if (mobileSheet === "peek") {
-        setMobileSheet(velocityY < -0.75 || finalY < halfY ? "full" : "half");
+        nextSnap = velocity < -0.65 || finalY < halfY ? "full" : "half";
       } else {
-        setMobileSheet("full");
+        nextSnap = "full";
       }
-    } else if (velocityY > 0.3) {
-      // Swiped DOWN fast
+    }
+    // Fast flick DOWN (positive velocity)
+    else if (velocity > 0.28) {
       if (mobileSheet === "full") {
-        setMobileSheet(velocityY > 0.75 || finalY > halfY ? "peek" : "half");
+        nextSnap = velocity > 0.65 || finalY > halfY ? "peek" : "half";
       } else {
-        setMobileSheet("peek");
+        nextSnap = "peek";
       }
-    } else {
-      // Position-based snapping
+    }
+    // Position-based snapping
+    else {
       const midFullHalf = halfY * 0.55;
       const midHalfPeek = halfY + (peekY - halfY) * 0.5;
 
       if (finalY < midFullHalf) {
-        setMobileSheet("full");
+        nextSnap = "full";
       } else if (finalY < midHalfPeek) {
-        setMobileSheet("half");
+        nextSnap = "half";
       } else {
-        setMobileSheet("peek");
+        nextSnap = "peek";
       }
     }
+
+    const targetY = getSnapTranslateY(nextSnap);
+    currentYRef.current = targetY;
+    if (sheetRef.current) {
+      sheetRef.current.style.transition = "transform 0.38s cubic-bezier(0.16, 1, 0.3, 1)";
+      sheetRef.current.style.transform = `translate3d(0, ${targetY}px, 0)`;
+    }
+    setMobileSheet(nextSnap);
   };
 
   // 2. Scrollable Content Pull-down to minimize when at top
   const handleContentTouchStart = (e: React.TouchEvent) => {
-    contentTouchStartY.current = e.touches[0].clientY;
-    contentTouchStartTime.current = Date.now();
-    contentStartTranslateY.current = getSnapTranslateY(mobileSheet);
-    isContentPulling.current = false;
+    const scrollTop = feedScrollRef.current ? feedScrollRef.current.scrollTop : 0;
+    if (scrollTop <= 1) {
+      contentTouchStartY.current = e.touches[0].clientY;
+      dragStartTranslateYRef.current = currentYRef.current || getSnapTranslateY(mobileSheet);
+      lastTouchTimeRef.current = Date.now();
+      isContentPulling.current = false;
+    }
   };
 
   const handleContentTouchMove = (e: React.TouchEvent) => {
@@ -213,18 +259,23 @@ export default function PulseFoodRadarPage() {
 
     if (scrollTop <= 1) {
       const pullDown = currentY - contentTouchStartY.current;
-      if (pullDown > 5) {
+      if (pullDown > 6) {
         isContentPulling.current = true;
-        setIsDragging(true);
+        isDraggingRef.current = true;
+        if (sheetRef.current) {
+          sheetRef.current.style.transition = "none";
+        }
         const peekY = sheetHeight - 136;
-        const nextY = Math.min(peekY, contentStartTranslateY.current + pullDown * 0.85);
-        setDragCurrentY(nextY);
+        const nextY = Math.min(peekY + 20, dragStartTranslateYRef.current + pullDown * 0.85);
+        currentYRef.current = nextY;
+        if (sheetRef.current) {
+          sheetRef.current.style.transform = `translate3d(0, ${nextY}px, 0)`;
+        }
       }
     } else {
       if (isContentPulling.current) {
         isContentPulling.current = false;
-        setIsDragging(false);
-        setDragCurrentY(null);
+        isDraggingRef.current = false;
       }
     }
   };
@@ -233,40 +284,48 @@ export default function PulseFoodRadarPage() {
     if (isContentPulling.current && contentTouchStartY.current !== null) {
       const endY = e.changedTouches[0].clientY;
       const pullDown = endY - contentTouchStartY.current;
-      const deltaTime = Math.max(1, Date.now() - contentTouchStartTime.current);
+      const deltaTime = Math.max(1, Date.now() - lastTouchTimeRef.current);
       const velocityY = pullDown / deltaTime;
 
-      if (pullDown > 45 || velocityY > 0.3) {
+      let nextSnap = mobileSheet;
+      if (pullDown > 55 || velocityY > 0.32) {
         if (mobileSheet === "full") {
-          setMobileSheet(pullDown > 180 || velocityY > 0.75 ? "peek" : "half");
+          nextSnap = pullDown > 180 || velocityY > 0.75 ? "peek" : "half";
         } else if (mobileSheet === "half") {
-          setMobileSheet("peek");
+          nextSnap = "peek";
         }
       }
+
+      const targetY = getSnapTranslateY(nextSnap);
+      currentYRef.current = targetY;
+      if (sheetRef.current) {
+        sheetRef.current.style.transition = "transform 0.38s cubic-bezier(0.16, 1, 0.3, 1)";
+        sheetRef.current.style.transform = `translate3d(0, ${targetY}px, 0)`;
+      }
+      setMobileSheet(nextSnap);
     }
 
     contentTouchStartY.current = null;
     isContentPulling.current = false;
-    setIsDragging(false);
-    setDragCurrentY(null);
+    isDraggingRef.current = false;
   };
 
   const toggleSheetState = () => {
-    if (mobileSheet === "peek") setMobileSheet("half");
-    else if (mobileSheet === "half") setMobileSheet("full");
-    else setMobileSheet("half");
+    if (hasDraggedRef.current) return;
+    const next = mobileSheet === "peek" ? "half" : mobileSheet === "half" ? "full" : "half";
+    setMobileSheet(next);
   };
 
   const minimizeSheet = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    if (mobileSheet === "full") setMobileSheet("half");
-    else if (mobileSheet === "half") setMobileSheet("peek");
+    const next = mobileSheet === "full" ? "half" : "peek";
+    setMobileSheet(next);
   };
 
   const maximizeSheet = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    if (mobileSheet === "peek") setMobileSheet("half");
-    else if (mobileSheet === "half") setMobileSheet("full");
+    const next = mobileSheet === "peek" ? "half" : "full";
+    setMobileSheet(next);
   };
 
   return (
@@ -383,16 +442,11 @@ export default function PulseFoodRadarPage() {
 
         {/* Slide-Up Feed Sheet with 0 Gap Continuous Fluid Expansion */}
         <div
+          ref={sheetRef}
           style={{
             height: `calc(100dvh - 57px + 140px)`,
-            transform: `translate3d(0, ${
-              isDragging && dragCurrentY !== null
-                ? dragCurrentY
-                : getSnapTranslateY(mobileSheet)
-            }px, 0)`,
-            transition: isDragging
-              ? "none"
-              : "transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1)",
+            transform: `translate3d(0, ${getSnapTranslateY(mobileSheet)}px, 0)`,
+            transition: "transform 0.38s cubic-bezier(0.16, 1, 0.3, 1)",
           }}
           className="absolute left-0 right-0 top-[57px] z-20 bg-white rounded-t-3xl border-t border-zinc-200/80 shadow-2xl flex flex-col will-change-transform pb-[140px]"
         >
@@ -496,20 +550,26 @@ export default function PulseFoodRadarPage() {
             )}
           </div>
         </div>
+      </div>
 
-        {/* Floating Glassmorphic Slider on Mobile (Cross-browser WebKit/Chromium/Gecko, Theme-Adaptive) */}
-        <div
-          className={`lg:hidden fixed bottom-4 left-0 right-0 z-35 flex justify-center pointer-events-none px-4 pb-[max(env(safe-area-inset-bottom,0px),8px)] transition-all duration-300 ease-out ${
-            selectedVenue
-              ? "opacity-0 pointer-events-none translate-y-6 scale-95"
-              : "opacity-100 translate-y-0 scale-100"
-          }`}
-        >
-          <FoodViewSlider
-            dishesCount={filteredPosts.length}
-            spotsCount={filteredVenues.length}
-          />
-        </div>
+      {/* ========================================================================= */}
+      {/* MOBILE FLOATING GLASSMORPHIC FOOD VS LOCATIONS TOGGLE                    */}
+      {/* Elevated at root level (z-[45]), 100% visible across all mobile browsers  */}
+      {/* ========================================================================= */}
+      <div
+        className={`lg:hidden fixed left-1/2 -translate-x-1/2 z-[45] pointer-events-auto flex items-center justify-center transition-all duration-300 ease-out ${
+          selectedVenue
+            ? "opacity-0 pointer-events-none translate-y-8 scale-90"
+            : "opacity-100 translate-y-0 scale-100"
+        }`}
+        style={{
+          bottom: "max(calc(env(safe-area-inset-bottom, 0px) + 20px), 24px)",
+        }}
+      >
+        <FoodViewSlider
+          dishesCount={filteredPosts.length}
+          spotsCount={filteredVenues.length}
+        />
       </div>
 
       {/* Modals & Floating Spot Cards */}
