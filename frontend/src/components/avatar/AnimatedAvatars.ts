@@ -14,32 +14,20 @@ function renderLordiconBaristaHTML(): string {
       pointer-events: none;
       user-select: none;
     ">
-      <!-- Minimalist 'You're here' Speech Bubble -->
+      <!-- Subtle Minimal Micro Beacon (Unobtrusive & Clean) -->
       <div style="
         position: absolute;
-        top: 0;
+        top: 6px;
         left: 50%;
         transform: translateX(-50%);
-        background: rgba(24, 24, 27, 0.95);
-        backdrop-filter: blur(8px);
-        color: #ffffff;
-        font-size: 10px;
-        font-weight: 700;
-        padding: 3px 9px;
-        border-radius: 999px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-        white-space: nowrap;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        border: 1px solid rgba(255,255,255,0.18);
-        letter-spacing: -0.01em;
-        animation: avatarPillFloat 2.6s ease-in-out infinite alternate;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #ff5500;
+        box-shadow: 0 0 8px rgba(255, 85, 0, 0.7);
         z-index: 10;
-      ">
-        <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #ff5500; box-shadow: 0 0 8px #ff5500;"></span>
-        <span>You're here</span>
-      </div>
+        animation: avatarPillFloat 2.6s ease-in-out infinite alternate;
+      "></div>
 
       <!-- Ground Beacon & Radar Rings (Center X = 38px, Ground Y = 110px) -->
       <div style="

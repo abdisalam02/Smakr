@@ -205,11 +205,21 @@ export function MapRadarView() {
           });
         }
 
+        const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
+        const containerH = map.getContainer()?.clientHeight || (typeof window !== "undefined" ? window.innerHeight : 650);
+        const bottomPad = isMobile ? Math.min(340, Math.max(220, Math.round(containerH * 0.44))) : 0;
+
         map.flyTo({
           center: [venue.longitude, venue.latitude],
           zoom: 15.5,
           essential: true,
           duration: 500,
+          padding: {
+            top: isMobile ? 60 : 0,
+            bottom: bottomPad,
+            left: 0,
+            right: 0,
+          },
         });
       };
 
@@ -411,11 +421,21 @@ export function MapRadarView() {
     const map = mapInstance.current;
     if (!map) return;
     map.resize();
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
+    const containerH = map.getContainer()?.clientHeight || (typeof window !== "undefined" ? window.innerHeight : 650);
+    const bottomPad = isMobile ? Math.min(340, Math.max(220, Math.round(containerH * 0.44))) : 0;
+
     map.flyTo({
       center: [mapCenter[0], mapCenter[1]],
       zoom: mapZoom,
       essential: true,
       duration: 700,
+      padding: {
+        top: isMobile ? 60 : 0,
+        bottom: bottomPad,
+        left: 0,
+        right: 0,
+      },
     });
   }, [mapCenter, mapZoom]);
 

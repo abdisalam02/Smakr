@@ -58,6 +58,7 @@ interface PulseStoreState {
   toastMessage: string | null;
   mapCategory: FoodCategory;
   feedCategory: FoodCategory;
+  feedMode: "food" | "places";
   selectedAvatar: AvatarOption;
 
   // Theme & Style Studio
@@ -79,6 +80,7 @@ interface PulseStoreState {
   setFoodCategory: (category: FoodCategory) => void;
   setMapCategory: (category: FoodCategory) => void;
   setFeedCategory: (category: FoodCategory) => void;
+  setFeedMode: (mode: "food" | "places") => void;
   setMobileSheetState: (state: "peek" | "half" | "full") => void;
   setIsAuthModalOpen: (open: boolean) => void;
   login: (user?: UserProfile) => void;
@@ -133,6 +135,7 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
   toastMessage: null,
   mapCategory: "all",
   feedCategory: "all",
+  feedMode: "food",
   selectedAvatar: "lordicon_barista",
 
   // Theme & Style Studio Initial State
@@ -269,6 +272,8 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
       mobileSheetState,
       ...(mobileSheetState !== "peek" ? { bottomSheetOpen: false, selectedVenue: null } : {}),
     }),
+
+  setFeedMode: (feedMode) => set({ feedMode }),
 
   setIsAuthModalOpen: (isAuthModalOpen) => set({ isAuthModalOpen }),
 

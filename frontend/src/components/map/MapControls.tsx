@@ -22,20 +22,19 @@ export function MapControls({
 
   return (
     <div className="absolute right-3.5 top-20 z-20 flex flex-col items-end gap-2 pointer-events-auto select-none">
-      {/* Cute 'Find Me' Location Button */}
+      {/* Sleek Minimalist Locate Me Button */}
       <button
         onClick={requestLocation}
         disabled={loading}
-        title="Find My Location"
-        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/95 hover:bg-white text-zinc-900 text-xs font-bold border border-zinc-200 shadow-md transition-all active:scale-95 backdrop-blur-md"
+        title="Locate Me"
+        aria-label="Locate Me"
+        className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/95 hover:bg-white text-zinc-700 hover:text-[#ff5500] border border-zinc-200 shadow-md transition-all active:scale-95 backdrop-blur-md"
       >
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="shrink-0">
-          <circle cx="12" cy="12" r="10" fill="#fed7aa" stroke="#ea580c" strokeWidth="2" />
-          <circle cx="9" cy="10.5" r="1.8" fill="#18181b" />
-          <circle cx="15" cy="10.5" r="1.8" fill="#18181b" />
-          <path d="M10 15 C11 16.5 13 16.5 14 15" stroke="#78350f" strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
-        <span>{loading ? "Locating..." : "Find Me"}</span>
+        <Navigation
+          className={`w-4 h-4 text-zinc-700 transition-transform ${
+            loading ? "animate-spin text-[#ff5500]" : ""
+          }`}
+        />
       </button>
 
       {/* Center Oslo */}
