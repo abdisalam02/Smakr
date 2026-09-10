@@ -228,6 +228,7 @@ export function VenueBottomSheet() {
                       fill
                       className="object-cover"
                       sizes="176px"
+                      unoptimized
                     />
                     <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded-md bg-black/70 backdrop-blur-xs text-white text-[9px] font-mono font-bold">
                       {dish.price_nok} NOK

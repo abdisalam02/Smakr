@@ -183,6 +183,13 @@ export interface LiveRadarEvent {
 
 export type ColorTheme =
   | "electric-orange"
+  | "cyber-midnight"
+  | "nordic-bakery"
+  | "kyoto-matcha"
+  | "amalfi-coast"
+  | "seoul-sunset"
+  | "oslo-brutalist"
+  | "retro-diner"
   | "nordic-amber"
   | "midnight-gastro"
   | "matcha-botanic"

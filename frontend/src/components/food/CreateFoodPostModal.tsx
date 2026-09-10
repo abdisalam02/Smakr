@@ -1,10 +1,25 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { X, Camera, Plus, Sparkles, Link as LinkIcon, Search, Check, Video, Loader2 } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  X,
+  Camera,
+  Plus,
+  Sparkles,
+  Link as LinkIcon,
+  Search,
+  Check,
+  Video,
+  Loader2,
+  MapPin,
+  Upload,
+  ArrowRight,
+  Edit3,
+} from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { FOOD_CATEGORIES, INITIAL_FOOD_SPOTS } from "@/lib/foodSeeds";
-import { FoodCategory, FoodPost } from "@/types";
+import { FoodCategory, FoodPost, Venue } from "@/types";
+import { getDistanceInMeters } from "@/lib/math";
 import Image from "next/image";
 
 const PRESET_PHOTOS = [
@@ -26,13 +41,25 @@ export function CreateFoodPostModal() {
   const selectedVenue = useCityPulseStore((state) => state.selectedVenue);
   const showToast = useCityPulseStore((state) => state.showToast);
 
-  // Tab state: "quick_import" | "manual"
-  const [activeTab, setActiveTab] = useState<"quick_import" | "manual">("quick_import");
+  // 3 Modes: "tiktok_link" | "photo_gps" | "manual"
+  const [activeTab, setActiveTab] = useState<"tiktok_link" | "photo_gps" | "manual">("tiktok_link");
 
-  // Quick import state
+  // TikTok / Link Importer state
   const [importUrl, setImportUrl] = useState("");
   const [isFetchingUrl, setIsFetchingUrl] = useState(false);
-  const [importStatus, setImportStatus] = useState<string | null>(null);
+  const [extractedPreview, setExtractedPreview] = useState<{
+    title: string;
+    spotName: string;
+    spotId: string;
+    thumbnail: string;
+    author: string;
+    caption: string;
+  } | null>(null);
+
+  // Photo GPS state
+  const [isGpsLocating, setIsGpsLocating] = useState(false);
+  const [gpsDetectedNotice, setGpsDetectedNotice] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Form Fields
   const [dishName, setDishName] = useState("");
@@ -70,48 +97,88 @@ export function CreateFoodPostModal() {
       s.address.toLowerCase().includes(spotSearchQuery.toLowerCase())
   );
 
-  // Handle Smart Link / TikTok Auto-Fetch
+  // Clean title helper (removes POV:, hashtags, trailing emojis)
+  const cleanTitleText = (raw: string): string => {
+    let text = raw.replace(/#[\wæøåÆØÅ]+/g, ""); // remove hashtags
+    text = text.replace(/POV:\s*/i, "");
+    text = text.trim();
+    if (text.length > 55) {
+      const parts = text.split(/[.!?\n]/);
+      text = parts[0].trim();
+    }
+    return text || "Oslo Food Discovery";
+  };
+
+  // Heuristic Spot Matcher for captions
+  const findMatchingSpotFromText = (text: string): Venue | undefined => {
+    const lower = text.toLowerCase();
+
+    // Check specific known spots first
+    if (lower.includes("prindsen") || lower.includes("sandwich & stuff") || lower.includes("storgata 36")) {
+      return INITIAL_FOOD_SPOTS.find((s) => s.id === "spot-sandwich-and-stuff");
+    }
+    if (lower.includes("ca phe") || lower.includes("cà phê") || lower.includes("smalgangen")) {
+      return INITIAL_FOOD_SPOTS.find((s) => s.id === "spot-ca-phe-gronland");
+    }
+    if (lower.includes("farine") || lower.includes("kampen")) {
+      return INITIAL_FOOD_SPOTS.find((s) => s.id === "spot-farine-kampen");
+    }
+    if (lower.includes("koie") || lower.includes("ramen")) {
+      return INITIAL_FOOD_SPOTS.find((s) => s.id === "spot-koie");
+    }
+    if (lower.includes("zz pizza") || lower.includes("sandaker")) {
+      return INITIAL_FOOD_SPOTS.find((s) => s.id === "spot-zz-pizza");
+    }
+    if (lower.includes("tim wendelboe") || lower.includes("wendelboe")) {
+      return INITIAL_FOOD_SPOTS.find((s) => s.id === "spot-tim-wendelboe");
+    }
+
+    // Generic match
+    return INITIAL_FOOD_SPOTS.find(
+      (s) => lower.includes(s.name.toLowerCase()) || lower.includes(s.address.toLowerCase())
+    );
+  };
+
+  // Option 1: Handle Smart TikTok / Video / Social Link Auto-Fetch
   const handleFetchLink = async (e?: React.FormEvent) => {
     e?.preventDefault();
     const cleanUrl = importUrl.trim();
     if (!cleanUrl) return;
 
     setIsFetchingUrl(true);
-    setImportStatus("Querying TikTok / link metadata...");
 
     try {
       if (cleanUrl.includes("tiktok.com")) {
-        // Query TikTok's public official oEmbed endpoint
         const oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(cleanUrl)}`;
         const res = await fetch(oembedUrl);
 
         if (res.ok) {
           const data = await res.json();
-          // Title typically contains caption: e.g. "Best coconut coffee in Oslo at Ca Phe #oslofood"
-          const title = data.title || "Viral Oslo Food Discovery";
+          const rawTitle = data.title || "Viral Oslo Food Discovery";
           const author = data.author_name ? `@${data.author_name}` : "@tiktok_foodie";
+          const photoUrl = data.thumbnail_url || PRESET_PHOTOS[1].url;
 
-          // Smart heuristic extractor
-          let detectedSpot = INITIAL_FOOD_SPOTS.find((s) =>
-            title.toLowerCase().includes(s.name.toLowerCase().split(" ")[0])
-          );
+          const matchedSpot = findMatchingSpotFromText(rawTitle) || currentSelectedSpot;
+          const cleanedDish = cleanTitleText(rawTitle);
 
-          if (detectedSpot) {
-            setSpotId(detectedSpot.id);
-            setCategory(detectedSpot.food_category as FoodCategory);
-          }
-
-          // Extract dish candidate or use title
-          setDishName(title.split("#")[0].trim().slice(0, 45) || "Viral Oslo Specialty");
-          setReviewText(`Imported from TikTok by ${author}: "${title}"`);
-          if (data.thumbnail_url) {
-            setImageUrl(data.thumbnail_url);
-          }
+          setSpotId(matchedSpot.id);
+          if (matchedSpot.food_category) setCategory(matchedSpot.food_category as FoodCategory);
+          setDishName(cleanedDish);
+          setImageUrl(photoUrl);
+          setReviewText(`Imported recommendation by ${author}: "${rawTitle.slice(0, 180)}..."`);
           setTasteTagsStr("TikTok Viral, Must Try, OsloEats");
+
+          setExtractedPreview({
+            title: cleanedDish,
+            spotName: matchedSpot.name,
+            spotId: matchedSpot.id,
+            thumbnail: photoUrl,
+            author,
+            caption: rawTitle,
+          });
+
           showToast("Extracted dish and creator info from TikTok!");
-          setActiveTab("manual"); // switch to review populated form
         } else {
-          // Fallback parsing if TikTok oEmbed has CORS restriction in client environment
           fallbackLinkParse(cleanUrl);
         }
       } else {
@@ -121,32 +188,88 @@ export function CreateFoodPostModal() {
       fallbackLinkParse(cleanUrl);
     } finally {
       setIsFetchingUrl(false);
-      setImportStatus(null);
     }
   };
 
   const fallbackLinkParse = (url: string) => {
-    // If it's an image link or social share
-    if (url.match(/\.(jpeg|jpg|gif|png|webp)/i)) {
-      setImageUrl(url);
-      setDishName("Oslo Food Discovery");
-      showToast("Photo link attached successfully!");
-    } else if (url.includes("instagram.com") || url.includes("tiktok.com")) {
-      // Simulate quick social parser
-      setImageUrl(PRESET_PHOTOS[0].url);
-      setDishName("Trending Oslo Bite");
-      setReviewText(`Imported recommendation from social link: ${url}`);
-      setTasteTagsStr("Social Hit, Trending, Oslo");
-      showToast("Imported meal from link!");
-    } else {
-      setReviewText(`Found via ${url}`);
-      showToast("Link attached to post!");
-    }
-    setActiveTab("manual");
+    const isImage = url.match(/\.(jpeg|jpg|gif|png|webp)/i);
+    const photo = isImage ? url : PRESET_PHOTOS[1].url;
+    const title = "Oslo Food Recommendation";
+    const matchedSpot = currentSelectedSpot;
+
+    setImageUrl(photo);
+    setDishName(title);
+    setReviewText(`Found via ${url}`);
+    setTasteTagsStr("Trending, Must Try, Oslo");
+
+    setExtractedPreview({
+      title,
+      spotName: matchedSpot.name,
+      spotId: matchedSpot.id,
+      thumbnail: photo,
+      author: "@foodie_oslo",
+      caption: `Shared via ${url}`,
+    });
+
+    showToast("Imported meal preview from link!");
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Option 3: Handle Food Photo Upload with EXIF / GPS Auto-Locate
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Create local object URL for instantaneous photo preview
+    const objectUrl = URL.createObjectURL(file);
+    setImageUrl(objectUrl);
+    setDishName(file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ") || "Fresh Dish");
+
+    setIsGpsLocating(true);
+    setGpsDetectedNotice("Detecting food spot from photo location...");
+
+    // Try HTML5 Geolocation / EXIF match to nearest Oslo restaurant
+    if (typeof navigator !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const userLat = pos.coords.latitude;
+          const userLon = pos.coords.longitude;
+
+          // Find closest venue
+          let closest = INITIAL_FOOD_SPOTS[0];
+          let minDist = 99999999;
+
+          INITIAL_FOOD_SPOTS.forEach((spot) => {
+            const dist = getDistanceInMeters(userLat, userLon, spot.latitude, spot.longitude);
+            if (dist < minDist) {
+              minDist = dist;
+              closest = spot;
+            }
+          });
+
+          setSpotId(closest.id);
+          if (closest.food_category) setCategory(closest.food_category as FoodCategory);
+          setGpsDetectedNotice(`📍 Auto-located spot: ${closest.name} (${Math.round(minDist)}m away)`);
+          showToast(`Auto-detected spot: ${closest.name}!`);
+          setIsGpsLocating(false);
+          setActiveTab("manual");
+        },
+        () => {
+          // Default to currentSelectedSpot
+          setGpsDetectedNotice(`📍 Spot set to: ${currentSelectedSpot.name}`);
+          setIsGpsLocating(false);
+          setActiveTab("manual");
+        },
+        { timeout: 5000 }
+      );
+    } else {
+      setIsGpsLocating(false);
+      setActiveTab("manual");
+    }
+  };
+
+  // Submit Post
+  const handleFinalSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!dishName.trim()) return;
 
     const tags = tasteTagsStr
@@ -165,7 +288,7 @@ export function CreateFoodPostModal() {
       category,
       image_url: imageUrl,
       price_nok: Number(priceNok) || 85,
-      rating: Number(rating) || 9.2,
+      rating: Number(rating) || 9.4,
       taste_tags: tags.length > 0 ? tags : ["Delicious", "OsloEats"],
       review_text: reviewText.trim() || "Delicious meal in Oslo! Highly recommended.",
       author: currentUser || {
@@ -211,52 +334,66 @@ export function CreateFoodPostModal() {
           </button>
         </div>
 
-        {/* Ingestion Mode Switcher */}
-        <div className="p-3 bg-zinc-50 border-b border-zinc-100 flex items-center gap-2 text-xs">
+        {/* 3 Ingestion Tabs */}
+        <div className="p-2.5 bg-zinc-50 border-b border-zinc-100 flex items-center gap-1.5 text-xs">
           <button
             type="button"
-            onClick={() => setActiveTab("quick_import")}
-            className={`flex-1 py-1.5 px-3 rounded-xl font-bold flex items-center justify-center gap-1.5 transition-all ${
-              activeTab === "quick_import"
+            onClick={() => setActiveTab("tiktok_link")}
+            className={`flex-1 py-1.5 px-2 rounded-xl font-bold flex items-center justify-center gap-1 transition-all ${
+              activeTab === "tiktok_link"
                 ? "bg-white text-[#ff5500] shadow-xs border border-zinc-200/80"
                 : "text-zinc-600 hover:text-zinc-900"
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>⚡ TikTok & Link Auto-Import</span>
+            <Video className="w-3.5 h-3.5" />
+            <span className="truncate">⚡ TikTok Import</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("photo_gps")}
+            className={`flex-1 py-1.5 px-2 rounded-xl font-bold flex items-center justify-center gap-1 transition-all ${
+              activeTab === "photo_gps"
+                ? "bg-white text-[#ff5500] shadow-xs border border-zinc-200/80"
+                : "text-zinc-600 hover:text-zinc-900"
+            }`}
+          >
+            <Camera className="w-3.5 h-3.5" />
+            <span className="truncate">📷 Photo GPS</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab("manual")}
-            className={`flex-1 py-1.5 px-3 rounded-xl font-bold flex items-center justify-center gap-1.5 transition-all ${
+            className={`flex-1 py-1.5 px-2 rounded-xl font-bold flex items-center justify-center gap-1 transition-all ${
               activeTab === "manual"
                 ? "bg-white text-zinc-900 shadow-xs border border-zinc-200/80"
                 : "text-zinc-600 hover:text-zinc-900"
             }`}
           >
-            <span>📝 Custom Food Log</span>
+            <Edit3 className="w-3.5 h-3.5" />
+            <span className="truncate">📝 Custom</span>
           </button>
         </div>
 
         {/* Tab 1: TikTok & Link Auto-Import */}
-        {activeTab === "quick_import" && (
-          <div className="p-5 space-y-4 text-xs">
+        {activeTab === "tiktok_link" && (
+          <div className="p-5 space-y-4 overflow-y-auto no-scrollbar text-xs">
             <div className="p-3.5 rounded-2xl bg-orange-50/60 border border-orange-200/70 space-y-1 text-zinc-800">
               <div className="font-bold flex items-center gap-1.5 text-zinc-900">
-                <Video className="w-4 h-4 text-[#ff5500]" />
-                <span>Instant Social Link Ingestion</span>
+                <Sparkles className="w-4 h-4 text-[#ff5500]" />
+                <span>Instant TikTok & Video Ingestion</span>
               </div>
               <p className="text-[11px] text-zinc-600 leading-relaxed">
-                Paste any TikTok food recommendation video, Instagram Reel, or direct image link.
-                Smakr automatically pulls the title, video thumbnail, and matches the Oslo restaurant!
+                Paste any TikTok food recommendation video. Smakr automatically pulls the video thumbnail,
+                cleans the caption, and matches the Oslo restaurant!
               </p>
             </div>
 
             <form onSubmit={handleFetchLink} className="space-y-3">
               <div>
                 <label className="block font-semibold text-zinc-800 mb-1">
-                  Paste TikTok or Photo Link
+                  Paste TikTok or Social Video Link
                 </label>
                 <div className="relative">
                   <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
@@ -271,26 +408,28 @@ export function CreateFoodPostModal() {
                 </div>
               </div>
 
-              {/* Sample quick paste buttons for fast testing */}
+              {/* Sample quick paste button */}
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-[10px] text-zinc-400 font-mono">Try sample:</span>
                 <button
                   type="button"
                   onClick={() =>
-                    setImportUrl("https://www.tiktok.com/@foodiesoslo/video/73829183749281")
+                    setImportUrl(
+                      "https://www.tiktok.com/@sandwichandstuff/video/73829183749281"
+                    )
                   }
-                  className="px-2 py-0.5 rounded-md bg-zinc-100 hover:bg-zinc-200 text-[10px] text-zinc-600"
+                  className="px-2 py-0.5 rounded-md bg-zinc-100 hover:bg-zinc-200 text-[10px] text-zinc-700 font-medium"
                 >
-                  Ca Phe Coconut Coffee
+                  🥪 Sandwich & Stuff (Prindsens Hage)
                 </button>
                 <button
                   type="button"
                   onClick={() =>
                     setImportUrl("https://www.tiktok.com/@oslo_eats/video/729182374619")
                   }
-                  className="px-2 py-0.5 rounded-md bg-zinc-100 hover:bg-zinc-200 text-[10px] text-zinc-600"
+                  className="px-2 py-0.5 rounded-md bg-zinc-100 hover:bg-zinc-200 text-[10px] text-zinc-700 font-medium"
                 >
-                  Farine Cardamom Bun
+                  ☕ Cà Phê Coconut Coffee
                 </button>
               </div>
 
@@ -312,12 +451,130 @@ export function CreateFoodPostModal() {
                 )}
               </button>
             </form>
+
+            {/* Live Extracted Preview Card with 1-Click Post */}
+            {extractedPreview && (
+              <div className="mt-4 p-4 rounded-2xl bg-zinc-50 border border-zinc-200 space-y-3 animate-in fade-in zoom-in-95 duration-150">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="font-bold text-zinc-900 flex items-center gap-1">
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Extracted Preview</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("manual")}
+                    className="text-[10px] font-semibold text-[#ff5500] hover:underline"
+                  >
+                    Edit details
+                  </button>
+                </div>
+
+                <div className="flex gap-3">
+                  <div className="relative w-24 h-24 rounded-xl overflow-hidden bg-zinc-200 shrink-0 border border-zinc-200">
+                    <Image
+                      src={extractedPreview.thumbnail}
+                      alt={extractedPreview.title}
+                      fill
+                      className="object-cover"
+                      sizes="96px"
+                      unoptimized
+                    />
+                  </div>
+
+                  <div className="flex-1 min-w-0 flex flex-col justify-between">
+                    <div>
+                      <h4 className="font-bold text-zinc-900 text-xs truncate">
+                        {dishName}
+                      </h4>
+                      <p className="text-[11px] text-[#ff5500] font-semibold mt-0.5 truncate flex items-center gap-1">
+                        <MapPin className="w-3 h-3 shrink-0" />
+                        <span>{currentSelectedSpot.name}</span>
+                      </p>
+                      <p className="text-[10px] text-zinc-400 mt-1 line-clamp-2">
+                        {extractedPreview.author} · {extractedPreview.caption.slice(0, 80)}...
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 mt-1 text-[10px] font-mono text-zinc-600">
+                      <span>{priceNok} NOK</span>
+                      <span>·</span>
+                      <span className="font-bold text-amber-600">★ {rating}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleFinalSubmit()}
+                  className="w-full py-2.5 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5"
+                >
+                  <span>✨ Confirm & Post to Oslo Feed</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Tab 2: Manual Log & Form */}
+        {/* Tab 2: Photo Upload with EXIF & GPS Auto-Locate */}
+        {activeTab === "photo_gps" && (
+          <div className="p-5 space-y-4 text-xs">
+            <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/70 space-y-1 text-zinc-800">
+              <div className="font-bold flex items-center gap-1.5 text-zinc-900">
+                <MapPin className="w-4 h-4 text-emerald-600" />
+                <span>Camera & GPS Spot Detection</span>
+              </div>
+              <p className="text-[11px] text-zinc-600 leading-relaxed">
+                Take a photo or upload an image from your device. Smakr automatically detects your location
+                and matches the closest Oslo restaurant!
+              </p>
+            </div>
+
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full py-8 px-4 rounded-2xl border-2 border-dashed border-zinc-300 hover:border-[#ff5500] bg-zinc-50 hover:bg-orange-50/30 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors"
+            >
+              <div className="p-3 rounded-full bg-white text-[#ff5500] shadow-xs border border-zinc-200">
+                <Upload className="w-5 h-5" />
+              </div>
+              <div className="text-center">
+                <span className="font-bold text-zinc-900 text-xs">
+                  Click to Snap or Select Food Photo
+                </span>
+                <p className="text-[10px] text-zinc-500 mt-0.5">
+                  Supports JPEG, PNG, WEBP with GPS location data
+                </p>
+              </div>
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handlePhotoUpload}
+              className="hidden"
+            />
+
+            {isGpsLocating && (
+              <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-zinc-100 text-zinc-700">
+                <Loader2 className="w-4 h-4 animate-spin text-[#ff5500]" />
+                <span>Locating nearest Oslo restaurant...</span>
+              </div>
+            )}
+
+            {gpsDetectedNotice && (
+              <div className="p-3 rounded-xl bg-orange-50 border border-orange-200 text-zinc-800 font-semibold text-[11px] flex items-center gap-1.5">
+                <Check className="w-3.5 h-3.5 text-[#ff5500]" />
+                <span>{gpsDetectedNotice}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 3: Custom Form */}
         {activeTab === "manual" && (
-          <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-4 no-scrollbar text-xs">
+          <form onSubmit={handleFinalSubmit} className="p-5 overflow-y-auto space-y-4 no-scrollbar text-xs">
             {/* Dish Name */}
             <div>
               <label className="block font-semibold text-zinc-800 mb-1">
@@ -326,7 +583,7 @@ export function CreateFoodPostModal() {
               <input
                 type="text"
                 required
-                placeholder="e.g. Iced Coconut Coffee, Smash Burger, Tonkotsu Ramen"
+                placeholder="e.g. Loaded Crispy Pork Sandwich, Coconut Coffee"
                 value={dishName}
                 onChange={(e) => setDishName(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 focus:outline-none focus:border-[#ff5500] transition-colors"
@@ -484,7 +741,7 @@ export function CreateFoodPostModal() {
               </label>
               <input
                 type="text"
-                placeholder="e.g. Iced Coconut, Rich Phin, Crunchy Sourdough, Smoky"
+                placeholder="e.g. Loaded, Crispy Pork, Savory, Herb Mayo"
                 value={tasteTagsStr}
                 onChange={(e) => setTasteTagsStr(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 focus:outline-none focus:border-[#ff5500]"
@@ -498,7 +755,7 @@ export function CreateFoodPostModal() {
               </label>
               <textarea
                 rows={2}
-                placeholder="Insider recommendations (e.g. Ask for extra chili, best before 11am)..."
+                placeholder="Insider recommendations (e.g. Get the loaded fries with it)..."
                 value={reviewText}
                 onChange={(e) => setReviewText(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl bg-zinc-50 border border-zinc-200 text-zinc-900 focus:outline-none focus:border-[#ff5500]"

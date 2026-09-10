@@ -19,7 +19,7 @@ interface SmakrSIconProps {
 export function SmakrSIcon({
   className = "w-6 h-6",
   size,
-  color = "#ff5500",
+  color = "var(--accent, #ff5500)",
   variant,
 }: SmakrSIconProps) {
   const storeVariant = useCityPulseStore((state) => state.activeLogoVariant);

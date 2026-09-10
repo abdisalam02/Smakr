@@ -36,8 +36,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="bg-[#f6f3ee] text-[#221e19] min-h-screen flex flex-col antialiased selection:bg-[#ff5500] selection:text-white">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('smakr_theme')||'electric-orange';if(t==='nordic-amber')t='nordic-bakery';if(t==='midnight-gastro')t='cyber-midnight';if(t==='matcha-botanic')t='kyoto-matcha';if(t==='oslo-monolith')t='oslo-brutalist';document.documentElement.setAttribute('data-theme',t);var f=localStorage.getItem('smakr_font')||'modern-sans';document.documentElement.setAttribute('data-font',f);}catch(e){}})();`,
+          }}
+        />
+      </head>
+      <body className="min-h-screen flex flex-col antialiased selection:bg-[var(--accent)] selection:text-white transition-colors duration-300">
         <Header />
         <main className="flex-1 flex flex-col relative overflow-hidden">
           {children}

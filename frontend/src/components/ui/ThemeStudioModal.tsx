@@ -21,52 +21,82 @@ const THEME_OPTIONS: ThemeOption[] = [
   {
     id: "electric-orange",
     name: "Electric Orange",
-    subtitle: "Modern high-contrast neon vibe",
+    subtitle: "Modern high-contrast neon vibe with clean porcelain surfaces",
     accent: "#ff5500",
-    bgPreview: "#fafafa",
+    bgPreview: "#f8f8fa",
     surfacePreview: "#ffffff",
-    borderPreview: "#e4e4e7",
-    tag: "Default Signature",
+    borderPreview: "#e2e2e8",
+    tag: "Signature",
   },
   {
-    id: "nordic-amber",
-    name: "Nordic Amber & Terracotta",
-    subtitle: "Warm Scandinavian bakery & coffee roast",
-    accent: "#c25e2e",
-    bgPreview: "#f9f6f0",
-    surfacePreview: "#ffffff",
-    borderPreview: "#e5ded4",
-    tag: "Warm Aesthetic",
-  },
-  {
-    id: "midnight-gastro",
-    name: "Midnight Gastro Lounge",
-    subtitle: "Cyber Oslo evening & neon glow",
-    accent: "#ff6b22",
-    bgPreview: "#0c0f17",
-    surfacePreview: "#161b26",
-    borderPreview: "#232b3d",
+    id: "cyber-midnight",
+    name: "Cyber Midnight",
+    subtitle: "Deep OLED dark mode with radiant tangerine glow",
+    accent: "#ff6b00",
+    bgPreview: "#090b10",
+    surfacePreview: "#111622",
+    borderPreview: "#232f45",
     tag: "Dark Mode",
   },
   {
-    id: "matcha-botanic",
-    name: "Matcha & Botanic",
-    subtitle: "Fresh organic herbs, oat milk & honey",
-    accent: "#2d6a4f",
-    bgPreview: "#f6f8f5",
-    surfacePreview: "#ffffff",
-    borderPreview: "#d9e2d7",
-    tag: "Contemporary",
+    id: "nordic-bakery",
+    name: "Nordic Bakery & Café",
+    subtitle: "Warm cardamom, dark roast espresso & craft linen",
+    accent: "#c25227",
+    bgPreview: "#f5eee3",
+    surfacePreview: "#fdfbf7",
+    borderPreview: "#decbb4",
+    tag: "Warm Artisan",
   },
   {
-    id: "oslo-monolith",
-    name: "Oslo Monolith Brutalist",
-    subtitle: "Stark monochrome with safety orange punch",
-    accent: "#ff4500",
-    bgPreview: "#f4f4f5",
+    id: "kyoto-matcha",
+    name: "Kyoto Matcha & Botanic",
+    subtitle: "Organic ceremonial matcha, bamboo mist & washi paper",
+    accent: "#15803d",
+    bgPreview: "#ebf3ed",
+    surfacePreview: "#f6faf7",
+    borderPreview: "#c5d9c9",
+    tag: "Organic Zen",
+  },
+  {
+    id: "amalfi-coast",
+    name: "Amalfi Coast Sea Azure",
+    subtitle: "Mediterranean Capri blue waves & crisp sea breeze",
+    accent: "#0284c7",
+    bgPreview: "#eef6fc",
     surfacePreview: "#ffffff",
-    borderPreview: "#18181b",
-    tag: "Minimalist High-Fashion",
+    borderPreview: "#bcd7f2",
+    tag: "Coastal Riviera",
+  },
+  {
+    id: "seoul-sunset",
+    name: "Seoul Sunset K-Bistro",
+    subtitle: "Vibrant hot rose magenta, strawberry cream & plum",
+    accent: "#f43f5e",
+    bgPreview: "#fef0f2",
+    surfacePreview: "#ffffff",
+    borderPreview: "#fbc7d2",
+    tag: "Vibrant Punch",
+  },
+  {
+    id: "oslo-brutalist",
+    name: "Oslo Brutalist Monolith",
+    subtitle: "Architectural raw concrete, ink grid & safety orange",
+    accent: "#ff3700",
+    bgPreview: "#e5e7eb",
+    surfacePreview: "#ffffff",
+    borderPreview: "#111827",
+    tag: "High-Fashion",
+  },
+  {
+    id: "retro-diner",
+    name: "Retro Synth Diner",
+    subtitle: "Arcade midnight violet & electric synthwave fuchsia",
+    accent: "#d946ef",
+    bgPreview: "#0e0b1a",
+    surfacePreview: "#18132c",
+    borderPreview: "#3a2d66",
+    tag: "Cyber Glow",
   },
 ];
 
@@ -143,6 +173,14 @@ const LOGO_OPTIONS: LogoOption[] = [
   },
 ];
 
+const normalizeTheme = (theme: string): ColorTheme => {
+  if (theme === "nordic-amber") return "nordic-bakery";
+  if (theme === "midnight-gastro") return "cyber-midnight";
+  if (theme === "matcha-botanic") return "kyoto-matcha";
+  if (theme === "oslo-monolith") return "oslo-brutalist";
+  return theme as ColorTheme;
+};
+
 export function ThemeStudioModal() {
   const isThemeStudioOpen = useCityPulseStore((state) => state.isThemeStudioOpen);
   const setIsThemeStudioOpen = useCityPulseStore((state) => state.setIsThemeStudioOpen);
@@ -154,12 +192,17 @@ export function ThemeStudioModal() {
   const setActiveLogoVariant = useCityPulseStore((state) => state.setActiveLogoVariant);
   const showToast = useCityPulseStore((state) => state.showToast);
 
+  const normalizedCurrentTheme = normalizeTheme(activeTheme);
+
   // Restore saved choices from localStorage on initial client mount
   useEffect(() => {
     try {
-      const savedTheme = localStorage.getItem("smakr_theme") as ColorTheme;
-      if (savedTheme && THEME_OPTIONS.some((t) => t.id === savedTheme)) {
-        setActiveTheme(savedTheme);
+      const rawTheme = localStorage.getItem("smakr_theme");
+      if (rawTheme) {
+        const savedTheme = normalizeTheme(rawTheme);
+        if (THEME_OPTIONS.some((t) => t.id === savedTheme)) {
+          setActiveTheme(savedTheme);
+        }
       }
       const savedFont = localStorage.getItem("smakr_font") as TypographyStyle;
       if (savedFont && FONT_OPTIONS.some((f) => f.id === savedFont)) {
@@ -214,13 +257,13 @@ export function ThemeStudioModal() {
                 <span>1. Color Palette</span>
               </div>
               <span className="text-[11px] text-zinc-400 font-mono">
-                {THEME_OPTIONS.find((t) => t.id === activeTheme)?.name}
+                {THEME_OPTIONS.find((t) => t.id === normalizedCurrentTheme)?.name}
               </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {THEME_OPTIONS.map((theme) => {
-                const isSelected = activeTheme === theme.id;
+                const isSelected = normalizedCurrentTheme === theme.id;
                 return (
                   <button
                     key={theme.id}
