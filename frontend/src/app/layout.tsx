@@ -40,7 +40,7 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('smakr_theme')||'electric-orange';if(t==='nordic-amber')t='nordic-bakery';if(t==='midnight-gastro')t='cyber-midnight';if(t==='matcha-botanic')t='kyoto-matcha';if(t==='oslo-monolith')t='oslo-brutalist';document.documentElement.setAttribute('data-theme',t);var f=localStorage.getItem('smakr_font')||'modern-sans';document.documentElement.setAttribute('data-font',f);}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('smakr_theme')||'oslo-minimalist';if(t==='electric-orange')t='oslo-minimalist';if(t==='cyber-midnight'||t==='midnight-gastro')t='obsidian-slate';if(t==='nordic-bakery'||t==='nordic-amber')t='nordic-linen';if(t==='kyoto-matcha'||t==='matcha-botanic')t='stockholm-sage';if(t==='amalfi-coast')t='bistro-navy';if(t==='seoul-sunset')t='bordeaux-chalk';if(t==='oslo-brutalist'||t==='oslo-monolith')t='swiss-monolith';if(t==='retro-diner')t='alabaster-bronze';document.documentElement.setAttribute('data-theme',t);var f=localStorage.getItem('smakr_font')||'modern-sans';document.documentElement.setAttribute('data-font',f);}catch(e){}})();`,
           }}
         />
       </head>

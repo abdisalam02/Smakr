@@ -19,6 +19,8 @@ import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { formatDistance } from "@/lib/math";
 import { FoodPost } from "@/types";
 
+import { getCulinaryImageForDish, getRealisticPrice } from "@/lib/culinaryImages";
+
 export function VenueBottomSheet() {
   const selectedVenue = useCityPulseStore((state) => state.selectedVenue);
   const setSelectedVenue = useCityPulseStore((state) => state.setSelectedVenue);
@@ -77,19 +79,29 @@ export function VenueBottomSheet() {
   const venuePosts = foodPosts.filter(
     (p) =>
       p.spot_id === selectedVenue.id ||
-      p.spot_name.toLowerCase() === selectedVenue.name.toLowerCase()
+      p.spot_name.toLowerCase().includes(selectedVenue.name.toLowerCase()) ||
+      selectedVenue.name.toLowerCase().includes(p.spot_name.toLowerCase())
   );
 
-  // Build a recommended dishes array combining community posts & signature dishes
-  const fallbackImages = [
-    "https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=600&q=80",
-    "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80",
-    "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=600&q=80",
-    "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=600&q=80",
-  ];
-
+  // Build a recommended dishes array combining community posts & signature dishes with exact photo matches
   const recommendedMeals = [
-    ...venuePosts,
+    ...venuePosts.map((p) => {
+      let cleanTitle = p.dish_name;
+      if (cleanTitle.length > 50 || cleanTitle.includes("POV:")) {
+        cleanTitle = cleanTitle.replace(/POV:\s*/i, "").replace(/#[\wæøåÆØÅ]+/g, "").trim();
+        if (cleanTitle.toLowerCase().includes("sandwich")) cleanTitle = "Crispy Pork Sandwich with Loaded Fries";
+        else if (cleanTitle.toLowerCase().includes("kaffe") || cleanTitle.toLowerCase().includes("coffee")) cleanTitle = "Iced Coconut Coffee Slush";
+        else {
+          const parts = cleanTitle.split(/[.!?\n]/);
+          cleanTitle = parts[0].slice(0, 42).trim();
+        }
+      }
+      return {
+        ...p,
+        dish_name: cleanTitle,
+        image_url: p.image_url || getCulinaryImageForDish(cleanTitle, p.category),
+      };
+    }),
     ...(selectedVenue.signature_dishes || [])
       .filter((dish) => !venuePosts.some((p) => p.dish_name.toLowerCase().includes(dish.toLowerCase())))
       .map((dish, i) => ({
@@ -101,9 +113,9 @@ export function VenueBottomSheet() {
         spot_coords: [selectedVenue.longitude, selectedVenue.latitude] as [number, number],
         dish_name: dish,
         category: selectedVenue.food_category || "coffee",
-        image_url: fallbackImages[i % fallbackImages.length],
-        price_nok: 85 + (i * 25),
-        rating: 9.6 - (i * 0.2),
+        image_url: getCulinaryImageForDish(dish, selectedVenue.food_category),
+        price_nok: getRealisticPrice(dish, selectedVenue.food_category),
+        rating: 9.6 - (i * 0.1),
         taste_tags: ["Chef Signature", "Must Order"],
         review_text: `Signature house specialty recommended by foodies visiting ${selectedVenue.name}.`,
         author: {

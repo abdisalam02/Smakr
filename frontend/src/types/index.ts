@@ -182,6 +182,18 @@ export interface LiveRadarEvent {
 }
 
 export type ColorTheme =
+  // Sleek, Modern Culinary Themes (Zero Neon)
+  | "oslo-minimalist"
+  | "obsidian-slate"
+  | "nordic-linen"
+  | "copenhagen-clay"
+  | "stockholm-sage"
+  | "bistro-navy"
+  | "smoked-espresso"
+  | "bordeaux-chalk"
+  | "swiss-monolith"
+  | "alabaster-bronze"
+  // Legacy / Transitional Aliases
   | "electric-orange"
   | "cyber-midnight"
   | "nordic-bakery"
@@ -197,8 +209,20 @@ export type ColorTheme =
 
 export type TypographyStyle =
   | "modern-sans"
+  | "jakarta-sans"
   | "editorial-serif"
+  | "classic-garamond"
   | "street-grotesk"
-  | "rounded-modern";
+  | "rounded-modern"
+  | "fashion-syne"
+  | "clean-dm";
 
-export type LogoVariant = "fluid" | "geometric" | "ribbon" | "block";
+export type LogoVariant =
+  | "fluid"
+  | "geometric"
+  | "ribbon"
+  | "block"
+  | "monoline"
+  | "stencil"
+  | "dual-blade"
+  | "serif";

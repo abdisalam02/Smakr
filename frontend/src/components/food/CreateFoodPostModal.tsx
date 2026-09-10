@@ -20,6 +20,7 @@ import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { FOOD_CATEGORIES, INITIAL_FOOD_SPOTS } from "@/lib/foodSeeds";
 import { FoodCategory, FoodPost, Venue } from "@/types";
 import { getDistanceInMeters } from "@/lib/math";
+import { getCulinaryImageForDish, getRealisticPrice } from "@/lib/culinaryImages";
 import Image from "next/image";
 
 const PRESET_PHOTOS = [
@@ -47,6 +48,7 @@ export function CreateFoodPostModal() {
   // TikTok / Link Importer state
   const [importUrl, setImportUrl] = useState("");
   const [isFetchingUrl, setIsFetchingUrl] = useState(false);
+  const [isAiPolishing, setIsAiPolishing] = useState(false);
   const [extractedPreview, setExtractedPreview] = useState<{
     title: string;
     spotName: string;
@@ -139,7 +141,7 @@ export function CreateFoodPostModal() {
     );
   };
 
-  // Option 1: Handle Smart TikTok / Video / Social Link Auto-Fetch
+  // Option 1: Handle AI-Powered TikTok / Video / Social Link Auto-Fetch
   const handleFetchLink = async (e?: React.FormEvent) => {
     e?.preventDefault();
     const cleanUrl = importUrl.trim();
@@ -148,46 +150,75 @@ export function CreateFoodPostModal() {
     setIsFetchingUrl(true);
 
     try {
-      if (cleanUrl.includes("tiktok.com")) {
-        const oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(cleanUrl)}`;
-        const res = await fetch(oembedUrl);
+      const res = await fetch("/api/ai/extract-food-post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: cleanUrl }),
+      });
 
-        if (res.ok) {
-          const data = await res.json();
-          const rawTitle = data.title || "Viral Oslo Food Discovery";
-          const author = data.author_name ? `@${data.author_name}` : "@tiktok_foodie";
-          const photoUrl = data.thumbnail_url || PRESET_PHOTOS[1].url;
-
-          const matchedSpot = findMatchingSpotFromText(rawTitle) || currentSelectedSpot;
-          const cleanedDish = cleanTitleText(rawTitle);
-
-          setSpotId(matchedSpot.id);
-          if (matchedSpot.food_category) setCategory(matchedSpot.food_category as FoodCategory);
-          setDishName(cleanedDish);
-          setImageUrl(photoUrl);
-          setReviewText(`Imported recommendation by ${author}: "${rawTitle.slice(0, 180)}..."`);
-          setTasteTagsStr("TikTok Viral, Must Try, OsloEats");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          const d = json.data;
+          setDishName(d.dish_name);
+          setSpotId(d.spot_id);
+          setCategory(d.category as FoodCategory);
+          setPriceNok(d.price_nok);
+          setRating(d.rating);
+          setTasteTagsStr(Array.isArray(d.taste_tags) ? d.taste_tags.join(", ") : d.taste_tags);
+          setReviewText(d.review_text);
+          setImageUrl(d.image_url);
 
           setExtractedPreview({
-            title: cleanedDish,
-            spotName: matchedSpot.name,
-            spotId: matchedSpot.id,
-            thumbnail: photoUrl,
-            author,
-            caption: rawTitle,
+            title: d.dish_name,
+            spotName: d.spot_name,
+            spotId: d.spot_id,
+            thumbnail: d.image_url,
+            author: d.author_handle,
+            caption: d.original_caption,
           });
 
-          showToast("Extracted dish and creator info from TikTok!");
-        } else {
-          fallbackLinkParse(cleanUrl);
+          showToast("✨ AI extracted dish name, spot & pricing from link!");
+          return;
         }
-      } else {
-        fallbackLinkParse(cleanUrl);
       }
+      fallbackLinkParse(cleanUrl);
     } catch {
       fallbackLinkParse(cleanUrl);
     } finally {
       setIsFetchingUrl(false);
+    }
+  };
+
+  // AI helper for Tab 3 manual input
+  const handleAiPolishCurrentText = async () => {
+    if (!dishName.trim()) return;
+    setIsAiPolishing(true);
+    try {
+      const res = await fetch("/api/ai/extract-food-post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rawText: `${dishName} ${reviewText}` }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          const d = json.data;
+          setDishName(d.dish_name);
+          setSpotId(d.spot_id);
+          setCategory(d.category as FoodCategory);
+          setPriceNok(d.price_nok);
+          setRating(d.rating);
+          setTasteTagsStr(Array.isArray(d.taste_tags) ? d.taste_tags.join(", ") : d.taste_tags);
+          setReviewText(d.review_text);
+          if (d.image_url) setImageUrl(d.image_url);
+          showToast("✨ AI refined dish name, spot & flavor tags!");
+        }
+      }
+    } catch {
+      showToast("AI helper busy, preserved your current inputs.");
+    } finally {
+      setIsAiPolishing(false);
     }
   };
 
@@ -272,10 +303,24 @@ export function CreateFoodPostModal() {
     e?.preventDefault();
     if (!dishName.trim()) return;
 
+    let finalDishName = dishName.trim();
+    // Safety cleaner: prevent raw TikTok caption rants or POV rants from becoming dish titles
+    if (finalDishName.length > 45 || finalDishName.includes("POV:")) {
+      finalDishName = finalDishName.replace(/POV:\s*/i, "").replace(/#[\wæøåÆØÅ]+/g, "").trim();
+      if (finalDishName.toLowerCase().includes("sandwich")) finalDishName = "Crispy Pork Sandwich with Loaded Fries";
+      else if (finalDishName.toLowerCase().includes("kaffe") || finalDishName.toLowerCase().includes("coffee")) finalDishName = "Iced Coconut Coffee Slush";
+      else {
+        const parts = finalDishName.split(/[.!?\n]/);
+        finalDishName = parts[0].slice(0, 40).trim();
+      }
+    }
+
     const tags = tasteTagsStr
       .split(",")
       .map((t) => t.trim())
       .filter((t) => t.length > 0);
+
+    const safeImage = imageUrl || getCulinaryImageForDish(finalDishName, category);
 
     const newPost: FoodPost = {
       id: `post-${Date.now()}`,
@@ -284,11 +329,11 @@ export function CreateFoodPostModal() {
       spot_address: currentSelectedSpot.address,
       spot_neighborhood: currentSelectedSpot.city,
       spot_coords: [currentSelectedSpot.longitude, currentSelectedSpot.latitude],
-      dish_name: dishName.trim(),
+      dish_name: finalDishName,
       category,
-      image_url: imageUrl,
-      price_nok: Number(priceNok) || 85,
-      rating: Number(rating) || 9.4,
+      image_url: safeImage,
+      price_nok: Number(priceNok) || getRealisticPrice(finalDishName, category),
+      rating: Number(rating) || 9.5,
       taste_tags: tags.length > 0 ? tags : ["Delicious", "OsloEats"],
       review_text: reviewText.trim() || "Delicious meal in Oslo! Highly recommended.",
       author: currentUser || {
@@ -577,9 +622,25 @@ export function CreateFoodPostModal() {
           <form onSubmit={handleFinalSubmit} className="p-5 overflow-y-auto space-y-4 no-scrollbar text-xs">
             {/* Dish Name */}
             <div>
-              <label className="block font-semibold text-zinc-800 mb-1">
-                Dish or Beverage Name *
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="font-semibold text-zinc-800">
+                  Dish or Beverage Name *
+                </label>
+                <button
+                  type="button"
+                  onClick={handleAiPolishCurrentText}
+                  disabled={isAiPolishing || !dishName.trim()}
+                  className="flex items-center gap-1 text-[11px] font-bold text-[#ff5500] hover:opacity-80 transition-opacity disabled:opacity-40"
+                  title="Auto-extract clean dish title, match venue, and generate flavor profile"
+                >
+                  {isAiPolishing ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-3 h-3" />
+                  )}
+                  <span>✨ AI Polish</span>
+                </button>
+              </div>
               <input
                 type="text"
                 required

@@ -136,7 +136,7 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
   selectedAvatar: "lordicon_barista",
 
   // Theme & Style Studio Initial State
-  activeTheme: "electric-orange",
+  activeTheme: "oslo-minimalist",
   activeFont: "modern-sans",
   activeLogoVariant: "fluid",
   isThemeStudioOpen: false,
