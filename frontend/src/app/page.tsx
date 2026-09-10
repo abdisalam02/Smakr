@@ -23,6 +23,7 @@ export default function PulseFoodRadarPage() {
   useLiveVibeSync();
 
   const venues = useCityPulseStore((state) => state.venues);
+  const selectedVenue = useCityPulseStore((state) => state.selectedVenue);
   const setVenues = useCityPulseStore((state) => state.setVenues);
   const viewMode = useCityPulseStore((state) => state.viewMode);
   const foodPosts = useCityPulseStore((state) => state.foodPosts);
@@ -443,8 +444,8 @@ export default function PulseFoodRadarPage() {
             </div>
           </div>
 
-          {/* Cravings Category Filter Bar */}
-          <div className="shrink-0 border-b border-zinc-100">
+          {/* Cravings Category Filter Bar (Visible when sheet is expanded) */}
+          <div className={`shrink-0 border-b border-zinc-100 transition-opacity duration-200 ${mobileSheet === "peek" ? "hidden" : "block"}`}>
             <FoodCategoryBar compact />
           </div>
 
@@ -454,7 +455,7 @@ export default function PulseFoodRadarPage() {
             onTouchStart={handleContentTouchStart}
             onTouchMove={handleContentTouchMove}
             onTouchEnd={handleContentTouchEnd}
-            className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar overscroll-contain pb-24"
+            className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar overscroll-contain pb-28"
           >
             {feedMode === "food" ? (
               filteredPosts.length === 0 ? (
@@ -494,16 +495,20 @@ export default function PulseFoodRadarPage() {
               )
             )}
           </div>
+        </div>
 
-          {/* Floating Glassmorphic Slider on Mobile */}
-          {mobileSheet !== "peek" && (
-            <div className="absolute bottom-3 left-0 right-0 flex justify-center z-30 pointer-events-none pb-[max(env(safe-area-inset-bottom,0px),6px)]">
-              <FoodViewSlider
-                dishesCount={filteredPosts.length}
-                spotsCount={filteredVenues.length}
-              />
-            </div>
-          )}
+        {/* Floating Glassmorphic Slider on Mobile (Cross-browser WebKit/Chromium/Gecko, Theme-Adaptive) */}
+        <div
+          className={`lg:hidden fixed bottom-4 left-0 right-0 z-35 flex justify-center pointer-events-none px-4 pb-[max(env(safe-area-inset-bottom,0px),8px)] transition-all duration-300 ease-out ${
+            selectedVenue
+              ? "opacity-0 pointer-events-none translate-y-6 scale-95"
+              : "opacity-100 translate-y-0 scale-100"
+          }`}
+        >
+          <FoodViewSlider
+            dishesCount={filteredPosts.length}
+            spotsCount={filteredVenues.length}
+          />
         </div>
       </div>
 

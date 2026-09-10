@@ -615,5 +615,34 @@ html, body {
   }
 }
 
+/* ========================================================================= */
+/* UNIVERSAL CROSS-BROWSER GLASSMORPHISM & THEME SLIDER                     */
+/* Supports: WebKit (iOS Safari, macOS Safari), Chromium (Chrome, Edge),    */
+/* Gecko (Firefox), Samsung Internet with automatic theme variable binding   */
+/* ========================================================================= */
+
+.smakr-glass-slider {
+  background-color: var(--surface);
+  background-color: color-mix(in srgb, var(--surface, #ffffff) 84%, transparent);
+  border: 1px solid var(--surface-border);
+  border-color: color-mix(in srgb, var(--surface-border, #e4e4e7) 80%, transparent);
+  box-shadow: 0 12px 36px -6px rgba(0, 0, 0, 0.22), 0 4px 14px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--surface-border);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transform: translate3d(0, 0, 0);
+  -webkit-transform: translate3d(0, 0, 0);
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .smakr-glass-slider {
+    background-color: var(--surface) !important;
+    opacity: 0.97;
+  }
+}
+
 
 

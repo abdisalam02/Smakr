@@ -17,27 +17,64 @@ export function FoodViewSlider({
 }: FoodViewSliderProps) {
   const feedMode = useCityPulseStore((state) => state.feedMode);
   const setFeedMode = useCityPulseStore((state) => state.setFeedMode);
+  const mobileSheet = useCityPulseStore((state) => state.mobileSheetState);
+  const setMobileSheet = useCityPulseStore((state) => state.setMobileSheetState);
+
+  const handleSelectMode = (mode: "food" | "places") => {
+    setFeedMode(mode);
+    // If mobile sheet is in collapsed peek state, smoothly open to half so user can view list!
+    if (mobileSheet === "peek") {
+      setMobileSheet("half");
+    }
+  };
 
   return (
     <div className={`pointer-events-auto select-none ${className}`}>
-      <div className="flex items-center p-1 rounded-full bg-white/85 dark:bg-zinc-900/85 backdrop-blur-xl border border-white/60 dark:border-zinc-800/60 shadow-xl shadow-black/10 ring-1 ring-zinc-900/5">
+      <div
+        className="smakr-glass-slider flex items-center p-1.5 rounded-full transition-all duration-300"
+        style={{
+          fontFamily: "var(--font-main, inherit)",
+        }}
+      >
         {/* Food / Dishes Toggle */}
         <button
-          onClick={() => setFeedMode("food")}
-          className={`flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 ${
+          onClick={() => handleSelectMode("food")}
+          type="button"
+          aria-label="View Food Dishes"
+          className="flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs font-bold transition-all duration-200 active:scale-95 cursor-pointer"
+          style={
             feedMode === "food"
-              ? "bg-zinc-950 text-white shadow-sm scale-100"
-              : "text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100/70 scale-95"
-          }`}
+              ? {
+                  backgroundColor: "var(--btn-primary-bg, #18181b)",
+                  color: "var(--btn-primary-text, #ffffff)",
+                  boxShadow: "0 2px 10px rgba(0, 0, 0, 0.18)",
+                }
+              : {
+                  color: "var(--muted, #71717a)",
+                  backgroundColor: "transparent",
+                }
+          }
         >
-          <Utensils className={`w-3.5 h-3.5 ${feedMode === "food" ? "text-[#ff5500]" : "text-zinc-500"}`} />
-          <span>Food</span>
+          <Utensils
+            className="w-3.5 h-3.5 shrink-0 transition-colors"
+            style={{
+              color: feedMode === "food" ? "var(--accent, #ff5500)" : "currentColor",
+            }}
+          />
+          <span className="tracking-tight">Food</span>
           <span
-            className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
+            className="text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold transition-colors"
+            style={
               feedMode === "food"
-                ? "bg-zinc-800 text-zinc-200"
-                : "bg-zinc-200/70 text-zinc-600"
-            }`}
+                ? {
+                    backgroundColor: "color-mix(in srgb, var(--btn-primary-text, #ffffff) 20%, transparent)",
+                    color: "var(--btn-primary-text, #ffffff)",
+                  }
+                : {
+                    backgroundColor: "var(--surface-raised, #f4f4f5)",
+                    color: "var(--muted, #71717a)",
+                  }
+            }
           >
             {dishesCount}
           </span>
@@ -45,21 +82,43 @@ export function FoodViewSlider({
 
         {/* Locations / Restaurants Toggle */}
         <button
-          onClick={() => setFeedMode("places")}
-          className={`flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 ${
+          onClick={() => handleSelectMode("places")}
+          type="button"
+          aria-label="View Food Locations"
+          className="flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs font-bold transition-all duration-200 active:scale-95 cursor-pointer"
+          style={
             feedMode === "places"
-              ? "bg-zinc-950 text-white shadow-sm scale-100"
-              : "text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100/70 scale-95"
-          }`}
+              ? {
+                  backgroundColor: "var(--btn-primary-bg, #18181b)",
+                  color: "var(--btn-primary-text, #ffffff)",
+                  boxShadow: "0 2px 10px rgba(0, 0, 0, 0.18)",
+                }
+              : {
+                  color: "var(--muted, #71717a)",
+                  backgroundColor: "transparent",
+                }
+          }
         >
-          <MapPin className={`w-3.5 h-3.5 ${feedMode === "places" ? "text-[#ff5500]" : "text-zinc-500"}`} />
-          <span>Locations</span>
+          <MapPin
+            className="w-3.5 h-3.5 shrink-0 transition-colors"
+            style={{
+              color: feedMode === "places" ? "var(--accent, #ff5500)" : "currentColor",
+            }}
+          />
+          <span className="tracking-tight">Locations</span>
           <span
-            className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
+            className="text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold transition-colors"
+            style={
               feedMode === "places"
-                ? "bg-zinc-800 text-zinc-200"
-                : "bg-zinc-200/70 text-zinc-600"
-            }`}
+                ? {
+                    backgroundColor: "color-mix(in srgb, var(--btn-primary-text, #ffffff) 20%, transparent)",
+                    color: "var(--btn-primary-text, #ffffff)",
+                  }
+                : {
+                    backgroundColor: "var(--surface-raised, #f4f4f5)",
+                    color: "var(--muted, #71717a)",
+                  }
+            }
           >
             {spotsCount}
           </span>
