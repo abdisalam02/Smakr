@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Search, Plus, LayoutGrid, Map, Columns, LogOut } from "lucide-react";
+import { Search, Plus, LayoutGrid, Map, Columns, LogOut, Palette } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { SmakrSIcon } from "@/components/ui/SmakrSIcon";
 
@@ -19,6 +19,7 @@ export function Header() {
   const currentUser = useCityPulseStore((state) => state.currentUser);
   const setIsAuthModalOpen = useCityPulseStore((state) => state.setIsAuthModalOpen);
   const logout = useCityPulseStore((state) => state.logout);
+  const setIsThemeStudioOpen = useCityPulseStore((state) => state.setIsThemeStudioOpen);
 
   const handleAddDish = () => {
     if (!currentUser) {
@@ -104,6 +105,16 @@ export function Header() {
               </button>
             </div>
           )}
+
+          {/* Theme & Style Studio Button */}
+          <button
+            onClick={() => setIsThemeStudioOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/95 hover:bg-white text-zinc-700 hover:text-[#ff5500] border border-white/80 shadow-xs transition-all active:scale-95"
+            title="Style & Theme Studio"
+          >
+            <Palette className="w-3.5 h-3.5 text-[#ff5500]" />
+            <span className="hidden sm:inline text-xs font-semibold">Theme</span>
+          </button>
 
           {/* Add Dish CTA (Auth-gated) */}
           <button

@@ -215,11 +215,11 @@ export default function PulseFoodRadarPage() {
         <div
           className={`${
             viewMode === "map"
-              ? "hidden"
+              ? "w-0 max-w-0 opacity-0 pointer-events-none p-0 border-r-0"
               : viewMode === "feed"
-              ? "w-full max-w-4xl mx-auto"
-              : "w-[46%] xl:w-[42%]"
-          } h-full border-r border-zinc-200/80 bg-white flex flex-col overflow-hidden transition-all duration-300`}
+              ? "w-full max-w-5xl mx-auto opacity-100 border-r-0"
+              : "w-[46%] xl:w-[42%] opacity-100 border-r border-zinc-200/80"
+          } h-full bg-white flex flex-col overflow-hidden transition-all duration-350 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[width,opacity]`}
         >
           <FoodCategoryBar />
           <div className="flex-1 overflow-y-auto p-5 space-y-4 no-scrollbar">
@@ -262,11 +262,11 @@ export default function PulseFoodRadarPage() {
         <div
           className={`${
             viewMode === "feed"
-              ? "hidden"
+              ? "w-0 max-w-0 opacity-0 pointer-events-none"
               : viewMode === "map"
-              ? "w-full"
-              : "w-[54%] xl:w-[58%]"
-          } h-full relative transition-all duration-300`}
+              ? "w-full opacity-100"
+              : "w-[54%] xl:w-[58%] opacity-100"
+          } h-full relative transition-all duration-350 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[width,opacity]`}
         >
           <MapRadarView />
         </div>

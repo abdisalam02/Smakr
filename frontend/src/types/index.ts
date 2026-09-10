@@ -177,11 +177,21 @@ export interface LiveRadarEvent {
     new_food_post?: FoodPost;
   };
   event_type?: string;
-  venue_id?: string;
-  venue_name?: string;
-  vibe?: VibeMetrics;
-  checkin?: LiveCheckin;
-  speed_test?: WifiSpeedTest;
   food_post?: FoodPost;
   timestamp?: string;
 }
+
+export type ColorTheme =
+  | "electric-orange"
+  | "nordic-amber"
+  | "midnight-gastro"
+  | "matcha-botanic"
+  | "oslo-monolith";
+
+export type TypographyStyle =
+  | "modern-sans"
+  | "editorial-serif"
+  | "street-grotesk"
+  | "rounded-modern";
+
+export type LogoVariant = "fluid" | "geometric" | "ribbon" | "block";

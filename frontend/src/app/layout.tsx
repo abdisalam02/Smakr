@@ -3,6 +3,7 @@ import "./globals.css";
 import { Header } from "@/components/ui/Header";
 import { QuickCheckInModal } from "@/components/checkin/QuickCheckInModal";
 import { SpeedTestWidget } from "@/components/checkin/SpeedTestWidget";
+import { ThemeStudioModal, ThemeStudioTrigger } from "@/components/ui/ThemeStudioModal";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://smakr.vercel.app"),
@@ -36,13 +37,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-[#f6f3ee] text-[#221e19] min-h-screen flex flex-col antialiased selection:bg-[#b85434] selection:text-white">
+      <body className="bg-[#f6f3ee] text-[#221e19] min-h-screen flex flex-col antialiased selection:bg-[#ff5500] selection:text-white">
         <Header />
-        <main className="flex-1 flex flex-col relative overflow-hidden bg-[#f6f3ee]">
+        <main className="flex-1 flex flex-col relative overflow-hidden">
           {children}
         </main>
         <QuickCheckInModal />
         <SpeedTestWidget />
+        <ThemeStudioTrigger />
+        <ThemeStudioModal />
       </body>
     </html>
   );

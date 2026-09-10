@@ -12,6 +12,9 @@ import {
   ViewMode,
   UserProfile,
   AvatarOption,
+  ColorTheme,
+  TypographyStyle,
+  LogoVariant,
 } from "@/types";
 import { INITIAL_FOOD_SPOTS, INITIAL_FOOD_POSTS } from "@/lib/foodSeeds";
 import { getDistanceInMeters } from "@/lib/math";
@@ -57,7 +60,17 @@ interface PulseStoreState {
   feedCategory: FoodCategory;
   selectedAvatar: AvatarOption;
 
+  // Theme & Style Studio
+  activeTheme: ColorTheme;
+  activeFont: TypographyStyle;
+  activeLogoVariant: LogoVariant;
+  isThemeStudioOpen: boolean;
+
   // Actions
+  setActiveTheme: (theme: ColorTheme) => void;
+  setActiveFont: (font: TypographyStyle) => void;
+  setActiveLogoVariant: (variant: LogoVariant) => void;
+  setIsThemeStudioOpen: (open: boolean) => void;
   setSelectedAvatar: (avatar: AvatarOption) => void;
   showToast: (message: string, durationMs?: number) => void;
   clearToast: () => void;
@@ -121,6 +134,43 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
   mapCategory: "all",
   feedCategory: "all",
   selectedAvatar: "lordicon_barista",
+
+  // Theme & Style Studio Initial State
+  activeTheme: "electric-orange",
+  activeFont: "modern-sans",
+  activeLogoVariant: "fluid",
+  isThemeStudioOpen: false,
+
+  setActiveTheme: (activeTheme: ColorTheme) => {
+    set({ activeTheme });
+    if (typeof window !== "undefined") {
+      document.documentElement.setAttribute("data-theme", activeTheme);
+      try {
+        localStorage.setItem("smakr_theme", activeTheme);
+      } catch {}
+    }
+  },
+
+  setActiveFont: (activeFont: TypographyStyle) => {
+    set({ activeFont });
+    if (typeof window !== "undefined") {
+      document.documentElement.setAttribute("data-font", activeFont);
+      try {
+        localStorage.setItem("smakr_font", activeFont);
+      } catch {}
+    }
+  },
+
+  setActiveLogoVariant: (activeLogoVariant: LogoVariant) => {
+    set({ activeLogoVariant });
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("smakr_logo", activeLogoVariant);
+      } catch {}
+    }
+  },
+
+  setIsThemeStudioOpen: (isThemeStudioOpen: boolean) => set({ isThemeStudioOpen }),
 
   setSelectedAvatar: (selectedAvatar: AvatarOption) => set({ selectedAvatar }),
 
