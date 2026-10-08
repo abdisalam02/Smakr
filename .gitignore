@@ -44,3 +44,6 @@ Thumbs.db
 
 # Dev server log
 .next-dev.log
+
+# Recordings / debugging media
+*.mp4

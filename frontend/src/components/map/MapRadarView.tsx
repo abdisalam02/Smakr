@@ -322,17 +322,20 @@ export function MapRadarView() {
         const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
 
         if (isMobile) {
-          // Mobile: the bottom sheet covers the lower map, so pad the camera.
+          // Mobile: the bottom sheet covers the lower map, so pad the camera based on sheet mode.
           const containerH =
             activeMap.getContainer()?.clientHeight ||
             (typeof window !== "undefined" ? window.innerHeight : 650);
-          const bottomPad = Math.min(340, Math.max(220, Math.round(containerH * 0.44)));
+          const currentSheet = useCityPulseStore.getState().mobileSheetState;
+          const bottomPad = currentSheet === "peek" ? 130 : Math.min(340, Math.max(220, Math.round(containerH * 0.44)));
 
           activeMap.flyTo({
             center: [current.longitude, current.latitude],
             zoom: 15.5,
             essential: true,
-            duration: 500,
+            speed: 1.1,
+            curve: 1.35,
+            maxDuration: 900,
             padding: { top: 60, bottom: bottomPad, left: 0, right: 0 },
           });
         } else {
@@ -341,7 +344,9 @@ export function MapRadarView() {
             center: [current.longitude, current.latitude],
             zoom: 15.5,
             essential: true,
-            duration: 500,
+            speed: 1.1,
+            curve: 1.35,
+            maxDuration: 900,
             padding: { top: 0, bottom: 0, left: 0, right: 0 },
           });
         }
@@ -504,10 +509,6 @@ export function MapRadarView() {
       minZoom: 9,
       maxZoom: 19,
       doubleClickZoom: true,
-      // Prevents the browser from discarding the WebGL buffer between frames,
-      // which otherwise leaves partially blank ("blocked") map regions when the
-      // canvas is composited under translucent/blurred chrome.
-      canvasContextAttributes: { preserveDrawingBuffer: true },
     });
 
     mapInstance.current = map;
@@ -720,7 +721,10 @@ export function MapRadarView() {
     map.resize();
     const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
     const containerH = map.getContainer()?.clientHeight || (typeof window !== "undefined" ? window.innerHeight : 650);
-    const bottomPad = isMobile ? Math.min(340, Math.max(220, Math.round(containerH * 0.44))) : 0;
+    const currentSheet = useCityPulseStore.getState().mobileSheetState;
+    const bottomPad = isMobile
+      ? (currentSheet === "peek" ? 130 : Math.min(340, Math.max(220, Math.round(containerH * 0.44))))
+      : 0;
 
     map.flyTo({
       center: [mapCenter[0], mapCenter[1]],
@@ -729,7 +733,9 @@ export function MapRadarView() {
       // produced choppy pans / stale ("blocked") canvas tiles on cellphones.
       pitch: 0,
       essential: true,
-      duration: 800,
+      speed: 1.1,
+      curve: 1.35,
+      maxDuration: 1100,
       padding: {
         top: isMobile ? 60 : 0,
         bottom: bottomPad,
@@ -967,13 +973,40 @@ export function MapRadarView() {
       anchor: "top",
       closeButton: false,
       closeOnClick: false,
+      // Focusing an off-screen popup button makes the browser scroll the
+      // overflow-hidden map container sideways mid-flight.
+      focusAfterOpen: false,
       className: "smakr-pin-card-popup",
     })
       .setLngLat([selectedVenue.longitude, selectedVenue.latitude])
-      .setDOMContent(popupNode)
-      .addTo(map);
+      .setDOMContent(popupNode);
 
     venuePopupRef.current = popup;
+
+    const resetContainerScroll = () => {
+      const container = map.getContainer();
+      let node: HTMLElement | null = container;
+      while (node) {
+        if (node.scrollLeft !== 0) node.scrollLeft = 0;
+        node = node.parentElement;
+      }
+    };
+
+    // Mount only once the camera has landed so the card never starts off-screen.
+    const attach = () => {
+      if (venuePopupRef.current !== popup) return;
+      popup.addTo(map);
+      resetContainerScroll();
+    };
+    if (map.isMoving()) {
+      map.once("moveend", attach);
+    } else {
+      requestAnimationFrame(() => (map.isMoving() ? map.once("moveend", attach) : attach()));
+    }
+
+    return () => {
+      map.off("moveend", attach);
+    };
   }, [selectedVenue, isMapReady, setSelectedVenue, setIsVenueDetailModalOpen]);
 
   function cycleTheme() {

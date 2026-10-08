@@ -48,3 +48,5 @@
 - Geolocation: two-stage (fast network fix, then background GPS refine) — "find me" is near-instant instead of ~3s.
 - Onboarding: a duplicate @handle (23505) now shows "already taken — try adding a number" and keeps the modal open on the handle step instead of hanging.
 - SSR session: the root layout reads the session (cookies) and passes the user to `Header` + `AuthProvider`, so the first painted frame shows the signed-in user (no logged-out flash on hard refresh). App is now `force-dynamic`.
+- Map fly-to: calibrated parabolic flight curve (speed 1.1, curve 1.35) and dynamic peek bottom padding (130px) for smooth inter-venue transitions.
+- Map popup: `focusAfterOpen: false` and mounts on `moveend`. Focusing an off-screen popup button was scrolling the map container sideways (the Digg Pizza jerk).
