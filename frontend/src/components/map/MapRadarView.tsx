@@ -2,6 +2,13 @@
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import * as maplibregl from "maplibre-gl";
+
+// Next.js/Turbopack cannot emit MapLibre v6's ESM worker (it would 404 next to
+// the hashed app chunk), so both worker files are self-hosted from
+// `public/maplibre/` and pointed to once here, before any Map is constructed.
+if (typeof window !== "undefined") {
+  maplibregl.setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
+}
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { MapControls } from "@/components/map/MapControls";
 import { fetchVenueDetail } from "@/lib/api";

@@ -14,7 +14,7 @@ import {
   Bookmark,
 } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, useDragControls } from "motion/react";
 import { useVenueDetail } from "@/hooks/useVenueDetail";
 import { formatDistance } from "@/lib/math";
 import { ReviewItem } from "@/types";
@@ -42,6 +42,10 @@ export function VenueBottomSheet() {
   const setBottomSheetOpen = useCityPulseStore((state) => state.setBottomSheetOpen);
   const openCreateDish = useCityPulseStore((state) => state.openCreateDish);
   const mobileSheetState = useCityPulseStore((state) => state.mobileSheetState);
+
+  // Drag-to-dismiss is armed only from the grab handle, so scrolling the inner
+  // content down can never fling the details sheet closed.
+  const detailsDragControls = useDragControls();
 
   const isDesktop = useIsDesktop();
 
@@ -185,10 +189,13 @@ export function VenueBottomSheet() {
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 300 }}
               drag="y"
+              dragControls={detailsDragControls}
+              dragListener={false}
               dragConstraints={{ top: 0 }}
-              dragElastic={{ top: 0, bottom: 0.5 }}
+              dragElastic={{ top: 0, bottom: 0.35 }}
               onDragEnd={(_, info) => {
-                if (info.offset.y > 90 || info.velocity.y > 300) {
+                // Only a deliberate, sizeable downward pull closes the sheet.
+                if (info.offset.y > 150 || info.velocity.y > 700) {
                   setIsVenueDetailModalOpen(false);
                 }
               }}
@@ -196,6 +203,7 @@ export function VenueBottomSheet() {
             >
               {/* Grab Handle Header for dragging */}
               <div
+                onPointerDown={(e) => detailsDragControls.start(e)}
                 className="w-full flex flex-col items-center pt-2.5 pb-2.5 px-5 cursor-grab active:cursor-grabbing bg-[#fbf9f5] border-b border-black/[0.06] shrink-0 touch-none select-none"
               >
                 {/* Pill grab bar */}
