@@ -4,6 +4,7 @@ import { useEffect, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { persistMascotConfig } from "@/lib/supabase/data";
 import type { OnboardingAvatarConfig } from "@/types/onboarding";
 import type { MascotConfig } from "@/types/mascot";
 import type { UserProfile } from "@/types";
@@ -138,6 +139,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Mascot is per-user (profiles.mascot_config) — restore it when present.
         if (profile.mascot_config) {
           hydrateMascotConfig(profile.mascot_config);
+        } else {
+          // First sign-in with a browser-local mascot — back it up to the profile
+          // so it follows the account instead of living only on this device.
+          void persistMascotConfig(profile.id, useCityPulseStore.getState().mascotConfig);
         }
         return;
       }
