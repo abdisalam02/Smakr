@@ -247,6 +247,8 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   const feedScrollRef = useRef<HTMLDivElement>(null);
   const contentTouchStartY = useRef<number | null>(null);
   const isContentPulling = useRef<boolean>(false);
+  // When the sheet is in "peek", a touch anywhere on the content drags the sheet.
+  const contentDelegatedDrag = useRef<boolean>(false);
 
   // Synchronize external sheet changes (buttons, pin clicks) to the DOM ref
   useEffect(() => {
@@ -359,6 +361,15 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
 
   // 2. Scrollable Content Pull-down to minimize when at top
   const handleContentTouchStart = (e: React.TouchEvent) => {
+    // In "peek" the feed is barely visible — a touch anywhere should drag the
+    // sheet (up to open, down to dismiss), mirroring the header grab handle.
+    if (mobileSheet === "peek") {
+      contentDelegatedDrag.current = true;
+      handleHeaderTouchStart(e);
+      return;
+    }
+    contentDelegatedDrag.current = false;
+
     const scrollTop = feedScrollRef.current ? feedScrollRef.current.scrollTop : 0;
     if (scrollTop <= 1) {
       contentTouchStartY.current = e.touches[0].clientY;
@@ -369,6 +380,10 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   };
 
   const handleContentTouchMove = (e: React.TouchEvent) => {
+    if (contentDelegatedDrag.current) {
+      handleHeaderTouchMove(e);
+      return;
+    }
     if (contentTouchStartY.current === null) return;
     const currentY = e.touches[0].clientY;
     const scrollTop = feedScrollRef.current ? feedScrollRef.current.scrollTop : 0;
@@ -397,6 +412,11 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   };
 
   const handleContentTouchEnd = (e: React.TouchEvent) => {
+    if (contentDelegatedDrag.current) {
+      contentDelegatedDrag.current = false;
+      handleHeaderTouchEnd();
+      return;
+    }
     if (isContentPulling.current && contentTouchStartY.current !== null) {
       const endY = e.changedTouches[0].clientY;
       const pullDown = endY - contentTouchStartY.current;
@@ -609,12 +629,15 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
             onTouchMove={handleContentTouchMove}
             onTouchEnd={handleContentTouchEnd}
             onClick={() => {
+              if (hasDraggedRef.current) return;
               if (mobileSheet === "peek") {
                 setMobileSheet("half");
               }
             }}
             className={`flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar overscroll-contain pb-28 ${
-              mobileSheet === "peek" ? "cursor-pointer active:opacity-90 transition-opacity" : ""
+              mobileSheet === "peek"
+                ? "cursor-pointer active:opacity-90 transition-opacity touch-none"
+                : ""
             }`}
           >
             {feedMode === "food" ? (

@@ -5,6 +5,7 @@ import type { Session } from "@supabase/supabase-js";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { OnboardingAvatarConfig } from "@/types/onboarding";
+import type { MascotConfig } from "@/types/mascot";
 import type { UserProfile } from "@/types";
 
 /**
@@ -26,6 +27,7 @@ interface ProfileRow {
   is_official: boolean | null;
   avatar_config?: OnboardingAvatarConfig | null;
   onboarding_completed?: boolean | null;
+  mascot_config?: MascotConfig | null;
 }
 
 // `*` (rather than an explicit column list) keeps the lookup resilient while the
@@ -43,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setCurrentUser = useCityPulseStore((state) => state.setCurrentUser);
   const setIsAuthModalOpen = useCityPulseStore((state) => state.setIsAuthModalOpen);
   const setIsAuthResolved = useCityPulseStore((state) => state.setIsAuthResolved);
+  const hydrateMascotConfig = useCityPulseStore((state) => state.hydrateMascotConfig);
   const showToast = useCityPulseStore((state) => state.showToast);
 
   useEffect(() => {
@@ -132,6 +135,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           avatar_config: profile.avatar_config ?? undefined,
           onboarding_completed: Boolean(profile.onboarding_completed),
         });
+        // Mascot is per-user (profiles.mascot_config) — restore it when present.
+        if (profile.mascot_config) {
+          hydrateMascotConfig(profile.mascot_config);
+        }
         return;
       }
 
@@ -200,7 +207,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       subscription.unsubscribe();
     };
-  }, [setCurrentUser, setIsAuthResolved]);
+  }, [setCurrentUser, setIsAuthResolved, hydrateMascotConfig]);
 
   // Surface middleware / callback bounces: `?auth=required` opens the modal,
   // `?auth_error=...` explains a failed PKCE exchange.

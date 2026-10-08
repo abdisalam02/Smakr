@@ -25,6 +25,17 @@ import {
   WEEKLY_PICK_STORAGE_KEY,
 } from "@/types";
 import { getDistanceInMeters } from "@/lib/math";
+import { persistMascotConfig } from "@/lib/supabase/data";
+
+/* Debounced, best-effort sync of the mascot config to the signed-in profile. */
+let mascotPersistTimer: ReturnType<typeof setTimeout> | null = null;
+function scheduleMascotPersist(userId: string, config: MascotConfig) {
+  if (typeof window === "undefined") return;
+  if (mascotPersistTimer) clearTimeout(mascotPersistTimer);
+  mascotPersistTimer = setTimeout(() => {
+    void persistMascotConfig(userId, config);
+  }, 1200);
+}
 
 const INITIAL_FILTERS: FilterState = {
   place_type: null,
@@ -113,6 +124,8 @@ interface PulseStoreState {
   toggleDietary: (tag: DietaryTag) => void;
   updateMascotConfig: (updates: Partial<MascotConfig>) => void;
   resetMascotConfig: () => void;
+  /** Hydrate the mascot from the server profile without scheduling a write-back. */
+  hydrateMascotConfig: (config: MascotConfig) => void;
   setFeedMode: (mode: "food" | "places") => void;
   setMobileSheetState: (state: "peek" | "half" | "full") => void;
   setIsAuthModalOpen: (open: boolean) => void;
@@ -303,8 +316,18 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
           localStorage.setItem(MASCOT_STORAGE_KEY, JSON.stringify(mascotConfig));
         } catch {}
       }
+      if (state.currentUser) scheduleMascotPersist(state.currentUser.id, mascotConfig);
       return { mascotConfig };
     }),
+
+  hydrateMascotConfig: (config) => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(MASCOT_STORAGE_KEY, JSON.stringify(config));
+      } catch {}
+    }
+    set({ mascotConfig: config });
+  },
 
   resetMascotConfig: () => {
     set({ mascotConfig: DEFAULT_MASCOT_CONFIG });
@@ -313,6 +336,8 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
         localStorage.removeItem(MASCOT_STORAGE_KEY);
       } catch {}
     }
+    const userId = get().currentUser?.id;
+    if (userId) scheduleMascotPersist(userId, DEFAULT_MASCOT_CONFIG);
   },
 
   setFoodCategory: (foodCategory) =>

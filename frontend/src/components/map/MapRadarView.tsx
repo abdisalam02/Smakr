@@ -238,9 +238,13 @@ export function MapRadarView() {
     const currentMapCategory = useCityPulseStore.getState().mapCategory;
     const currentNeighborhood = useCityPulseStore.getState().mapNeighborhood;
     const currentOpenNow = useCityPulseStore.getState().filters.open_now;
+    // The Weekly Pick venue is represented by the "Smakr Pick" mascot marker, so
+    // its own food pin is suppressed to avoid stacking two pins in one place.
+    const currentWeeklyVenueId = useCityPulseStore.getState().weeklyPick.venue_id;
 
     // Filter venues based on craving category, neighborhood & open status
     const visibleVenues = currentVenues.filter((venue) => {
+      if (currentWeeklyVenueId && venue.id === currentWeeklyVenueId) return false;
       if (currentMapCategory !== "all") {
         const categoryMatch =
           venue.food_category === currentMapCategory ||
@@ -574,7 +578,7 @@ export function MapRadarView() {
   // 2. Re-render markers when venues, selection, or filters change
   useEffect(() => {
     renderMarkers();
-  }, [venues, selectedVenue, mapCategory, mapNeighborhood, openNow, renderMarkers]);
+  }, [venues, selectedVenue, mapCategory, mapNeighborhood, openNow, weeklyPick.venue_id, renderMarkers]);
 
   // 2.5 Auto-fit map camera when category filter changes
   useEffect(() => {

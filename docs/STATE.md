@@ -39,3 +39,7 @@
 - Bottom nav rebuilt without the shared layoutId (fixes white active tab); food post card made translucent (`bg-[#181615]/80 backdrop-blur-md`, image `opacity-90`).
 - Session handling: middleware now refreshes the Supabase session cookie on every request (previously `/admin` only), so server code sees the signed-in user and long-lived tabs/reloads don't drop the session.
 - Auth model confirmed: `@supabase/ssr` browser client persists in cookies (400-day max-age, `autoRefreshToken`, PKCE); callback exchanges the code in a Route Handler.
+- Font picker moved off the public UI into the Admin → Settings tab; app body typeface defaults to Syne (`components/ui/FontSwitcher.tsx` now exports `BodyFontPicker`).
+- Mascot is now per-user: persisted to `profiles.mascot_config` (migration `20261013_profiles_mascot_config.sql`) and hydrated on sign-in — it was localStorage-only, so admins saw the default "lady" on fresh browsers.
+- Map: the Weekly Pick venue's own food pin is suppressed (the "Smakr Pick" mascot marker already represents it).
+- Mobile feed sheet: in peek, a touch anywhere on the sheet drags it open (previously header-handle only).

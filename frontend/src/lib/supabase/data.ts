@@ -196,6 +196,29 @@ export async function persistOnboarding(input: OnboardingPersistInput): Promise<
   }
 }
 
+/**
+ * Persists a user's mascot configuration to `profiles.mascot_config`.
+ * Best-effort — silently no-ops until the column migration is applied.
+ */
+export async function persistMascotConfig(userId: string, config: unknown): Promise<boolean> {
+  const supabase = getSupabaseBrowserClient();
+  if (!supabase) return false;
+  try {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ mascot_config: config })
+      .eq("id", userId);
+    if (error) {
+      console.warn("[data] persistMascotConfig failed:", error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn("[data] persistMascotConfig threw:", err);
+    return false;
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /* Admin writes — Google Places import & data cleanup                  */
 /* ------------------------------------------------------------------ */

@@ -33,6 +33,7 @@ import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
 import { VenueImporter, DataCleanupCard } from "@/components/admin/VenueImporter";
 import { EditPostModal } from "@/components/admin/EditPostModal";
 import { broadcastWeeklyPick, fetchFoodPosts, fetchVenues } from "@/lib/supabase/data";
+import { BodyFontPicker } from "@/components/ui/FontSwitcher";
 
 /* ------------------------------------------------------------------ */
 /* Static option lists                                                 */
@@ -103,7 +104,7 @@ function Card({ children, className = "" }: { children: React.ReactNode; classNa
   );
 }
 
-type TabId = "dispatch" | "venues" | "moderation";
+type TabId = "dispatch" | "venues" | "moderation" | "settings";
 
 /* ------------------------------------------------------------------ */
 /* Page                                                               */
@@ -387,12 +388,13 @@ export default function AdminControlCenterPage() {
         </div>
 
         {/* ============ Tabs ============ */}
-        <div className="mb-5 p-1 rounded-2xl bg-zinc-100 border border-zinc-200 grid grid-cols-3 gap-1">
+        <div className="mb-5 p-1 rounded-2xl bg-zinc-100 border border-zinc-200 grid grid-cols-4 gap-1">
           {(
             [
               { id: "dispatch", label: "Mascot & Dispatch", emoji: "📣" },
               { id: "venues", label: "Venue Management", emoji: "🏪" },
               { id: "moderation", label: "Post Moderation", emoji: "🛡️" },
+              { id: "settings", label: "Settings", emoji: "⚙️" },
             ] as { id: TabId; label: string; emoji: string }[]
           ).map((t) => {
             const active = tab === t.id;
@@ -919,6 +921,22 @@ export default function AdminControlCenterPage() {
                 </tbody>
               </table>
             </div>
+          </Card>
+        )}
+
+        {/* ================================================================= */}
+        {/* TAB 4 — Settings (typeface + appearance)                           */}
+        {/* ================================================================= */}
+        {tab === "settings" && (
+          <Card className="space-y-4">
+            <h2 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
+              <Palette className="w-4 h-4 text-[#e84a27]" />
+              Appearance &amp; Typeface
+            </h2>
+            <p className="text-xs text-zinc-500 leading-relaxed">
+              The app body typeface. Kept as <strong>Syne</strong> for the beta run — change it here if needed.
+            </p>
+            <BodyFontPicker />
           </Card>
         )}
       </div>
