@@ -587,7 +587,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
             transform: `translate3d(0, ${getSnapTranslateY(mobileSheet)}px, 0)`,
             transition: "transform 0.38s cubic-bezier(0.16, 1, 0.3, 1)",
           }}
-          className="absolute left-0 right-0 top-[57px] z-20 bg-[#FAF7F2]/80 dark:bg-[#181615]/80 backdrop-blur-md rounded-t-3xl border-t border-black/[0.08] shadow-2xl flex flex-col will-change-transform pb-[140px]"
+          className="absolute left-0 right-0 top-[57px] z-20 bg-[#FAF7F2]/85 dark:bg-[#181615]/85 rounded-t-3xl border-t border-black/[0.08] shadow-2xl flex flex-col will-change-transform pb-[140px]"
         >
           {/* Sticky Sheet Header: Grab Handle + Mascot Drop Pill + Category Filter Bar */}
           <div className="sticky top-0 z-20 bg-[#FAF7F2]/65 dark:bg-[#181615]/65 backdrop-blur-xl border-b border-black/[0.06] rounded-t-3xl shrink-0">

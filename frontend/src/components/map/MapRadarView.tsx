@@ -543,7 +543,7 @@ export function MapRadarView() {
     });
 
     map.on("styledata", () => {
-      safeResize();
+      map.triggerRepaint();
     });
 
     map.on("style.load", () => {
@@ -568,10 +568,10 @@ export function MapRadarView() {
       }
     });
 
-    // After a large pan / pitch, force a repaint + guarded resize so no canvas
-    // region is left blank (the "blocked out" map) on big pans to either side.
+    // After a large pan / pitch, force a repaint so no canvas region is left
+    // blank. IMPORTANT: never call `map.resize()` here — resize re-enters
+    // `moveend`, which recurses/loops and can leave the canvas half-rendered.
     map.on("moveend", () => {
-      safeResize();
       map.triggerRepaint();
     });
 
@@ -976,10 +976,15 @@ export function MapRadarView() {
       {/* Map Canvas — kept mounted (opacity only) so MapLibre can measure it */}
       <div
         ref={mapContainer}
-        className={`absolute inset-0 w-full h-full transition-opacity duration-500 ease-out ${
-          isMapReady ? "opacity-100" : "opacity-0"
-        }`}
-        style={{ width: "100%", height: "100%" }}
+        className={`absolute inset-0 w-full h-full ${isMapReady ? "opacity-100" : "opacity-0"}`}
+        style={{
+          width: "100%",
+          height: "100%",
+          // Own GPU layer. Without this the WebGL canvas can be composited at a
+          // stale size (partially painted / "blocked" regions) on mobile GPUs.
+          transform: "translateZ(0)",
+          willChange: "transform",
+        }}
       />
 
       {/* Style Switcher Pills (Bottom-left on desktop only, completely clear of filters and feed) */}
