@@ -8,6 +8,7 @@ import { useGeolocation } from "@/hooks/useGeolocation";
 interface MapControlsProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
+  onLocate?: () => void;
   onToggleTheme?: () => void;
   isDarkTheme?: boolean;
 }
@@ -15,16 +16,25 @@ interface MapControlsProps {
 export function MapControls({
   onZoomIn,
   onZoomOut,
+  onLocate,
   onToggleTheme,
 }: MapControlsProps) {
   const { requestLocation, loading } = useGeolocation();
   const setMapCenter = useCityPulseStore((state) => state.setMapCenter);
 
+  const handleLocateClick = () => {
+    if (onLocate) {
+      onLocate();
+    } else {
+      requestLocation();
+    }
+  };
+
   return (
     <div className="absolute right-3.5 top-20 z-20 flex flex-col items-end gap-2 pointer-events-auto select-none">
       {/* Sleek Minimalist Locate Me Button */}
       <button
-        onClick={requestLocation}
+        onClick={handleLocateClick}
         disabled={loading}
         title="Locate Me"
         aria-label="Locate Me"

@@ -50,3 +50,10 @@
 - SSR session: the root layout reads the session (cookies) and passes the user to `Header` + `AuthProvider`, so the first painted frame shows the signed-in user (no logged-out flash on hard refresh). App is now `force-dynamic`.
 - Map fly-to: calibrated parabolic flight curve (speed 1.1, curve 1.35) and dynamic peek bottom padding (130px) for smooth inter-venue transitions.
 - Map popup: `focusAfterOpen: false` and mounts on `moveend`. Focusing an off-screen popup button was scrolling the map container sideways (the Digg Pizza jerk).
+- Venue details sheet: fluid touch pull-down and 0.38s cubic-bezier ease matching feed modal; bottom nav bound to modal open state so it restores immediately on close.
+- Map venue popup: elevated bottom padding (300-390px / ~48% container) so pin and descending card sit in upper-middle of screen clear of the peek sheet.
+- Geolocation pan: deduplicated setMapCenter triggers so locate runs a single un-interrupted flight curve matching venue pins.
+- User avatar scaling: root element returned to MapLibre while zoom scaling targets inner .puck-scale, preventing translate wipes and position jumping.
+- Puck proportions: compact 36px base avatar scaling down to 0.28x on zoom out; guest users receive stable randomized Open Peeps.
+- Mobile map clarity: the feed sheet and its sticky header are now opaque (they were `#FAF7F2]/85` and `/65` + `backdrop-blur-xl`). A translucent sibling made Chrome composite the WebGL canvas through a translucent surface, so the map above/behind the sheet rendered washed-out ("blocked"). Dropped the now-unneeded `preserveDrawingBuffer`.
+- Map camera: `flyToTarget` passes an explicit `duration: 850` instead of `speed` + `maxDuration: 900`. MapLibre derives the flight duration from distance and clamps it to 0 once it exceeds `maxDuration`, so longer flights (locate-me, some venue pins) snapped instantly while shorter ones glided. Every camera move now glides for the same 850ms, matching the category-filter/`fitBounds` calls.

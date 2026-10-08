@@ -108,6 +108,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   const searchQuery = useCityPulseStore((state) => state.filters.search_query);
   const setFeedCategory = useCityPulseStore((state) => state.setFeedCategory);
   const setIsCreateBiteModalOpen = useCityPulseStore((state) => state.setIsCreateBiteModalOpen);
+  const isVenueDetailModalOpen = useCityPulseStore((state) => state.isVenueDetailModalOpen);
 
   // Mobile Slide-up Bottom Sheet State (peek = 142px, half = 58vh, full = 92vh)
   const mobileSheet = useCityPulseStore((state) => state.mobileSheetState);
@@ -699,7 +700,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
       {/* ========================================================================= */}
       <div
         className={`lg:hidden fixed left-1/2 -translate-x-1/2 z-[45] pointer-events-auto flex items-center justify-center transition-all duration-300 ease-out ${
-          selectedVenue
+          isVenueDetailModalOpen
             ? "opacity-0 pointer-events-none translate-y-8 scale-90"
             : "opacity-100 translate-y-0 scale-100"
         }`}

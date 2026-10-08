@@ -11,6 +11,7 @@ if (typeof window !== "undefined") {
 }
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { MapControls } from "@/components/map/MapControls";
+import { useGeolocation } from "@/hooks/useGeolocation";
 import { fetchVenueDetail } from "@/lib/api";
 import { Venue } from "@/types";
 import {
@@ -23,6 +24,7 @@ import { FOOD_PIN_SVG_MAP } from "@/components/food/FoodIcons";
 import { formatDistance } from "@/lib/math";
 import {
   buildOpenPeepsSvg,
+  getOrCreateGuestOpenPeepsConfig,
   type OpenPeepsConfig,
 } from "@/lib/onboardingAvatar";
 import type { MascotConfig } from "@/types/mascot";
@@ -72,14 +74,21 @@ function buildUserAvatarPuckElement(
   mascotConfig?: MascotConfig | null,
   useMascot = false
 ): HTMLDivElement {
+  // MapLibre MUST exclusively own the root's `style.transform` (translate3d).
+  // All zoom scaling is applied strictly to the inner `.puck-scale` child.
+  const root = document.createElement("div");
+  root.className = "select-none pointer-events-none";
+
   const container = document.createElement("div");
   container.className =
-    "relative flex flex-col items-center group cursor-pointer select-none pointer-events-auto";
+    "puck-scale relative flex flex-col items-center select-none pointer-events-none";
+  container.style.transformOrigin = "bottom center";
+  container.style.willChange = "transform";
 
   // Small "You're here" caption above the puck.
   const badge = document.createElement("div");
   badge.className =
-    "bg-white/90 text-zinc-700 font-semibold text-[10px] leading-none px-2 py-1 rounded-full shadow-sm border border-black/5 whitespace-nowrap mb-0.5";
+    "puck-badge bg-white/90 text-zinc-700 font-semibold text-[10px] leading-none px-2 py-1 rounded-full shadow-sm border border-black/5 whitespace-nowrap mb-0.5 transition-opacity duration-200";
   badge.textContent = "You're here";
 
   // Character body wrapper with radar ripple under the feet
@@ -89,18 +98,18 @@ function buildUserAvatarPuckElement(
   // Radar ripple: soft pulsing circle under the avatar
   const ripple = document.createElement("div");
   ripple.className =
-    "absolute -bottom-1 w-11 h-3 rounded-full bg-[#e84a27] animate-ping opacity-35 pointer-events-none";
+    "absolute -bottom-1 w-10 h-3 rounded-full bg-[#e84a27] animate-ping opacity-35 pointer-events-none";
   ripple.style.animationDuration = "2.4s";
 
   // Soft shadow oval under avatar feet
   const shadow = document.createElement("div");
   shadow.className =
-    "absolute -bottom-0.5 w-9 h-2.5 rounded-full bg-black/25 blur-[1px] pointer-events-none";
+    "absolute -bottom-0.5 w-8 h-2 rounded-full bg-black/25 blur-[1px] pointer-events-none";
 
-  // Character avatar container showing head + torso (unclipped)
+  // Compact character avatar container showing head + torso (unclipped)
   const charContainer = document.createElement("div");
   charContainer.className =
-    "relative w-12 h-14 flex items-center justify-center filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.18)] transition-transform group-hover:scale-110";
+    "relative w-10 h-12 flex items-center justify-center filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.18)]";
 
   const renderSvgInto = (svgStr: string) => {
     charContainer.innerHTML = svgStr;
@@ -121,16 +130,13 @@ function buildUserAvatarPuckElement(
     charContainer.appendChild(img);
   } else if (useMascot) {
     // Admins / official accounts use the Smakr mascot — matching the header avatar.
-    renderSvgInto(buildMascotSVGString(mascotConfig ?? undefined, false, 48, 56));
+    renderSvgInto(buildMascotSVGString(mascotConfig ?? undefined, false, 40, 48));
   } else if (avatarConfig) {
     // Signed-in user with an Open Peeps avatar.
     renderSvgInto(buildOpenPeepsSvg(avatarConfig));
   } else {
-    // Logged-out / not-onboarded: a neutral "you" dot — never a random avatar.
-    charContainer.innerHTML = `
-      <span style="width:34px;height:34px;border-radius:9999px;background:#e84a27;border:3px solid #ffffff;box-shadow:0 3px 8px rgba(0,0,0,0.28);display:flex;align-items:center;justify-content:center;">
-        <span style="width:10px;height:10px;border-radius:9999px;background:#ffffff;"></span>
-      </span>`;
+    // Non-logged-in / guest: randomly generated Open Peeps avatar
+    renderSvgInto(buildOpenPeepsSvg(getOrCreateGuestOpenPeepsConfig()));
   }
 
   bodyWrapper.appendChild(ripple);
@@ -139,7 +145,32 @@ function buildUserAvatarPuckElement(
 
   container.appendChild(badge);
   container.appendChild(bodyWrapper);
-  return container;
+  root.appendChild(container);
+  return root;
+}
+
+/**
+ * Dynamically scales the avatar puck smaller as the map zooms out so it never
+ * covers city blocks, while staying compact and proportional at street-level zoom.
+ * Strictly transforms `.puck-scale` so MapLibre's marker translate is never touched.
+ */
+function applyPuckZoomScale(rootEl: HTMLElement, zoom: number) {
+  const scaleEl = rootEl.querySelector<HTMLElement>(".puck-scale") ?? rootEl;
+  // Compact avatar scaling:
+  // At zoom 16+ (street level): 0.88
+  // At zoom 15 (neighborhood): 0.74
+  // At zoom 14 (district): 0.60
+  // At zoom 13 (city center): 0.46
+  // At zoom 12 (greater city): 0.36
+  // At zoom <= 11 (overview): 0.28
+  const scale = Math.max(0.28, Math.min(0.88, 0.88 - (16.0 - zoom) * 0.14));
+  scaleEl.style.transform = `scale(${scale.toFixed(3)})`;
+
+  const badge = rootEl.querySelector<HTMLElement>(".puck-badge");
+  if (badge) {
+    badge.style.opacity = zoom < 14.2 ? "0" : "1";
+    badge.style.pointerEvents = "none";
+  }
 }
 
 function createAquarellePinElement(
@@ -228,6 +259,55 @@ export function MapRadarView() {
   const currentUser = useCityPulseStore((state) => state.currentUser);
   const mobileSheetState = useCityPulseStore((state) => state.mobileSheetState);
   const userLocationMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const lastAvatarSigRef = useRef<string>("");
+  const { requestLocation } = useGeolocation();
+
+  // Unified smooth flight logic matching the venue pins on the map
+  const flyToTarget = useCallback((lng: number, lat: number, targetZoom = 15.5) => {
+    const map = mapInstance.current;
+    if (!map) return;
+
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
+    const containerH =
+      map.getContainer()?.clientHeight ||
+      (typeof window !== "undefined" ? window.innerHeight : 650);
+    const bottomPad = isMobile
+      ? Math.min(390, Math.max(300, Math.round(containerH * 0.48)))
+      : 0;
+
+    map.flyTo({
+      center: [lng, lat],
+      zoom: targetZoom,
+      essential: true,
+      // Explicit duration instead of speed + maxDuration: MapLibre derives the
+      // duration from distance and clamps it to 0 once it exceeds maxDuration,
+      // which made longer flights snap instantly while short ones glided. A
+      // fixed duration makes every camera move (venue pins, feed "Map" pills and
+      // the locate-me button) animate identically and smoothly.
+      duration: 850,
+      curve: 1.35,
+      pitch: 0,
+      padding: {
+        top: isMobile ? 60 : 0,
+        bottom: bottomPad,
+        left: 0,
+        right: 0,
+      },
+    });
+  }, []);
+
+  const handleLocateMe = useCallback(() => {
+    const store = useCityPulseStore.getState();
+    if (store.selectedVenue) {
+      store.setSelectedVenue(null);
+    }
+    store.setMobileSheetState("peek");
+
+    if (userLocation) {
+      flyToTarget(userLocation.lon, userLocation.lat, 15.5);
+    }
+    requestLocation();
+  }, [userLocation, flyToTarget, requestLocation]);
 
   // Trigger map resize on mobile sheet gestures and initial load
   useEffect(() => {
@@ -316,40 +396,7 @@ export function MapRadarView() {
           });
         }
 
-        const activeMap = mapInstance.current;
-        if (!activeMap) return;
-
-        const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
-
-        if (isMobile) {
-          // Mobile: the bottom sheet covers the lower map, so pad the camera based on sheet mode.
-          const containerH =
-            activeMap.getContainer()?.clientHeight ||
-            (typeof window !== "undefined" ? window.innerHeight : 650);
-          const currentSheet = useCityPulseStore.getState().mobileSheetState;
-          const bottomPad = currentSheet === "peek" ? 130 : Math.min(340, Math.max(220, Math.round(containerH * 0.44)));
-
-          activeMap.flyTo({
-            center: [current.longitude, current.latitude],
-            zoom: 15.5,
-            essential: true,
-            speed: 1.1,
-            curve: 1.35,
-            maxDuration: 900,
-            padding: { top: 60, bottom: bottomPad, left: 0, right: 0 },
-          });
-        } else {
-          // Desktop: master-detail split — the map is never covered by a sheet.
-          activeMap.flyTo({
-            center: [current.longitude, current.latitude],
-            zoom: 15.5,
-            essential: true,
-            speed: 1.1,
-            curve: 1.35,
-            maxDuration: 900,
-            padding: { top: 0, bottom: 0, left: 0, right: 0 },
-          });
-        }
+        flyToTarget(current.longitude, current.latitude, 15.5);
       };
 
       const el = createAquarellePinElement(venue, isSelected, handleSelect);
@@ -364,7 +411,7 @@ export function MapRadarView() {
 
       markersMap.current.set(venue.id, marker);
     });
-  }, [setSelectedVenue]);
+  }, [setSelectedVenue, flyToTarget]);
 
   // Floating "Pick of the Week" badge attached to the mascot marker
   const buildWeeklyBadge = useCallback((): HTMLDivElement => {
@@ -578,6 +625,10 @@ export function MapRadarView() {
           state.setSelectedVenue(null);
         }
       }
+      if (userLocationMarkerRef.current) {
+        const el = userLocationMarkerRef.current.getElement();
+        if (el) applyPuckZoomScale(el, z);
+      }
     });
 
     // After a large pan / pitch, force a repaint so no canvas region is left
@@ -714,36 +765,10 @@ export function MapRadarView() {
     map.setStyle(newStyle);
   }, [activeTheme]);
 
-  // 4. Center updates
+  // 4. Synchronize MapLibre camera with store `mapCenter` & `mapZoom`
   useEffect(() => {
-    const map = mapInstance.current;
-    if (!map) return;
-    map.resize();
-    const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
-    const containerH = map.getContainer()?.clientHeight || (typeof window !== "undefined" ? window.innerHeight : 650);
-    const currentSheet = useCityPulseStore.getState().mobileSheetState;
-    const bottomPad = isMobile
-      ? (currentSheet === "peek" ? 130 : Math.min(340, Math.max(220, Math.round(containerH * 0.44))))
-      : 0;
-
-    map.flyTo({
-      center: [mapCenter[0], mapCenter[1]],
-      zoom: mapZoom,
-      // Keep the camera flat: a pitched fly was the biggest mobile GPU cost and
-      // produced choppy pans / stale ("blocked") canvas tiles on cellphones.
-      pitch: 0,
-      essential: true,
-      speed: 1.1,
-      curve: 1.35,
-      maxDuration: 1100,
-      padding: {
-        top: isMobile ? 60 : 0,
-        bottom: bottomPad,
-        left: 0,
-        right: 0,
-      },
-    });
-  }, [mapCenter, mapZoom]);
+    flyToTarget(mapCenter[0], mapCenter[1], mapZoom);
+  }, [mapCenter, mapZoom, flyToTarget]);
 
   // 4b. Synchronize User Avatar Geolocation Puck
   useEffect(() => {
@@ -754,26 +779,38 @@ export function MapRadarView() {
       if (userLocationMarkerRef.current) {
         userLocationMarkerRef.current.remove();
         userLocationMarkerRef.current = null;
+        lastAvatarSigRef.current = "";
       }
       return;
     }
 
     const { lat, lon } = userLocation;
 
+    const isNiwacheOrAdmin =
+      currentUser?.role === "admin" ||
+      (currentUser?.handle || "").toLowerCase().includes("niwache");
+    const avatarSig = `${currentUser?.avatar_url || ""}:${currentUser?.role || ""}:${JSON.stringify(currentUser?.avatar_config || {})}:${JSON.stringify(mascotConfig || {})}`;
+
+    // If marker already exists and avatar identity has not changed, just update position smoothly
+    if (userLocationMarkerRef.current && lastAvatarSigRef.current === avatarSig) {
+      userLocationMarkerRef.current.setLngLat([lon, lat]);
+      return;
+    }
+
     if (userLocationMarkerRef.current) {
       userLocationMarkerRef.current.remove();
       userLocationMarkerRef.current = null;
     }
 
-    const isNiwacheOrAdmin =
-      currentUser?.role === "admin" ||
-      (currentUser?.handle || "").toLowerCase().includes("niwache");
+    lastAvatarSigRef.current = avatarSig;
     const el = buildUserAvatarPuckElement(
       currentUser?.avatar_url,
       currentUser?.avatar_config,
       mascotConfig,
       !currentUser?.avatar_url && isNiwacheOrAdmin
     );
+    applyPuckZoomScale(el, map.getZoom());
+
     const marker = new maplibregl.Marker({
       element: el,
       anchor: "bottom",
@@ -1068,6 +1105,7 @@ export function MapRadarView() {
       <MapControls
         onZoomIn={() => mapInstance.current?.zoomIn()}
         onZoomOut={() => mapInstance.current?.zoomOut()}
+        onLocate={handleLocateMe}
         onToggleTheme={cycleTheme}
         isDarkTheme={activeTheme === "aquarelle"}
       />

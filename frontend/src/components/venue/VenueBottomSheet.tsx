@@ -14,7 +14,7 @@ import {
   Bookmark,
 } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
-import { motion, AnimatePresence, useDragControls } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { useVenueDetail } from "@/hooks/useVenueDetail";
 import { formatDistance } from "@/lib/math";
 import { ReviewItem } from "@/types";
@@ -43,18 +43,23 @@ export function VenueBottomSheet() {
   const openCreateDish = useCityPulseStore((state) => state.openCreateDish);
   const mobileSheetState = useCityPulseStore((state) => state.mobileSheetState);
 
-  // Drag-to-dismiss is armed only from the grab handle, so scrolling the inner
-  // content down can never fling the details sheet closed.
-  const detailsDragControls = useDragControls();
-
   const isDesktop = useIsDesktop();
 
   // Expanded detailed slidable card state on mobile
   const isVenueDetailModalOpen = useCityPulseStore((state) => state.isVenueDetailModalOpen);
   const setIsVenueDetailModalOpen = useCityPulseStore((state) => state.setIsVenueDetailModalOpen);
-  const [detailsDragOffset, setDetailsDragOffset] = useState(0);
-  const [isDraggingDetails, setIsDraggingDetails] = useState(false);
-  const detailsTouchStartY = React.useRef<number | null>(null);
+
+  // Direct GPU-accelerated touch sheet refs and trackers (matching HomeView feed modal)
+  const sheetRef = React.useRef<HTMLDivElement>(null);
+  const contentScrollRef = React.useRef<HTMLDivElement>(null);
+  const isDraggingRef = React.useRef(false);
+  const dragStartYRef = React.useRef(0);
+  const currentYRef = React.useRef(0);
+  const lastTouchYRef = React.useRef(0);
+  const lastTouchTimeRef = React.useRef(0);
+  const currentVelocityRef = React.useRef(0);
+  const isContentPullingRef = React.useRef(false);
+  const contentTouchStartYRef = React.useRef<number | null>(null);
 
   // Shared venue data: posts, recommended meals, reactions, likes & saves
   const {
@@ -119,55 +124,166 @@ export function VenueBottomSheet() {
 
   const displayedReviews = showAllReviews ? reviews : reviews.slice(0, 2);
 
-  const handleDetailsTouchStart = (e: React.TouchEvent) => {
-    detailsTouchStartY.current = e.touches[0].clientY;
-    setIsDraggingDetails(true);
-  };
+  const handleClose = React.useCallback(() => {
+    setIsVenueDetailModalOpen(false);
+    setSelectedVenue(null);
+    setBottomSheetOpen(false);
+  }, [setIsVenueDetailModalOpen, setSelectedVenue, setBottomSheetOpen]);
 
-  const handleDetailsTouchMove = (e: React.TouchEvent) => {
-    if (detailsTouchStartY.current === null) return;
-    const currentY = e.touches[0].clientY;
-    const deltaY = currentY - detailsTouchStartY.current;
-    if (deltaY > 0) {
-      setDetailsDragOffset(deltaY);
+  // Keyboard Escape dismiss
+  useEffect(() => {
+    if (!isVenueDetailModalOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isVenueDetailModalOpen, handleClose]);
+
+  // 1. Header grab bar touch drag handlers (direct GPU transform, fluid 0.38s ease)
+  const handleHeaderTouchStart = (e: React.TouchEvent) => {
+    const startY = e.touches[0].clientY;
+    isDraggingRef.current = true;
+    dragStartYRef.current = startY;
+    lastTouchYRef.current = startY;
+    lastTouchTimeRef.current = Date.now();
+    currentVelocityRef.current = 0;
+    currentYRef.current = 0;
+
+    if (sheetRef.current) {
+      sheetRef.current.style.transition = "none";
     }
   };
 
-  const handleDetailsTouchEnd = (e: React.TouchEvent) => {
-    if (detailsTouchStartY.current === null) return;
-    const endY = e.changedTouches[0].clientY;
-    const deltaY = endY - detailsTouchStartY.current;
-    detailsTouchStartY.current = null;
-    setIsDraggingDetails(false);
+  const handleHeaderTouchMove = (e: React.TouchEvent) => {
+    if (!isDraggingRef.current) return;
+    const currentTouchY = e.touches[0].clientY;
+    const delta = currentTouchY - dragStartYRef.current;
 
-    if (deltaY > 90) {
-      setIsVenueDetailModalOpen(false);
-      setDetailsDragOffset(0);
+    const now = Date.now();
+    const timeDelta = Math.max(1, now - lastTouchTimeRef.current);
+    currentVelocityRef.current = (currentTouchY - lastTouchYRef.current) / timeDelta;
+    lastTouchYRef.current = currentTouchY;
+    lastTouchTimeRef.current = now;
+
+    // Pull down moves 1:1; pull up has rubber-band resistance
+    let nextY = delta;
+    if (nextY < 0) {
+      nextY = nextY * 0.22;
+    }
+
+    currentYRef.current = nextY;
+    if (sheetRef.current) {
+      sheetRef.current.style.transform = `translate3d(0, ${nextY}px, 0)`;
+    }
+  };
+
+  const handleHeaderTouchEnd = () => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+
+    const finalY = currentYRef.current;
+    const velocity = currentVelocityRef.current;
+
+    // Fast flick down or pulled down > 55px closes the sheet!
+    if (finalY > 55 || velocity > 0.28) {
+      if (sheetRef.current) {
+        sheetRef.current.style.transition = "transform 0.38s cubic-bezier(0.16, 1, 0.3, 1)";
+        sheetRef.current.style.transform = "translate3d(0, 100%, 0)";
+      }
+      setTimeout(() => {
+        handleClose();
+      }, 350);
     } else {
-      setDetailsDragOffset(0);
+      if (sheetRef.current) {
+        sheetRef.current.style.transition = "transform 0.38s cubic-bezier(0.16, 1, 0.3, 1)";
+        sheetRef.current.style.transform = "translate3d(0, 0, 0)";
+      }
     }
   };
 
-  if (isDesktop) return null;
-  if (!bottomSheetOpen || !selectedVenue) return null;
+  // 2. Scrollable content pull-down to close when at top (scrollTop <= 1)
+  const handleContentTouchStart = (e: React.TouchEvent) => {
+    const scrollTop = contentScrollRef.current ? contentScrollRef.current.scrollTop : 0;
+    if (scrollTop <= 1) {
+      contentTouchStartYRef.current = e.touches[0].clientY;
+      lastTouchYRef.current = e.touches[0].clientY;
+      lastTouchTimeRef.current = Date.now();
+      currentVelocityRef.current = 0;
+      isContentPullingRef.current = false;
+    }
+  };
+
+  const handleContentTouchMove = (e: React.TouchEvent) => {
+    if (contentTouchStartYRef.current === null) return;
+    const currentY = e.touches[0].clientY;
+    const scrollTop = contentScrollRef.current ? contentScrollRef.current.scrollTop : 0;
+
+    if (scrollTop <= 1) {
+      const pullDown = currentY - contentTouchStartYRef.current;
+      if (pullDown > 6) {
+        isContentPullingRef.current = true;
+        isDraggingRef.current = true;
+        if (sheetRef.current) {
+          sheetRef.current.style.transition = "none";
+        }
+
+        const now = Date.now();
+        const timeDelta = Math.max(1, now - lastTouchTimeRef.current);
+        currentVelocityRef.current = (currentY - lastTouchYRef.current) / timeDelta;
+        lastTouchYRef.current = currentY;
+        lastTouchTimeRef.current = now;
+
+        currentYRef.current = pullDown;
+        if (sheetRef.current) {
+          sheetRef.current.style.transform = `translate3d(0, ${pullDown}px, 0)`;
+        }
+      }
+    } else {
+      if (isContentPullingRef.current) {
+        isContentPullingRef.current = false;
+        isDraggingRef.current = false;
+      }
+    }
+  };
+
+  const handleContentTouchEnd = (e: React.TouchEvent) => {
+    if (isContentPullingRef.current && contentTouchStartYRef.current !== null) {
+      const endY = e.changedTouches[0].clientY;
+      const pullDown = endY - contentTouchStartYRef.current;
+      const velocity = currentVelocityRef.current;
+
+      if (pullDown > 55 || velocity > 0.3) {
+        if (sheetRef.current) {
+          sheetRef.current.style.transition = "transform 0.38s cubic-bezier(0.16, 1, 0.3, 1)";
+          sheetRef.current.style.transform = "translate3d(0, 100%, 0)";
+        }
+        setTimeout(() => {
+          handleClose();
+        }, 350);
+      } else {
+        if (sheetRef.current) {
+          sheetRef.current.style.transition = "transform 0.38s cubic-bezier(0.16, 1, 0.3, 1)";
+          sheetRef.current.style.transform = "translate3d(0, 0, 0)";
+        }
+      }
+    }
+    contentTouchStartYRef.current = null;
+    isContentPullingRef.current = false;
+    isDraggingRef.current = false;
+  };
+
+  if (isDesktop || !selectedVenue) return null;
 
   const handleAddDish = () => {
     openCreateDish();
-  };
-
-  const handleClose = () => {
-    setBottomSheetOpen(false);
-    setSelectedVenue(null);
-    setIsVenueDetailModalOpen(false);
   };
 
   return (
     <>
       {/* ======================================================================= */}
       {/* DEDICATED FULL-SCREEN SLIDE-UP DRAWER (View Details / Menu & Vibes)     */}
-      {/* ======================================================================= */}
-      {/* 2. DEDICATED FULL-SCREEN SLIDE-UP DRAWER (View Details / Menu & Vibes)   */}
-      {/* Dimmed backdrop, zero layer collisions, clear close button               */}
+      {/* Dimmed backdrop, 0.38s cubic-bezier easing matching feed modal, fluid pull */}
       {/* ======================================================================= */}
       <AnimatePresence>
         {isVenueDetailModalOpen && (
@@ -177,72 +293,71 @@ export function VenueBottomSheet() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              onClick={() => setIsVenueDetailModalOpen(false)}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              onClick={handleClose}
               className="fixed inset-0 bg-black/40 backdrop-blur-sm cursor-pointer"
             />
 
-            {/* Slidable Card container with smooth spring slide-up */}
+            {/* Slidable Card container with smooth slide-up matching feed modal */}
             <motion.div
+              ref={sheetRef}
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              drag="y"
-              dragControls={detailsDragControls}
-              dragListener={false}
-              dragConstraints={{ top: 0 }}
-              dragElastic={{ top: 0, bottom: 0.35 }}
-              onDragEnd={(_, info) => {
-                // Only a deliberate, sizeable downward pull closes the sheet.
-                if (info.offset.y > 150 || info.velocity.y > 700) {
-                  setIsVenueDetailModalOpen(false);
-                }
-              }}
+              transition={{ duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
               className="relative z-10 w-full h-[88dvh] max-h-[90vh] bg-[#fbf9f5] rounded-t-3xl border-t border-black/10 shadow-2xl flex flex-col overflow-hidden will-change-transform"
             >
               {/* Grab Handle Header for dragging */}
               <div
-                onPointerDown={(e) => detailsDragControls.start(e)}
+                onTouchStart={handleHeaderTouchStart}
+                onTouchMove={handleHeaderTouchMove}
+                onTouchEnd={handleHeaderTouchEnd}
                 className="w-full flex flex-col items-center pt-2.5 pb-2.5 px-5 cursor-grab active:cursor-grabbing bg-[#fbf9f5] border-b border-black/[0.06] shrink-0 touch-none select-none"
               >
                 {/* Pill grab bar */}
                 <div className="w-10 h-1 rounded-full bg-zinc-300 hover:bg-zinc-400 transition-colors mb-2.5" />
 
-              <div className="w-full flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-comico text-2xl sm:text-3xl text-zinc-950 tracking-tight leading-tight truncate">
-                    {selectedVenue.name}
-                  </h3>
-                  <p className="text-xs text-zinc-500 mt-1 flex items-center gap-1.5 flex-wrap">
-                    <MapPin className="w-3.5 h-3.5 text-[#e84a27] shrink-0" />
-                    <span className="font-medium text-zinc-700">
-                      {selectedVenue.address.includes("Oslo")
-                        ? selectedVenue.address
-                        : `${selectedVenue.address}, ${selectedVenue.city}`}
-                    </span>
-                    {selectedVenue.neighborhood && (
-                      <>
-                        <span className="text-zinc-300">•</span>
-                        <span className="capitalize text-zinc-500 font-medium">
-                          {selectedVenue.neighborhood}
-                        </span>
-                      </>
-                    )}
-                  </p>
+                <div className="w-full flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-comico text-2xl sm:text-3xl text-zinc-950 tracking-tight leading-tight truncate">
+                      {selectedVenue.name}
+                    </h3>
+                    <p className="text-xs text-zinc-500 mt-1 flex items-center gap-1.5 flex-wrap">
+                      <MapPin className="w-3.5 h-3.5 text-[#e84a27] shrink-0" />
+                      <span className="font-medium text-zinc-700">
+                        {selectedVenue.address.includes("Oslo")
+                          ? selectedVenue.address
+                          : `${selectedVenue.address}, ${selectedVenue.city}`}
+                      </span>
+                      {selectedVenue.neighborhood && (
+                        <>
+                          <span className="text-zinc-300">•</span>
+                          <span className="capitalize text-zinc-500 font-medium">
+                            {selectedVenue.neighborhood}
+                          </span>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleClose}
+                    className="p-2 rounded-full bg-zinc-200/80 hover:bg-zinc-300 active:bg-zinc-400 text-zinc-700 transition-colors shrink-0 mt-0.5 cursor-pointer"
+                    title="Close details"
+                    aria-label="Close details"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
-                <button
-                  onClick={() => setIsVenueDetailModalOpen(false)}
-                  className="p-2 rounded-full bg-zinc-200/80 hover:bg-zinc-300 text-zinc-700 transition-colors shrink-0 mt-0.5"
-                  title="Close details"
-                  aria-label="Close details"
-                >
-                  <X className="w-4 h-4" />
-                </button>
               </div>
-            </div>
 
-            <div className="flex-1 overflow-y-auto p-5 space-y-5 text-xs no-scrollbar">
+              <div
+                ref={contentScrollRef}
+                onTouchStart={handleContentTouchStart}
+                onTouchMove={handleContentTouchMove}
+                onTouchEnd={handleContentTouchEnd}
+                className="flex-1 overflow-y-auto p-5 space-y-5 text-xs no-scrollbar overscroll-contain"
+              >
               {/* Cover Photo */}
               {selectedVenue.cover_image_url && (
                 <div className="relative w-full h-52 rounded-3xl overflow-hidden border border-zinc-200 bg-zinc-100 shadow-xs">
@@ -279,7 +394,7 @@ export function VenueBottomSheet() {
 
                 <button
                   onClick={() => {
-                    setIsVenueDetailModalOpen(false);
+                    handleClose();
                     handleAddDish();
                   }}
                   className="flex items-center justify-center gap-1.5 py-2.5 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] text-white font-semibold shadow-md shadow-[#e84a27]/25 transition-all"

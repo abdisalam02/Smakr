@@ -795,3 +795,37 @@ export function surpriseOpenPeepsConfig(): OpenPeepsConfig {
     clothingColor: pick(CLOTHING_COLORS).value,
   };
 }
+
+let cachedGuestAvatar: OpenPeepsConfig | null = null;
+
+/**
+ * Returns a stable randomized Open Peeps configuration for guest / logged-out users,
+ * cached in memory and localStorage so it remains consistent during the session.
+ */
+export function getOrCreateGuestOpenPeepsConfig(): OpenPeepsConfig {
+  if (cachedGuestAvatar) return cachedGuestAvatar;
+
+  if (typeof window !== "undefined") {
+    try {
+      const stored = window.localStorage.getItem("smakr_guest_peep_avatar");
+      if (stored) {
+        cachedGuestAvatar = normalizeOpenPeepsConfig(JSON.parse(stored));
+        return cachedGuestAvatar;
+      }
+    } catch {
+      // ignore localStorage errors (e.g. private browsing)
+    }
+  }
+
+  const fresh = surpriseOpenPeepsConfig();
+  cachedGuestAvatar = fresh;
+  if (typeof window !== "undefined") {
+    try {
+      window.localStorage.setItem("smakr_guest_peep_avatar", JSON.stringify(fresh));
+    } catch {
+      // ignore
+    }
+  }
+  return fresh;
+}
+
