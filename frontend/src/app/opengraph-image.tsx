@@ -33,7 +33,7 @@ export default async function Image() {
             width: "600px",
             height: "600px",
             borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(255, 85, 0, 0.18) 0%, rgba(9, 9, 11, 0) 70%)",
+            background: "radial-gradient(circle, rgba(232, 74, 39, 0.18) 0%, rgba(9, 9, 11, 0) 70%)",
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
@@ -45,7 +45,7 @@ export default async function Image() {
           <svg width="120" height="120" viewBox="0 0 32 32" fill="none">
             <path
               d="M24 9.5C24 6 20.5 4 16 4C10.5 4 7 7 7 11C7 16.5 25 14.5 25 21C25 25.5 21 28 16 28C10 28 6.5 25 6 20.5"
-              stroke="#ff5500"
+              stroke="#e84a27"
               strokeWidth="4.5"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -55,7 +55,7 @@ export default async function Image() {
 
         {/* Brand Name */}
         <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-          <span style={{ fontSize: "64px", fontWeight: "900", color: "#ff5500", letterSpacing: "-0.04em" }}>
+          <span style={{ fontSize: "64px", fontWeight: "900", color: "#e84a27", letterSpacing: "-0.04em" }}>
             S
           </span>
           <span style={{ fontSize: "64px", fontWeight: "900", color: "#ffffff", letterSpacing: "-0.04em" }}>

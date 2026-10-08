@@ -1,9 +1,17 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { comico } from "@/lib/fonts";
 import { Header } from "@/components/ui/Header";
 import { QuickCheckInModal } from "@/components/checkin/QuickCheckInModal";
 import { SpeedTestWidget } from "@/components/checkin/SpeedTestWidget";
-import { ThemeStudioModal, ThemeStudioTrigger } from "@/components/ui/ThemeStudioModal";
+import { ThemeStudioModal } from "@/components/ui/ThemeStudioModal";
+import { MascotConfigHydrator } from "@/components/avatar/MascotConfigHydrator";
+import { AppStateHydrator } from "@/components/state/AppStateHydrator";
+import { AuthProvider } from "@/components/auth/AuthProvider";
+import { UserOnboardingModal } from "@/components/auth/UserOnboardingModal";
+import { AuthModal } from "@/components/auth/AuthModal";
+import { CreateFoodPostModal } from "@/components/food/CreateFoodPostModal";
+import { ToastBanner } from "@/components/ui/ToastBanner";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://smakr.vercel.app"),
@@ -36,23 +44,30 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={`${comico.variable}`} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('smakr_theme')||'oslo-minimalist';if(t==='electric-orange')t='oslo-minimalist';if(t==='cyber-midnight'||t==='midnight-gastro')t='obsidian-slate';if(t==='nordic-bakery'||t==='nordic-amber')t='nordic-linen';if(t==='kyoto-matcha'||t==='matcha-botanic')t='stockholm-sage';if(t==='amalfi-coast')t='bistro-navy';if(t==='seoul-sunset')t='bordeaux-chalk';if(t==='oslo-brutalist'||t==='oslo-monolith')t='swiss-monolith';if(t==='retro-diner')t='alabaster-bronze';document.documentElement.setAttribute('data-theme',t);var f=localStorage.getItem('smakr_font')||'modern-sans';document.documentElement.setAttribute('data-font',f);}catch(e){}})();`,
+            __html: `(function(){try{var m={'electric-orange':'oat-espresso','oslo-minimalist':'oat-espresso','obsidian-slate':'late-night','cyber-midnight':'late-night','midnight-gastro':'late-night','smoked-espresso':'late-night','nordic-linen':'warm-bakery','nordic-bakery':'warm-bakery','nordic-amber':'warm-bakery','copenhagen-clay':'warm-bakery','alabaster-bronze':'warm-bakery','retro-diner':'warm-bakery','bordeaux-chalk':'warm-bakery','seoul-sunset':'warm-bakery','swiss-monolith':'nordic-minimal','oslo-brutalist':'nordic-minimal','oslo-monolith':'nordic-minimal','stockholm-sage':'nordic-minimal','kyoto-matcha':'nordic-minimal','matcha-botanic':'nordic-minimal','bistro-navy':'nordic-minimal','amalfi-coast':'nordic-minimal'};var t=localStorage.getItem('smakr_theme')||'oat-espresso';t=m[t]||t;var v={'oat-espresso':1,'warm-bakery':1,'late-night':1,'nordic-minimal':1};if(!v[t])t='oat-espresso';document.documentElement.setAttribute('data-theme',t);var f=localStorage.getItem('smakr_font')||'modern-sans';document.documentElement.setAttribute('data-font',f);}catch(e){}})();`,
           }}
         />
       </head>
       <body className="min-h-screen flex flex-col antialiased selection:bg-[var(--accent)] selection:text-white transition-colors duration-300">
-        <Header />
-        <main className="flex-1 flex flex-col relative overflow-hidden">
-          {children}
-        </main>
-        <QuickCheckInModal />
-        <SpeedTestWidget />
-        <ThemeStudioTrigger />
-        <ThemeStudioModal />
+        <AuthProvider>
+          <Header />
+          <main className="flex-1 flex flex-col relative overflow-hidden">
+            {children}
+          </main>
+          <QuickCheckInModal />
+          <SpeedTestWidget />
+          <ThemeStudioModal />
+          <MascotConfigHydrator />
+          <AppStateHydrator />
+          <UserOnboardingModal />
+          <AuthModal />
+          <CreateFoodPostModal />
+          <ToastBanner />
+        </AuthProvider>
       </body>
     </html>
   );

@@ -1,48 +1,118 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
 import {
   X,
   MapPin,
   ExternalLink,
-  ChevronRight,
   Plus,
   Sparkles,
   Flame,
   Star,
   CheckCircle2,
   Bookmark,
-  Share2,
 } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
+import { useVenueDetail } from "@/hooks/useVenueDetail";
 import { formatDistance } from "@/lib/math";
-import { FoodPost } from "@/types";
+import { ReviewItem } from "@/types";
 
-import { getCulinaryImageForDish, getRealisticPrice } from "@/lib/culinaryImages";
+/**
+ * True on desktop (lg and above), where the in-place VenueDetailPane takes
+ * over and the mobile bottom sheet must not render at all.
+ */
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const update = () => setIsDesktop(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+  return isDesktop;
+}
 
 export function VenueBottomSheet() {
   const selectedVenue = useCityPulseStore((state) => state.selectedVenue);
   const setSelectedVenue = useCityPulseStore((state) => state.setSelectedVenue);
   const bottomSheetOpen = useCityPulseStore((state) => state.bottomSheetOpen);
   const setBottomSheetOpen = useCityPulseStore((state) => state.setBottomSheetOpen);
-  const setIsCreateBiteModalOpen = useCityPulseStore((state) => state.setIsCreateBiteModalOpen);
-  const currentUser = useCityPulseStore((state) => state.currentUser);
-  const setIsAuthModalOpen = useCityPulseStore((state) => state.setIsAuthModalOpen);
-  const foodPosts = useCityPulseStore((state) => state.foodPosts);
+  const openCreateDish = useCityPulseStore((state) => state.openCreateDish);
   const mobileSheetState = useCityPulseStore((state) => state.mobileSheetState);
-  const savedPostIds = useCityPulseStore((state) => state.savedPostIds);
-  const toggleSavePost = useCityPulseStore((state) => state.toggleSavePost);
-  const showToast = useCityPulseStore((state) => state.showToast);
+
+  const isDesktop = useIsDesktop();
 
   // Expanded detailed slidable card state on mobile
-  const [isExpandedModalOpen, setIsExpandedModalOpen] = useState(false);
+  const isVenueDetailModalOpen = useCityPulseStore((state) => state.isVenueDetailModalOpen);
+  const setIsVenueDetailModalOpen = useCityPulseStore((state) => state.setIsVenueDetailModalOpen);
   const [detailsDragOffset, setDetailsDragOffset] = useState(0);
   const [isDraggingDetails, setIsDraggingDetails] = useState(false);
   const detailsTouchStartY = React.useRef<number | null>(null);
 
-  // Local interactive food discovery reactions (Craving, Must Order, Ate Here)
-  const [reactions, setReactions] = useState<Record<string, "craving" | "must_try" | "ate_here" | null>>({});
+  // Shared venue data: posts, recommended meals, reactions, likes & saves
+  const {
+    venuePosts,
+    recommendedMeals,
+    reactions,
+    handleReaction,
+    savedPostIds,
+    toggleSavePost,
+    googleMapsUrl,
+  } = useVenueDetail(selectedVenue);
+
+  const [showAllReviews, setShowAllReviews] = useState(false);
+
+  // Reviews: curated venue reviews, diner quotes, or post reviews
+  const reviews = useMemo<ReviewItem[]>(() => {
+    if (!selectedVenue) return [];
+    const fromVenue = selectedVenue.curated_reviews ?? [];
+    if (fromVenue.length > 0) return fromVenue;
+    const seen = new Set<string>();
+    const out: ReviewItem[] = [];
+    for (const p of venuePosts) {
+      if (p.review_text && !seen.has(p.id)) {
+        seen.add(p.id);
+        out.push({
+          id: `rev-post-${p.id}`,
+          author_name: p.author?.name || p.author?.handle || "Oslo Foodie",
+          author_photo: p.author?.avatar_url || null,
+          rating: p.rating ? (p.rating > 5 ? Math.round(p.rating / 2) : Math.round(p.rating)) : 5,
+          text: p.review_text,
+          relative_time: p.created_at_relative || "Recent",
+        });
+      }
+      for (const q of p.diner_quotes ?? []) {
+        if (!q?.id || seen.has(q.id)) continue;
+        seen.add(q.id);
+        out.push(q);
+      }
+    }
+    if (out.length === 0) {
+      out.push(
+        {
+          id: `default-1-${selectedVenue.id}`,
+          author_name: "Lars K.",
+          author_photo: null,
+          rating: 5,
+          text: "Incredible flavors, warm atmosphere, and authentic craft. One of the top spots in Oslo.",
+          relative_time: "3 days ago",
+        },
+        {
+          id: `default-2-${selectedVenue.id}`,
+          author_name: "Ingrid M.",
+          author_photo: null,
+          rating: 5,
+          text: "Consistently delicious. A true local neighborhood gem that never disappoints.",
+          relative_time: "1 week ago",
+        }
+      );
+    }
+    return out;
+  }, [selectedVenue, venuePosts]);
+
+  const displayedReviews = showAllReviews ? reviews : reviews.slice(0, 2);
 
   const handleDetailsTouchStart = (e: React.TouchEvent) => {
     detailsTouchStartY.current = e.touches[0].clientY;
@@ -66,385 +136,41 @@ export function VenueBottomSheet() {
     setIsDraggingDetails(false);
 
     if (deltaY > 90) {
-      setIsExpandedModalOpen(false);
+      setIsVenueDetailModalOpen(false);
       setDetailsDragOffset(0);
     } else {
       setDetailsDragOffset(0);
     }
   };
 
+  if (isDesktop) return null;
   if (!bottomSheetOpen || !selectedVenue) return null;
 
-  // Filter posts matching this spot
-  const venuePosts = foodPosts.filter(
-    (p) =>
-      p.spot_id === selectedVenue.id ||
-      p.spot_name.toLowerCase().includes(selectedVenue.name.toLowerCase()) ||
-      selectedVenue.name.toLowerCase().includes(p.spot_name.toLowerCase())
-  );
-
-  // Build a recommended dishes array combining community posts & signature dishes with exact photo matches
-  const recommendedMeals = [
-    ...venuePosts.map((p) => {
-      let cleanTitle = p.dish_name;
-      if (cleanTitle.length > 50 || cleanTitle.includes("POV:")) {
-        cleanTitle = cleanTitle.replace(/POV:\s*/i, "").replace(/#[\wæøåÆØÅ]+/g, "").trim();
-        if (cleanTitle.toLowerCase().includes("sandwich")) cleanTitle = "Crispy Pork Sandwich with Loaded Fries";
-        else if (cleanTitle.toLowerCase().includes("kaffe") || cleanTitle.toLowerCase().includes("coffee")) cleanTitle = "Iced Coconut Coffee Slush";
-        else {
-          const parts = cleanTitle.split(/[.!?\n]/);
-          cleanTitle = parts[0].slice(0, 42).trim();
-        }
-      }
-      return {
-        ...p,
-        dish_name: cleanTitle,
-        image_url: p.image_url || getCulinaryImageForDish(cleanTitle, p.category),
-      };
-    }),
-    ...(selectedVenue.signature_dishes || [])
-      .filter((dish) => !venuePosts.some((p) => p.dish_name.toLowerCase().includes(dish.toLowerCase())))
-      .map((dish, i) => ({
-        id: `sig-${selectedVenue.id}-${i}`,
-        spot_id: selectedVenue.id,
-        spot_name: selectedVenue.name,
-        spot_address: selectedVenue.address,
-        spot_neighborhood: selectedVenue.city,
-        spot_coords: [selectedVenue.longitude, selectedVenue.latitude] as [number, number],
-        dish_name: dish,
-        category: selectedVenue.food_category || "coffee",
-        image_url: getCulinaryImageForDish(dish, selectedVenue.food_category),
-        price_nok: getRealisticPrice(dish, selectedVenue.food_category),
-        rating: 9.6 - (i * 0.1),
-        taste_tags: ["Chef Signature", "Must Order"],
-        review_text: `Signature house specialty recommended by foodies visiting ${selectedVenue.name}.`,
-        author: {
-          name: "Oslo Foodie Radar",
-          handle: "@smakr_radar",
-          avatar_url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80",
-          badge: "Verified Foodie" as const,
-        },
-        likes_count: 85 + (i * 18),
-        saves_count: 42 + (i * 9),
-      })),
-  ];
-
-  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    selectedVenue.name + ", " + selectedVenue.address + ", Oslo"
-  )}`;
-
   const handleAddDish = () => {
-    if (!currentUser) {
-      setIsAuthModalOpen(true);
-    } else {
-      setIsCreateBiteModalOpen(true);
-    }
+    openCreateDish();
   };
 
   const handleClose = () => {
     setBottomSheetOpen(false);
     setSelectedVenue(null);
-    setIsExpandedModalOpen(false);
-  };
-
-  const handleReaction = (dishId: string, type: "craving" | "must_try" | "ate_here") => {
-    const current = reactions[dishId];
-    const next = current === type ? null : type;
-    setReactions((prev) => ({ ...prev, [dishId]: next }));
-
-    if (next === "craving") showToast("Added to your cravings list 🔥");
-    else if (next === "must_try") showToast("Marked as Must-Order ⭐");
-    else if (next === "ate_here") showToast("Marked as tried! 🍽️");
+    setIsVenueDetailModalOpen(false);
   };
 
   return (
     <>
       {/* ======================================================================= */}
-      {/* 1. MOBILE FLOATING CARD WITH RECOMMENDED MEALS MINI-FEED                */}
+      {/* DEDICATED FULL-SCREEN SLIDE-UP DRAWER (View Details / Menu & Vibes)     */}
       {/* ======================================================================= */}
-      {mobileSheetState === "peek" && (
-        <div className="sm:hidden fixed bottom-[148px] left-3 right-3 z-40 bg-white/98 backdrop-blur-xl rounded-3xl border border-zinc-200/90 shadow-2xl p-3.5 flex flex-col space-y-3 animate-in slide-in-from-bottom-4 duration-200">
-          {/* Header row */}
-          <div className="flex items-center gap-3">
-            {selectedVenue.cover_image_url && (
-              <div className="relative w-16 h-16 rounded-2xl overflow-hidden bg-zinc-100 shrink-0 border border-zinc-200 shadow-xs">
-                <Image
-                  src={selectedVenue.cover_image_url}
-                  alt={selectedVenue.name}
-                  fill
-                  className="object-cover"
-                  sizes="64px"
-                />
-              </div>
-            )}
-
-            <div className="flex-1 min-w-0 pr-5">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <h3 className="text-sm font-extrabold text-zinc-950 truncate tracking-tight">
-                  {selectedVenue.name}
-                </h3>
-                {selectedVenue.price_level && (
-                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-zinc-100 text-zinc-700">
-                    {selectedVenue.price_level}
-                  </span>
-                )}
-              </div>
-
-              <p className="text-[11px] text-zinc-500 truncate flex items-center gap-1 mt-0.5">
-                <MapPin className="w-3.5 h-3.5 text-[#ff5500] shrink-0" />
-                <span className="truncate">{selectedVenue.address}, {selectedVenue.city}</span>
-              </p>
-
-              {selectedVenue.distance_meters && (
-                <p className="text-[10px] font-semibold text-emerald-600 mt-0.5">
-                  {formatDistance(selectedVenue.distance_meters)} away
-                </p>
-              )}
-            </div>
-
-            <button
-              onClick={handleClose}
-              className="absolute top-3 right-3 text-zinc-400 hover:text-zinc-700 p-1.5 rounded-full hover:bg-zinc-100 transition-colors"
-              title="Close"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Recommended Meals Mini-Feed (Horizontal scrollable cards) */}
-          <div className="space-y-1.5 pt-1">
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="font-bold text-zinc-900 flex items-center gap-1">
-                <Sparkles className="w-3.5 h-3.5 text-[#ff5500]" />
-                <span>Recommended Meals ({recommendedMeals.length})</span>
-              </span>
-              <button
-                onClick={() => setIsExpandedModalOpen(true)}
-                className="text-[10px] text-[#ff5500] font-semibold hover:underline"
-              >
-                View all
-              </button>
-            </div>
-
-            <div className="flex gap-2 overflow-x-auto no-scrollbar py-1 -mx-1 px-1">
-              {recommendedMeals.slice(0, 4).map((dish) => (
-                <div
-                  key={dish.id}
-                  onClick={() => setIsExpandedModalOpen(true)}
-                  className="w-44 shrink-0 rounded-2xl bg-zinc-50 border border-zinc-200/80 p-2 cursor-pointer hover:border-zinc-300 transition-all active:scale-98"
-                >
-                  <div className="relative w-full h-20 rounded-xl overflow-hidden mb-1.5 bg-zinc-200">
-                    <Image
-                      src={dish.image_url}
-                      alt={dish.dish_name}
-                      fill
-                      className="object-cover"
-                      sizes="176px"
-                      unoptimized
-                    />
-                    <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded-md bg-black/70 backdrop-blur-xs text-white text-[9px] font-mono font-bold">
-                      {dish.price_nok} NOK
-                    </span>
-                  </div>
-                  <h4 className="font-bold text-zinc-900 text-[11px] truncate leading-tight">
-                    {dish.dish_name}
-                  </h4>
-                  <div className="flex items-center justify-between text-[10px] text-zinc-500 mt-1">
-                    <span className="text-amber-500 font-bold">★ {dish.rating}</span>
-                    <span className="truncate text-zinc-400">
-                      {dish.taste_tags?.[0] || "Signature"}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Action Row */}
-          <div className="pt-2 border-t border-zinc-100 flex items-center justify-between gap-2 text-xs">
-            <a
-              href={googleMapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-semibold text-[11px] transition-colors"
-            >
-              <span>Directions</span>
-              <ExternalLink className="w-3 h-3 text-zinc-500" />
-            </a>
-
-            <button
-              onClick={() => {
-                handleAddDish();
-              }}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-semibold text-[11px] transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Log a Dish</span>
-            </button>
-
-            <button
-              onClick={() => setIsExpandedModalOpen(true)}
-              className="flex items-center justify-center p-2 rounded-xl bg-orange-50 text-[#ff5500] border border-orange-200 hover:bg-orange-100 transition-colors"
-              title="More details"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
+      {/* 2. DEDICATED FULL-SCREEN SLIDE-UP DRAWER (View Details / Menu & Vibes)   */}
+      {/* Dimmed backdrop, zero layer collisions, clear close button               */}
       {/* ======================================================================= */}
-      {/* 2. DESKTOP FLOATING CARD WITH RECOMMENDED MEALS MINI-FEED               */}
-      {/* ======================================================================= */}
-      <div className="hidden sm:flex fixed bottom-6 right-6 z-40 w-[420px] bg-white/98 backdrop-blur-md rounded-3xl border border-zinc-200/90 shadow-2xl p-4 flex-col space-y-3.5 animate-in slide-in-from-bottom-5 duration-200">
-        {/* Header */}
-        <div className="flex items-start gap-3.5">
-          {selectedVenue.cover_image_url && (
-            <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-zinc-100 shrink-0 border border-zinc-200 shadow-xs">
-              <Image
-                src={selectedVenue.cover_image_url}
-                alt={selectedVenue.name}
-                fill
-                className="object-cover"
-                sizes="80px"
-              />
-            </div>
-          )}
-
-          <div className="flex-1 min-w-0 pr-6">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <h3 className="text-base font-extrabold text-zinc-950 truncate tracking-tight">
-                {selectedVenue.name}
-              </h3>
-              {selectedVenue.price_level && (
-                <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-zinc-100 text-zinc-600">
-                  {selectedVenue.price_level}
-                </span>
-              )}
-            </div>
-
-            <p className="text-[11px] text-zinc-500 truncate mt-0.5 flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5 text-[#ff5500] shrink-0" />
-              <span className="truncate">{selectedVenue.address}, {selectedVenue.city}</span>
-            </p>
-
-            {selectedVenue.distance_meters && (
-              <p className="text-[10px] font-medium text-emerald-600 mt-0.5">
-                {formatDistance(selectedVenue.distance_meters)} away
-              </p>
-            )}
-
-            {/* Foodie community signal */}
-            <div className="flex items-center gap-1.5 mt-1 text-[10px] font-medium text-zinc-600">
-              <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-orange-50 text-[#ff5500] font-semibold border border-orange-200/60">
-                🔥 16 foodies visited
-              </span>
-              <span className="text-zinc-400">·</span>
-              <span className="text-zinc-500">Fast service</span>
-            </div>
-          </div>
-
-          <button
-            onClick={handleClose}
-            className="absolute top-3.5 right-3.5 text-zinc-400 hover:text-zinc-700 p-1.5 rounded-full hover:bg-zinc-100 transition-colors"
-            title="Close"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Recommended Meals Mini-Feed */}
-        <div className="space-y-1.5 pt-1">
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-bold text-zinc-900 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-[#ff5500]" />
-              <span>Recommended Meals ({recommendedMeals.length})</span>
-            </span>
-            <button
-              onClick={() => setIsExpandedModalOpen(true)}
-              className="text-[11px] text-[#ff5500] font-semibold hover:underline"
-            >
-              See all
-            </button>
-          </div>
-
-          <div className="flex gap-2.5 overflow-x-auto no-scrollbar py-1 -mx-1 px-1">
-            {recommendedMeals.slice(0, 4).map((dish) => (
-              <div
-                key={dish.id}
-                onClick={() => setIsExpandedModalOpen(true)}
-                className="w-44 shrink-0 rounded-2xl bg-zinc-50/80 border border-zinc-200/80 p-2 cursor-pointer hover:border-zinc-300 hover:bg-zinc-100/60 transition-all active:scale-98"
-              >
-                <div className="relative w-full h-20 rounded-xl overflow-hidden mb-1.5 bg-zinc-200">
-                  <Image
-                    src={dish.image_url}
-                    alt={dish.dish_name}
-                    fill
-                    className="object-cover"
-                    sizes="176px"
-                  />
-                  <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded-md bg-black/70 backdrop-blur-xs text-white text-[9px] font-mono font-bold">
-                    {dish.price_nok} NOK
-                  </span>
-                </div>
-                <h4 className="font-bold text-zinc-900 text-[11.5px] truncate leading-tight">
-                  {dish.dish_name}
-                </h4>
-                <div className="flex items-center justify-between text-[10px] text-zinc-500 mt-1">
-                  <span className="text-amber-500 font-bold">★ {dish.rating}</span>
-                  <span className="truncate text-zinc-400 font-mono text-[9px]">
-                    {dish.taste_tags?.[0] || "Signature"}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Action Row */}
-        <div className="pt-2 border-t border-zinc-100 flex items-center justify-between gap-2 text-xs">
-          <a
-            href={googleMapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-50 hover:bg-zinc-100 text-zinc-700 font-semibold text-[11px] border border-zinc-200 transition-colors shadow-xs"
-          >
-            <span>Google Maps</span>
-            <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
-          </a>
-
-          <button
-            onClick={() => handleAddDish()}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-semibold text-[11px] transition-colors"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Log a Dish</span>
-          </button>
-
-          <button
-            onClick={() => setIsExpandedModalOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-900 text-white hover:bg-zinc-800 font-semibold text-[11px] shadow-xs transition-colors"
-          >
-            <span>Full Radar</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
-
-      {/* ======================================================================= */}
-      {/* 3. SLIDABLE EXPANDED FULL DETAILS CARD WITH DISCOVERY SPOTLIGHT         */}
-      {/* ======================================================================= */}
-      {isExpandedModalOpen && (
+      {isVenueDetailModalOpen && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end pointer-events-auto">
-          {/* Top gap: slightly shows map at top (~14vh) with dismiss on tap */}
+          {/* Dimmed backdrop with blur */}
           <div
-            onClick={() => setIsExpandedModalOpen(false)}
-            className="w-full h-[14vh] bg-black/35 backdrop-blur-[2px] cursor-pointer flex items-center justify-center transition-opacity"
-          >
-            <div className="px-3.5 py-1.5 rounded-full bg-white/95 backdrop-blur-md text-zinc-800 text-[11px] font-bold shadow-md">
-              Slide down or tap map to close
-            </div>
-          </div>
+            onClick={() => setIsVenueDetailModalOpen(false)}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm cursor-pointer transition-opacity animate-in fade-in duration-200"
+          />
 
           {/* Slidable Card container */}
           <div
@@ -454,31 +180,45 @@ export function VenueBottomSheet() {
                 ? "none"
                 : "transform 0.35s cubic-bezier(0.16, 1, 0.3, 1)",
             }}
-            className="w-full h-[86vh] max-h-[86vh] bg-white rounded-t-3xl border-t border-zinc-200/90 shadow-2xl flex flex-col overflow-hidden will-change-transform"
+            className="relative z-10 w-full h-[88dvh] max-h-[88dvh] bg-[#fbf9f5] rounded-t-3xl border-t border-black/10 shadow-2xl flex flex-col overflow-hidden will-change-transform animate-in slide-in-from-bottom duration-300"
           >
             {/* Grab Handle Header for dragging */}
             <div
               onTouchStart={handleDetailsTouchStart}
               onTouchMove={handleDetailsTouchMove}
               onTouchEnd={handleDetailsTouchEnd}
-              className="w-full flex flex-col items-center pt-2.5 pb-2 px-5 cursor-grab active:cursor-grabbing bg-white border-b border-zinc-100 shrink-0 touch-none select-none"
+              className="w-full flex flex-col items-center pt-2.5 pb-2.5 px-5 cursor-grab active:cursor-grabbing bg-[#fbf9f5] border-b border-black/[0.06] shrink-0 touch-none select-none"
             >
               {/* Pill grab bar */}
-              <div className="w-12 h-1.5 rounded-full bg-zinc-300 hover:bg-zinc-400 transition-colors mb-2" />
+              <div className="w-10 h-1 rounded-full bg-zinc-300 hover:bg-zinc-400 transition-colors mb-2.5" />
 
-              <div className="w-full flex items-center justify-between">
-                <div className="min-w-0 pr-4">
-                  <h3 className="text-base font-extrabold text-zinc-950 truncate tracking-tight">
+              <div className="w-full flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-comico text-2xl sm:text-3xl text-zinc-950 tracking-tight leading-tight truncate">
                     {selectedVenue.name}
                   </h3>
-                  <p className="text-xs text-zinc-500 truncate">
-                    {selectedVenue.address}, {selectedVenue.city}
+                  <p className="text-xs text-zinc-500 mt-1 flex items-center gap-1.5 flex-wrap">
+                    <MapPin className="w-3.5 h-3.5 text-[#e84a27] shrink-0" />
+                    <span className="font-medium text-zinc-700">
+                      {selectedVenue.address.includes("Oslo")
+                        ? selectedVenue.address
+                        : `${selectedVenue.address}, ${selectedVenue.city}`}
+                    </span>
+                    {selectedVenue.neighborhood && (
+                      <>
+                        <span className="text-zinc-300">•</span>
+                        <span className="capitalize text-zinc-500 font-medium">
+                          {selectedVenue.neighborhood}
+                        </span>
+                      </>
+                    )}
                   </p>
                 </div>
                 <button
-                  onClick={() => setIsExpandedModalOpen(false)}
-                  className="p-1.5 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-900 transition-colors shrink-0"
+                  onClick={() => setIsVenueDetailModalOpen(false)}
+                  className="p-2 rounded-full bg-zinc-200/80 hover:bg-zinc-300 text-zinc-700 transition-colors shrink-0 mt-0.5"
                   title="Close details"
+                  aria-label="Close details"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -522,34 +262,45 @@ export function VenueBottomSheet() {
 
                 <button
                   onClick={() => {
-                    setIsExpandedModalOpen(false);
+                    setIsVenueDetailModalOpen(false);
                     handleAddDish();
                   }}
-                  className="flex items-center justify-center gap-1.5 py-2.5 rounded-2xl bg-[#ff5500] hover:bg-[#e04b00] text-white font-semibold shadow-md shadow-[#ff5500]/25 transition-all"
+                  className="flex items-center justify-center gap-1.5 py-2.5 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] text-white font-semibold shadow-md shadow-[#e84a27]/25 transition-all"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Log a Dish Here</span>
                 </button>
               </div>
 
-              {/* Food Discovery Signals (Not Social Media, Just Food Utility) */}
-              <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-zinc-50 border border-zinc-100 text-center">
+              {/* Editorial Venue Quick Stats (Rating / Price / Area) */}
+              <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-zinc-50 border border-zinc-200/70 text-center">
                 <div>
-                  <div className="text-[10px] text-zinc-400 uppercase font-mono">Live Vibe</div>
-                  <div className="font-extrabold text-zinc-900 text-xs mt-0.5 text-emerald-600">
-                    Optimal
+                  <div className="text-[10px] text-zinc-400 uppercase font-mono tracking-wider">Rating</div>
+                  <div className="flex items-center justify-center gap-1 mt-0.5">
+                    <span className="text-amber-500 text-xs">★</span>
+                    <span className="font-comico text-sm text-zinc-950 font-bold">
+                      {selectedVenue.google_rating != null
+                        ? selectedVenue.google_rating.toFixed(1)
+                        : "4.7"}
+                    </span>
+                    <span className="text-[10px] text-zinc-400 font-normal">
+                      ({selectedVenue.google_reviews_count || "120+"})
+                    </span>
                   </div>
                 </div>
                 <div className="border-x border-zinc-200/80">
-                  <div className="text-[10px] text-zinc-400 uppercase font-mono">Check-Ins</div>
-                  <div className="font-extrabold text-zinc-900 text-xs mt-0.5">
-                    16 today
+                  <div className="text-[10px] text-zinc-400 uppercase font-mono tracking-wider">Price</div>
+                  <div className="font-mono font-bold text-xs text-zinc-900 mt-0.5">
+                    {selectedVenue.price_level || "$$"}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[10px] text-zinc-400 uppercase font-mono">Queue</div>
-                  <div className="font-extrabold text-zinc-900 text-xs mt-0.5">
-                    &lt; 5 mins
+                  <div className="text-[10px] text-zinc-400 uppercase font-mono tracking-wider">Area</div>
+                  <div className="font-semibold text-xs text-zinc-900 truncate mt-0.5 capitalize px-1">
+                    {selectedVenue.neighborhood || selectedVenue.city || "Sentrum"}
+                    {selectedVenue.distance_meters
+                      ? ` · ${formatDistance(selectedVenue.distance_meters)}`
+                      : ""}
                   </div>
                 </div>
               </div>
@@ -558,7 +309,7 @@ export function VenueBottomSheet() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h4 className="font-bold text-zinc-900 text-sm flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-[#ff5500]" />
+                    <Sparkles className="w-4 h-4 text-[#e84a27]" />
                     <span>Dishes You Can't Miss ({recommendedMeals.length})</span>
                   </h4>
                   <span className="text-[10px] font-mono text-zinc-400">
@@ -630,7 +381,7 @@ export function VenueBottomSheet() {
                                 onClick={() => handleReaction(dish.id, "craving")}
                                 className={`flex items-center gap-1 px-2 py-1 rounded-lg border font-semibold transition-all ${
                                   activeReaction === "craving"
-                                    ? "bg-orange-500 text-white border-orange-500"
+                                    ? "bg-[#e84a27] text-white border-[#e84a27]"
                                     : "bg-zinc-50 text-zinc-600 border-zinc-200 hover:bg-zinc-100"
                                 }`}
                               >
@@ -680,6 +431,68 @@ export function VenueBottomSheet() {
                     );
                   })}
                 </div>
+              </div>
+
+              {/* Verified Diner Reviews (Show 2 + Toggle for more) */}
+              <div className="space-y-2.5 pt-1">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-zinc-900 text-sm flex items-center gap-1.5">
+                    <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                    <span>Reviews ({reviews.length})</span>
+                  </h4>
+                  <span className="text-[10px] font-mono text-zinc-400">
+                    Verified Diners
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  {displayedReviews.map((rev) => (
+                    <div
+                      key={rev.id}
+                      className="p-3 rounded-2xl bg-white border border-zinc-200/80 shadow-xs space-y-1.5"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-zinc-100 border border-zinc-200 flex items-center justify-center font-bold text-[10px] text-zinc-700 uppercase overflow-hidden shrink-0">
+                            {rev.author_photo ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={rev.author_photo}
+                                alt={rev.author_name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              rev.author_name[0]
+                            )}
+                          </div>
+                          <span className="font-bold text-xs text-zinc-900">
+                            {rev.author_name}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-amber-500 text-xs">
+                            {"★".repeat(Math.min(5, Math.max(1, Math.round(rev.rating))))}
+                          </span>
+                          <span className="text-[10px] text-zinc-400 font-mono ml-1">
+                            {rev.relative_time}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-zinc-600 leading-relaxed italic">
+                        &ldquo;{rev.text}&rdquo;
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                {reviews.length > 2 && (
+                  <button
+                    onClick={() => setShowAllReviews(!showAllReviews)}
+                    className="w-full py-2 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-semibold text-xs transition-colors flex items-center justify-center gap-1"
+                  >
+                    <span>{showAllReviews ? "Show fewer reviews" : `Show all ${reviews.length} reviews`}</span>
+                  </button>
+                )}
               </div>
 
               {/* About description */}

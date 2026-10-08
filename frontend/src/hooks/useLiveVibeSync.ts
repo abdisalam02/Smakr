@@ -4,6 +4,16 @@ import { useEffect, useRef } from "react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { LiveRadarEvent } from "@/types";
 
+/**
+ * Live vibe streaming is OPT-IN. It is disabled unless
+ * `NEXT_PUBLIC_ENABLE_LIVE_VIBES === "true"` so local development never spawns
+ * a failing `ws://localhost:8001/...` connection (and its reconnect loop) when
+ * the FastAPI backend isn't running.
+ */
+const LIVE_VIBES_ENABLED =
+  typeof process !== "undefined" &&
+  process.env?.NEXT_PUBLIC_ENABLE_LIVE_VIBES === "true";
+
 function getWsUrl() {
   if (process.env.NEXT_PUBLIC_WS_URL) return process.env.NEXT_PUBLIC_WS_URL;
   if (typeof window !== "undefined") {
@@ -22,6 +32,13 @@ export function useLiveVibeSync() {
   const setLastEvent = useCityPulseStore((state) => state.setLastEvent);
 
   useEffect(() => {
+    // Feature flag off (default) → skip entirely: no socket, no reconnect loop,
+    // no console noise.
+    if (!LIVE_VIBES_ENABLED) {
+      setWsConnected(false);
+      return;
+    }
+
     let isMounted = true;
 
     function connect() {
@@ -49,31 +66,31 @@ export function useLiveVibeSync() {
               updateVenueVibe(msg.data.venue_id, msg.data.vibe, undefined, msg.data.speed_test);
             }
           } catch (err) {
-            console.error("Failed to parse WebSocket message:", err);
+            console.warn("Failed to parse WebSocket message:", err);
           }
         };
 
         ws.onclose = () => {
-          if (isMounted) {
-            setWsConnected(false);
-            // Reconnect with 3s backoff
-            reconnectTimeoutRef.current = setTimeout(() => {
-              if (isMounted) connect();
-            }, 3000);
-          }
+          if (!isMounted) return;
+          setWsConnected(false);
+          // Reconnect with a 3s backoff.
+          reconnectTimeoutRef.current = setTimeout(() => {
+            if (isMounted) connect();
+          }, 3000);
         };
 
         ws.onerror = () => {
+          // Avoid the uncaught-error noise; onclose handles the retry.
           ws.close();
         };
-      } catch (e) {
-        console.error("WebSocket init error:", e);
+      } catch (err) {
+        console.warn("WebSocket init error:", err);
       }
     }
 
     connect();
 
-    // Periodic ping to keep alive
+    // Periodic ping to keep alive.
     const pingInterval = setInterval(() => {
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
         wsRef.current.send(JSON.stringify({ type: "ping" }));

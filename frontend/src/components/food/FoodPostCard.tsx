@@ -2,174 +2,301 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import {
-  ThumbsUp,
-  MapPin,
-  ArrowUpRight,
-  Bookmark,
-} from "lucide-react";
+import { ThumbsUp, MapPin, Bookmark } from "lucide-react";
 import { FoodPost } from "@/types";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
+import { setPostLike, setPostSave } from "@/lib/supabase/data";
+import { MascotCharacter } from "@/components/avatar/MascotCharacter";
 
 interface FoodPostCardProps {
   post: FoodPost;
+  /** True only for the first above-the-fold card so its photo is preloaded. */
+  priority?: boolean;
 }
 
-export function FoodPostCard({ post }: FoodPostCardProps) {
-  const likedPostIds = useCityPulseStore((state) => state.likedPostIds);
-  const savedPostIds = useCityPulseStore((state) => state.savedPostIds);
+/**
+  * Full-bleed photo editorial hero card with overlaid typography and actions.
+  *
+  * Memoized + subscribed to atomic store slices so unrelated updates (map center,
+  * filters, other pins) never re-render or repaint this card.
+  */
+export const FoodPostCard = React.memo(function FoodPostCard({
+  post,
+  priority = false,
+}: FoodPostCardProps) {
+  // Atomic selectors: each returns a stable primitive / reference, so only the
+  // cards whose own state changed re-render.
+  const isLiked = useCityPulseStore((state) => state.likedPostIds.has(post.id));
+  const isSaved = useCityPulseStore((state) => state.savedPostIds.has(post.id));
   const toggleLikePost = useCityPulseStore((state) => state.toggleLikePost);
   const toggleSavePost = useCityPulseStore((state) => state.toggleSavePost);
   const flyToSpot = useCityPulseStore((state) => state.flyToSpot);
+  const currentUser = useCityPulseStore((state) => state.currentUser);
+  const linkedVenue = useCityPulseStore(
+    (state) => state.venues.find((v) => v.id === post.spot_id) ?? null
+  );
+  const mascotConfig = useCityPulseStore((state) => state.mascotConfig);
 
-  const isLiked = likedPostIds.has(post.id);
-  const isSaved = savedPostIds.has(post.id);
   const [showHeart, setShowHeart] = useState(false);
 
+  const googleRating =
+    typeof linkedVenue?.google_rating === "number" && linkedVenue.google_rating > 0
+      ? linkedVenue.google_rating
+      : null;
+  const googleCount = linkedVenue?.google_reviews_count ?? 0;
+  const dinerQuotes = post.diner_quotes ?? [];
+
+  const displayRating =
+    googleRating != null
+      ? googleRating.toFixed(1)
+      : post.rating
+      ? (post.rating > 5 ? (post.rating / 2).toFixed(1) : post.rating.toFixed(1))
+      : "4.7";
+
+  const isNiwacheAdmin = Boolean(
+    post.author?.handle?.toLowerCase().includes("niwache") ||
+    (currentUser?.role === "admin" && currentUser?.handle === post.author?.handle)
+  );
+
+  const stars = (rating: number) => {
+    const full = Math.max(0, Math.min(5, Math.round(rating)));
+    return `${"★".repeat(full)}${"☆".repeat(5 - full)}`;
+  };
+
+  // Optimistic local count first, then best-effort Supabase persistence.
+  const handleToggleLike = () => {
+    const nextLiked = !isLiked;
+    toggleLikePost(post.id);
+    if (currentUser?.id) void setPostLike(currentUser.id, post.id, nextLiked);
+  };
+
+  const handleToggleSave = () => {
+    const nextSaved = !isSaved;
+    toggleSavePost(post.id);
+    if (currentUser?.id) void setPostSave(currentUser.id, post.id, nextSaved);
+  };
+
   const handleDoubleTap = () => {
-    if (!isLiked) toggleLikePost(post.id);
+    if (!isLiked) handleToggleLike();
     setShowHeart(true);
     setTimeout(() => setShowHeart(false), 700);
   };
 
-  const handleFlyToRadar = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleFlyToRadar = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    flyToSpot(post.spot_coords, post.spot_id);
+  };
+
+  const handleCardClick = () => {
     flyToSpot(post.spot_coords, post.spot_id);
   };
 
   return (
     <article
-      onClick={handleFlyToRadar}
+      onClick={handleCardClick}
       onDoubleClick={handleDoubleTap}
-      className="group relative w-full aspect-[4/5] rounded-3xl overflow-hidden border border-zinc-200/70 shadow-sm hover:shadow-md transition-all duration-300 select-none cursor-pointer bg-zinc-900"
+      className="group relative w-full rounded-[26px] overflow-hidden border border-black/[0.08] dark:border-white/10 bg-[#181615] shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer select-none"
     >
-      {/* Full-bleed Photo Background */}
-      <Image
-        src={post.image_url}
-        alt={post.dish_name}
-        fill
-        className="object-cover transition-transform duration-700 group-hover:scale-105"
-        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 400px"
-        unoptimized
-        priority
-      />
-
-      {/* Cinematic Vignette Gradient */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-black/35 pointer-events-none" />
-
-      {/* Quick Heart Burst on Double Tap */}
-      {showHeart && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none animate-in fade-in zoom-in-50 duration-200">
-          <div className="p-4 rounded-full bg-white/20 backdrop-blur-md">
-            <ThumbsUp className="w-12 h-12 text-white fill-orange-500 stroke-white" />
-          </div>
-        </div>
-      )}
-
-      {/* Top Floating Info: Price Tag & Rating Badge */}
-      <div className="absolute top-3.5 left-3.5 right-3.5 flex items-center justify-between pointer-events-auto">
-        <span className="px-3 py-1 rounded-full bg-black/55 backdrop-blur-md text-white font-mono font-semibold text-xs border border-white/15 shadow-xs">
-          {post.price_nok} NOK
-        </span>
-
-        <div className="flex items-center gap-1.5">
-          <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-md text-zinc-900 font-bold text-xs shadow-xs">
-            <span className="text-amber-500 text-[10px]">★</span>
-            <span className="font-mono">{post.rating}</span>
-          </div>
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleSavePost(post.id);
-            }}
-            className={`p-1.5 rounded-full backdrop-blur-md border transition-all ${
-              isSaved
-                ? "bg-white text-zinc-900 border-white"
-                : "bg-black/40 text-white/80 border-white/15 hover:bg-black/60"
-            }`}
-            title={isSaved ? "Saved" : "Save dish"}
+      {/* Repeating SMAKR Monogram Watermark Pattern across background layer */}
+      <svg
+        className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.035] select-none text-white z-0"
+        aria-hidden="true"
+      >
+        <defs>
+          <pattern
+            id={`smakr-pattern-${post.id}`}
+            width="88"
+            height="44"
+            patternUnits="userSpaceOnUse"
+            patternTransform="rotate(-14)"
           >
-            <Bookmark className={`w-3.5 h-3.5 ${isSaved ? "fill-zinc-900" : ""}`} />
-          </button>
-        </div>
-      </div>
+            <text
+              x="0"
+              y="16"
+              fontFamily="var(--font-comico), sans-serif"
+              fontWeight="900"
+              fontSize="9"
+              letterSpacing="0.18em"
+              fill="currentColor"
+            >
+              SMAKR ·
+            </text>
+            <text
+              x="44"
+              y="38"
+              fontFamily="var(--font-comico), sans-serif"
+              fontWeight="900"
+              fontSize="9"
+              letterSpacing="0.18em"
+              fill="currentColor"
+            >
+              SMAKR ·
+            </text>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill={`url(#smakr-pattern-${post.id})`} />
+      </svg>
 
-      {/* Bottom Content Area Directly on Image */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 pt-8 text-white flex flex-col justify-end space-y-2 pointer-events-auto">
-        {/* Dish Title & Location */}
-        {/* Dish Title, Location & Insider Foodie Comment */}
-        <div>
-          <h3 className="text-base sm:text-lg font-extrabold text-white tracking-tight leading-snug drop-shadow-sm">
-            {post.dish_name}
-          </h3>
-          <p className="text-xs text-zinc-300 font-medium flex items-center gap-1 mt-0.5">
-            <MapPin className="w-3.5 h-3.5 text-[#ff5500] shrink-0" />
-            <span className="font-semibold text-white">{post.spot_name}</span>
-            {post.spot_neighborhood && (
-              <span className="text-zinc-300 font-normal">
-                · {post.spot_neighborhood}
-              </span>
-            )}
-          </p>
-          {/* Insider Foodie Review / Comment */}
-          {post.review_text && (
-            <p className="text-[11.5px] text-zinc-200/95 leading-relaxed line-clamp-2 mt-1.5 font-normal italic drop-shadow-xs bg-black/35 backdrop-blur-xs px-2.5 py-1 rounded-lg border border-white/10">
-              "{post.review_text}"
-            </p>
-          )}
-        </div>
+      {/* Full-Bleed Photography Hero Container */}
+      <div className="relative w-full aspect-[4/3] min-h-[320px] overflow-hidden bg-zinc-900">
+        <Image
+          src={post.image_url}
+          alt={post.dish_name}
+          fill
+          unoptimized
+          priority={priority}
+          loading={priority ? undefined : "lazy"}
+          className="object-cover w-full transition-transform duration-700 ease-out group-hover:scale-105"
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 600px"
+        />
 
-        {/* User Profile, Likes & Map Action */}
-        <div className="pt-2 border-t border-white/15 flex items-center justify-between gap-2">
-          {/* User Profile */}
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="relative w-6 h-6 rounded-full overflow-hidden border border-white/30 shrink-0 bg-zinc-800">
-              <Image
-                src={post.author.avatar_url}
-                alt={post.author.name}
-                fill
-                className="object-cover"
-                sizes="24px"
-              />
-            </div>
-            <span className="text-xs text-zinc-200 font-medium truncate">
-              {post.author.handle}
+        {/* Seamless Dark Gradient Overlay covering the bottom 60% */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/55 to-transparent pointer-events-none" />
+
+        {/* Floating Top Badges (Over Image) */}
+        <div className="absolute top-3 inset-x-3 flex items-start justify-between gap-2 z-10 pointer-events-auto">
+          {/* Top-Left: Price Sticker */}
+          <span className="font-comico bg-[#e84a27] text-white px-3 py-1 rounded-full text-xs font-bold shadow-md rotate-[-1deg] tracking-tight">
+            {post.price_nok} NOK
+          </span>
+
+          {/* Top-Right: Rating pill + Save bookmark */}
+          <div className="flex items-center gap-1.5">
+            <span className="bg-black/60 backdrop-blur-md text-amber-400 font-bold px-2.5 py-1 rounded-full text-xs border border-white/10 flex items-center gap-1 shadow-xs">
+              <span className="text-amber-400 text-xs">★</span>
+              <span className="font-comico text-white text-xs tracking-wide">{displayRating}</span>
             </span>
-          </div>
-
-          {/* Thumbs Up & Map Link Button */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            {/* Thumbs Up Recommend */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                toggleLikePost(post.id);
+                handleToggleSave();
               }}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold backdrop-blur-md transition-all ${
-                isLiked
-                  ? "bg-orange-500 text-white shadow-xs"
-                  : "bg-white/15 hover:bg-white/25 text-white border border-white/15"
+              className={`p-1.5 rounded-full backdrop-blur-md border transition-all active:scale-95 ${
+                isSaved
+                  ? "bg-white text-zinc-900 border-white shadow-xs"
+                  : "bg-black/60 text-white border-white/10 hover:bg-black/80"
               }`}
+              title={isSaved ? "Saved" : "Save dish"}
+              aria-label={isSaved ? "Saved" : "Save dish"}
             >
-              <ThumbsUp
-                className={`w-3 h-3 ${isLiked ? "fill-white" : ""}`}
-              />
-              <span className="font-mono text-xs">{post.likes_count}</span>
+              <Bookmark className={`w-3.5 h-3.5 ${isSaved ? "fill-zinc-900" : ""}`} />
             </button>
+          </div>
+        </div>
 
-            {/* Direct Map Fly-To */}
-            <button
-              onClick={handleFlyToRadar}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-white text-zinc-900 hover:bg-zinc-100 font-semibold text-xs shadow-xs transition-colors"
-              title="Locate restaurant on map"
-            >
-              <span>Map</span>
-              <ArrowUpRight className="w-3 h-3 text-zinc-600" />
-            </button>
+        {/* Double-tap heart feedback animation */}
+        {showHeart && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 animate-in fade-in zoom-in-50 duration-200">
+            <div className="p-3.5 rounded-full bg-white/30 backdrop-blur-md shadow-xl">
+              <ThumbsUp className="w-10 h-10 text-white fill-[#e84a27] stroke-white" />
+            </div>
+          </div>
+        )}
+
+        {/* Overlaid Editorial Content (Bottom Half of Photo) */}
+        <div className="absolute bottom-0 inset-x-0 p-3.5 sm:p-4 z-10 flex flex-col justify-end pointer-events-auto">
+          {/* Dish Title */}
+          <h3 className="font-comico text-lg sm:text-xl leading-snug drop-shadow-sm text-white line-clamp-1">
+            {post.dish_name}
+          </h3>
+
+          {/* Venue & Location */}
+          <div className="text-xs font-medium text-zinc-300 drop-shadow-sm mt-0.5 flex items-center gap-1.5 flex-wrap">
+            <MapPin className="w-3 h-3 text-[#e84a27] shrink-0" />
+            <span className="font-semibold text-white">{post.spot_name}</span>
+            {post.spot_neighborhood && (
+              <>
+                <span className="text-zinc-400">·</span>
+                <span>{post.spot_neighborhood}</span>
+              </>
+            )}
+            {googleRating != null && (
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-[10px] font-bold">
+                <span className="text-amber-400">★</span>
+                <span className="font-mono text-white">{googleRating.toFixed(1)}</span>
+                {googleCount > 0 && (
+                  <span className="text-white/60 font-normal">({googleCount})</span>
+                )}
+              </span>
+            )}
+          </div>
+
+          {/* Single Compact Review Quote (never blocks the food photo) */}
+          {post.review_text ? (
+            <div className="bg-black/40 backdrop-blur-md border border-white/15 rounded-xl px-2.5 py-1.5 my-2 max-w-[95%]">
+              <p className="text-[11px] text-zinc-100 italic leading-snug line-clamp-2">
+                &ldquo;{post.review_text}&rdquo;
+              </p>
+            </div>
+          ) : dinerQuotes.length > 0 ? (
+            <div className="bg-black/40 backdrop-blur-md border border-white/15 rounded-xl px-2.5 py-1.5 my-2 max-w-[95%]">
+              <p className="text-[11px] text-zinc-100 italic leading-snug line-clamp-2">
+                &ldquo;{dinerQuotes[0].text}&rdquo;
+              </p>
+              <p className="text-[9px] mt-0.5 flex items-center gap-1 text-zinc-300">
+                <span className="text-amber-400 font-mono">{stars(dinerQuotes[0].rating)}</span>
+                <span className="truncate">· {dinerQuotes[0].author_name}</span>
+              </p>
+            </div>
+          ) : null}
+
+          {/* Author & Action Footer */}
+          <div className="flex items-center justify-between gap-2 pt-1 mt-0.5">
+            {/* Left: Author Avatar + @handle */}
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-7 h-7 shrink-0 flex items-center justify-center">
+                {isNiwacheAdmin ? (
+                  <MascotCharacter config={mascotConfig} size={28} />
+                ) : post.author?.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={post.author.avatar_url}
+                    alt={post.author.handle || "author"}
+                    className="w-7 h-7 rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-[11px] font-bold text-white">
+                    {(post.author?.name || "U")[0]}
+                  </span>
+                )}
+              </span>
+              <span className="text-xs font-semibold text-zinc-200 truncate">
+                {post.author?.handle?.startsWith("@") ? post.author.handle : `@${post.author?.handle || "foodie"}`}
+              </span>
+            </div>
+
+            {/* Right Group: Like pill + [ 📍 Map ] Action Pill */}
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Like Pill */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleToggleLike();
+                }}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold backdrop-blur-md border transition-all active:scale-95 ${
+                  isLiked
+                    ? "bg-[#e84a27] text-white border-[#e84a27] shadow-sm"
+                    : "bg-black/50 text-zinc-200 border-white/10 hover:bg-black/70"
+                }`}
+                title="Like dish"
+              >
+                <ThumbsUp className={`w-3 h-3 ${isLiked ? "fill-white" : ""}`} />
+                <span className="font-mono text-[11px]">{post.likes_count}</span>
+              </button>
+
+              {/* [ 📍 Map ] Action Pill */}
+              <button
+                onClick={handleFlyToRadar}
+                className="flex items-center gap-1 bg-white hover:bg-zinc-100 text-zinc-950 font-bold px-3 py-1 rounded-full text-xs shadow-md transition-transform active:scale-95"
+                title="Locate on map"
+              >
+                <span aria-hidden>📍</span>
+                <span>Map</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
     </article>
   );
-}
+});

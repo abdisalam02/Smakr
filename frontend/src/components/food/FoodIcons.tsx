@@ -10,8 +10,8 @@ interface IconProps {
 export function AllFoodIcon({ className = "w-4 h-4" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className}>
-      <circle cx="12" cy="12" r="10" fill="#ffedd5" stroke="#f97316" strokeWidth="1.5" />
-      <path d="M12 6L13.5 10.5L18 12L13.5 13.5L12 18L10.5 13.5L6 12L10.5 10.5L12 6Z" fill="#ea580c" />
+      <circle cx="12" cy="12" r="10" fill="#ffedd5" stroke="#e84a27" strokeWidth="1.5" />
+      <path d="M12 6L13.5 10.5L18 12L13.5 13.5L12 18L10.5 13.5L6 12L10.5 10.5L12 6Z" fill="#e84a27" />
     </svg>
   );
 }
@@ -44,8 +44,8 @@ export function CoffeeIcon({ className = "w-4 h-4" }: IconProps) {
       {/* Handle */}
       <path d="M17 9H19.5C20.6 9 21.5 9.9 21.5 11C21.5 12.1 20.6 13 19.5 13H17" stroke="#451a03" strokeWidth="1.4" strokeLinecap="round" />
       {/* Steam lines */}
-      <path d="M8 3.5C8 4.5 9 5 9 6" stroke="#ea580c" strokeWidth="1.2" strokeLinecap="round" />
-      <path d="M12 2.5C12 3.5 13 4 13 5.5" stroke="#ea580c" strokeWidth="1.2" strokeLinecap="round" />
+      <path d="M8 3.5C8 4.5 9 5 9 6" stroke="#e84a27" strokeWidth="1.2" strokeLinecap="round" />
+      <path d="M12 2.5C12 3.5 13 4 13 5.5" stroke="#e84a27" strokeWidth="1.2" strokeLinecap="round" />
       {/* Saucer */}
       <path d="M4 21H18" stroke="#451a03" strokeWidth="1.4" strokeLinecap="round" />
     </svg>
@@ -179,7 +179,7 @@ export function DrinksIcon({ className = "w-4 h-4" }: IconProps) {
 
 // Helper dictionary of raw SVG strings for MapLibre map pins
 export const FOOD_PIN_SVG_MAP: Record<string, string> = {
-  all: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><circle cx="12" cy="12" r="10" fill="#ffedd5" stroke="#f97316" stroke-width="1.5"/><path d="M12 6L13.5 10.5L18 12L13.5 13.5L12 18L10.5 13.5L6 12L10.5 10.5L12 6Z" fill="#ea580c"/></svg>`,
+  all: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><circle cx="12" cy="12" r="10" fill="#ffedd5" stroke="#e84a27" stroke-width="1.5"/><path d="M12 6L13.5 10.5L18 12L13.5 13.5L12 18L10.5 13.5L6 12L10.5 10.5L12 6Z" fill="#e84a27"/></svg>`,
   bakery: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M4 14C3 10.5 5.5 6.5 12 6.5C18.5 6.5 21 10.5 20 14C19.5 16 17 17.5 15 16C13.5 15 13 13.5 12 13.5C11 13.5 10.5 15 9 16C7 17.5 4.5 16 4 14Z" fill="#fbbf24" stroke="#b45309" stroke-width="1.4"/><path d="M8 8.5C9 10 10.5 11 12 11C13.5 11 15 10 16 8.5" stroke="#d97706" stroke-width="1.3"/></svg>`,
   coffee: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M5 8H17V15C17 17.8 14.8 20 12 20C9.2 20 7 17.8 7 15V8H5Z" fill="#78350f" stroke="#451a03" stroke-width="1.4"/><path d="M5 8H17V11H5V8Z" fill="#ffedd5"/><path d="M17 9H19.5C20.6 9 21.5 9.9 21.5 11C21.5 12.1 20.6 13 19.5 13H17" stroke="#451a03" stroke-width="1.4"/></svg>`,
   ramen: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M3 11C3 16.5 7 20 12 20C17 20 21 16.5 21 11H3Z" fill="#ef4444" stroke="#991b1b" stroke-width="1.4"/><ellipse cx="12" cy="11" rx="9" ry="2.2" fill="#fbbf24"/><circle cx="9" cy="11" r="1.5" fill="#f97316"/><rect x="14" y="8" width="3" height="4.5" rx="0.5" fill="#18181b"/><path d="M2 4L18 9" stroke="#78350f" stroke-width="1.3"/></svg>`,

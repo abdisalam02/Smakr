@@ -16,7 +16,7 @@ export function FoodFeed() {
   const feedMode = useCityPulseStore((state) => state.feedMode);
   const searchQuery = useCityPulseStore((state) => state.filters.search_query);
   const setFeedCategory = useCityPulseStore((state) => state.setFeedCategory);
-  const setIsCreateBiteModalOpen = useCityPulseStore((state) => state.setIsCreateBiteModalOpen);
+  const openCreateDish = useCityPulseStore((state) => state.openCreateDish);
 
   const filteredPosts = foodPosts.filter((post) => {
     if (currentCategory !== "all" && post.category !== currentCategory) {
@@ -89,7 +89,7 @@ export function FoodFeed() {
           </div>
 
           <button
-            onClick={() => setIsCreateBiteModalOpen(true)}
+            onClick={() => openCreateDish()}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-xs transition-colors shadow-xs"
           >
             <Plus className="w-3.5 h-3.5" />

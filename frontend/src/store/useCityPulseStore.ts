@@ -15,11 +15,16 @@ import {
   ColorTheme,
   TypographyStyle,
   LogoVariant,
+  DietaryTag,
+  Neighborhood,
+  MascotConfig,
+  DEFAULT_MASCOT_CONFIG,
+  MASCOT_STORAGE_KEY,
+  WeeklyPick,
+  DEFAULT_WEEKLY_PICK,
+  WEEKLY_PICK_STORAGE_KEY,
 } from "@/types";
-import { INITIAL_FOOD_SPOTS, INITIAL_FOOD_POSTS } from "@/lib/foodSeeds";
 import { getDistanceInMeters } from "@/lib/math";
-
-const COMBINED_SPOTS: Venue[] = INITIAL_FOOD_SPOTS;
 
 const INITIAL_FILTERS: FilterState = {
   place_type: null,
@@ -32,6 +37,9 @@ const INITIAL_FILTERS: FilterState = {
   min_download_mbps: null,
   vibe_status: null,
   search_query: "",
+  dietary: [],
+  neighborhood: "all",
+  open_now: null,
 };
 
 interface PulseStoreState {
@@ -52,34 +60,55 @@ interface PulseStoreState {
   isSpeedTestModalOpen: boolean;
   isCreateBiteModalOpen: boolean;
   bottomSheetOpen: boolean;
+  isVenueDetailModalOpen: boolean;
+  setIsVenueDetailModalOpen: (open: boolean) => void;
   wsConnected: boolean;
   lastEvent: LiveRadarEvent | null;
   isLoadingVenues: boolean;
+  /** True until the first venues/posts/weekly-drop sync resolves. */
+  isHydratingData: boolean;
+  /** True once the Supabase auth session has been resolved (or confirmed absent). */
+  isAuthResolved: boolean;
+  /** True once the server-prefetched payload has been applied to the store. */
+  serverDataApplied: boolean;
   toastMessage: string | null;
   mapCategory: FoodCategory;
   feedCategory: FoodCategory;
   feedMode: "food" | "places";
   selectedAvatar: AvatarOption;
+  mapNeighborhood: Neighborhood;
+  selectedDietary: DietaryTag[];
+  mascotConfig: MascotConfig;
+  weeklyPick: WeeklyPick;
 
   // Theme & Style Studio
   activeTheme: ColorTheme;
   activeFont: TypographyStyle;
   activeLogoVariant: LogoVariant;
   isThemeStudioOpen: boolean;
+  /** True when the avatar builder is opened in edit mode from the profile menu. */
+  isAvatarStudioOpen: boolean;
 
   // Actions
   setActiveTheme: (theme: ColorTheme) => void;
   setActiveFont: (font: TypographyStyle) => void;
   setActiveLogoVariant: (variant: LogoVariant) => void;
   setIsThemeStudioOpen: (open: boolean) => void;
+  openAvatarStudio: () => void;
+  setIsAvatarStudioOpen: (open: boolean) => void;
   setSelectedAvatar: (avatar: AvatarOption) => void;
   showToast: (message: string, durationMs?: number) => void;
   clearToast: () => void;
   setVenues: (venues: Venue[]) => void;
+  setFoodPosts: (posts: FoodPost[]) => void;
   setViewMode: (mode: ViewMode) => void;
   setFoodCategory: (category: FoodCategory) => void;
   setMapCategory: (category: FoodCategory) => void;
   setFeedCategory: (category: FoodCategory) => void;
+  setMapNeighborhood: (neighborhood: Neighborhood) => void;
+  toggleDietary: (tag: DietaryTag) => void;
+  updateMascotConfig: (updates: Partial<MascotConfig>) => void;
+  resetMascotConfig: () => void;
   setFeedMode: (mode: "food" | "places") => void;
   setMobileSheetState: (state: "peek" | "half" | "full") => void;
   setIsAuthModalOpen: (open: boolean) => void;
@@ -105,23 +134,45 @@ interface PulseStoreState {
   openSpeedTestModal: (venue?: Venue | VenueDetail) => void;
   closeSpeedTestModal: () => void;
   setIsCreateBiteModalOpen: (open: boolean) => void;
+  /** Auth- + onboarding-aware entry point for the "+ Log a Dish" flow. */
+  openCreateDish: () => void;
   setBottomSheetOpen: (open: boolean) => void;
   setWsConnected: (connected: boolean) => void;
   setLastEvent: (event: LiveRadarEvent) => void;
   setIsLoadingVenues: (loading: boolean) => void;
+  setIsHydratingData: (loading: boolean) => void;
+  setIsAuthResolved: (resolved: boolean) => void;
+  markServerDataApplied: () => void;
+
+  // Weekly Dispatch (Mascot Pick of the Week)
+  setWeeklyPick: (pick: WeeklyPick) => void;
+
+  // Auth / admin
+  setCurrentUser: (user: UserProfile | null) => void;
+  selectVenueById: (venueId: string) => void;
+
+  // Admin moderation & venue management
+  deletePost: (postId: string) => void;
+  updatePost: (postId: string, updates: Partial<FoodPost>) => void;
+  toggleOfficialPick: (postId: string) => void;
+  addVenue: (venue: Venue) => void;
+  updateVenue: (venueId: string, updates: Partial<Venue>) => void;
+  deleteVenue: (venueId: string) => void;
 }
 
 export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
-  venues: COMBINED_SPOTS,
+  // Venues are DB-driven — start empty and hydrate via fetchVenues().
+  venues: [],
   selectedVenue: null,
   filters: INITIAL_FILTERS,
   userLocation: { lat: 59.9171, lon: 10.7516 }, // Oslo Sentrum (Torggata / Youngstorget)
   mapCenter: [10.7516, 59.9171], // Oslo Sentrum (Torggata / Youngstorget)
   mapZoom: 13.8,
   viewMode: "split",
-  foodPosts: INITIAL_FOOD_POSTS,
-  likedPostIds: new Set<string>(["post-001-ca-phe-coconut"]),
-  savedPostIds: new Set<string>(["post-003-farine-cardamom", "post-006-zz-pizza-nduja"]),
+  // The feed is DB-driven — start empty and hydrate via fetchFoodPosts().
+  foodPosts: [],
+  likedPostIds: new Set<string>(),
+  savedPostIds: new Set<string>(),
   currentUser: null,
   isAuthModalOpen: false,
   mobileSheetState: "half",
@@ -129,20 +180,29 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
   isSpeedTestModalOpen: false,
   isCreateBiteModalOpen: false,
   bottomSheetOpen: false,
+  isVenueDetailModalOpen: false,
   wsConnected: false,
   lastEvent: null,
   isLoadingVenues: false,
+  isHydratingData: true,
+  isAuthResolved: false,
+  serverDataApplied: false,
   toastMessage: null,
   mapCategory: "all",
   feedCategory: "all",
   feedMode: "food",
   selectedAvatar: "lordicon_barista",
+  mapNeighborhood: "all",
+  selectedDietary: [],
+  mascotConfig: DEFAULT_MASCOT_CONFIG,
+  weeklyPick: DEFAULT_WEEKLY_PICK,
 
   // Theme & Style Studio Initial State
-  activeTheme: "oslo-minimalist",
+  activeTheme: "oat-espresso",
   activeFont: "modern-sans",
   activeLogoVariant: "fluid",
   isThemeStudioOpen: false,
+  isAvatarStudioOpen: false,
 
   setActiveTheme: (activeTheme: ColorTheme) => {
     set({ activeTheme });
@@ -175,6 +235,11 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
 
   setIsThemeStudioOpen: (isThemeStudioOpen: boolean) => set({ isThemeStudioOpen }),
 
+  openAvatarStudio: () => set({ isAvatarStudioOpen: true, isAuthModalOpen: false }),
+
+  setIsAvatarStudioOpen: (isAvatarStudioOpen: boolean) => set({ isAvatarStudioOpen }),
+  setIsVenueDetailModalOpen: (isVenueDetailModalOpen: boolean) => set({ isVenueDetailModalOpen }),
+
   setSelectedAvatar: (selectedAvatar: AvatarOption) => set({ selectedAvatar }),
 
   showToast: (message: string, durationMs = 4500) => {
@@ -190,6 +255,8 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
 
   setVenues: (venues) => set({ venues }),
 
+  setFoodPosts: (foodPosts) => set({ foodPosts }),
+
   setViewMode: (viewMode) => set({ viewMode }),
 
   setMapCategory: (mapCategory) => set({ mapCategory }),
@@ -199,6 +266,43 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
       feedCategory,
       filters: { ...state.filters, food_category: feedCategory },
     })),
+
+  setMapNeighborhood: (mapNeighborhood) =>
+    set((state) => ({
+      mapNeighborhood,
+      filters: { ...state.filters, neighborhood: mapNeighborhood },
+    })),
+
+  toggleDietary: (tag) =>
+    set((state) => {
+      const selectedDietary = state.selectedDietary.includes(tag)
+        ? state.selectedDietary.filter((t) => t !== tag)
+        : [...state.selectedDietary, tag];
+      return {
+        selectedDietary,
+        filters: { ...state.filters, dietary: selectedDietary },
+      };
+    }),
+
+  updateMascotConfig: (updates) =>
+    set((state) => {
+      const mascotConfig: MascotConfig = { ...state.mascotConfig, ...updates };
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(MASCOT_STORAGE_KEY, JSON.stringify(mascotConfig));
+        } catch {}
+      }
+      return { mascotConfig };
+    }),
+
+  resetMascotConfig: () => {
+    set({ mascotConfig: DEFAULT_MASCOT_CONFIG });
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem(MASCOT_STORAGE_KEY);
+      } catch {}
+    }
+  },
 
   setFoodCategory: (foodCategory) =>
     set((state) => ({
@@ -285,32 +389,105 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
         handle: "@astrid_eats_oslo",
         avatar_url:
           "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80",
-        badge: "Verified Foodie",
+        role: "foodie",
+        is_official: false,
       },
       isAuthModalOpen: false,
     }),
 
+  setCurrentUser: (user) => set({ currentUser: user, isAuthModalOpen: false }),
+
   logout: () => set({ currentUser: null }),
+
+  setWeeklyPick: (pick) => {
+    set({ weeklyPick: pick });
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(WEEKLY_PICK_STORAGE_KEY, JSON.stringify(pick));
+      } catch {}
+    }
+  },
+
+  selectVenueById: (venueId) => {
+    const venue = get().venues.find((v) => v.id === venueId);
+    if (!venue) {
+      get().showToast("That spot is no longer on the radar.");
+      return;
+    }
+    set({
+      selectedVenue: {
+        ...venue,
+        recent_checkins: [],
+        recent_speed_tests: [],
+      },
+      isVenueDetailModalOpen: true,
+      bottomSheetOpen: true,
+    });
+  },
+
+  deletePost: (postId) => {
+    set((state) => ({
+      foodPosts: state.foodPosts.filter((post) => post.id !== postId),
+    }));
+  },
+
+  updatePost: (postId, updates) => {
+    set((state) => ({
+      foodPosts: state.foodPosts.map((post) =>
+        post.id === postId ? { ...post, ...updates } : post
+      ),
+    }));
+  },
+
+  toggleOfficialPick: (postId) => {
+    set((state) => ({
+      foodPosts: state.foodPosts.map((post) =>
+        post.id === postId
+          ? { ...post, is_official_pick: !post.is_official_pick }
+          : post
+      ),
+    }));
+  },
+
+  addVenue: (venue) => {
+    set((state) => ({ venues: [venue, ...state.venues] }));
+  },
+
+  updateVenue: (venueId, updates) => {
+    set((state) => {
+      const venues = state.venues.map((v) =>
+        v.id === venueId ? { ...v, ...updates } : v
+      );
+      let selectedVenue = state.selectedVenue;
+      if (selectedVenue && selectedVenue.id === venueId) {
+        selectedVenue = { ...selectedVenue, ...updates };
+      }
+      return { venues, selectedVenue };
+    });
+  },
+
+  deleteVenue: (venueId) => {
+    set((state) => ({
+      venues: state.venues.filter((v) => v.id !== venueId),
+      selectedVenue:
+        state.selectedVenue && state.selectedVenue.id === venueId
+          ? null
+          : state.selectedVenue,
+    }));
+  },
 
   flyToSpot: (coords, spotId) => {
     const { venues, viewMode } = get();
+    const spot = spotId ? venues.find((v) => v.id === spotId) : null;
     set({
       mapCenter: [coords[0], coords[1]],
-      mapZoom: 15.5,
-      mobileSheetState: "peek", // Smoothly slide down feed so map & card show!
+      mapZoom: 16,
+      mobileSheetState: "peek", // Smoothly slide down feed so map shows!
+      isVenueDetailModalOpen: false, // Ensure full detail drawer is dismissed so map is visible
+      selectedVenue: spot ? (spot as VenueDetail) : null,
       bottomSheetOpen: true,
       viewMode: viewMode === "feed" ? "split" : viewMode,
     });
-
-    if (spotId) {
-      const spot = venues.find((v) => v.id === spotId);
-      if (spot) {
-        set({
-          selectedVenue: spot as VenueDetail,
-          bottomSheetOpen: true,
-        });
-      }
-    }
   },
 
   updateVenueVibe: (venueId, vibe, newCheckin, speedTest) => {
@@ -351,6 +528,7 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
     set({
       selectedVenue: venue,
       bottomSheetOpen: venue !== null,
+      ...(venue === null ? { isVenueDetailModalOpen: false } : {}),
     }),
 
   setFilters: (newFilters) =>
@@ -412,6 +590,30 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
 
   setIsCreateBiteModalOpen: (open) => set({ isCreateBiteModalOpen: open }),
 
+  openCreateDish: () => {
+    const { currentUser } = get();
+
+    // 1) Guests must sign in first.
+    if (!currentUser) {
+      set({ isAuthModalOpen: true });
+      get().showToast("Sign in or create an account to log dishes on Smakr.");
+      return;
+    }
+
+    // 2) Not-yet-onboarded foodies finish their 15-second profile first. The
+    //    UserOnboardingModal is always mounted and overlays when this is true.
+    const needsOnboarding =
+      currentUser.onboarding_completed !== true &&
+      !currentUser.is_official &&
+      currentUser.role !== "admin";
+    if (needsOnboarding) {
+      get().showToast("Finish your 15-second profile first ✨");
+      return;
+    }
+
+    set({ isCreateBiteModalOpen: true });
+  },
+
   setBottomSheetOpen: (open) => set({ bottomSheetOpen: open }),
 
   setWsConnected: (connected) => set({ wsConnected: connected }),
@@ -419,4 +621,14 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
   setLastEvent: (event) => set({ lastEvent: event }),
 
   setIsLoadingVenues: (loading) => set({ isLoadingVenues: loading }),
+
+  setIsHydratingData: (isHydratingData) => set({ isHydratingData }),
+
+  setIsAuthResolved: (isAuthResolved) => set({ isAuthResolved }),
+
+  markServerDataApplied: () => set({ serverDataApplied: true }),
 }));
+
+if (typeof window !== "undefined") {
+  (window as unknown as { __store: typeof useCityPulseStore }).__store = useCityPulseStore;
+}

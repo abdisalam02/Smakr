@@ -6,35 +6,14 @@ import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { MapControls } from "@/components/map/MapControls";
 import { fetchVenueDetail } from "@/lib/api";
 import { Venue } from "@/types";
-import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
-import { createAvatarElement } from "@/components/avatar/AnimatedAvatars";
 import {
-  FOOD_PIN_SVG_MAP,
-  AllFoodIcon,
-  BakeryIcon,
-  CoffeeIcon,
-  RamenIcon,
-  BurgerIcon,
-  PizzaIcon,
-  TacoIcon,
-  SushiIcon,
-  DessertIcon,
-  DrinksIcon,
-} from "@/components/food/FoodIcons";
-import { FoodCategory } from "@/types";
-
-const CATEGORY_ICON_MAP: Record<FoodCategory, React.ComponentType<{ className?: string }>> = {
-  all: AllFoodIcon,
-  coffee: CoffeeIcon,
-  bakery: BakeryIcon,
-  ramen: RamenIcon,
-  burger: BurgerIcon,
-  pizza: PizzaIcon,
-  street_food: TacoIcon,
-  sushi: SushiIcon,
-  dessert: DessertIcon,
-  drinks: DrinksIcon,
-};
+  createMascotDOMElement,
+  buildMascotSVGString,
+  MASCOT_VIEWBOX_WIDTH,
+  MASCOT_VIEWBOX_HEIGHT,
+} from "@/components/avatar/MascotCharacter";
+import { FOOD_PIN_SVG_MAP } from "@/components/food/FoodIcons";
+import { formatDistance } from "@/lib/math";
 
 const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY || "ThoacZP1opK329U6AvTz";
 
@@ -56,6 +35,25 @@ function getMapStyles() {
 
 // Fixed-position marker builder:
 // Root node MUST be absolute with top:0, left:0 so MapLibre's translate3d() math places it precisely at its GPS point
+const PIN_SHADOW_SELECTED =
+  "drop-shadow(0 4px 10px rgba(232, 74, 39, 0.65)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35))";
+const PIN_SHADOW_DEFAULT =
+  "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.35)) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2))";
+
+/**
+ * Updates a pin's selected/unselected visuals IN PLACE. Markers are created once
+ * and only mutated afterwards, so store updates never tear down and rebuild the
+ * marker DOM (which caused layout thrash and frame drops).
+ */
+function applyPinState(root: HTMLElement, isSelected: boolean) {
+  root.dataset.selected = isSelected ? "1" : "0";
+  root.style.zIndex = isSelected ? "35" : "15";
+  const visual = root.querySelector<HTMLElement>(".pin-visual");
+  if (visual) visual.style.transform = isSelected ? "scale(1.3)" : "scale(1.0)";
+  const glyph = root.querySelector<HTMLElement>(".pin-glyph");
+  if (glyph) glyph.style.filter = isSelected ? PIN_SHADOW_SELECTED : PIN_SHADOW_DEFAULT;
+}
+
 function createAquarellePinElement(
   venue: Venue,
   isSelected: boolean,
@@ -72,10 +70,14 @@ function createAquarellePinElement(
   root.style.padding = "0";
   root.style.cursor = "pointer";
   root.style.userSelect = "none";
-  root.style.zIndex = isSelected ? "35" : "15";
 
   const categoryKey = venue.food_category || (venue.place_type === "cafe" ? "coffee" : "all");
   const iconSvg = FOOD_PIN_SVG_MAP[categoryKey] || FOOD_PIN_SVG_MAP.all;
+  // A curated emoji (set by the admin importer) overrides the default SVG pin.
+  const curatedIcon = venue.icon ? String(venue.icon).replace(/[<>&"']/g, "").trim() : "";
+  const pinGlyph = curatedIcon
+    ? `<span style="font-size:26px;line-height:1;">${curatedIcon}</span>`
+    : iconSvg.replace('width="20" height="20"', 'width="32" height="32"');
 
   const inner = document.createElement("div");
   inner.className = "pin-visual";
@@ -86,24 +88,19 @@ function createAquarellePinElement(
   inner.style.justifyContent = "center";
   inner.style.position = "relative";
   inner.style.transition = "transform 0.15s cubic-bezier(0.16, 1, 0.3, 1)";
-  inner.style.transform = isSelected ? "scale(1.3)" : "scale(1.0)";
 
   inner.innerHTML = `
     <!-- Clean Standalone Food Icon with Soft Map Shadow -->
-    <div style="
+    <div class="pin-glyph" style="
       width: 34px;
       height: 34px;
       display: flex;
       align-items: center;
       justify-content: center;
-      filter: ${
-        isSelected
-          ? "drop-shadow(0 4px 10px rgba(255, 85, 0, 0.65)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35))"
-          : "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.35)) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2))"
-      };
+      filter: ${PIN_SHADOW_DEFAULT};
       transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), filter 0.2s ease;
     ">
-      ${iconSvg.replace('width="20" height="20"', 'width="32" height="32"')}
+      ${pinGlyph}
     </div>
 
     <!-- Hover Tooltip -->
@@ -134,12 +131,14 @@ function createAquarellePinElement(
 
   root.addEventListener("mouseenter", () => {
     if (tooltip) tooltip.style.display = "block";
-    inner.style.transform = isSelected ? "scale(1.3)" : "scale(1.15)";
+    const selected = root.dataset.selected === "1";
+    inner.style.transform = selected ? "scale(1.3)" : "scale(1.15)";
   });
 
   root.addEventListener("mouseleave", () => {
     if (tooltip) tooltip.style.display = "none";
-    inner.style.transform = isSelected ? "scale(1.22)" : "scale(1.0)";
+    const selected = root.dataset.selected === "1";
+    inner.style.transform = selected ? "scale(1.22)" : "scale(1.0)";
   });
 
   root.addEventListener("click", (e) => {
@@ -148,6 +147,7 @@ function createAquarellePinElement(
   });
 
   root.appendChild(inner);
+  applyPinState(root, isSelected);
   return root;
 }
 
@@ -155,75 +155,129 @@ export function MapRadarView() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<maplibregl.Map | null>(null);
   const markersMap = useRef<Map<string, maplibregl.Marker>>(new Map());
-  const userMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const weeklyMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const venuePopupRef = useRef<maplibregl.Popup | null>(null);
+  const isMapReadyRef = useRef(false);
+  const [isMapReady, setIsMapReady] = useState(false);
 
   // Fast, responsive Streets v2 default
   const [activeTheme, setActiveTheme] = useState<"streets" | "dataviz" | "aquarelle">("streets");
   const venues = useCityPulseStore((state) => state.venues);
   const selectedVenue = useCityPulseStore((state) => state.selectedVenue);
   const setSelectedVenue = useCityPulseStore((state) => state.setSelectedVenue);
+  const setIsVenueDetailModalOpen = useCityPulseStore((state) => state.setIsVenueDetailModalOpen);
   const mapCategory = useCityPulseStore((state) => state.mapCategory);
-  const setMapCategory = useCityPulseStore((state) => state.setMapCategory);
+  const mapNeighborhood = useCityPulseStore((state) => state.mapNeighborhood);
+  const openNow = useCityPulseStore((state) => state.filters.open_now);
   const mapCenter = useCityPulseStore((state) => state.mapCenter);
   const mapZoom = useCityPulseStore((state) => state.mapZoom);
-  const userLocation = useCityPulseStore((state) => state.userLocation);
+  const weeklyPick = useCityPulseStore((state) => state.weeklyPick);
+  const mascotConfig = useCityPulseStore((state) => state.mascotConfig);
 
   // Synchronize markers to MapLibre
   const renderMarkers = useCallback(() => {
     const map = mapInstance.current;
-    if (!map) return;
+    if (!map || !isMapReadyRef.current) return;
 
     const currentVenues = useCityPulseStore.getState().venues;
     const currentSelected = useCityPulseStore.getState().selectedVenue;
     const currentMapCategory = useCityPulseStore.getState().mapCategory;
+    const currentNeighborhood = useCityPulseStore.getState().mapNeighborhood;
+    const currentOpenNow = useCityPulseStore.getState().filters.open_now;
 
-    // Filter venues based on selected food craving
+    // Filter venues based on craving category, neighborhood & open status
     const visibleVenues = currentVenues.filter((venue) => {
-      if (currentMapCategory === "all") return true;
-      if (venue.food_category === currentMapCategory) return true;
-      if (currentMapCategory === "coffee" && venue.place_type === "cafe") return true;
-      return false;
+      if (currentMapCategory !== "all") {
+        const categoryMatch =
+          venue.food_category === currentMapCategory ||
+          (currentMapCategory === "coffee" && venue.place_type === "cafe");
+        if (!categoryMatch) return false;
+      }
+      if (
+        currentNeighborhood !== "all" &&
+        venue.neighborhood !== currentNeighborhood
+      ) {
+        return false;
+      }
+      if (currentOpenNow && !venue.open_now) return false;
+      return true;
     });
 
-    // Remove existing markers
-    markersMap.current.forEach((m) => m.remove());
-    markersMap.current.clear();
+    // Remove markers that are no longer visible (rare) — never rebuild the rest.
+    const visibleIds = new Set(visibleVenues.map((v) => v.id));
+    markersMap.current.forEach((marker, id) => {
+      if (!visibleIds.has(id)) {
+        marker.remove();
+        markersMap.current.delete(id);
+      }
+    });
 
-    // Attach all venue markers
+    // Create only new markers; update existing ones in place (position + state).
+    // A pin is only rebuilt when its visual identity (icon/category/name) changes.
     visibleVenues.forEach((venue) => {
       const isSelected = currentSelected?.id === venue.id;
+      const pinKey = `${venue.icon ?? ""}|${venue.food_category}|${venue.name}`;
+
+      let existing = markersMap.current.get(venue.id);
+      if (existing && existing.getElement().dataset.pinKey !== pinKey) {
+        existing.remove();
+        markersMap.current.delete(venue.id);
+        existing = undefined;
+      }
+      if (existing) {
+        existing.setLngLat([venue.longitude, venue.latitude]);
+        applyPinState(existing.getElement(), isSelected);
+        return;
+      }
 
       const handleSelect = async () => {
+        // Read the freshest venue snapshot so the handler never goes stale.
+        const current =
+          useCityPulseStore.getState().venues.find((v) => v.id === venue.id) ?? venue;
         try {
           const detail = await fetchVenueDetail(venue.id);
           setSelectedVenue(detail);
         } catch {
           setSelectedVenue({
-            ...venue,
+            ...current,
             recent_checkins: [],
             recent_speed_tests: [],
           });
         }
 
-        const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
-        const containerH = map.getContainer()?.clientHeight || (typeof window !== "undefined" ? window.innerHeight : 650);
-        const bottomPad = isMobile ? Math.min(340, Math.max(220, Math.round(containerH * 0.44))) : 0;
+        const activeMap = mapInstance.current;
+        if (!activeMap) return;
 
-        map.flyTo({
-          center: [venue.longitude, venue.latitude],
-          zoom: 15.5,
-          essential: true,
-          duration: 500,
-          padding: {
-            top: isMobile ? 60 : 0,
-            bottom: bottomPad,
-            left: 0,
-            right: 0,
-          },
-        });
+        const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
+
+        if (isMobile) {
+          // Mobile: the bottom sheet covers the lower map, so pad the camera.
+          const containerH =
+            activeMap.getContainer()?.clientHeight ||
+            (typeof window !== "undefined" ? window.innerHeight : 650);
+          const bottomPad = Math.min(340, Math.max(220, Math.round(containerH * 0.44)));
+
+          activeMap.flyTo({
+            center: [current.longitude, current.latitude],
+            zoom: 15.5,
+            essential: true,
+            duration: 500,
+            padding: { top: 60, bottom: bottomPad, left: 0, right: 0 },
+          });
+        } else {
+          // Desktop: master-detail split — the map is never covered by a sheet.
+          activeMap.flyTo({
+            center: [current.longitude, current.latitude],
+            zoom: 15.5,
+            essential: true,
+            duration: 500,
+            padding: { top: 0, bottom: 0, left: 0, right: 0 },
+          });
+        }
       };
 
       const el = createAquarellePinElement(venue, isSelected, handleSelect);
+      el.dataset.pinKey = pinKey;
 
       const marker = new maplibregl.Marker({
         element: el,
@@ -236,28 +290,77 @@ export function MapRadarView() {
     });
   }, [setSelectedVenue]);
 
-  // Synchronize Lordicon Foodie Avatar Marker to MapLibre
-  const renderUserMarker = useCallback(() => {
-    const map = mapInstance.current;
-    if (!map) return;
-    const loc = useCityPulseStore.getState().userLocation;
-    if (!loc) return;
+  // Floating "Pick of the Week" badge attached to the mascot marker
+  const buildWeeklyBadge = useCallback((): HTMLDivElement => {
+    const badge = document.createElement("div");
+    badge.textContent = "✦ Smakr Pick of the Week";
+    Object.assign(badge.style, {
+      position: "absolute",
+      bottom: "calc(100% - 2px)",
+      left: "50%",
+      transform: "translateX(-50%)",
+      background: "#e84a27",
+      color: "#ffffff",
+      fontSize: "9px",
+      fontWeight: "700",
+      letterSpacing: "0.01em",
+      whiteSpace: "nowrap",
+      padding: "2px 6px",
+      borderRadius: "999px",
+      border: "1px solid rgba(255,255,255,0.55)",
+      boxShadow: "0 2px 8px rgba(232, 74, 39, 0.35)",
+      pointerEvents: "none",
+      zIndex: "60",
+    } as Partial<CSSStyleDeclaration>);
+    return badge;
+  }, []);
 
-    if (!userMarkerRef.current) {
-      const el = createAvatarElement();
+  const openWeeklyVenue = useCallback(() => {
+    const state = useCityPulseStore.getState();
+    state.selectVenueById(state.weeklyPick.venue_id);
+  }, []);
+
+  // Anchor the customizable Smakr mascot exclusively to the Weekly Pick.
+  // (No user GPS tracking is attached to the mascot.)
+  const renderWeeklyMarker = useCallback(() => {
+    const map = mapInstance.current;
+    if (!map || !isMapReadyRef.current) return;
+
+    const state = useCityPulseStore.getState();
+    const pick = state.weeklyPick;
+    const config = state.mascotConfig;
+    const [lng, lat] = pick.coords;
+    if (typeof lng !== "number" || typeof lat !== "number") return;
+
+    const width = 38;
+    const height = Math.round((width * MASCOT_VIEWBOX_HEIGHT) / MASCOT_VIEWBOX_WIDTH);
+
+    if (!weeklyMarkerRef.current) {
+      const el = createMascotDOMElement(config);
+      el.style.pointerEvents = "auto";
+      el.style.cursor = "pointer";
+      el.appendChild(buildWeeklyBadge());
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openWeeklyVenue();
+      });
 
       const marker = new maplibregl.Marker({
         element: el,
         anchor: "bottom",
       })
-        .setLngLat([loc.lon, loc.lat])
+        .setLngLat([lng, lat])
         .addTo(map);
 
-      userMarkerRef.current = marker;
+      weeklyMarkerRef.current = marker;
     } else {
-      userMarkerRef.current.setLngLat([loc.lon, loc.lat]);
+      // Rebuild the SVG in place so live config changes reflect instantly
+      const el = weeklyMarkerRef.current.getElement();
+      el.innerHTML = buildMascotSVGString(config, true, width, height);
+      el.appendChild(buildWeeklyBadge());
+      weeklyMarkerRef.current.setLngLat([lng, lat]);
     }
-  }, []);
+  }, [buildWeeklyBadge, openWeeklyVenue]);
 
   // 1. Initialize MapLibre
   useEffect(() => {
@@ -282,15 +385,32 @@ export function MapRadarView() {
 
     mapInstance.current = map;
 
-    map.on("load", () => {
-      map.resize();
+    // Attach marker DOM only when the main thread is idle so the MapLibre boot
+    // never competes with hydration/paint for frame budget. Falls back to rAF.
+    const attachMarkers = () => {
       renderMarkers();
-      renderUserMarker();
+      renderWeeklyMarker();
+    };
+    const scheduleMarkerAttachment = () => {
+      const ric = (
+        window as unknown as {
+          requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+        }
+      ).requestIdleCallback;
+      if (typeof ric === "function") ric(attachMarkers, { timeout: 400 });
+      else requestAnimationFrame(attachMarkers);
+    };
+
+    map.on("load", () => {
+      isMapReadyRef.current = true;
+      setIsMapReady(true);
+      map.resize();
+      scheduleMarkerAttachment();
     });
 
     map.on("style.load", () => {
-      renderMarkers();
-      renderUserMarker();
+      if (!isMapReadyRef.current) return;
+      scheduleMarkerAttachment();
     });
 
     // Single click on empty map: deselects venue card and minimizes feed to peek if expanded
@@ -318,16 +438,18 @@ export function MapRadarView() {
       resizeObserver.disconnect();
       markersMap.current.forEach((m) => m.remove());
       markersMap.current.clear();
-      if (userMarkerRef.current) userMarkerRef.current.remove();
+      if (weeklyMarkerRef.current) weeklyMarkerRef.current.remove();
+      isMapReadyRef.current = false;
+      setIsMapReady(false);
       map.remove();
       mapInstance.current = null;
     };
   }, []);
 
-  // 2. Re-render markers when venues or selection changes
+  // 2. Re-render markers when venues, selection, or filters change
   useEffect(() => {
     renderMarkers();
-  }, [venues, selectedVenue, mapCategory, renderMarkers]);
+  }, [venues, selectedVenue, mapCategory, mapNeighborhood, openNow, renderMarkers]);
 
   // 2.5 Auto-fit map camera when category filter changes
   useEffect(() => {
@@ -439,10 +561,194 @@ export function MapRadarView() {
     });
   }, [mapCenter, mapZoom]);
 
-  // 5. User GPS point (Lordicon foodie avatar)
+  // 5. Weekly Pick mascot anchor (re-anchors + recolours on dispatch/config change)
   useEffect(() => {
-    renderUserMarker();
-  }, [userLocation, renderUserMarker]);
+    renderWeeklyMarker();
+  }, [weeklyPick, mascotConfig, renderWeeklyMarker]);
+
+  // 6. Synchronize active venue popup card directly under marker pin
+  useEffect(() => {
+    const map = mapInstance.current;
+    if (!map || !isMapReady) return;
+
+    if (venuePopupRef.current) {
+      venuePopupRef.current.remove();
+      venuePopupRef.current = null;
+    }
+
+    if (!selectedVenue) return;
+
+    const popupNode = document.createElement("div");
+    popupNode.className = "smakr-map-venue-card";
+
+    const ratingVal = selectedVenue.google_rating != null
+      ? selectedVenue.google_rating.toFixed(1)
+      : "4.8";
+
+    const distanceText = selectedVenue.distance_meters
+      ? formatDistance(selectedVenue.distance_meters)
+      : "";
+
+    const addressText = selectedVenue.address
+      ? selectedVenue.address
+      : selectedVenue.neighborhood
+      ? `${selectedVenue.neighborhood}, Oslo`
+      : "Oslo";
+
+    const imageUrl = selectedVenue.cover_image_url || "/images/placeholder-venue.jpg";
+    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${selectedVenue.latitude},${selectedVenue.longitude}`;
+
+    popupNode.innerHTML = `
+      <div style="
+        background: #fbf9f5;
+        border: 1.5px solid rgba(0, 0, 0, 0.08);
+        border-radius: 18px;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+        padding: 10px 11px;
+        width: 295px;
+        max-width: 88vw;
+        position: relative;
+        font-family: inherit;
+      ">
+        <button id="smakr-popup-close-btn" style="
+          position: absolute;
+          top: 6px;
+          right: 6px;
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          background: rgba(0,0,0,0.06);
+          border: none;
+          color: #71717a;
+          font-size: 12px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 10;
+        ">✕</button>
+
+        <div style="display: flex; gap: 11px; align-items: center;">
+          <div style="
+            width: 74px;
+            height: 74px;
+            border-radius: 14px;
+            overflow: hidden;
+            flex-shrink: 0;
+            background: #e4d9c8;
+            border: 1px solid rgba(0,0,0,0.08);
+          ">
+            <img src="${imageUrl}" alt="${selectedVenue.name}" style="width: 100%; height: 100%; object-fit: cover;" />
+          </div>
+
+          <div style="flex: 1; min-width: 0;">
+            <div style="
+              font-family: var(--font-comico, sans-serif);
+              font-size: 15px;
+              color: #181615;
+              font-weight: bold;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            ">
+              ${selectedVenue.name}
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+              <span style="
+                background: #181615;
+                color: #ffffff;
+                font-size: 10px;
+                font-weight: bold;
+                padding: 1px 5px;
+                border-radius: 5px;
+                display: inline-flex;
+                align-items: center;
+                gap: 2px;
+              ">
+                <span style="color: #f59e0b;">★</span> ${ratingVal}
+              </span>
+              ${distanceText ? `<span style="font-size: 10.5px; color: #059669; font-weight: 600;">· ${distanceText}</span>` : ""}
+            </div>
+
+            <div style="
+              font-size: 11px;
+              color: #71717a;
+              margin-top: 4px;
+              line-height: 1.35;
+              word-break: break-word;
+            ">
+              📍 ${addressText}
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(0,0,0,0.06);">
+          <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" style="
+            flex: 1;
+            padding: 4px 8px;
+            border-radius: 8px;
+            background: #ffffff;
+            border: 1px solid rgba(0,0,0,0.1);
+            color: #3f3f46;
+            font-size: 10.5px;
+            font-weight: 600;
+            text-align: center;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+          ">
+            <span>Map</span> ↗
+          </a>
+
+          <button id="smakr-popup-menu-btn" style="
+            flex: 1;
+            padding: 4px 8px;
+            border-radius: 8px;
+            background: #e84a27;
+            border: none;
+            color: #ffffff;
+            font-family: var(--font-comico, sans-serif);
+            font-size: 10.5px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            box-shadow: 0 1px 4px rgba(232,74,39,0.2);
+          ">
+            <span>Details</span> →
+          </button>
+        </div>
+      </div>
+    `;
+
+    popupNode.querySelector("#smakr-popup-close-btn")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      setSelectedVenue(null);
+    });
+
+    popupNode.querySelector("#smakr-popup-menu-btn")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      setIsVenueDetailModalOpen(true);
+    });
+
+    const popup = new maplibregl.Popup({
+      offset: [0, 24],
+      anchor: "top",
+      closeButton: false,
+      closeOnClick: false,
+      className: "smakr-pin-card-popup",
+    })
+      .setLngLat([selectedVenue.longitude, selectedVenue.latitude])
+      .setDOMContent(popupNode)
+      .addTo(map);
+
+    venuePopupRef.current = popup;
+  }, [selectedVenue, isMapReady, setSelectedVenue, setIsVenueDetailModalOpen]);
 
   function cycleTheme() {
     if (activeTheme === "streets") setActiveTheme("dataviz");
@@ -451,34 +757,41 @@ export function MapRadarView() {
   }
 
   return (
-    <div className="relative w-full h-full min-h-[500px] flex-1 overflow-hidden bg-[#f6f3ee]">
-      {/* Map Canvas */}
+    <div className="relative w-full h-full min-h-[500px] flex-1 overflow-hidden bg-[var(--background,#f6f3ee)]">
+      {/* Map Canvas — kept mounted (opacity only) so MapLibre can measure it */}
       <div
         ref={mapContainer}
-        className="absolute inset-0 w-full h-full"
+        className={`absolute inset-0 w-full h-full transition-opacity duration-500 ease-out ${
+          isMapReady ? "opacity-100" : "opacity-0"
+        }`}
         style={{ width: "100%", height: "100%" }}
       />
 
-      {/* FLOATING MAP CRAVING FILTER BAR (Full-width directly under top nav) */}
-      <div className="absolute top-3 left-3 right-3 sm:left-4 sm:right-4 z-20 overflow-x-auto no-scrollbar pointer-events-auto flex items-center gap-1.5 p-1.5 rounded-2xl bg-white/95 backdrop-blur-md border border-zinc-200/80 shadow-md shadow-zinc-950/5">
-        {FOOD_CATEGORIES.map((cat) => {
-          const isActive = mapCategory === cat.id;
-          const Icon = CATEGORY_ICON_MAP[cat.id] || AllFoodIcon;
-          return (
-            <button
-              key={cat.id}
-              onClick={() => setMapCategory(cat.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all select-none ${
-                isActive
-                  ? "bg-[#ff5500] text-white font-bold shadow-md shadow-[#ff5500]/25"
-                  : "bg-transparent hover:bg-zinc-100 text-zinc-600 hover:text-zinc-950 font-medium"
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5 flex-shrink-0" />
-              <span>{cat.label}</span>
-            </button>
-          );
-        })}
+      {/* Ambient skeleton + radar sweep while vector styles initialise */}
+      <div
+        aria-hidden={isMapReady}
+        className={`absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 transition-opacity duration-500 ease-out ${
+          isMapReady ? "opacity-0 pointer-events-none" : "opacity-100"
+        }`}
+        style={{ background: "var(--background, #F7F2E8)" }}
+      >
+        <div className="relative w-36 h-36">
+          <div className="absolute inset-0 rounded-full border border-[#e84a27]/20 animate-pulse" />
+          <div className="absolute inset-5 rounded-full border border-[#e84a27]/15" />
+          <div className="absolute inset-10 rounded-full border border-[#e84a27]/10" />
+          <div
+            className="absolute inset-0 rounded-full animate-[spin_3.5s_linear_infinite]"
+            style={{
+              background:
+                "conic-gradient(from 0deg, rgba(232,74,39,0.32) 0deg, rgba(232,74,39,0.06) 55deg, transparent 90deg, transparent 360deg)",
+            }}
+          />
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-[#e84a27] animate-ping" />
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-[#e84a27] shadow-[0_0_0_4px_rgba(232,74,39,0.18)]" />
+        </div>
+        <p className="text-[11px] font-semibold tracking-wide text-zinc-400 animate-pulse">
+          Warming up the Oslo radar…
+        </p>
       </div>
 
       {/* Style Switcher Pills (Bottom-left on desktop only, completely clear of filters and feed) */}

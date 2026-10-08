@@ -1,0 +1,20 @@
+# Project State
+- Brand visual refactor complete: Comico typography and Burnt Paprika (#e84a27) deployed.
+- Navigation chrome streamlined to Smakr logo, theme toggle, and profile menu.
+- Feed cards tuned to 280-310px height with 3-line editorial meta and snap filters.
+- Mobile bottom sheet calibrated to 35% peek and 80% browse snap points.
+- Logo tuned: scaled down SMAKR wordmark, borderless letter-spaced OSLO label, slim header pill.
+- Style Studio relocated exclusively to /admin top action bar.
+- Footer nav slider streamlined to 36px tactile pill with high-contrast active state.
+- Mascot radar marker scaled to 38px; Weekly Drop consolidated to single 24px header bust.
+- Translucent floating chrome deployed over full-bleed top-edge MapLibre canvas.
+- Editorial food cards rebuilt with full-bleed 4:3 photo, price sticker, and map fly-to pill.
+- Sheet header label updated to FEED in brand Burnt Paprika (#e84a27).
+- Expanded Weekly Drop presents 50px mascot bust on left with tailored speech-bubble tail.
+- Smakr mascot avatar wired for @niwache12 admin profile across header and post cards.
+- Venue inspection card anchored directly under MapLibre marker pin with photo, rating, address, and directions.
+- Food cards streamlined to at most one compact review quote to keep photos unblocked.
+- Map pin card widened with 74px photo, full address, and compact Map / Details buttons.
+- Map controls streamlined to Locate Me and Zoom (+/-); top neighborhood filter bar cleared.
+- Food cards updated with font-comico ratings and borderless 28px admin mascot avatar.
+- Venue detail drawer enlarged heading, added Rating/Price/Area stats, and added reviews section.

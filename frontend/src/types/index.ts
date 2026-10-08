@@ -1,3 +1,5 @@
+import type { OnboardingAvatarConfig } from "./onboarding";
+
 export type VibeStatus = "optimal" | "moderate" | "packed";
 
 export type FoodCategory =
@@ -11,6 +13,18 @@ export type FoodCategory =
   | "sushi"
   | "dessert"
   | "drinks";
+
+export type DietaryTag = "vegan" | "vegetarian" | "halal" | "gluten_free";
+
+export type Neighborhood =
+  | "all"
+  | "grunerlokka"
+  | "torggata"
+  | "toyen"
+  | "gronland"
+  | "sentrum"
+  | "frogner"
+  | "kampen";
 
 export type AvatarOption = "open_peeps" | "ouch_3d" | "lordicon_barista";
 
@@ -26,17 +40,67 @@ export interface AvatarDefinition {
 
 export interface UserProfile {
   id: string;
-  name: string;
+  email?: string;
   handle: string;
-  avatar_url: string;
+  role: "admin" | "foodie";
+  is_official: boolean;
+  /** Optional display name (social profiles / legacy). */
+  name?: string;
+  /** Optional avatar image (social profiles / legacy). */
+  avatar_url?: string;
+  /** Onboarding avatar levers persisted to `public.profiles.avatar_config`. */
+  avatar_config?: OnboardingAvatarConfig | null;
+  /** Whether the 15-second onboarding flow has been completed. */
+  onboarding_completed?: boolean;
   badge?: "Verified Foodie" | "Chef" | "Local Guide" | "Top Taster";
 }
+
+export interface WeeklyPick {
+  id: string;
+  venue_id: string;
+  dish_name: string;
+  dish_image: string;
+  /** e.g. "Skip the queue at Koie, order the Spicy Miso before 17:30!" */
+  speech_bubble: string;
+  coords: [number, number]; // [lng, lat]
+  price_nok: number;
+  /** e.g. "Week 41 Pick" */
+  week_label: string;
+  active: boolean;
+}
+
+export const WEEKLY_PICK_STORAGE_KEY = "smakr_weekly_pick";
+export const USER_STORAGE_KEY = "smakr_user";
+
+export const DEFAULT_WEEKLY_PICK: WeeklyPick = {
+  id: "weekly-pick-koie-ramen",
+  venue_id: "spot-koie",
+  dish_name: "Spicy Miso Tonkotsu Ramen",
+  dish_image:
+    "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=1200&q=80",
+  speech_bubble: "Skip the queue at Koie — order the Spicy Miso before 17:30!",
+  coords: [10.7516, 59.9171],
+  price_nok: 215,
+  week_label: "Week 41 Pick",
+  active: true,
+};
 
 export interface FoodCategoryDef {
   id: FoodCategory;
   label: string;
   emoji: string;
   shortDesc: string;
+}
+
+export interface ReviewItem {
+  id: string;
+  author_name: string;
+  author_photo: string | null;
+  /** 1–5 stars. */
+  rating: number;
+  text: string;
+  /** e.g. "2 weeks ago". */
+  relative_time: string;
 }
 
 export interface FoodPost {
@@ -65,6 +129,11 @@ export interface FoodPost {
   is_drop?: boolean;
   drop_badge?: string; // e.g. "🔥 Trending Drop", "✨ New Item", "⏳ Limited Batch", "🥐 Fresh from Oven"
   item_availability?: "Available Now" | "Sold Out Today" | "Fresh From Oven" | "Weekend Only";
+  dietary_tags?: DietaryTag[];
+  /** Curated by the Smakr admin via the Control Center moderation queue. */
+  is_official_pick?: boolean;
+  /** Customer soundbites curated onto this dish (JSONB `diner_quotes`). */
+  diner_quotes?: ReviewItem[];
 }
 
 export interface VibeMetrics {
@@ -93,10 +162,18 @@ export interface Venue {
   longitude: number;
   place_type: "cafe" | "library" | "coworking" | "hotel_lobby";
   food_category?: FoodCategory;
+  /** Admin-curated emoji shown on the map pin & venue cards (stored in `vibe_signals.icon`). */
+  icon?: string;
   price_level?: "$" | "$$" | "$$$";
   signature_dishes?: string[];
   live_food_status?: string;
   google_place_id?: string | null;
+  /** Google's aggregate star rating (0–5). */
+  google_rating?: number | null;
+  /** Google's total review count. */
+  google_reviews_count?: number | null;
+  /** Hand-picked Google reviews saved to the venue (JSONB `curated_reviews`). */
+  curated_reviews?: ReviewItem[];
   opening_hours_json?: Record<string, string> | null;
   cover_image_url?: string | null;
   description?: string | null;
@@ -112,6 +189,9 @@ export interface Venue {
   created_at?: string | null;
   vibe: VibeMetrics;
   distance_meters?: number | null;
+  neighborhood?: Neighborhood;
+  dietary_tags?: DietaryTag[];
+  open_now?: boolean;
 }
 
 export interface LiveCheckin {
@@ -164,6 +244,9 @@ export interface FilterState {
   min_download_mbps: number | null;
   vibe_status: VibeStatus | null;
   search_query: string;
+  dietary: DietaryTag[];
+  neighborhood: Neighborhood;
+  open_now: boolean | null;
 }
 
 export interface LiveRadarEvent {
@@ -182,7 +265,12 @@ export interface LiveRadarEvent {
 }
 
 export type ColorTheme =
-  // Sleek, Modern Culinary Themes (Zero Neon)
+  // 4 Signature Food-Culture Themes (anchored to Burnt Paprika #e84a27)
+  | "oat-espresso"
+  | "warm-bakery"
+  | "late-night"
+  | "nordic-minimal"
+  // Legacy / Transitional Aliases (kept for existing localStorage keys)
   | "oslo-minimalist"
   | "obsidian-slate"
   | "nordic-linen"
@@ -208,6 +296,7 @@ export type ColorTheme =
   | "oslo-monolith";
 
 export type TypographyStyle =
+  | "comico"
   | "modern-sans"
   | "jakarta-sans"
   | "editorial-serif"
@@ -226,3 +315,9 @@ export type LogoVariant =
   | "stencil"
   | "dual-blade"
   | "serif";
+
+// Modular Mascot System (types, config defaults & studio option metadata)
+export * from "./mascot";
+
+// 15-second onboarding avatar schema & lever metadata
+export * from "./onboarding";

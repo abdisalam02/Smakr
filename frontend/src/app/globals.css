@@ -9,44 +9,54 @@
 /* 8 ADVANCED TYPOGRAPHY PAIRINGS                                            */
 /* ========================================================================= */
 
-[data-font="modern-sans"] {
+/* Specificity note: selectors use `html[data-font="…"]` (0,1,1) so they
+   reliably win over the `:root`/theme blocks (0,1,0). This fixes the bug
+   where `:root`'s font declarations overrode every active font choice. */
+
+html[data-font="modern-sans"] {
   --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-heading: 'Inter', sans-serif;
 }
 
-[data-font="jakarta-sans"] {
+html[data-font="jakarta-sans"] {
   --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-heading: 'Plus Jakarta Sans', sans-serif;
 }
 
-[data-font="editorial-serif"] {
+html[data-font="editorial-serif"] {
   --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-heading: 'Playfair Display', Georgia, serif;
 }
 
-[data-font="classic-garamond"] {
+html[data-font="classic-garamond"] {
   --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-heading: 'Cormorant Garamond', Georgia, serif;
 }
 
-[data-font="street-grotesk"] {
+html[data-font="street-grotesk"] {
   --font-main: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-heading: 'Space Grotesk', sans-serif;
 }
 
-[data-font="rounded-modern"] {
+html[data-font="rounded-modern"] {
   --font-main: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-heading: 'Outfit', sans-serif;
 }
 
-[data-font="fashion-syne"] {
+html[data-font="fashion-syne"] {
   --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-heading: 'Syne', sans-serif;
 }
 
-[data-font="clean-dm"] {
+html[data-font="clean-dm"] {
   --font-main: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-heading: 'DM Sans', sans-serif;
+}
+
+/* Comico (Brand Display) — body stays crisp, headings get the hand-drawn voice */
+html[data-font="comico"] {
+  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-heading: 'Comico', var(--font-comico), cursive, sans-serif;
 }
 
 h1, h2, h3, .font-heading {
@@ -67,172 +77,111 @@ html, body {
 }
 
 /* ========================================================================= */
-/* 10 SLEEK, MODERN CULINARY THEMES (ZERO NEON)                               */
+/* GLOBAL SEMANTIC FUNCTIONAL TOKENS (shared across every theme)             */
 /* ========================================================================= */
 
-/* 1. Oslo Minimalist (Signature Light) */
+:root {
+  --pop: #1B3BCE;          /* Cobalt Blue for bookmarks/special badges */
+  --pop-hover: #152FA8;
+  --success: #3D5A45;      /* Fresh Sage for Halal/Vegan/Open Now */
+  --success-tint: #E6EDE6;
+  --amber: #E2A365;        /* Warm Ochre for star ratings / price pills */
+  --amber-ink: #A96A2E;
+  --danger: #C0392B;       /* Muted brick red for Closed / Sold Out */
+}
+
+/* ========================================================================= */
+/* 4 SIGNATURE FOOD-CULTURE THEMES (all anchored to Burnt Paprika #e84a27)   */
+/* Legacy theme ids are kept as fallback aliases for existing localStorage.   */
+/* ========================================================================= */
+
+/* 1. Oat & Espresso — Signature Day Mode (default) */
 :root,
+[data-theme="oat-espresso"],
 [data-theme="oslo-minimalist"],
 [data-theme="electric-orange"] {
-  --background: #fafafa;
-  --surface: #ffffff;
-  --surface-raised: #f4f4f5;
-  --surface-border: #e4e4e7;
-  --foreground: #18181b;
-  --muted: #71717a;
-  --muted-light: #a1a1aa;
-  --accent: #c25e2e;
-  --accent-glow: rgba(194, 94, 46, 0.12);
-  --btn-primary-bg: #18181b;
-  --btn-primary-text: #ffffff;
+  --background: #F7F2E8;
+  --surface: #FFFCF6;
+  --surface-raised: #F0E9DC;
+  --surface-border: #E4D9C8;
+  --foreground: #241C16;
+  --muted: #6E6154;
+  --muted-light: #9C8F80;
+  --accent: #E84A27;
+  --accent-hover: #D23E1D;
+  --accent-glow: rgba(232, 74, 39, 0.12);
+  --btn-primary-bg: #241C16;
+  --btn-primary-text: #FFFCF6;
   --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-heading: 'Inter', sans-serif;
 }
 
-/* 2. Obsidian & Slate (Sleek Matte Dark Mode) */
+/* 2. Warm Bakery — Warm Morning Light */
+[data-theme="warm-bakery"],
+[data-theme="nordic-linen"],
+[data-theme="nordic-bakery"],
+[data-theme="nordic-amber"],
+[data-theme="copenhagen-clay"],
+[data-theme="alabaster-bronze"],
+[data-theme="retro-diner"],
+[data-theme="bordeaux-chalk"],
+[data-theme="seoul-sunset"] {
+  --background: #FBF4E6;
+  --surface: #FFFBF2;
+  --surface-raised: #F3E8D4;
+  --surface-border: #E6D6B8;
+  --foreground: #2A1E12;
+  --muted: #7A6450;
+  --muted-light: #A89378;
+  --accent: #E84A27;
+  --accent-hover: #D23E1D;
+  --accent-glow: rgba(232, 74, 39, 0.14);
+  --btn-primary-bg: #2A1E12;
+  --btn-primary-text: #FFFBF2;
+}
+
+/* 3. Late Night — Espresso Ink Dark Mode */
+[data-theme="late-night"],
+[data-theme="smoked-espresso"],
 [data-theme="obsidian-slate"],
 [data-theme="cyber-midnight"],
 [data-theme="midnight-gastro"] {
-  --background: #0e1015;
-  --surface: #161922;
-  --surface-raised: #1e222e;
-  --surface-border: #262b3a;
-  --foreground: #f1f3f7;
-  --muted: #94a3b8;
-  --muted-light: #64748b;
-  --accent: #d97736;
-  --accent-glow: rgba(217, 119, 54, 0.20);
-  --btn-primary-bg: #d97736;
-  --btn-primary-text: #0e1015;
+  --background: #17120F;
+  --surface: #211A16;
+  --surface-raised: #2B231D;
+  --surface-border: #3A2F27;
+  --foreground: #F6EEE6;
+  --muted: #B8A796;
+  --muted-light: #7E6C5B;
+  --accent: #FF5A38;       /* Lifted paprika for dark contrast */
+  --accent-hover: #FF7256;
+  --accent-glow: rgba(232, 74, 39, 0.24);
+  --btn-primary-bg: #E84A27;
+  --btn-primary-text: #17120F;
 }
 
-/* 3. Nordic Linen & Oat (Warm Quiet Luxury) */
-[data-theme="nordic-linen"],
-[data-theme="nordic-bakery"],
-[data-theme="nordic-amber"] {
-  --background: #f6f3ee;
-  --surface: #fdfcfa;
-  --surface-raised: #eeeae2;
-  --surface-border: #ded7cc;
-  --foreground: #201a15;
-  --muted: #786b5f;
-  --muted-light: #a3978b;
-  --accent: #8f5330;
-  --accent-glow: rgba(143, 83, 48, 0.14);
-  --btn-primary-bg: #201a15;
-  --btn-primary-text: #fdfcfa;
-}
-
-/* 4. Copenhagen Limestone & Clay */
-[data-theme="copenhagen-clay"] {
-  --background: #f3efe9;
-  --surface: #fbf9f6;
-  --surface-raised: #e7e0d6;
-  --surface-border: #d6ccbf;
-  --foreground: #28201a;
-  --muted: #7a6e64;
-  --muted-light: #a89c92;
-  --accent: #b85d38;
-  --accent-glow: rgba(184, 93, 56, 0.14);
-  --btn-primary-bg: #28201a;
-  --btn-primary-text: #fbf9f6;
-}
-
-/* 5. Stockholm Sage & Mineral */
-[data-theme="stockholm-sage"],
-[data-theme="kyoto-matcha"],
-[data-theme="matcha-botanic"] {
-  --background: #edf2ee;
-  --surface: #f8faf8;
-  --surface-raised: #dfe7e0;
-  --surface-border: #c8d5ca;
-  --foreground: #122419;
-  --muted: #556f5e;
-  --muted-light: #7f9687;
-  --accent: #2d5a3f;
-  --accent-glow: rgba(45, 90, 63, 0.14);
-  --btn-primary-bg: #122419;
-  --btn-primary-text: #f8faf8;
-}
-
-/* 6. French Bistro Navy & Bone */
-[data-theme="bistro-navy"],
-[data-theme="amalfi-coast"] {
-  --background: #f2f5f9;
-  --surface: #ffffff;
-  --surface-raised: #e2e8f0;
-  --surface-border: #cbd5e1;
-  --foreground: #0f172a;
-  --muted: #475569;
-  --muted-light: #94a3b8;
-  --accent: #1e3a8a;
-  --accent-glow: rgba(30, 58, 138, 0.12);
-  --btn-primary-bg: #1e3a8a;
-  --btn-primary-text: #ffffff;
-}
-
-/* 7. Smoked Espresso & Truffle (Dark Mode) */
-[data-theme="smoked-espresso"] {
-  --background: #12100e;
-  --surface: #1c1815;
-  --surface-raised: #26211d;
-  --surface-border: #38302a;
-  --foreground: #f7f4f0;
-  --muted: #a89786;
-  --muted-light: #706254;
-  --accent: #c49265;
-  --accent-glow: rgba(196, 146, 101, 0.20);
-  --btn-primary-bg: #c49265;
-  --btn-primary-text: #12100e;
-}
-
-/* 8. Bordeaux & Fine Chalk */
-[data-theme="bordeaux-chalk"],
-[data-theme="seoul-sunset"] {
-  --background: #f9f6f6;
-  --surface: #ffffff;
-  --surface-raised: #f2e9ea;
-  --surface-border: #e2d1d4;
-  --foreground: #2a0c12;
-  --muted: #7a4d55;
-  --muted-light: #a67780;
-  --accent: #721c2e;
-  --accent-glow: rgba(114, 28, 46, 0.12);
-  --btn-primary-bg: #721c2e;
-  --btn-primary-text: #ffffff;
-}
-
-/* 9. Pure Swiss Monolith */
+/* 4. Nordic Minimal — Clean Gallery White */
+[data-theme="nordic-minimal"],
 [data-theme="swiss-monolith"],
 [data-theme="oslo-brutalist"],
-[data-theme="oslo-monolith"] {
-  --background: #f6f6f7;
-  --surface: #ffffff;
-  --surface-raised: #ececee;
-  --surface-border: #18181b;
-  --foreground: #000000;
-  --muted: #52525b;
-  --muted-light: #71717a;
-  --accent: #18181b;
-  --accent-glow: rgba(24, 24, 27, 0.10);
-  --btn-primary-bg: #000000;
-  --btn-primary-text: #ffffff;
-}
-
-/* 10. Alabaster & Warm Bronze */
-[data-theme="alabaster-bronze"],
-[data-theme="retro-diner"] {
-  --background: #f7f5f0;
-  --surface: #fcfbfa;
-  --surface-raised: #ece7de;
-  --surface-border: #dad2c5;
-  --foreground: #1d1a16;
-  --muted: #72675a;
-  --muted-light: #9c8f80;
-  --accent: #96713e;
-  --accent-glow: rgba(150, 113, 62, 0.14);
-  --btn-primary-bg: #1d1a16;
-  --btn-primary-text: #fcfbfa;
+[data-theme="oslo-monolith"],
+[data-theme="stockholm-sage"],
+[data-theme="kyoto-matcha"],
+[data-theme="matcha-botanic"],
+[data-theme="bistro-navy"],
+[data-theme="amalfi-coast"] {
+  --background: #FAFAF8;
+  --surface: #FFFFFF;
+  --surface-raised: #F2F2EF;
+  --surface-border: #E3E3DE;
+  --foreground: #1C1B18;
+  --muted: #6B6A64;
+  --muted-light: #A3A29B;
+  --accent: #E84A27;
+  --accent-hover: #D23E1D;
+  --accent-glow: rgba(232, 74, 39, 0.10);
+  --btn-primary-bg: #1C1B18;
+  --btn-primary-text: #FFFFFF;
 }
 
 /* ========================================================================= */
@@ -240,26 +189,31 @@ html, body {
 /* ========================================================================= */
 
 /* Dynamic Accent Colors */
+[data-theme] .bg-\[\#e84a27\],
 [data-theme] .bg-\[\#ff5500\],
 [data-theme] .bg-orange-500 {
   background-color: var(--accent) !important;
 }
 
+[data-theme] .hover\:bg-\[\#d23e1d\]:hover,
 [data-theme] .hover\:bg-\[\#e04b00\]:hover,
 [data-theme] .hover\:bg-orange-600:hover {
   filter: brightness(0.9) !important;
 }
 
+[data-theme] .text-\[\#e84a27\],
 [data-theme] .text-\[\#ff5500\],
 [data-theme] .text-orange-500 {
   color: var(--accent) !important;
 }
 
+[data-theme] .border-\[\#e84a27\],
 [data-theme] .border-\[\#ff5500\],
 [data-theme] .border-orange-500 {
   border-color: var(--accent) !important;
 }
 
+[data-theme] .accent-\[\#e84a27\],
 [data-theme] .accent-\[\#ff5500\] {
   accent-color: var(--accent) !important;
 }
@@ -606,6 +560,64 @@ html, body {
   }
 }
 
+/* Modular Mascot System Animations */
+.mascot-float {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: mascotFloat 3.2s ease-in-out infinite;
+}
+
+@keyframes mascotFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.mascot-bounce {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: mascotBounce 0.9s ease-in-out infinite;
+}
+
+@keyframes mascotBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.mascot-ping {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pingAura 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.mascot-ping-delay {
+  animation-delay: 0.8s;
+}
+
+.mascot-steam {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: lordiconSteamRise 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.mascot-steam-delay {
+  animation-delay: 0.8s;
+}
+
+/* Admin Control Center — Google Places "coming soon" shimmer */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 @keyframes reactionPop {
   0%, 100% {
     transform: translateY(0) scale(1);
@@ -626,7 +638,7 @@ html, body {
   background-color: color-mix(in srgb, var(--surface, #ffffff) 86%, transparent);
   border: 1px solid var(--surface-border, rgba(0, 0, 0, 0.1));
   border-color: color-mix(in srgb, var(--surface-border, #e4e4e7) 80%, transparent);
-  box-shadow: 0 12px 36px -6px rgba(0, 0, 0, 0.22), 0 4px 14px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--surface-border, rgba(0, 0, 0, 0.06));
+  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   transform: translate3d(0, 0, 0);
@@ -642,6 +654,23 @@ html, body {
     background-color: var(--surface, #ffffff) !important;
     opacity: 0.98;
   }
+}
+
+/* ========================================================================= */
+/* SMAKR MAP VENUE CARD POPUP (Anchored cleanly right under map pin)         */
+/* ========================================================================= */
+
+.smakr-pin-card-popup .maplibregl-popup-content {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  padding: 0 !important;
+  border-radius: 18px !important;
+}
+
+.smakr-pin-card-popup .maplibregl-popup-tip {
+  border-bottom-color: #fbf9f5 !important;
+  border-top-color: #fbf9f5 !important;
 }
 
 

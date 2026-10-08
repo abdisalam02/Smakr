@@ -1,175 +1,222 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { usePathname } from "next/navigation";
-import { Search, Plus, LayoutGrid, Map, Columns, LogOut, Palette } from "lucide-react";
+import {
+  Plus,
+  LogOut,
+  ShieldCheck,
+  Sparkles,
+  ChevronDown,
+  Palette,
+} from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
-import { SmakrSIcon } from "@/components/ui/SmakrSIcon";
+import SmakrLogo from "@/components/ui/SmakrLogo";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { MascotCharacter } from "@/components/avatar/MascotCharacter";
 
 export function Header() {
-  const pathname = usePathname();
-  const wsConnected = useCityPulseStore((state) => state.wsConnected);
-  const filters = useCityPulseStore((state) => state.filters);
-  const setFilters = useCityPulseStore((state) => state.setFilters);
-  const viewMode = useCityPulseStore((state) => state.viewMode);
-  const setViewMode = useCityPulseStore((state) => state.setViewMode);
-  const setIsCreateBiteModalOpen = useCityPulseStore((state) => state.setIsCreateBiteModalOpen);
+  const openCreateDish = useCityPulseStore((state) => state.openCreateDish);
   const currentUser = useCityPulseStore((state) => state.currentUser);
+  const isAuthResolved = useCityPulseStore((state) => state.isAuthResolved);
+  const mascotConfig = useCityPulseStore((state) => state.mascotConfig);
   const setIsAuthModalOpen = useCityPulseStore((state) => state.setIsAuthModalOpen);
+  const openAvatarStudio = useCityPulseStore((state) => state.openAvatarStudio);
   const logout = useCityPulseStore((state) => state.logout);
-  const setIsThemeStudioOpen = useCityPulseStore((state) => state.setIsThemeStudioOpen);
+  const showToast = useCityPulseStore((state) => state.showToast);
 
-  const handleAddDish = () => {
-    if (!currentUser) {
-      setIsAuthModalOpen(true);
-    } else {
-      setIsCreateBiteModalOpen(true);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onPointerDown = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuOpen]);
+
+  const handleSignOut = async () => {
+    setMenuOpen(false);
+    const supabase = getSupabaseBrowserClient();
+    if (supabase) {
+      try {
+        await supabase.auth.signOut();
+      } catch {
+        // Ignore — local state is cleared below regardless.
+      }
     }
+    logout();
+    showToast("Signed out of Smakr.");
   };
 
+  const isAdmin = currentUser?.role === "admin";
+  const isNiwacheOrAdmin =
+    isAdmin ||
+    currentUser?.handle?.toLowerCase().includes("niwache");
+
+  const initials = currentUser
+    ? (currentUser.name || currentUser.handle || "?")
+        .replace(/[@_.]/g, " ")
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((w) => w[0])
+        .join("")
+        .toUpperCase()
+    : "";
+
   return (
-    <header className="absolute top-0 left-0 right-0 z-30 bg-transparent px-4 lg:px-6 py-2.5 transition-colors pointer-events-none">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-        {/* Brand */}
-        <div className="flex items-center gap-3 pointer-events-auto">
-          <Link href="/" className="flex items-center gap-1 group select-none bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-2xl border border-white/80 shadow-sm hover:bg-white transition-all">
-            <SmakrSIcon className="w-5 h-5 shrink-0 -mr-0.5" />
-            <span className="text-zinc-950 font-black text-lg tracking-tight leading-none">
-              makr
-            </span>
-            <span className="text-[9px] font-mono font-bold tracking-widest text-zinc-400 uppercase pl-1.5 ml-1 border-l border-zinc-200">
-              oslo
-            </span>
-          </Link>
+    <header className="absolute top-0 left-0 right-0 z-30 bg-transparent pt-safe pt-3 px-3.5 sm:px-6 transition-colors pointer-events-none">
+      <div className="w-full max-w-7xl mx-auto flex items-center justify-between gap-3">
+        {/* Top-Left Pill: Frosted glass capsule */}
+        <div className="flex items-center gap-3 pointer-events-auto shrink-0">
+          <div className="bg-white/85 dark:bg-stone-900/85 backdrop-blur-md shadow-sm border border-black/5 rounded-full px-3.5 py-1.5 hover:bg-white/95 transition-all">
+            <SmakrLogo variant="solid-orange" />
+          </div>
         </div>
 
-        {/* Minimalist Floating Search Bar */}
-        {pathname === "/" && (
-          <div className="flex-1 max-w-sm hidden md:block pointer-events-auto">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-              <input
-                type="text"
-                placeholder="Search coconut coffee, smash burgers, ramen..."
-                value={filters.search_query}
-                onChange={(e) => setFilters({ search_query: e.target.value })}
-                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-full bg-white/90 hover:bg-white focus:bg-white border border-white/80 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-[#ff5500] focus:ring-1 focus:ring-[#ff5500] shadow-sm transition-all"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* View Switcher & Action */}
-        <div className="flex items-center gap-2 pointer-events-auto">
-          {pathname === "/" && (
-            <div className="hidden sm:flex items-center bg-white/90 backdrop-blur-md p-0.5 rounded-xl border border-white/80 text-xs shadow-sm">
-              <button
-                onClick={() => setViewMode("feed")}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg transition-all ${
-                  viewMode === "feed"
-                    ? "bg-zinc-950 text-white font-medium shadow-xs"
-                    : "text-zinc-600 hover:text-zinc-950"
-                }`}
-                title="Feed view"
-              >
-                <LayoutGrid className="w-3.5 h-3.5" />
-                <span className="hidden md:inline">Feed</span>
-              </button>
-
-              <button
-                onClick={() => setViewMode("split")}
-                className={`hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-lg transition-all ${
-                  viewMode === "split"
-                    ? "bg-zinc-950 text-white font-medium shadow-xs"
-                    : "text-zinc-600 hover:text-zinc-950"
-                }`}
-                title="Split view"
-              >
-                <Columns className="w-3.5 h-3.5" />
-                <span>Split</span>
-              </button>
-
-              <button
-                onClick={() => setViewMode("map")}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg transition-all ${
-                  viewMode === "map"
-                    ? "bg-zinc-950 text-white font-medium shadow-xs"
-                    : "text-zinc-600 hover:text-zinc-950"
-                }`}
-                title="Map view"
-              >
-                <Map className="w-3.5 h-3.5" />
-                <span className="hidden md:inline">Map</span>
-              </button>
-            </div>
-          )}
-
-          {/* Theme & Style Studio Button */}
-          <button
-            onClick={() => setIsThemeStudioOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/95 hover:bg-white text-zinc-700 hover:text-[#ff5500] border border-white/80 shadow-xs transition-all active:scale-95"
-            title="Style & Theme Studio"
-          >
-            <Palette className="w-3.5 h-3.5 text-[#ff5500]" />
-            <span className="hidden sm:inline text-xs font-semibold">Theme</span>
-          </button>
-
-          {/* Add Dish CTA (Auth-gated) */}
-          <button
-            onClick={handleAddDish}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#ff5500] hover:bg-[#e04b00] text-white font-semibold text-xs shadow-md shadow-[#ff5500]/25 transition-all"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Add Dish</span>
-          </button>
-
-          {/* User Profile / Sign In */}
+        {/* Top-Right Pill: Matching frosted capsule */}
+        <div className="flex items-center gap-2 pointer-events-auto shrink-0">
           {currentUser ? (
-            <div className="flex items-center gap-1.5 pl-0.5">
-              <div
-                className="relative w-7 h-7 rounded-full overflow-hidden border border-zinc-300 shadow-xs cursor-pointer group"
-                title={`${currentUser.name} (${currentUser.handle}) · Click to sign out`}
-                onClick={logout}
-              >
-                <Image
-                  src={currentUser.avatar_url}
-                  alt={currentUser.name}
-                  fill
-                  className="object-cover"
-                  sizes="28px"
-                />
-              </div>
+            <div className="relative" ref={menuRef}>
               <button
-                onClick={logout}
-                className="hidden xl:flex text-zinc-400 hover:text-zinc-700 p-1 rounded-md"
-                title="Sign out"
+                onClick={() => setMenuOpen((v) => !v)}
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full bg-white/85 dark:bg-stone-900/85 backdrop-blur-md shadow-sm border border-black/5 hover:bg-white/95 transition-all active:scale-95"
+                title="Account menu"
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <span className="w-7 h-7 rounded-full bg-zinc-100 flex items-center justify-center overflow-hidden ring-1 ring-black/5 shrink-0">
+                  {currentUser.avatar_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={currentUser.avatar_url}
+                      alt={currentUser.handle}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : isNiwacheOrAdmin ? (
+                    <MascotCharacter config={mascotConfig} size={28} />
+                  ) : (
+                    <span className="w-full h-full bg-zinc-900 text-white flex items-center justify-center text-[10px] font-bold tracking-tight">
+                      {initials}
+                    </span>
+                  )}
+                </span>
+                <span className="text-xs font-semibold text-zinc-800 max-w-[100px] truncate">
+                  {currentUser.handle}
+                </span>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-zinc-400 transition-transform ${menuOpen ? "rotate-180" : ""}`}
+                />
               </button>
+
+              {menuOpen && (
+                <div
+                  role="menu"
+                  className="absolute right-0 top-full mt-2 w-60 rounded-2xl border border-zinc-200/90 bg-white shadow-xl p-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150"
+                >
+                  <div className="px-3 py-2.5 border-b border-zinc-100">
+                    <p className="text-xs font-bold text-zinc-900 truncate">
+                      {currentUser.name || currentUser.handle}
+                    </p>
+                    <p className="text-[10px] text-zinc-400 truncate">
+                      {currentUser.email || currentUser.handle}
+                    </p>
+                    <span
+                      className={`inline-flex items-center gap-1 mt-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        isAdmin
+                          ? "bg-[#e84a27]/10 text-[#e84a27]"
+                          : "bg-zinc-100 text-zinc-500"
+                      }`}
+                    >
+                      {isAdmin ? "✦ Admin" : "Foodie"}
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      openCreateDish();
+                    }}
+                    role="menuitem"
+                    className="w-full flex items-center gap-2 px-3 py-2 mt-1 rounded-xl text-xs font-semibold text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950 transition-colors text-left"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-[#e84a27]" />
+                    <span>Add Dish</span>
+                  </button>
+
+                  {isAdmin && (
+                    <Link
+                      href="/admin"
+                      role="menuitem"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-zinc-700 hover:bg-amber-50 hover:text-amber-900 transition-colors"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5 text-[#e84a27]" />
+                      <span>Control Center</span>
+                    </Link>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      openAvatarStudio();
+                    }}
+                    role="menuitem"
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950 transition-colors text-left"
+                  >
+                    <Palette className="w-3.5 h-3.5 text-[#e84a27]" />
+                    <span>Customize Avatar &amp; Look</span>
+                  </button>
+
+                  <Link
+                    href="/mascot-studio"
+                    role="menuitem"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950 transition-colors"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-[#e84a27]" />
+                    <span>Mascot Studio</span>
+                  </Link>
+
+                  <button
+                    onClick={handleSignOut}
+                    role="menuitem"
+                    className="w-full flex items-center gap-2 px-3 py-2 mt-1 rounded-xl text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors text-left"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : !isAuthResolved ? (
+            <div
+              className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full bg-white/85 dark:bg-stone-900/85 backdrop-blur-md shadow-sm border border-black/5 animate-pulse"
+              aria-label="Loading account"
+            >
+              <span className="w-7 h-7 rounded-full bg-zinc-200 dark:bg-zinc-700" />
+              <span className="h-3 w-16 rounded-full bg-zinc-200 dark:bg-zinc-700" />
             </div>
           ) : (
             <button
               onClick={() => setIsAuthModalOpen(true)}
-              className="hidden sm:flex items-center px-2.5 py-1.5 rounded-xl text-xs font-semibold text-zinc-700 hover:text-zinc-950 hover:bg-white/70 border border-white/50 transition-colors"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/85 dark:bg-stone-900/85 backdrop-blur-md shadow-sm border border-black/5 hover:bg-white/95 text-xs font-semibold text-zinc-800 dark:text-zinc-200 transition-all active:scale-95"
             >
-              Sign in
+              Sign In
             </button>
           )}
-
-          {/* Live Sync */}
-          <div
-            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/70 backdrop-blur-md border border-white/40 text-[10px] text-zinc-600 shadow-xs"
-            title={wsConnected ? "Connected live" : "Connecting..."}
-          >
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                wsConnected ? "bg-emerald-500" : "bg-amber-500 animate-pulse"
-              }`}
-            />
-            <span className="hidden sm:inline font-mono">{wsConnected ? "Live" : "Sync"}</span>
-          </div>
         </div>
       </div>
     </header>

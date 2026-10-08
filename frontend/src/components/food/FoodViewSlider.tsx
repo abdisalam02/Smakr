@@ -29,7 +29,8 @@ export function FoodViewSlider({
   };
 
   return (
-    <div
+    <nav
+      aria-label="Feed or Locations toggle"
       className={`pointer-events-auto select-none ${className}`}
       style={{
         WebkitTouchCallout: "none",
@@ -38,63 +39,46 @@ export function FoodViewSlider({
         touchAction: "manipulation",
       }}
     >
-      <div
-        className="smakr-glass-slider relative flex items-center p-1 rounded-full w-[240px] sm:w-[258px] h-11"
-        style={{
-          fontFamily: "var(--font-main, inherit)",
-        }}
-      >
-        {/* Physical Sliding Active Pill Highlight (GPU hardware-accelerated 60/120fps translate3d) */}
+      <div className="relative flex items-center p-[3px] rounded-full w-[208px] sm:w-[218px] h-9 bg-white/95 backdrop-blur-md border border-black/[0.08] shadow-md shadow-black/5">
+        {/* Physical Sliding Active Pill (Hardware-accelerated 60/120fps translate3d) */}
         <div
-          className="absolute top-1 bottom-1 left-1 rounded-full pointer-events-none will-change-transform"
+          className="absolute top-[3px] bottom-[3px] left-[3px] rounded-full bg-zinc-900 shadow-xs pointer-events-none will-change-transform"
           style={{
-            width: "calc(50% - 4px)",
-            backgroundColor: "var(--btn-primary-bg, #18181b)",
+            width: "calc(50% - 3px)",
             transform:
               feedMode === "food"
                 ? "translate3d(0, 0, 0)"
                 : "translate3d(100%, 0, 0)",
-            transition: "transform 0.28s cubic-bezier(0.16, 1, 0.3, 1)",
-            boxShadow: "0 2px 10px rgba(0, 0, 0, 0.22)",
+            transition: "transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)",
           }}
         />
 
-        {/* Food / Dishes Toggle */}
+        {/* Feed / Food Toggle */}
         <button
           onClick={() => handleSelectMode("food")}
           type="button"
-          aria-label="View Food Dishes"
-          className="relative z-10 flex-1 h-full flex items-center justify-center gap-1.5 px-3 rounded-full text-xs font-bold transition-colors duration-200 active:scale-95 cursor-pointer bg-transparent border-0 outline-none"
-          style={{
-            color:
-              feedMode === "food"
-                ? "var(--btn-primary-text, #ffffff)"
-                : "var(--muted, #71717a)",
-          }}
+          aria-label="View Food Feed"
+          aria-pressed={feedMode === "food"}
+          className={`relative z-10 flex-1 h-full flex items-center justify-center gap-1.5 rounded-full text-xs font-bold transition-colors duration-150 active:scale-[0.98] cursor-pointer bg-transparent border-0 outline-none ${
+            feedMode === "food"
+              ? "text-white"
+              : "text-zinc-600 hover:text-zinc-950"
+          }`}
         >
           <Utensils
-            className="w-3.5 h-3.5 shrink-0 transition-colors duration-200"
-            style={{
-              color:
-                feedMode === "food"
-                  ? "var(--accent, #ff5500)"
-                  : "var(--muted, #71717a)",
-            }}
-          />
-          <span className="tracking-tight">Food</span>
-          <span
-            className="text-[10px] font-mono px-1.5 py-0.5 rounded-full font-bold transition-colors duration-200"
-            style={
+            className={`w-3 h-3 shrink-0 transition-colors duration-150 ${
               feedMode === "food"
-                ? {
-                    backgroundColor: "rgba(255, 255, 255, 0.2)",
-                    color: "var(--btn-primary-text, #ffffff)",
-                  }
-                : {
-                    backgroundColor: "rgba(120, 120, 120, 0.12)",
-                    color: "var(--muted, #71717a)",
-                  }
-            }
+                ? "text-[#e84a27]"
+                : "text-zinc-400"
+            }`}
+          />
+          <span className="tracking-tight">Feed</span>
+          <span
+            className={`text-[10px] tabular-nums font-semibold transition-colors duration-150 ${
+              feedMode === "food"
+                ? "text-white/70"
+                : "text-zinc-400"
+            }`}
           >
             {dishesCount}
           </span>
@@ -105,42 +89,32 @@ export function FoodViewSlider({
           onClick={() => handleSelectMode("places")}
           type="button"
           aria-label="View Food Locations"
-          className="relative z-10 flex-1 h-full flex items-center justify-center gap-1.5 px-3 rounded-full text-xs font-bold transition-colors duration-200 active:scale-95 cursor-pointer bg-transparent border-0 outline-none"
-          style={{
-            color:
-              feedMode === "places"
-                ? "var(--btn-primary-text, #ffffff)"
-                : "var(--muted, #71717a)",
-          }}
+          aria-pressed={feedMode === "places"}
+          className={`relative z-10 flex-1 h-full flex items-center justify-center gap-1.5 rounded-full text-xs font-bold transition-colors duration-150 active:scale-[0.98] cursor-pointer bg-transparent border-0 outline-none ${
+            feedMode === "places"
+              ? "text-white"
+              : "text-zinc-600 hover:text-zinc-950"
+          }`}
         >
           <MapPin
-            className="w-3.5 h-3.5 shrink-0 transition-colors duration-200"
-            style={{
-              color:
-                feedMode === "places"
-                  ? "var(--accent, #ff5500)"
-                  : "var(--muted, #71717a)",
-            }}
+            className={`w-3 h-3 shrink-0 transition-colors duration-150 ${
+              feedMode === "places"
+                ? "text-[#e84a27]"
+                : "text-zinc-400"
+            }`}
           />
           <span className="tracking-tight">Locations</span>
           <span
-            className="text-[10px] font-mono px-1.5 py-0.5 rounded-full font-bold transition-colors duration-200"
-            style={
+            className={`text-[10px] tabular-nums font-semibold transition-colors duration-150 ${
               feedMode === "places"
-                ? {
-                    backgroundColor: "rgba(255, 255, 255, 0.2)",
-                    color: "var(--btn-primary-text, #ffffff)",
-                  }
-                : {
-                    backgroundColor: "rgba(120, 120, 120, 0.12)",
-                    color: "var(--muted, #71717a)",
-                  }
-            }
+                ? "text-white/70"
+                : "text-zinc-400"
+            }`}
           >
             {spotsCount}
           </span>
         </button>
       </div>
-    </div>
+    </nav>
   );
 }

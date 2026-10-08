@@ -19,104 +19,45 @@ interface ThemeOption {
 
 const THEME_OPTIONS: ThemeOption[] = [
   {
-    id: "oslo-minimalist",
-    name: "Oslo Minimalist",
-    subtitle: "Chalk white, crisp charcoal & subtle cinnamon warmth",
-    accent: "#c25e2e",
-    bgPreview: "#fafafa",
-    surfacePreview: "#ffffff",
-    borderPreview: "#e4e4e7",
+    id: "oat-espresso",
+    name: "Oat & Espresso",
+    subtitle:
+      "Warm oat canvas, espresso ink & burnt paprika — the signature day mode",
+    accent: "#E84A27",
+    bgPreview: "#F7F2E8",
+    surfacePreview: "#FFFCF6",
+    borderPreview: "#E4D9C8",
     tag: "Signature",
   },
   {
-    id: "obsidian-slate",
-    name: "Obsidian & Slate",
-    subtitle: "Sleek matte dark mode with warm amber glow",
-    accent: "#d97736",
-    bgPreview: "#0e1015",
-    surfacePreview: "#161922",
-    borderPreview: "#262b3a",
-    tag: "Sleek Dark",
+    id: "warm-bakery",
+    name: "Warm Bakery",
+    subtitle: "Golden morning light, cardamom & fresh pastry warmth",
+    accent: "#E84A27",
+    bgPreview: "#FBF4E6",
+    surfacePreview: "#FFFBF2",
+    borderPreview: "#E6D6B8",
+    tag: "Morning",
   },
   {
-    id: "nordic-linen",
-    name: "Nordic Linen & Oat",
-    subtitle: "Warm natural linen, espresso & cardamom",
-    accent: "#8f5330",
-    bgPreview: "#f6f3ee",
-    surfacePreview: "#fdfcfa",
-    borderPreview: "#ded7cc",
-    tag: "Quiet Luxury",
+    id: "late-night",
+    name: "Late Night",
+    subtitle: "Espresso ink dark mode with a lifted paprika glow",
+    accent: "#FF5A38",
+    bgPreview: "#17120F",
+    surfacePreview: "#211A16",
+    borderPreview: "#3A2F27",
+    tag: "Dark Mode",
   },
   {
-    id: "copenhagen-clay",
-    name: "Copenhagen Limestone & Clay",
-    subtitle: "Architectural limestone & warm terracotta",
-    accent: "#b85d38",
-    bgPreview: "#f3efe9",
-    surfacePreview: "#fbf9f6",
-    borderPreview: "#d6ccbf",
-    tag: "Modern Craft",
-  },
-  {
-    id: "stockholm-sage",
-    name: "Stockholm Sage & Mineral",
-    subtitle: "Scandinavian botanical sage & deep pine forest",
-    accent: "#2d5a3f",
-    bgPreview: "#edf2ee",
-    surfacePreview: "#f8faf8",
-    borderPreview: "#c8d5ca",
-    tag: "Muted Botanical",
-  },
-  {
-    id: "bistro-navy",
-    name: "French Bistro Navy & Bone",
-    subtitle: "Classic Parisian navy, bone white & subtle bronze",
-    accent: "#1e3a8a",
-    bgPreview: "#f2f5f9",
-    surfacePreview: "#ffffff",
-    borderPreview: "#cbd5e1",
-    tag: "High-End",
-  },
-  {
-    id: "smoked-espresso",
-    name: "Smoked Espresso & Truffle",
-    subtitle: "Velvety dark roast, warm caramel crema & ivory",
-    accent: "#c49265",
-    bgPreview: "#12100e",
-    surfacePreview: "#1c1815",
-    borderPreview: "#38302a",
-    tag: "Roastery Dark",
-  },
-  {
-    id: "bordeaux-chalk",
-    name: "Bordeaux & Fine Chalk",
-    subtitle: "Understated fine wine cabernet & chalk white",
-    accent: "#721c2e",
-    bgPreview: "#f9f6f6",
-    surfacePreview: "#ffffff",
-    borderPreview: "#e2d1d4",
-    tag: "Wine Bar",
-  },
-  {
-    id: "swiss-monolith",
-    name: "Pure Swiss Monolith",
-    subtitle: "Architectural pure black, paper white & ink grid",
-    accent: "#18181b",
-    bgPreview: "#f6f6f7",
-    surfacePreview: "#ffffff",
-    borderPreview: "#18181b",
-    tag: "Minimalist Grayscale",
-  },
-  {
-    id: "alabaster-bronze",
-    name: "Alabaster & Warm Bronze",
-    subtitle: "Fine dining private room & architectural bronze",
-    accent: "#96713e",
-    bgPreview: "#f7f5f0",
-    surfacePreview: "#fcfbfa",
-    borderPreview: "#dad2c5",
-    tag: "Private Dining",
+    id: "nordic-minimal",
+    name: "Nordic Minimal",
+    subtitle: "Clean gallery white, quiet structure & crisp paprika accent",
+    accent: "#E84A27",
+    bgPreview: "#FAFAF8",
+    surfacePreview: "#FFFFFF",
+    borderPreview: "#E3E3DE",
+    tag: "Gallery",
   },
 ];
 
@@ -129,6 +70,13 @@ interface FontOption {
 }
 
 const FONT_OPTIONS: FontOption[] = [
+  {
+    id: "comico",
+    name: "Comico (Brand Display)",
+    styleDesc: "Hand-drawn marker headings over crisp Inter body text",
+    previewSample: "Smakr · Oslo Food Guide",
+    tag: "Brand Voice",
+  },
   {
     id: "modern-sans",
     name: "Inter / Modern Swiss",
@@ -192,6 +140,8 @@ interface LogoOption {
   name: string;
   description: string;
   tag: string;
+  category: "signature" | "architectural";
+  bestWithComico?: boolean;
 }
 
 const LOGO_OPTIONS: LogoOption[] = [
@@ -200,61 +150,148 @@ const LOGO_OPTIONS: LogoOption[] = [
     name: "Fluid Curve S",
     description: "Organic continuous curved stroke with soft endpoints",
     tag: "Signature",
-  },
-  {
-    id: "geometric",
-    name: "Architectural S",
-    description: "Crisp Scandinavian geometry and structured balance",
-    tag: "Modernist",
+    category: "signature",
+    bestWithComico: true,
   },
   {
     id: "ribbon",
     name: "Infinity Ribbon S",
     description: "Flowing dynamic ribbon fold evoking steam ribbons",
     tag: "Artisanal",
-  },
-  {
-    id: "block",
-    name: "Editorial Block S",
-    description: "Punchy architectural neo-grotesk cut with clean square terminal",
-    tag: "Brutalist",
+    category: "signature",
+    bestWithComico: true,
   },
   {
     id: "monoline",
     name: "Precision Monoline S",
-    description: "Ultra-thin Swiss architectural monoline single-weight cut",
-    tag: "Precision",
+    description: "Ultra-thin single-weight hand-drawn marker cut",
+    tag: "Hand-Drawn",
+    category: "signature",
   },
   {
     id: "stencil",
     name: "Modernist Stencil S",
-    description: "Architectural negative-space disconnected culinary cut",
-    tag: "Modernist Cut",
+    description: "Playful negative-space disconnected culinary cut",
+    tag: "Retro Poster",
+    category: "signature",
   },
   {
     id: "dual-blade",
     name: "Dual Blade S",
     description: "Two sleek parallel curved blades with dynamic sweep",
     tag: "Aerodynamic",
+    category: "architectural",
+  },
+  {
+    id: "geometric",
+    name: "Architectural S",
+    description: "Crisp Scandinavian geometry and structured balance",
+    tag: "Modernist",
+    category: "architectural",
+  },
+  {
+    id: "block",
+    name: "Editorial Block S",
+    description: "Punchy architectural neo-grotesk cut with clean square terminal",
+    tag: "Brutalist",
+    category: "architectural",
   },
   {
     id: "serif",
     name: "Serif Monogram S",
     description: "High-fashion luxury Michelin editorial monogram with serif foot",
     tag: "Luxury Monogram",
+    category: "architectural",
   },
 ];
 
+const SIGNATURE_LOGOS = LOGO_OPTIONS.filter((l) => l.category === "signature");
+const ARCHITECTURAL_LOGOS = LOGO_OPTIONS.filter(
+  (l) => l.category === "architectural"
+);
+
+function LogoCard({
+  logo,
+  isSelected,
+  onSelect,
+}: {
+  logo: LogoOption;
+  isSelected: boolean;
+  onSelect: (logo: LogoOption) => void;
+}) {
+  return (
+    <button
+      onClick={() => onSelect(logo)}
+      className={`relative p-3.5 rounded-2xl border text-center flex flex-col items-center justify-between gap-3 transition-all ${
+        isSelected
+          ? "border-[#e84a27] bg-orange-50/40 ring-2 ring-[#e84a27]/20 shadow-xs"
+          : "border-zinc-200 hover:border-zinc-300 bg-white hover:bg-zinc-50/60"
+      }`}
+    >
+      {logo.bestWithComico && (
+        <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap px-1.5 py-0.5 rounded-full bg-[#e84a27] text-white text-[8px] font-bold uppercase tracking-wide shadow-xs">
+          ✦ Best with Comico
+        </span>
+      )}
+
+      {/* Visual Icon Preview — locked to brand paprika so it never shifts with theme */}
+      <div className="p-2 flex items-center justify-center">
+        <SmakrSIcon
+          variant={logo.id}
+          color="#e84a27"
+          className="w-9 h-9 transition-transform hover:scale-110"
+        />
+      </div>
+
+      <div>
+        <div className="font-bold text-zinc-900 text-xs">{logo.name}</div>
+        <span className="text-[10px] text-zinc-400 font-mono">{logo.tag}</span>
+      </div>
+
+      {isSelected && (
+        <span className="flex items-center justify-center w-4 h-4 rounded-full bg-[#e84a27] text-white mx-auto">
+          <Check className="w-2.5 h-2.5 stroke-[3]" />
+        </span>
+      )}
+    </button>
+  );
+}
+
 const normalizeTheme = (theme: string): ColorTheme => {
-  if (theme === "electric-orange") return "oslo-minimalist";
-  if (theme === "cyber-midnight" || theme === "midnight-gastro") return "obsidian-slate";
-  if (theme === "nordic-bakery" || theme === "nordic-amber") return "nordic-linen";
-  if (theme === "kyoto-matcha" || theme === "matcha-botanic") return "stockholm-sage";
-  if (theme === "amalfi-coast") return "bistro-navy";
-  if (theme === "seoul-sunset") return "bordeaux-chalk";
-  if (theme === "oslo-brutalist" || theme === "oslo-monolith") return "swiss-monolith";
-  if (theme === "retro-diner") return "alabaster-bronze";
-  return theme as ColorTheme;
+  switch (theme) {
+    case "oat-espresso":
+    case "oslo-minimalist":
+    case "electric-orange":
+      return "oat-espresso";
+    case "warm-bakery":
+    case "nordic-linen":
+    case "nordic-bakery":
+    case "nordic-amber":
+    case "copenhagen-clay":
+    case "alabaster-bronze":
+    case "retro-diner":
+    case "bordeaux-chalk":
+    case "seoul-sunset":
+      return "warm-bakery";
+    case "late-night":
+    case "smoked-espresso":
+    case "obsidian-slate":
+    case "cyber-midnight":
+    case "midnight-gastro":
+      return "late-night";
+    case "nordic-minimal":
+    case "swiss-monolith":
+    case "oslo-brutalist":
+    case "oslo-monolith":
+    case "stockholm-sage":
+    case "kyoto-matcha":
+    case "matcha-botanic":
+    case "bistro-navy":
+    case "amalfi-coast":
+      return "nordic-minimal";
+    default:
+      return theme as ColorTheme;
+  }
 };
 
 export function ThemeStudioModal() {
@@ -297,14 +334,14 @@ export function ThemeStudioModal() {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="relative w-full max-w-2xl bg-white rounded-3xl border border-zinc-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-orange-50 text-[#ff5500] border border-orange-200/50">
+        <div className="px-4 sm:px-6 py-4 border-b border-zinc-100 flex items-center justify-between gap-3 bg-zinc-50/50">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-2 rounded-xl bg-orange-50 text-[#e84a27] border border-orange-200/50 shrink-0">
               <Palette className="w-5 h-5" />
             </div>
-            <div>
-              <h2 className="text-base font-extrabold text-zinc-900 tracking-tight flex items-center gap-2">
-                <span>Smakr Style & Theme Studio</span>
+            <div className="min-w-0">
+              <h2 className="text-base font-extrabold text-zinc-900 tracking-tight flex items-center gap-2 flex-wrap">
+                <span>Smakr Style &amp; Theme Studio</span>
                 <span className="text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600">
                   Live Preview
                 </span>
@@ -317,19 +354,19 @@ export function ThemeStudioModal() {
 
           <button
             onClick={() => setIsThemeStudioOpen(false)}
-            className="text-zinc-400 hover:text-zinc-700 p-2 rounded-full hover:bg-zinc-100 transition-colors"
+            className="text-zinc-400 hover:text-zinc-700 p-2 rounded-full hover:bg-zinc-100 transition-colors shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Studio Content */}
-        <div className="p-6 overflow-y-auto space-y-7 no-scrollbar text-xs">
+        <div className="px-4 sm:px-6 py-5 sm:py-6 overflow-y-auto overflow-x-hidden space-y-7 no-scrollbar text-xs">
           {/* Section 1: Color Themes */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 font-bold text-zinc-900 text-sm">
-                <Palette className="w-4 h-4 text-[#ff5500]" />
+                <Palette className="w-4 h-4 text-[#e84a27]" />
                 <span>1. Color Palette</span>
               </div>
               <span className="text-[11px] text-zinc-400 font-mono">
@@ -349,7 +386,7 @@ export function ThemeStudioModal() {
                     }}
                     className={`relative p-3.5 rounded-2xl border text-left flex items-start justify-between gap-3 transition-all ${
                       isSelected
-                        ? "border-[#ff5500] bg-orange-50/40 ring-2 ring-[#ff5500]/20 shadow-xs"
+                        ? "border-[#e84a27] bg-orange-50/40 ring-2 ring-[#e84a27]/20 shadow-xs"
                         : "border-zinc-200 hover:border-zinc-300 bg-white hover:bg-zinc-50/60"
                     }`}
                   >
@@ -384,7 +421,7 @@ export function ThemeStudioModal() {
                         />
                       </div>
                       {isSelected && (
-                        <span className="flex items-center justify-center w-4 h-4 rounded-full bg-[#ff5500] text-white">
+                        <span className="flex items-center justify-center w-4 h-4 rounded-full bg-[#e84a27] text-white">
                           <Check className="w-2.5 h-2.5 stroke-[3]" />
                         </span>
                       )}
@@ -399,7 +436,7 @@ export function ThemeStudioModal() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 font-bold text-zinc-900 text-sm">
-                <Type className="w-4 h-4 text-[#ff5500]" />
+                <Type className="w-4 h-4 text-[#e84a27]" />
                 <span>2. Typography & Font Style</span>
               </div>
               <span className="text-[11px] text-zinc-400 font-mono">
@@ -418,8 +455,10 @@ export function ThemeStudioModal() {
                       showToast(`Applied "${font.name}" typography`);
                     }}
                     className={`relative p-3.5 rounded-2xl border text-left flex flex-col justify-between gap-2.5 transition-all ${
+                      font.id === "comico" ? "sm:col-span-2 " : ""
+                    }${
                       isSelected
-                        ? "border-[#ff5500] bg-orange-50/40 ring-2 ring-[#ff5500]/20 shadow-xs"
+                        ? "border-[#e84a27] bg-orange-50/40 ring-2 ring-[#e84a27]/20 shadow-xs"
                         : "border-zinc-200 hover:border-zinc-300 bg-white hover:bg-zinc-50/60"
                     }`}
                   >
@@ -428,7 +467,7 @@ export function ThemeStudioModal() {
                         {font.name}
                       </span>
                       {isSelected ? (
-                        <span className="flex items-center justify-center w-4 h-4 rounded-full bg-[#ff5500] text-white">
+                        <span className="flex items-center justify-center w-4 h-4 rounded-full bg-[#e84a27] text-white">
                           <Check className="w-2.5 h-2.5 stroke-[3]" />
                         </span>
                       ) : (
@@ -439,7 +478,13 @@ export function ThemeStudioModal() {
                     </div>
 
                     <div className="p-2 rounded-xl bg-zinc-50 border border-zinc-100 text-zinc-800">
-                      <div className="font-semibold text-xs tracking-tight truncate">
+                      <div
+                        className={`font-semibold tracking-tight truncate ${
+                          font.id === "comico"
+                            ? "font-comico text-lg"
+                            : "text-xs"
+                        }`}
+                      >
                         {font.previewSample}
                       </div>
                     </div>
@@ -454,10 +499,10 @@ export function ThemeStudioModal() {
           </div>
 
           {/* Section 3: Minimalist Logo S Variants */}
-          <div className="space-y-3">
+          <div className="space-y-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 font-bold text-zinc-900 text-sm">
-                <Compass className="w-4 h-4 text-[#ff5500]" />
+                <Compass className="w-4 h-4 text-[#e84a27]" />
                 <span>3. Freestanding 'S' Logo Variants</span>
               </div>
               <span className="text-[11px] text-zinc-400 font-mono">
@@ -465,53 +510,56 @@ export function ThemeStudioModal() {
               </span>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              {LOGO_OPTIONS.map((logo) => {
-                const isSelected = activeLogoVariant === logo.id;
-                return (
-                  <button
+            {/* Signature variants — matched to Comico's hand-drawn voice */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-[#e84a27]">
+                  Signature — Comico Match
+                </span>
+                <span className="flex-1 h-px bg-zinc-100" />
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1.5">
+                {SIGNATURE_LOGOS.map((logo) => (
+                  <LogoCard
                     key={logo.id}
-                    onClick={() => {
-                      setActiveLogoVariant(logo.id);
-                      showToast(`Applied "${logo.name}" logo`);
+                    logo={logo}
+                    isSelected={activeLogoVariant === logo.id}
+                    onSelect={(selected) => {
+                      setActiveLogoVariant(selected.id);
+                      showToast(`Applied "${selected.name}" logo`);
                     }}
-                    className={`relative p-3.5 rounded-2xl border text-center flex flex-col items-center justify-between gap-3 transition-all ${
-                      isSelected
-                        ? "border-[#ff5500] bg-orange-50/40 ring-2 ring-[#ff5500]/20 shadow-xs"
-                        : "border-zinc-200 hover:border-zinc-300 bg-white hover:bg-zinc-50/60"
-                    }`}
-                  >
-                    {/* Visual Icon Preview */}
-                    <div className="p-2 flex items-center justify-center">
-                      <SmakrSIcon
-                        variant={logo.id}
-                        className="w-9 h-9 text-[#ff5500] transition-transform hover:scale-110"
-                      />
-                    </div>
+                  />
+                ))}
+              </div>
+            </div>
 
-                    <div>
-                      <div className="font-bold text-zinc-900 text-xs">
-                        {logo.name}
-                      </div>
-                      <span className="text-[10px] text-zinc-400 font-mono">
-                        {logo.tag}
-                      </span>
-                    </div>
-
-                    {isSelected && (
-                      <span className="flex items-center justify-center w-4 h-4 rounded-full bg-[#ff5500] text-white mx-auto">
-                        <Check className="w-2.5 h-2.5 stroke-[3]" />
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+            {/* Architectural variants — secondary / legacy shapes */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400">
+                  Architectural — Secondary
+                </span>
+                <span className="flex-1 h-px bg-zinc-100" />
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 opacity-80">
+                {ARCHITECTURAL_LOGOS.map((logo) => (
+                  <LogoCard
+                    key={logo.id}
+                    logo={logo}
+                    isSelected={activeLogoVariant === logo.id}
+                    onSelect={(selected) => {
+                      setActiveLogoVariant(selected.id);
+                      showToast(`Applied "${selected.name}" logo`);
+                    }}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Footer Actions */}
-        <div className="px-6 py-3.5 border-t border-zinc-100 bg-zinc-50/60 flex items-center justify-between">
+        <div className="px-4 sm:px-6 py-3.5 border-t border-zinc-100 bg-zinc-50/60 flex flex-wrap items-center justify-between gap-2">
           <p className="text-[11px] text-zinc-500">
             Changes apply instantly across headers, feeds, cards, and markers.
           </p>
@@ -541,8 +589,8 @@ export function ThemeStudioTrigger() {
       title="Customize Theme, Fonts & Logo"
     >
       <div className="relative">
-        <Palette className="w-3.5 h-3.5 text-[#ff5500] group-hover:rotate-12 transition-transform" />
-        <span className="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full bg-[#ff5500] animate-pulse" />
+        <Palette className="w-3.5 h-3.5 text-[#e84a27] group-hover:rotate-12 transition-transform" />
+        <span className="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full bg-[#e84a27] animate-pulse" />
       </div>
       <span>Style Studio</span>
     </button>
