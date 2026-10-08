@@ -517,20 +517,38 @@ export function MapRadarView() {
       else requestAnimationFrame(attachMarkers);
     };
 
+    // Guarded resize: `map.resize()` can synchronously re-enter `moveend`, which
+    // previously recursed into "Maximum call stack size exceeded". The flag is
+    // released on the next macrotask so genuine later resizes still work.
+    let resizing = false;
+    const safeResize = () => {
+      if (resizing || !mapInstance.current) return;
+      resizing = true;
+      try {
+        map.resize();
+      } finally {
+        setTimeout(() => {
+          resizing = false;
+        }, 0);
+      }
+    };
+
     map.on("load", () => {
       isMapReadyRef.current = true;
       setIsMapReady(true);
-      map.resize();
+      safeResize();
       scheduleMarkerAttachment();
+      // Catch a late layout pass (mobile browser chrome / sheet settling).
+      requestAnimationFrame(() => safeResize());
     });
 
     map.on("styledata", () => {
-      map.resize();
+      safeResize();
     });
 
     map.on("style.load", () => {
       if (!isMapReadyRef.current) return;
-      map.resize();
+      safeResize();
       scheduleMarkerAttachment();
     });
 
@@ -550,10 +568,10 @@ export function MapRadarView() {
       }
     });
 
-    // After a large pan / pitch, nudge a repaint so no canvas region is left
-    // blank. Do NOT call `map.resize()` here — resize can re-enter `moveend`
-    // and blow the call stack (RangeError: Maximum call stack size exceeded).
+    // After a large pan / pitch, force a repaint + guarded resize so no canvas
+    // region is left blank (the "blocked out" map) on big pans to either side.
     map.on("moveend", () => {
+      safeResize();
       map.triggerRepaint();
     });
 
@@ -569,9 +587,7 @@ export function MapRadarView() {
       }
     });
 
-    const handleResize = () => {
-      if (mapInstance.current) mapInstance.current.resize();
-    };
+    const handleResize = () => safeResize();
 
     const resizeObserver = new ResizeObserver(handleResize);
     if (mapContainer.current) resizeObserver.observe(mapContainer.current);
