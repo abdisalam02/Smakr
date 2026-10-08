@@ -714,7 +714,9 @@ export function MapRadarView() {
     map.flyTo({
       center: [mapCenter[0], mapCenter[1]],
       zoom: mapZoom,
-      pitch: 20,
+      // Keep the camera flat: a pitched fly was the biggest mobile GPU cost and
+      // produced choppy pans / stale ("blocked") canvas tiles on cellphones.
+      pitch: 0,
       essential: true,
       duration: 800,
       padding: {
