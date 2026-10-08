@@ -43,3 +43,6 @@
 - Mascot is now per-user: persisted to `profiles.mascot_config` (migration `20261013_profiles_mascot_config.sql`) and hydrated on sign-in — it was localStorage-only, so admins saw the default "lady" on fresh browsers.
 - Map: the Weekly Pick venue's own food pin is suppressed (the "Smakr Pick" mascot marker already represents it).
 - Mobile feed sheet: in peek, a touch anywhere on the sheet drags it open (previously header-handle only).
+- Map popup: zoom<13.8 auto-dismiss now only fires while zooming OUT — programmatic fly-ins no longer clear the just-opened card (fixes "click twice"). `moveend` now resizes + repaints to clear stale canvas regions.
+- Logged-out "find me" puck is a neutral orange dot (was a random Open Peeps avatar); signed-in users keep their avatar/mascot.
+- Geolocation: two-stage (fast network fix, then background GPS refine) — "find me" is near-instant instead of ~3s.

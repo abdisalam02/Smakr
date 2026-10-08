@@ -16,7 +16,6 @@ import { FOOD_PIN_SVG_MAP } from "@/components/food/FoodIcons";
 import { formatDistance } from "@/lib/math";
 import {
   buildOpenPeepsSvg,
-  openPeepsConfigFromPreset,
   type OpenPeepsConfig,
 } from "@/lib/onboardingAvatar";
 import type { MascotConfig } from "@/types/mascot";
@@ -116,8 +115,15 @@ function buildUserAvatarPuckElement(
   } else if (useMascot) {
     // Admins / official accounts use the Smakr mascot — matching the header avatar.
     renderSvgInto(buildMascotSVGString(mascotConfig ?? undefined, false, 48, 56));
+  } else if (avatarConfig) {
+    // Signed-in user with an Open Peeps avatar.
+    renderSvgInto(buildOpenPeepsSvg(avatarConfig));
   } else {
-    renderSvgInto(buildOpenPeepsSvg(avatarConfig ?? openPeepsConfigFromPreset("male1")));
+    // Logged-out / not-onboarded: a neutral "you" dot — never a random avatar.
+    charContainer.innerHTML = `
+      <span style="width:34px;height:34px;border-radius:9999px;background:#e84a27;border:3px solid #ffffff;box-shadow:0 3px 8px rgba(0,0,0,0.28);display:flex;align-items:center;justify-content:center;">
+        <span style="width:10px;height:10px;border-radius:9999px;background:#ffffff;"></span>
+      </span>`;
   }
 
   bodyWrapper.appendChild(ripple);
@@ -528,14 +534,27 @@ export function MapRadarView() {
       scheduleMarkerAttachment();
     });
 
-    // Auto-dismiss floating venue preview card if zoomed out past city level
+    // Auto-dismiss the floating venue card when the user zooms OUT past city
+    // level. Guard on a *decreasing* zoom so the programmatic fly-IN (from a
+    // zoomed-out view) doesn't immediately clear the card that was just opened.
+    let lastZoom = map.getZoom();
     map.on("zoom", () => {
-      if (map.getZoom() < 13.8) {
+      const z = map.getZoom();
+      const zoomingOut = z < lastZoom;
+      lastZoom = z;
+      if (z < 13.8 && zoomingOut) {
         const state = useCityPulseStore.getState();
         if (state.selectedVenue) {
           state.setSelectedVenue(null);
         }
       }
+    });
+
+    // After any camera flight settles, force a full repaint so no canvas region
+    // is left blank ("blocked out") after big pans / pitches.
+    map.on("moveend", () => {
+      map.resize();
+      map.triggerRepaint();
     });
 
     // Single click on empty map: deselects venue card and minimizes feed to peek if expanded
