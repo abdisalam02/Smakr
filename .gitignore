@@ -41,3 +41,6 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 *.tsbuildinfo
+
+# Dev server log
+.next-dev.log
