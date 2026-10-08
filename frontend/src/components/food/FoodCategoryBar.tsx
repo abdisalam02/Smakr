@@ -46,8 +46,10 @@ export function FoodCategoryBar({ compact = false }: FoodCategoryBarProps) {
 
   return (
     <div
-      className={`w-full overflow-x-auto no-scrollbar bg-white/95 backdrop-blur-md border-b border-zinc-100 ${
-        compact ? "py-2 px-3" : "py-2.5 px-4"
+      className={`w-full overflow-x-auto no-scrollbar ${
+        compact
+          ? "py-2 px-3 bg-transparent"
+          : "py-2.5 px-4 bg-[#FAF7F2]/65 dark:bg-[#181615]/65 backdrop-blur-xl border-b border-black/[0.06]"
       }`}
     >
       <div className="max-w-7xl mx-auto flex items-center gap-1.5 min-w-max">
@@ -62,8 +64,8 @@ export function FoodCategoryBar({ compact = false }: FoodCategoryBarProps) {
               onClick={() => setFeedCategory(cat.id)}
               className={`group flex items-center gap-2 px-3 py-1.5 rounded-full text-xs transition-all select-none ${
                 isActive
-                  ? "bg-zinc-900 text-white font-medium shadow-xs"
-                  : "bg-zinc-50 hover:bg-zinc-100 text-zinc-600 hover:text-zinc-900 font-normal"
+                  ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold shadow-xs"
+                  : "bg-white/55 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/15 text-zinc-700 dark:text-zinc-200 font-normal backdrop-blur-sm border border-black/[0.06] dark:border-white/10"
               }`}
             >
               <Icon

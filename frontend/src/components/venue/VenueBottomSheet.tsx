@@ -14,6 +14,7 @@ import {
   Bookmark,
 } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
+import { motion, AnimatePresence } from "motion/react";
 import { useVenueDetail } from "@/hooks/useVenueDetail";
 import { formatDistance } from "@/lib/math";
 import { ReviewItem } from "@/types";
@@ -164,33 +165,41 @@ export function VenueBottomSheet() {
       {/* 2. DEDICATED FULL-SCREEN SLIDE-UP DRAWER (View Details / Menu & Vibes)   */}
       {/* Dimmed backdrop, zero layer collisions, clear close button               */}
       {/* ======================================================================= */}
-      {isVenueDetailModalOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end pointer-events-auto">
-          {/* Dimmed backdrop with blur */}
-          <div
-            onClick={() => setIsVenueDetailModalOpen(false)}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm cursor-pointer transition-opacity animate-in fade-in duration-200"
-          />
+      <AnimatePresence>
+        {isVenueDetailModalOpen && (
+          <div className="fixed inset-0 z-50 flex flex-col justify-end pointer-events-auto">
+            {/* Dimmed backdrop overlay that fades in and dismisses the drawer when tapped */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setIsVenueDetailModalOpen(false)}
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm cursor-pointer"
+            />
 
-          {/* Slidable Card container */}
-          <div
-            style={{
-              transform: `translate3d(0, ${detailsDragOffset}px, 0)`,
-              transition: isDraggingDetails
-                ? "none"
-                : "transform 0.35s cubic-bezier(0.16, 1, 0.3, 1)",
-            }}
-            className="relative z-10 w-full h-[88dvh] max-h-[88dvh] bg-[#fbf9f5] rounded-t-3xl border-t border-black/10 shadow-2xl flex flex-col overflow-hidden will-change-transform animate-in slide-in-from-bottom duration-300"
-          >
-            {/* Grab Handle Header for dragging */}
-            <div
-              onTouchStart={handleDetailsTouchStart}
-              onTouchMove={handleDetailsTouchMove}
-              onTouchEnd={handleDetailsTouchEnd}
-              className="w-full flex flex-col items-center pt-2.5 pb-2.5 px-5 cursor-grab active:cursor-grabbing bg-[#fbf9f5] border-b border-black/[0.06] shrink-0 touch-none select-none"
+            {/* Slidable Card container with smooth spring slide-up */}
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 28, stiffness: 300 }}
+              drag="y"
+              dragConstraints={{ top: 0 }}
+              dragElastic={{ top: 0, bottom: 0.5 }}
+              onDragEnd={(_, info) => {
+                if (info.offset.y > 90 || info.velocity.y > 300) {
+                  setIsVenueDetailModalOpen(false);
+                }
+              }}
+              className="relative z-10 w-full h-[88dvh] max-h-[90vh] bg-[#fbf9f5] rounded-t-3xl border-t border-black/10 shadow-2xl flex flex-col overflow-hidden will-change-transform"
             >
-              {/* Pill grab bar */}
-              <div className="w-10 h-1 rounded-full bg-zinc-300 hover:bg-zinc-400 transition-colors mb-2.5" />
+              {/* Grab Handle Header for dragging */}
+              <div
+                className="w-full flex flex-col items-center pt-2.5 pb-2.5 px-5 cursor-grab active:cursor-grabbing bg-[#fbf9f5] border-b border-black/[0.06] shrink-0 touch-none select-none"
+              >
+                {/* Pill grab bar */}
+                <div className="w-10 h-1 rounded-full bg-zinc-300 hover:bg-zinc-400 transition-colors mb-2.5" />
 
               <div className="w-full flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
@@ -507,9 +516,10 @@ export function VenueBottomSheet() {
                 </div>
               )}
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
-    </>
+    </AnimatePresence>
+  </>
   );
 }

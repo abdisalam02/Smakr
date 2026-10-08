@@ -18,3 +18,24 @@
 - Map controls streamlined to Locate Me and Zoom (+/-); top neighborhood filter bar cleared.
 - Food cards updated with font-comico ratings and borderless 28px admin mascot avatar.
 - Venue detail drawer enlarged heading, added Rating/Price/Area stats, and added reviews section.
+- Frosted floating bottom nav deployed with animated layout pill tabs and centered Add action.
+- User location puck wired with Open Peeps avatar, pulsating radar ring, and smooth pitch flyTo.
+- Map auto-dismisses venue popup card on zoom out (< 13.8) and on canvas click.
+- Venue detail drawer upgraded to spring slide-up with dimmed backdrop overlay.
+- Complementary body font roster (Jakarta, DM Sans, Space, Geist) with live switcher active.
+- Map tiles sync with resize observer on sheet gestures and style loads without gray patches.
+- Frosted translucent chrome deployed to header, category bar, and mobile sheet container.
+- Peek feed enables tap-to-expand to half-browse mode with guarded card child actions.
+- User location puck upgraded to anchored badge pill, radar ripple ring, and friendly avatars.
+- Weekly drop mascot and map marker unified to pick mascot avatar source of truth.
+- Map markers tuned: user location renders unclipped bust with torso; Smakr pick renders head pin.
+- Weekly drop capsule removed beacon dot; expanded view features enlarged 76px mascot and rich dish card.
+- Frosted translucency tuned across nav pills, filter chips, and sticky header on scroll.
+- Bottom nav tab transitions converted to smooth Framer Motion layoutId spring slider.
+- Live body font roster expanded to 8 pairings with instant DOM CSS variable injection.
+- Beta rebrand: `✦ BETA v0.9` header badge; onboarding eyebrow `✦ OSLO BETA CONTRIBUTOR` + `WELCOME TO THE SMAKR BETA!`; profile menu `✦ Beta Tester` chip.
+- New in-app Beta Feedback drawer (`components/feedback/BetaFeedbackDrawer.tsx`) mounted in `layout.tsx`, opened from profile menu `💬 Send Beta Feedback`; writes to `public.beta_feedback`.
+- Requires migration `20261012_beta_feedback.sql` to be applied for submissions to persist (toasts gracefully otherwise).
+- Bottom nav rebuilt without the shared layoutId (fixes white active tab); food post card made translucent (`bg-[#181615]/80 backdrop-blur-md`, image `opacity-90`).
+- Session handling: middleware now refreshes the Supabase session cookie on every request (previously `/admin` only), so server code sees the signed-in user and long-lived tabs/reloads don't drop the session.
+- Auth model confirmed: `@supabase/ssr` browser client persists in cookies (400-day max-age, `autoRefreshToken`, PKCE); callback exchanges the code in a Route Handler.

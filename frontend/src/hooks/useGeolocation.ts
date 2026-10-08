@@ -21,10 +21,7 @@ export function useGeolocation() {
       setMapCenter([coords.lon, coords.lat], 15.5);
       setMobileSheetState("peek"); // Collapses feed sheet so user sees their cute ragdoll!
       setLoading(false);
-
-      if (isRealGps) {
-        showToast("📍 Found your GPS position! Your ragdoll is here.");
-      }
+      void isRealGps;
     };
 
     if (typeof window === "undefined" || !navigator.geolocation) {

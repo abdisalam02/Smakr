@@ -88,6 +88,8 @@ interface PulseStoreState {
   isThemeStudioOpen: boolean;
   /** True when the avatar builder is opened in edit mode from the profile menu. */
   isAvatarStudioOpen: boolean;
+  /** True when the in-app beta feedback drawer is open. */
+  isBetaFeedbackOpen: boolean;
 
   // Actions
   setActiveTheme: (theme: ColorTheme) => void;
@@ -96,6 +98,8 @@ interface PulseStoreState {
   setIsThemeStudioOpen: (open: boolean) => void;
   openAvatarStudio: () => void;
   setIsAvatarStudioOpen: (open: boolean) => void;
+  openBetaFeedback: () => void;
+  setIsBetaFeedbackOpen: (open: boolean) => void;
   setSelectedAvatar: (avatar: AvatarOption) => void;
   showToast: (message: string, durationMs?: number) => void;
   clearToast: () => void;
@@ -165,7 +169,9 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
   venues: [],
   selectedVenue: null,
   filters: INITIAL_FILTERS,
-  userLocation: { lat: 59.9171, lon: 10.7516 }, // Oslo Sentrum (Torggata / Youngstorget)
+  // No phantom location on load — the "You're here" puck only appears once the
+  // user shares their location (avoids overlapping the Weekly Pick marker).
+  userLocation: null,
   mapCenter: [10.7516, 59.9171], // Oslo Sentrum (Torggata / Youngstorget)
   mapZoom: 13.8,
   viewMode: "split",
@@ -203,6 +209,7 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
   activeLogoVariant: "fluid",
   isThemeStudioOpen: false,
   isAvatarStudioOpen: false,
+  isBetaFeedbackOpen: false,
 
   setActiveTheme: (activeTheme: ColorTheme) => {
     set({ activeTheme });
@@ -238,6 +245,10 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
   openAvatarStudio: () => set({ isAvatarStudioOpen: true, isAuthModalOpen: false }),
 
   setIsAvatarStudioOpen: (isAvatarStudioOpen: boolean) => set({ isAvatarStudioOpen }),
+
+  openBetaFeedback: () => set({ isBetaFeedbackOpen: true, isAuthModalOpen: false }),
+
+  setIsBetaFeedbackOpen: (isBetaFeedbackOpen: boolean) => set({ isBetaFeedbackOpen }),
   setIsVenueDetailModalOpen: (isVenueDetailModalOpen: boolean) => set({ isVenueDetailModalOpen }),
 
   setSelectedAvatar: (selectedAvatar: AvatarOption) => set({ selectedAvatar }),

@@ -164,6 +164,8 @@ export async function setPostSave(userId: string, postId: string, saved: boolean
 export interface OnboardingPersistInput {
   userId: string;
   handle: string;
+  /** Display name (profiles.name). Optional. */
+  name?: string;
   avatarConfig: OnboardingAvatarConfig;
   avatarUrl: string;
 }
@@ -177,6 +179,7 @@ export async function persistOnboarding(input: OnboardingPersistInput): Promise<
       .from("profiles")
       .update({
         handle: input.handle,
+        ...(input.name !== undefined ? { name: input.name } : {}),
         avatar_config: input.avatarConfig,
         avatar_url: input.avatarUrl,
         onboarding_completed: true,

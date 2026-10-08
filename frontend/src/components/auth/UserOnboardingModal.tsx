@@ -97,6 +97,7 @@ export function UserOnboardingModal() {
 
   const [config, setConfig] = useState<OpenPeepsConfig>(DEFAULT_OPEN_PEEPS_CONFIG);
   const [handle, setHandle] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -124,6 +125,7 @@ export function UserOnboardingModal() {
       (currentUser.handle || "").replace(/^[@_\s]+/, "") ||
         (currentUser.email ? currentUser.email.split("@")[0] : "")
     );
+    setDisplayName(currentUser.name || "");
   }, [currentUser]);
 
   // Re-seed the moment the builder opens in edit mode.
@@ -136,6 +138,7 @@ export function UserOnboardingModal() {
     setHairCategory(categoryForHead(seeded.genderPreset.startsWith("male"), seeded.headType));
     setStep(0);
     setHandle((user.handle || "").replace(/^[@_\s]+/, ""));
+    setDisplayName(user.name || "");
   }, [isStudioOpen]);
 
   const previewSvg = useMemo(() => buildOpenPeepsSvg(config), [config]);
@@ -188,9 +191,11 @@ export function UserOnboardingModal() {
     }
     setSaving(true);
     const avatarUrl = buildOpenPeepsDataUri(config);
+    const cleanName = displayName.trim();
     const persisted = await persistOnboarding({
       userId: currentUser.id,
       handle: cleanHandle,
+      name: cleanName,
       avatarConfig: config,
       avatarUrl,
     });
@@ -198,6 +203,7 @@ export function UserOnboardingModal() {
     setCurrentUser({
       ...currentUser,
       handle: cleanHandle,
+      name: cleanName || undefined,
       avatar_url: avatarUrl,
       avatar_config: config,
       onboarding_completed: true,
@@ -259,6 +265,15 @@ export function UserOnboardingModal() {
                 );
               })}
             </div>
+
+            <Section title="Display name">
+              <input
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Your name"
+                className="w-full px-3 py-2.5 text-sm rounded-xl bg-white border border-zinc-200 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-[#e84a27] focus:ring-1 focus:ring-[#e84a27] transition-all"
+              />
+            </Section>
 
             <Section title="Your @handle">
               <div className="relative">
@@ -429,11 +444,17 @@ export function UserOnboardingModal() {
 
         {/* Title (compact) */}
         <div className="px-5 sm:px-6 pt-5 pb-2 pr-12">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-50 text-[#e84a27] border border-orange-200/60 text-[10px] font-bold uppercase tracking-wider mb-2">
+            <span>{isEditMode ? "Edit mode" : "✦ OSLO BETA CONTRIBUTOR"}</span>
+          </div>
           <h2 className="font-comico text-xl leading-tight text-zinc-900">
-            {isEditMode
-              ? "Customize your foodie look"
-              : "Welcome to Smakr! Create your foodie profile"}
+            {isEditMode ? "Customize your profile" : "WELCOME TO THE SMAKR BETA!"}
           </h2>
+          <p className="text-xs text-zinc-500 mt-1.5">
+            {isEditMode
+              ? "Change your avatar anytime — your saved dishes stay untouched."
+              : "Create your foodie persona, claim your handle, and help us map Oslo's best dishes."}
+          </p>
         </div>
 
         {/* Pinned avatar preview + progress — ALWAYS visible */}
@@ -507,7 +528,7 @@ export function UserOnboardingModal() {
               ) : (
                 <>
                   <Sparkles className="w-4 h-4" />
-                  <span>{isEditMode ? "Save my look" : "Start Exploring Oslo"}</span>
+                  <span>{isEditMode ? "Save profile" : "Start Exploring Oslo"}</span>
                 </>
               )}
             </button>

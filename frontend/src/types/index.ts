@@ -60,6 +60,8 @@ export interface WeeklyPick {
   venue_id: string;
   dish_name: string;
   dish_image: string;
+  /** Optional custom mascot avatar URL */
+  mascot_avatar_url?: string;
   /** e.g. "Skip the queue at Koie, order the Spicy Miso before 17:30!" */
   speech_bubble: string;
   coords: [number, number]; // [lng, lat]

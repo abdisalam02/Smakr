@@ -281,7 +281,6 @@ export const EXPRESSION_OPTIONS = [
   { label: "Cheeky", value: "cheeky" },
   { label: "Driven / Foodie", value: "driven" },
   { label: "Delighted Eater", value: "eatingHappy" },
-  { label: "Cool Serious", value: "serious" },
 ] as const satisfies readonly { label: string; value: FaceValue }[];
 
 /* ------------------------------------------------------------------ */

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
+import { motion } from "motion/react";
 import { ThumbsUp, MapPin, Bookmark } from "lucide-react";
 import { FoodPost } from "@/types";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
@@ -92,10 +93,13 @@ export const FoodPostCard = React.memo(function FoodPostCard({
   };
 
   return (
-    <article
+    <motion.article
+      initial={{ opacity: 0, y: 14, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
       onClick={handleCardClick}
       onDoubleClick={handleDoubleTap}
-      className="group relative w-full rounded-[26px] overflow-hidden border border-black/[0.08] dark:border-white/10 bg-[#181615] shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer select-none"
+      className="group relative w-full rounded-[26px] overflow-hidden border border-black/[0.08] dark:border-white/10 bg-[#181615]/80 backdrop-blur-md shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer select-none"
     >
       {/* Repeating SMAKR Monogram Watermark Pattern across background layer */}
       <svg
@@ -146,7 +150,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
           unoptimized
           priority={priority}
           loading={priority ? undefined : "lazy"}
-          className="object-cover w-full transition-transform duration-700 ease-out group-hover:scale-105"
+          className="object-cover w-full opacity-90 transition-transform duration-700 ease-out group-hover:scale-105"
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 600px"
         />
 
@@ -196,7 +200,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
         {/* Overlaid Editorial Content (Bottom Half of Photo) */}
         <div className="absolute bottom-0 inset-x-0 p-3.5 sm:p-4 z-10 flex flex-col justify-end pointer-events-auto">
           {/* Dish Title */}
-          <h3 className="font-comico text-lg sm:text-xl leading-snug drop-shadow-sm text-white line-clamp-1">
+          <h3 className="font-bold text-lg sm:text-xl leading-snug drop-shadow-sm text-white line-clamp-1">
             {post.dish_name}
           </h3>
 
@@ -297,6 +301,6 @@ export const FoodPostCard = React.memo(function FoodPostCard({
           </div>
         </div>
       </div>
-    </article>
+    </motion.article>
   );
 });

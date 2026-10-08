@@ -14,6 +14,12 @@ import {
 } from "@/components/avatar/MascotCharacter";
 import { FOOD_PIN_SVG_MAP } from "@/components/food/FoodIcons";
 import { formatDistance } from "@/lib/math";
+import {
+  buildOpenPeepsSvg,
+  openPeepsConfigFromPreset,
+  type OpenPeepsConfig,
+} from "@/lib/onboardingAvatar";
+import type { MascotConfig } from "@/types/mascot";
 
 const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY || "ThoacZP1opK329U6AvTz";
 
@@ -52,6 +58,75 @@ function applyPinState(root: HTMLElement, isSelected: boolean) {
   if (visual) visual.style.transform = isSelected ? "scale(1.3)" : "scale(1.0)";
   const glyph = root.querySelector<HTMLElement>(".pin-glyph");
   if (glyph) glyph.style.filter = isSelected ? PIN_SHADOW_SELECTED : PIN_SHADOW_DEFAULT;
+}
+
+function buildUserAvatarPuckElement(
+  avatarUrl?: string | null,
+  avatarConfig?: OpenPeepsConfig | null,
+  mascotConfig?: MascotConfig | null,
+  useMascot = false
+): HTMLDivElement {
+  const container = document.createElement("div");
+  container.className =
+    "relative flex flex-col items-center group cursor-pointer select-none pointer-events-auto";
+
+  // Small "You're here" caption above the puck.
+  const badge = document.createElement("div");
+  badge.className =
+    "bg-white/90 text-zinc-700 font-semibold text-[10px] leading-none px-2 py-1 rounded-full shadow-sm border border-black/5 whitespace-nowrap mb-0.5";
+  badge.textContent = "You're here";
+
+  // Character body wrapper with radar ripple under the feet
+  const bodyWrapper = document.createElement("div");
+  bodyWrapper.className = "relative flex flex-col items-center justify-center";
+
+  // Radar ripple: soft pulsing circle under the avatar
+  const ripple = document.createElement("div");
+  ripple.className =
+    "absolute -bottom-1 w-11 h-3 rounded-full bg-[#e84a27] animate-ping opacity-35 pointer-events-none";
+  ripple.style.animationDuration = "2.4s";
+
+  // Soft shadow oval under avatar feet
+  const shadow = document.createElement("div");
+  shadow.className =
+    "absolute -bottom-0.5 w-9 h-2.5 rounded-full bg-black/25 blur-[1px] pointer-events-none";
+
+  // Character avatar container showing head + torso (unclipped)
+  const charContainer = document.createElement("div");
+  charContainer.className =
+    "relative w-12 h-14 flex items-center justify-center filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.18)] transition-transform group-hover:scale-110";
+
+  const renderSvgInto = (svgStr: string) => {
+    charContainer.innerHTML = svgStr;
+    const svgEl = charContainer.querySelector("svg");
+    if (svgEl) {
+      svgEl.style.width = "100%";
+      svgEl.style.height = "100%";
+      svgEl.style.display = "block";
+      svgEl.style.overflow = "visible";
+    }
+  };
+
+  if (avatarUrl) {
+    const img = document.createElement("img");
+    img.src = avatarUrl;
+    img.alt = "You";
+    img.className = "w-full h-full object-contain block pointer-events-none";
+    charContainer.appendChild(img);
+  } else if (useMascot) {
+    // Admins / official accounts use the Smakr mascot — matching the header avatar.
+    renderSvgInto(buildMascotSVGString(mascotConfig ?? undefined, false, 48, 56));
+  } else {
+    renderSvgInto(buildOpenPeepsSvg(avatarConfig ?? openPeepsConfigFromPreset("male1")));
+  }
+
+  bodyWrapper.appendChild(ripple);
+  bodyWrapper.appendChild(shadow);
+  bodyWrapper.appendChild(charContainer);
+
+  container.appendChild(badge);
+  container.appendChild(bodyWrapper);
+  return container;
 }
 
 function createAquarellePinElement(
@@ -102,44 +177,7 @@ function createAquarellePinElement(
     ">
       ${pinGlyph}
     </div>
-
-    <!-- Hover Tooltip -->
-    <div class="pin-tooltip" style="
-      position: absolute;
-      bottom: calc(100% + 5px);
-      left: 50%;
-      transform: translateX(-50%);
-      background: #ffffff;
-      color: #221e19;
-      padding: 3px 8px;
-      border-radius: 6px;
-      border: 1px solid #dcd4c3;
-      box-shadow: 0 4px 12px rgba(60, 48, 34, 0.15);
-      font-size: 11px;
-      font-weight: 600;
-      white-space: nowrap;
-      pointer-events: none;
-      display: none;
-      z-index: 60;
-    ">
-      <span>${venue.name}</span>
-      <span style="color: #6b6459; font-weight: normal; margin-left: 4px;">• ${venue.vibe?.seat_label || "Active"}</span>
-    </div>
   `;
-
-  const tooltip = inner.querySelector(".pin-tooltip") as HTMLDivElement;
-
-  root.addEventListener("mouseenter", () => {
-    if (tooltip) tooltip.style.display = "block";
-    const selected = root.dataset.selected === "1";
-    inner.style.transform = selected ? "scale(1.3)" : "scale(1.15)";
-  });
-
-  root.addEventListener("mouseleave", () => {
-    if (tooltip) tooltip.style.display = "none";
-    const selected = root.dataset.selected === "1";
-    inner.style.transform = selected ? "scale(1.22)" : "scale(1.0)";
-  });
 
   root.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -173,6 +211,22 @@ export function MapRadarView() {
   const mapZoom = useCityPulseStore((state) => state.mapZoom);
   const weeklyPick = useCityPulseStore((state) => state.weeklyPick);
   const mascotConfig = useCityPulseStore((state) => state.mascotConfig);
+  const userLocation = useCityPulseStore((state) => state.userLocation);
+  const currentUser = useCityPulseStore((state) => state.currentUser);
+  const mobileSheetState = useCityPulseStore((state) => state.mobileSheetState);
+  const userLocationMarkerRef = useRef<maplibregl.Marker | null>(null);
+
+  // Trigger map resize on mobile sheet gestures and initial load
+  useEffect(() => {
+    if (!mapInstance.current) return;
+    const handleResize = () => mapInstance.current?.resize();
+    window.addEventListener("resize", handleResize);
+    const timer = setTimeout(handleResize, 350);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      clearTimeout(timer);
+    };
+  }, [mobileSheetState]);
 
   // Synchronize markers to MapLibre
   const renderMarkers = useCallback(() => {
@@ -293,7 +347,7 @@ export function MapRadarView() {
   // Floating "Pick of the Week" badge attached to the mascot marker
   const buildWeeklyBadge = useCallback((): HTMLDivElement => {
     const badge = document.createElement("div");
-    badge.textContent = "✦ Smakr Pick of the Week";
+    badge.textContent = "✦ Smakr Pick";
     Object.assign(badge.style, {
       position: "absolute",
       bottom: "calc(100% - 2px)",
@@ -335,11 +389,39 @@ export function MapRadarView() {
     const width = 38;
     const height = Math.round((width * MASCOT_VIEWBOX_HEIGHT) / MASCOT_VIEWBOX_WIDTH);
 
+    function buildWeeklyElement(): HTMLDivElement {
+      const root = document.createElement("div");
+      root.className =
+        "relative flex flex-col items-center group cursor-pointer select-none pointer-events-auto";
+      root.appendChild(buildWeeklyBadge());
+      const circle = document.createElement("div");
+      circle.className =
+        "relative w-10 h-10 rounded-full border-2 border-white shadow-lg bg-stone-100 overflow-hidden ring-2 ring-[#e84a27] flex items-center justify-center";
+      if (pick.mascot_avatar_url) {
+        const img = document.createElement("img");
+        img.src = pick.mascot_avatar_url;
+        img.alt = "✦ Smakr Pick";
+        img.className = "w-full h-full object-cover object-top block pointer-events-none";
+        circle.appendChild(img);
+      } else {
+        const svgStr = buildMascotSVGString(config, false, 40, 40);
+        circle.innerHTML = svgStr;
+        const svg = circle.querySelector("svg");
+        if (svg) {
+          // Crop to the head so the avatar sits centred in the circular marker.
+          svg.setAttribute("viewBox", "38 15 200 200");
+          svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+          svg.style.width = "100%";
+          svg.style.height = "100%";
+          svg.style.display = "block";
+        }
+      }
+      root.appendChild(circle);
+      return root;
+    }
+
     if (!weeklyMarkerRef.current) {
-      const el = createMascotDOMElement(config);
-      el.style.pointerEvents = "auto";
-      el.style.cursor = "pointer";
-      el.appendChild(buildWeeklyBadge());
+      const el = buildWeeklyElement();
       el.addEventListener("click", (e) => {
         e.stopPropagation();
         openWeeklyVenue();
@@ -354,10 +436,34 @@ export function MapRadarView() {
 
       weeklyMarkerRef.current = marker;
     } else {
-      // Rebuild the SVG in place so live config changes reflect instantly
       const el = weeklyMarkerRef.current.getElement();
-      el.innerHTML = buildMascotSVGString(config, true, width, height);
+      el.innerHTML = "";
+      el.className =
+        "relative flex flex-col items-center group cursor-pointer select-none pointer-events-auto";
       el.appendChild(buildWeeklyBadge());
+      const circle = document.createElement("div");
+      circle.className =
+        "relative w-10 h-10 rounded-full border-2 border-white shadow-lg bg-stone-100 overflow-hidden ring-2 ring-[#e84a27] flex items-center justify-center";
+      if (pick.mascot_avatar_url) {
+        const img = document.createElement("img");
+        img.src = pick.mascot_avatar_url;
+        img.alt = "✦ Smakr Pick";
+        img.className = "w-full h-full object-cover object-top block pointer-events-none";
+        circle.appendChild(img);
+      } else {
+        const svgStr = buildMascotSVGString(config, false, 40, 40);
+        circle.innerHTML = svgStr;
+        const svg = circle.querySelector("svg");
+        if (svg) {
+          // Crop to the head so the avatar sits centred in the circular marker.
+          svg.setAttribute("viewBox", "38 15 200 200");
+          svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+          svg.style.width = "100%";
+          svg.style.height = "100%";
+          svg.style.display = "block";
+        }
+      }
+      el.appendChild(circle);
       weeklyMarkerRef.current.setLngLat([lng, lat]);
     }
   }, [buildWeeklyBadge, openWeeklyVenue]);
@@ -377,7 +483,7 @@ export function MapRadarView() {
       attributionControl: false,
       dragRotate: false,
       pitchWithRotate: false,
-      maxPitch: 0,
+      maxPitch: 60,
       minZoom: 9,
       maxZoom: 19,
       doubleClickZoom: true,
@@ -408,9 +514,24 @@ export function MapRadarView() {
       scheduleMarkerAttachment();
     });
 
+    map.on("styledata", () => {
+      map.resize();
+    });
+
     map.on("style.load", () => {
       if (!isMapReadyRef.current) return;
+      map.resize();
       scheduleMarkerAttachment();
+    });
+
+    // Auto-dismiss floating venue preview card if zoomed out past city level
+    map.on("zoom", () => {
+      if (map.getZoom() < 13.8) {
+        const state = useCityPulseStore.getState();
+        if (state.selectedVenue) {
+          state.setSelectedVenue(null);
+        }
+      }
     });
 
     // Single click on empty map: deselects venue card and minimizes feed to peek if expanded
@@ -439,6 +560,10 @@ export function MapRadarView() {
       markersMap.current.forEach((m) => m.remove());
       markersMap.current.clear();
       if (weeklyMarkerRef.current) weeklyMarkerRef.current.remove();
+      if (userLocationMarkerRef.current) {
+        userLocationMarkerRef.current.remove();
+        userLocationMarkerRef.current = null;
+      }
       isMapReadyRef.current = false;
       setIsMapReady(false);
       map.remove();
@@ -550,8 +675,9 @@ export function MapRadarView() {
     map.flyTo({
       center: [mapCenter[0], mapCenter[1]],
       zoom: mapZoom,
+      pitch: 20,
       essential: true,
-      duration: 700,
+      duration: 800,
       padding: {
         top: isMobile ? 60 : 0,
         bottom: bottomPad,
@@ -560,6 +686,53 @@ export function MapRadarView() {
       },
     });
   }, [mapCenter, mapZoom]);
+
+  // 4b. Synchronize User Avatar Geolocation Puck
+  useEffect(() => {
+    const map = mapInstance.current;
+    if (!map || !isMapReadyRef.current) return;
+
+    if (!userLocation) {
+      if (userLocationMarkerRef.current) {
+        userLocationMarkerRef.current.remove();
+        userLocationMarkerRef.current = null;
+      }
+      return;
+    }
+
+    const { lat, lon } = userLocation;
+
+    if (userLocationMarkerRef.current) {
+      userLocationMarkerRef.current.remove();
+      userLocationMarkerRef.current = null;
+    }
+
+    const isNiwacheOrAdmin =
+      currentUser?.role === "admin" ||
+      (currentUser?.handle || "").toLowerCase().includes("niwache");
+    const el = buildUserAvatarPuckElement(
+      currentUser?.avatar_url,
+      currentUser?.avatar_config,
+      mascotConfig,
+      !currentUser?.avatar_url && isNiwacheOrAdmin
+    );
+    const marker = new maplibregl.Marker({
+      element: el,
+      anchor: "bottom",
+    })
+      .setLngLat([lon, lat])
+      .addTo(map);
+
+    userLocationMarkerRef.current = marker;
+  }, [
+    userLocation,
+    currentUser?.avatar_url,
+    currentUser?.avatar_config,
+    currentUser?.handle,
+    currentUser?.role,
+    mascotConfig,
+    isMapReady,
+  ]);
 
   // 5. Weekly Pick mascot anchor (re-anchors + recolours on dispatch/config change)
   useEffect(() => {
@@ -650,6 +823,7 @@ export function MapRadarView() {
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
+              padding-right: 22px;
             ">
               ${selectedVenue.name}
             </div>
@@ -766,33 +940,6 @@ export function MapRadarView() {
         }`}
         style={{ width: "100%", height: "100%" }}
       />
-
-      {/* Ambient skeleton + radar sweep while vector styles initialise */}
-      <div
-        aria-hidden={isMapReady}
-        className={`absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 transition-opacity duration-500 ease-out ${
-          isMapReady ? "opacity-0 pointer-events-none" : "opacity-100"
-        }`}
-        style={{ background: "var(--background, #F7F2E8)" }}
-      >
-        <div className="relative w-36 h-36">
-          <div className="absolute inset-0 rounded-full border border-[#e84a27]/20 animate-pulse" />
-          <div className="absolute inset-5 rounded-full border border-[#e84a27]/15" />
-          <div className="absolute inset-10 rounded-full border border-[#e84a27]/10" />
-          <div
-            className="absolute inset-0 rounded-full animate-[spin_3.5s_linear_infinite]"
-            style={{
-              background:
-                "conic-gradient(from 0deg, rgba(232,74,39,0.32) 0deg, rgba(232,74,39,0.06) 55deg, transparent 90deg, transparent 360deg)",
-            }}
-          />
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-[#e84a27] animate-ping" />
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-[#e84a27] shadow-[0_0_0_4px_rgba(232,74,39,0.18)]" />
-        </div>
-        <p className="text-[11px] font-semibold tracking-wide text-zinc-400 animate-pulse">
-          Warming up the Oslo radar…
-        </p>
-      </div>
 
       {/* Style Switcher Pills (Bottom-left on desktop only, completely clear of filters and feed) */}
       <div className="hidden lg:flex absolute left-4 bottom-6 z-20 items-center gap-1 p-1 rounded-xl bg-white/95 backdrop-blur-md border border-zinc-200 shadow-md text-xs">

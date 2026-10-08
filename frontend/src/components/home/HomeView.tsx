@@ -448,7 +448,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
               : viewMode === "feed"
               ? "w-full max-w-5xl mx-auto opacity-100 border-r-0"
               : "w-[46%] xl:w-[42%] opacity-100 border-r border-zinc-200/80"
-          } h-full bg-white flex flex-col overflow-hidden transition-all duration-350 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[width,opacity] relative`}
+          } h-full bg-[#FAF7F2] dark:bg-[#181615] flex flex-col overflow-hidden transition-all duration-350 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[width,opacity] relative`}
         >
           {selectedVenue ? (
             <VenueDetailPane
@@ -457,8 +457,10 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
             />
           ) : (
             <>
-              <MascotWeeklyDrop feedCount={filteredPosts.length} />
-              <FeedFilterBar />
+              <div className="sticky top-0 z-20 bg-[#FAF7F2]/65 dark:bg-[#181615]/65 backdrop-blur-xl border-b border-black/[0.06]">
+                <MascotWeeklyDrop feedCount={filteredPosts.length} />
+                <FeedFilterBar />
+              </div>
               <div data-feed-scroll className="flex-1 overflow-y-auto p-5 space-y-4 no-scrollbar pb-24">
             {feedMode === "food" ? (
               foodPosts.length === 0 && isHydratingData ? (
@@ -565,48 +567,55 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
             transform: `translate3d(0, ${getSnapTranslateY(mobileSheet)}px, 0)`,
             transition: "transform 0.38s cubic-bezier(0.16, 1, 0.3, 1)",
           }}
-          className="absolute left-0 right-0 top-[57px] z-20 bg-white rounded-t-3xl border-t border-zinc-200/80 shadow-2xl flex flex-col will-change-transform pb-[140px]"
+          className="absolute left-0 right-0 top-[57px] z-20 bg-[#FAF7F2]/80 dark:bg-[#181615]/80 backdrop-blur-md rounded-t-3xl border-t border-black/[0.08] shadow-2xl flex flex-col will-change-transform pb-[140px]"
         >
-          {/* Consolidated Sheet Header Bar: Grab Handle + Smakr Feed & Mascot Drop Pill */}
-          <div
-            onTouchStart={handleHeaderTouchStart}
-            onTouchMove={handleHeaderTouchMove}
-            onTouchEnd={handleHeaderTouchEnd}
-            onClick={toggleSheetState}
-            className="w-full pt-2 pb-1 cursor-pointer select-none bg-white rounded-t-3xl shrink-0 active:bg-zinc-50 transition-colors touch-none"
-          >
-            {/* Grab pill */}
-            <div className="w-10 h-1 rounded-full bg-zinc-300 mx-auto mb-1 hover:bg-zinc-400 transition-colors" />
-
-            {/* Smakr Feed header + Weekly Drop capsule */}
+          {/* Sticky Sheet Header: Grab Handle + Mascot Drop Pill + Category Filter Bar */}
+          <div className="sticky top-0 z-20 bg-[#FAF7F2]/65 dark:bg-[#181615]/65 backdrop-blur-xl border-b border-black/[0.06] rounded-t-3xl shrink-0">
             <div
-              onClick={(e) => e.stopPropagation()}
-              className="cursor-default"
+              onTouchStart={handleHeaderTouchStart}
+              onTouchMove={handleHeaderTouchMove}
+              onTouchEnd={handleHeaderTouchEnd}
+              onClick={toggleSheetState}
+              className="w-full pt-2 pb-1 cursor-pointer select-none rounded-t-3xl active:bg-black/[0.02] transition-colors touch-none"
             >
-              <MascotWeeklyDrop
-                compact
-                feedCount={filteredPosts.length}
-                isPeek={mobileSheet === "peek"}
-                onOpen={() => {
-                  if (mobileSheet === "peek") setMobileSheet("half");
-                }}
-              />
-            </div>
-          </div>
+              {/* Grab pill */}
+              <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-zinc-600 mx-auto mb-1 hover:bg-zinc-400 transition-colors" />
 
-          {/* Cravings Category Filter Bar (Visible directly under the header bar) */}
-          <div className="shrink-0 border-b border-zinc-100 transition-opacity duration-200">
+              {/* Smakr Feed header + Weekly Drop capsule */}
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="cursor-default"
+              >
+                <MascotWeeklyDrop
+                  compact
+                  feedCount={filteredPosts.length}
+                  isPeek={mobileSheet === "peek"}
+                  onOpen={() => {
+                    if (mobileSheet === "peek") setMobileSheet("half");
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Cravings Category Filter Bar */}
             <FeedFilterBar compact />
           </div>
 
-          {/* Scrollable Feed Dishes or Spots with scroll-to-top pull-down minimize */}
+          {/* Scrollable Feed Dishes or Spots with tap-to-expand peek interaction */}
           <div
             ref={feedScrollRef}
             data-feed-scroll
             onTouchStart={handleContentTouchStart}
             onTouchMove={handleContentTouchMove}
             onTouchEnd={handleContentTouchEnd}
-            className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar overscroll-contain pb-28"
+            onClick={() => {
+              if (mobileSheet === "peek") {
+                setMobileSheet("half");
+              }
+            }}
+            className={`flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar overscroll-contain pb-28 ${
+              mobileSheet === "peek" ? "cursor-pointer active:opacity-90 transition-opacity" : ""
+            }`}
           >
             {feedMode === "food" ? (
               foodPosts.length === 0 && isHydratingData ? (
@@ -618,7 +627,11 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
               ) : filteredPosts.length === 0 ? (
                 <FeedEmptyState />
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div
+                  className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${
+                    mobileSheet === "peek" ? "pointer-events-none" : ""
+                  }`}
+                >
                   {filteredPosts.map((post, index) => (
                     <FoodPostCard key={post.id} post={post} priority={!isDesktop && index === 0} />
                   ))}
@@ -642,7 +655,11 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div
+                  className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${
+                    mobileSheet === "peek" ? "pointer-events-none" : ""
+                  }`}
+                >
                   {filteredVenues.map((venue, index) => (
                     <FoodSpotCard key={venue.id} venue={venue} priority={!isDesktop && index === 0} />
                   ))}

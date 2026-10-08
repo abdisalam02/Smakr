@@ -53,20 +53,52 @@ html[data-font="clean-dm"] {
   --font-heading: 'DM Sans', sans-serif;
 }
 
-/* Comico (Brand Display) — body stays crisp, headings get the hand-drawn voice */
-html[data-font="comico"] {
-  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-heading: 'Comico', var(--font-comico), cursive, sans-serif;
+/* ========================================================================= */
+/* DYNAMIC CURATED BODY PAIRING FONTS                                        */
+/* ========================================================================= */
+
+:root {
+  --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-main: 'Plus Jakarta Sans', system-ui, sans-serif;
 }
 
-h1, h2, h3, .font-heading {
-  font-family: var(--font-heading) !important;
+[data-body-font="jakarta"], :root[data-body-font="jakarta"] {
+  --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-main: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+[data-body-font="dmsans"], :root[data-body-font="dmsans"] {
+  --font-body: 'DM Sans', system-ui, sans-serif;
+  --font-main: 'DM Sans', system-ui, sans-serif;
+}
+[data-body-font="space"], :root[data-body-font="space"] {
+  --font-body: 'Space Grotesk', system-ui, sans-serif;
+  --font-main: 'Space Grotesk', system-ui, sans-serif;
+}
+[data-body-font="geist"], :root[data-body-font="geist"] {
+  --font-body: var(--font-geist, 'Geist', system-ui, sans-serif);
+  --font-main: var(--font-geist, 'Geist', system-ui, sans-serif);
+}
+[data-body-font="outfit"], :root[data-body-font="outfit"] {
+  --font-body: 'Outfit', system-ui, sans-serif;
+  --font-main: 'Outfit', system-ui, sans-serif;
+}
+[data-body-font="syne"], :root[data-body-font="syne"] {
+  --font-body: 'Syne', system-ui, sans-serif;
+  --font-main: 'Syne', system-ui, sans-serif;
+}
+[data-body-font="inter"], :root[data-body-font="inter"] {
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-main: 'Inter', system-ui, sans-serif;
+}
+[data-body-font="cormorant"], :root[data-body-font="cormorant"] {
+  --font-body: 'Cormorant Garamond', Georgia, serif;
+  --font-main: 'Cormorant Garamond', Georgia, serif;
 }
 
 html, body {
   color: var(--foreground);
   background: var(--background);
-  font-family: var(--font-main);
+  font-family: var(--font-body, var(--font-main));
   overflow: hidden;
   margin: 0;
   padding: 0;
@@ -74,6 +106,19 @@ html, body {
   height: 100vh;
   -webkit-font-smoothing: antialiased;
   transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body, input, textarea, button, select, p, span, h1, h2, h3, h4, h5, h6, a, div {
+  font-family: var(--font-body, var(--font-main));
+}
+
+/* Strictly reserve font-comico for logo branding & expressive price tags */
+.font-brand, .font-comico {
+  font-family: var(--font-comico), cursive, sans-serif !important;
+}
+
+.font-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
 }
 
 /* ========================================================================= */

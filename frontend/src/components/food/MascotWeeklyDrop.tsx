@@ -49,6 +49,9 @@ export function MascotWeeklyDrop({
     .slice(0, 2)
     .join(" ");
   const weekChip = (weeklyPick.week_label || "This Week").replace(/\s*pick$/i, "").trim();
+  const weekNumber = weekChip.replace(/[^0-9]/g, "") || "41";
+
+  const [isScrolledDown, setIsScrolledDown] = useState(false);
 
   // Auto-collapse when sheet transitions to peek
   useEffect(() => {
@@ -57,22 +60,25 @@ export function MascotWeeklyDrop({
     }
   }, [isPeek]);
 
-  // Auto-collapse: any feed container that scrolls down >35px closes the card.
+  // Scroll-driven collapse: listen to feed container scroll (passive)
   useEffect(() => {
-    if (!isExpanded) return;
     const containers = Array.from(
       document.querySelectorAll<HTMLElement>("[data-feed-scroll]")
     );
     const cleanups = containers.map((el) => {
-      const startTop = el.scrollTop;
       const onScroll = () => {
-        if (el.scrollTop - startTop > 30) setIsExpanded(false);
+        if (el.scrollTop > 35) {
+          setIsScrolledDown(true);
+          setIsExpanded(false);
+        } else if (el.scrollTop <= 10) {
+          setIsScrolledDown(false);
+        }
       };
       el.addEventListener("scroll", onScroll, { passive: true });
       return () => el.removeEventListener("scroll", onScroll);
     });
     return () => cleanups.forEach((fn) => fn());
-  }, [isExpanded]);
+  }, []);
 
   const handleSpot = () => flyToSpot(weeklyPick.coords, weeklyPick.venue_id);
   const handleMenu = () => selectVenueById(weeklyPick.venue_id);
@@ -87,10 +93,19 @@ export function MascotWeeklyDrop({
   const isUnifiedHeader = feedCount !== undefined;
 
   return (
-    <section ref={rootRef} className={`w-full px-4 shrink-0 ${compact ? "pt-1 pb-1" : "pt-2 pb-1"}`}>
+    <section
+      ref={rootRef}
+      className={`w-full px-4 shrink-0 transition-all duration-200 ${
+        isScrolledDown ? "pt-0 pb-0" : compact ? "pt-1 pb-1" : "pt-2 pb-1"
+      }`}
+    >
       {isUnifiedHeader ? (
         /* ── Unified Header Row: Smakr Feed {count} on Left, ✦ Drop Pill on Right ── */
-        <div className="flex items-center justify-between gap-2.5 min-h-[36px]">
+        <div
+          className={`flex items-center justify-between gap-2.5 transition-all duration-200 ${
+            isScrolledDown ? "min-h-[30px]" : "min-h-[36px]"
+          }`}
+        >
           <div className="flex items-center gap-2">
             <h2 className="font-comico text-sm sm:text-base tracking-wider text-[#e84a27] uppercase">
               FEED
@@ -104,20 +119,38 @@ export function MascotWeeklyDrop({
             type="button"
             onClick={handleToggle}
             aria-expanded={isExpanded}
-            className="flex items-center gap-1.5 pl-1.5 pr-2.5 py-1 rounded-full bg-[#fbf9f5] hover:bg-[#f5f0e6] border border-black/[0.08] dark:border-white/10 transition-all active:scale-95 shadow-2xs"
+            className={`inline-flex items-center gap-2 rounded-full bg-white/90 dark:bg-stone-900/90 border border-black/10 dark:border-white/10 shadow-sm transition-all active:scale-95 max-w-full overflow-hidden ${
+              isScrolledDown
+                ? "h-7 pl-1 pr-2.5 py-0.5 text-[11px]"
+                : "pl-1 pr-3 py-1"
+            }`}
           >
-            <span className="relative shrink-0 w-6 h-6 rounded-full bg-zinc-100 flex items-center justify-center overflow-visible ring-1 ring-black/5">
-              <MascotCharacter
-                config={mascotConfig}
-                size={24}
-                animated={isExpanded}
-              />
-              {/* Orange beacon dot */}
-              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#e84a27] ring-1.5 ring-white shadow-xs" />
-            </span>
+            {/* Avatar Circle Frame with rigid sizing */}
+            <div
+              className={`relative rounded-full overflow-hidden shrink-0 bg-stone-100 dark:bg-stone-800 ring-1 ring-black/10 dark:ring-white/10 flex items-center justify-center ${
+                isScrolledDown ? "w-5 h-5" : "w-7 h-7 sm:w-8 sm:h-8"
+              }`}
+            >
+              {weeklyPick.mascot_avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={weeklyPick.mascot_avatar_url}
+                  alt="Smakr Mascot"
+                  className="w-full h-full object-cover object-top block"
+                />
+              ) : (
+                <MascotCharacter
+                  config={mascotConfig}
+                  size={isScrolledDown ? 20 : 28}
+                  animated={isExpanded}
+                />
+              )}
+            </div>
 
-            <span className="text-[10px] font-bold tracking-tight text-[#e84a27] whitespace-nowrap">
-              ✦ {weekChip} Drop
+            {/* Capsule Text & Chevron */}
+            <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate max-w-[140px] sm:max-w-[180px]">
+              <span className="text-[#e84a27] font-bold mr-1">✦ Drop {weekNumber}</span>
+              {shortVenue}
             </span>
 
             <ChevronDown
@@ -128,7 +161,7 @@ export function MascotWeeklyDrop({
           </button>
         </div>
       ) : (
-        /* ── Standalone capsule trigger (~34px height) ── */
+        /* ── Standalone capsule trigger ── */
         <div
           className="rounded-2xl border shadow-xs overflow-hidden transition-all duration-300 ease-out"
           style={{
@@ -140,31 +173,42 @@ export function MascotWeeklyDrop({
             type="button"
             onClick={handleToggle}
             aria-expanded={isExpanded}
-            className={`w-full flex items-center text-left hover:bg-black/[0.02] transition-colors h-[34px] ${
-              compact ? "gap-2 pl-1.5 pr-2" : "gap-2.5 pl-2 pr-2.5"
+            className={`w-full flex items-center text-left hover:bg-black/[0.02] transition-colors ${
+              isScrolledDown ? "h-[28px] pl-1 pr-2 gap-1.5" : "h-[36px] pl-1.5 pr-2.5 gap-2"
             }`}
           >
-            <span className="relative shrink-0 w-6 h-6 rounded-full bg-zinc-100 flex items-center justify-center overflow-visible ring-1 ring-black/5">
-              <MascotCharacter
-                config={mascotConfig}
-                size={24}
-                animated={isExpanded}
-              />
-              {/* Orange beacon dot */}
-              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#e84a27] ring-1.5 ring-white shadow-xs" />
-            </span>
+            <div
+              className={`relative rounded-full overflow-hidden shrink-0 bg-stone-100 dark:bg-stone-800 ring-1 ring-black/10 dark:ring-white/10 flex items-center justify-center ${
+                isScrolledDown ? "w-5 h-5" : "w-7 h-7 sm:w-8 sm:h-8"
+              }`}
+            >
+              {weeklyPick.mascot_avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={weeklyPick.mascot_avatar_url}
+                  alt="Smakr Mascot"
+                  className="w-full h-full object-cover object-top block"
+                />
+              ) : (
+                <MascotCharacter
+                  config={mascotConfig}
+                  size={isScrolledDown ? 20 : 28}
+                  animated={isExpanded}
+                />
+              )}
+            </div>
 
             <span
               className={`shrink-0 inline-flex items-center gap-1 rounded-full bg-[#e84a27] text-white font-bold tracking-tight whitespace-nowrap shadow-xs ${
-                compact ? "text-[9px] px-1.5 py-0.5" : "text-[10px] px-2 py-0.5"
+                isScrolledDown ? "text-[9px] px-1.5 py-0.5" : "text-[10px] px-2 py-0.5"
               }`}
             >
-              ✦ {weekChip} Drop
+              ✦ Drop {weekNumber}
             </span>
 
             <span
               className={`flex-1 min-w-0 font-bold text-zinc-800 truncate ${
-                compact ? "text-[11px]" : "text-xs"
+                isScrolledDown ? "text-[11px]" : "text-xs"
               }`}
             >
               {shortVenue}
@@ -173,7 +217,7 @@ export function MascotWeeklyDrop({
             </span>
 
             <ChevronDown
-              className={`${compact ? "w-3.5 h-3.5" : "w-4 h-4"} text-zinc-400 shrink-0 transition-transform duration-300 ${
+              className={`${isScrolledDown ? "w-3 h-3" : "w-3.5 h-3.5"} text-zinc-400 shrink-0 transition-transform duration-300 ${
                 isExpanded ? "rotate-180" : ""
               }`}
             />
@@ -196,18 +240,27 @@ export function MascotWeeklyDrop({
             }}
           >
             {/* Mascot on left presenting the speech bubble on right */}
-            <div className="flex items-start gap-2.5">
-              <div className="shrink-0 w-14 h-14 rounded-2xl bg-[#f5efe3] border border-[#e7e0d4] p-1 flex items-center justify-center shadow-xs overflow-hidden">
-                <MascotCharacter
-                  config={mascotConfig}
-                  size={50}
-                  animated={isExpanded}
-                />
+            <div className="flex items-start gap-3">
+              <div className="shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-[#f5efe3] dark:bg-stone-800 border border-[#e7e0d4] dark:border-white/10 p-1 flex items-center justify-center shadow-xs overflow-hidden">
+                {weeklyPick.mascot_avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={weeklyPick.mascot_avatar_url}
+                    alt="Smakr Mascot"
+                    className="w-full h-full object-cover object-top block rounded-xl"
+                  />
+                ) : (
+                  <MascotCharacter
+                    config={mascotConfig}
+                    size={76}
+                    animated={isExpanded}
+                  />
+                )}
               </div>
 
               {/* Speech bubble with tail pointing to the mascot */}
               <div
-                className="relative flex-1 rounded-2xl border px-3.5 py-2.5 shadow-xs"
+                className="relative flex-1 rounded-2xl border px-3.5 py-3 shadow-xs min-h-[80px] flex flex-col justify-center"
                 style={{
                   background: "var(--surface-raised, #F5EFE3)",
                   borderColor: "var(--surface-border, #E7E0D4)",
@@ -216,7 +269,7 @@ export function MascotWeeklyDrop({
                 {/* Speech bubble arrow/tail pointing left towards the mascot */}
                 <span
                   aria-hidden
-                  className="absolute top-4 -left-1.5 w-3 h-3 rotate-45 border-l border-b"
+                  className="absolute top-6 -left-1.5 w-3 h-3 rotate-45 border-l border-b"
                   style={{
                     background: "var(--surface-raised, #F5EFE3)",
                     borderColor: "var(--surface-border, #E7E0D4)",
@@ -225,36 +278,38 @@ export function MascotWeeklyDrop({
                 <div className="flex items-center gap-1.5 mb-1 text-[9px] font-bold uppercase tracking-wider text-[#e84a27]">
                   <span>✦ Mascot Drop Note</span>
                 </div>
-                <p className="font-comico text-[13px] leading-snug text-zinc-900 relative z-10">
+                <p className="text-[13px] font-medium italic leading-snug text-zinc-900 dark:text-zinc-100 relative z-10">
                   &ldquo;{weeklyPick.speech_bubble}&rdquo;
                 </p>
               </div>
             </div>
 
-            {/* Dish snapshot + price */}
-            <div className="flex items-center gap-2.5">
-              <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-black/10 shrink-0 bg-zinc-100">
+            {/* Restructured featured dish section */}
+            <div className="flex items-center gap-3 p-2 rounded-2xl bg-black/[0.02] dark:bg-white/[0.04] border border-black/5 dark:border-white/5">
+              <div className="relative w-16 h-16 sm:w-18 sm:h-18 rounded-xl overflow-hidden border border-black/10 shrink-0 bg-zinc-100 shadow-xs">
                 <Image
                   src={weeklyPick.dish_image}
                   alt={weeklyPick.dish_name}
                   fill
                   unoptimized
                   className="object-cover"
-                  sizes="48px"
+                  sizes="72px"
                 />
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-zinc-900 truncate">
-                  {weeklyPick.dish_name}
-                </p>
-                <p className="text-[11px] text-zinc-500 truncate flex items-center gap-1">
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                    {weeklyPick.dish_name}
+                  </p>
+                  <span className="shrink-0 text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-xs">
+                    {weeklyPick.price_nok} NOK
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate flex items-center gap-1">
                   <MapPin className="w-3 h-3 text-[#e84a27] shrink-0" />
-                  <span>{venueName}</span>
+                  <span className="font-medium text-zinc-700 dark:text-zinc-300">{venueName}</span>
                 </p>
               </div>
-              <span className="shrink-0 text-[11px] font-mono font-bold px-2 py-1 rounded-full bg-zinc-900 text-white">
-                {weeklyPick.price_nok} NOK
-              </span>
             </div>
 
             {/* Actions + close */}

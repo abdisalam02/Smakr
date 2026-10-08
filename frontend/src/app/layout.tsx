@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Plus_Jakarta_Sans, DM_Sans, Space_Grotesk, Geist } from "next/font/google";
 import { comico } from "@/lib/fonts";
 import { Header } from "@/components/ui/Header";
 import { QuickCheckInModal } from "@/components/checkin/QuickCheckInModal";
@@ -10,8 +11,34 @@ import { AppStateHydrator } from "@/components/state/AppStateHydrator";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { UserOnboardingModal } from "@/components/auth/UserOnboardingModal";
 import { AuthModal } from "@/components/auth/AuthModal";
+import { BetaFeedbackDrawer } from "@/components/feedback/BetaFeedbackDrawer";
 import { CreateFoodPostModal } from "@/components/food/CreateFoodPostModal";
 import { ToastBanner } from "@/components/ui/ToastBanner";
+import { FontSwitcher } from "@/components/ui/FontSwitcher";
+
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-jakarta",
+  display: "swap",
+});
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-dmsans",
+  display: "swap",
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-space",
+  display: "swap",
+});
+
+const geist = Geist({
+  subsets: ["latin"],
+  variable: "--font-geist",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://smakr.vercel.app"),
@@ -44,11 +71,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${comico.variable}`} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${comico.variable} ${plusJakarta.variable} ${dmSans.variable} ${spaceGrotesk.variable} ${geist.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var m={'electric-orange':'oat-espresso','oslo-minimalist':'oat-espresso','obsidian-slate':'late-night','cyber-midnight':'late-night','midnight-gastro':'late-night','smoked-espresso':'late-night','nordic-linen':'warm-bakery','nordic-bakery':'warm-bakery','nordic-amber':'warm-bakery','copenhagen-clay':'warm-bakery','alabaster-bronze':'warm-bakery','retro-diner':'warm-bakery','bordeaux-chalk':'warm-bakery','seoul-sunset':'warm-bakery','swiss-monolith':'nordic-minimal','oslo-brutalist':'nordic-minimal','oslo-monolith':'nordic-minimal','stockholm-sage':'nordic-minimal','kyoto-matcha':'nordic-minimal','matcha-botanic':'nordic-minimal','bistro-navy':'nordic-minimal','amalfi-coast':'nordic-minimal'};var t=localStorage.getItem('smakr_theme')||'oat-espresso';t=m[t]||t;var v={'oat-espresso':1,'warm-bakery':1,'late-night':1,'nordic-minimal':1};if(!v[t])t='oat-espresso';document.documentElement.setAttribute('data-theme',t);var f=localStorage.getItem('smakr_font')||'modern-sans';document.documentElement.setAttribute('data-font',f);}catch(e){}})();`,
+            __html: `(function(){try{var m={'electric-orange':'oat-espresso','oslo-minimalist':'oat-espresso','obsidian-slate':'late-night','cyber-midnight':'late-night','midnight-gastro':'late-night','smoked-espresso':'late-night','nordic-linen':'warm-bakery','nordic-bakery':'warm-bakery','nordic-amber':'warm-bakery','copenhagen-clay':'warm-bakery','alabaster-bronze':'warm-bakery','retro-diner':'warm-bakery','bordeaux-chalk':'warm-bakery','seoul-sunset':'warm-bakery','swiss-monolith':'nordic-minimal','oslo-brutalist':'nordic-minimal','oslo-monolith':'nordic-minimal','stockholm-sage':'nordic-minimal','kyoto-matcha':'nordic-minimal','matcha-botanic':'nordic-minimal','bistro-navy':'nordic-minimal','amalfi-coast':'nordic-minimal'};var t=localStorage.getItem('smakr_theme')||'oat-espresso';t=m[t]||t;var v={'oat-espresso':1,'warm-bakery':1,'late-night':1,'nordic-minimal':1};if(!v[t])t='oat-espresso';document.documentElement.setAttribute('data-theme',t);var f=localStorage.getItem('smakr_font')||'modern-sans';document.documentElement.setAttribute('data-font',f);var bf=localStorage.getItem('smakr_body_font')||'jakarta';document.documentElement.setAttribute('data-body-font',bf);var fm={'jakarta':"'Plus Jakarta Sans', system-ui, sans-serif",'dmsans':"'DM Sans', system-ui, sans-serif",'space':"'Space Grotesk', system-ui, sans-serif",'geist':"var(--font-geist, 'Geist', system-ui, sans-serif)",'outfit':"'Outfit', system-ui, sans-serif",'syne':"'Syne', system-ui, sans-serif",'inter':"'Inter', system-ui, sans-serif",'cormorant':"'Cormorant Garamond', Georgia, serif"};if(fm[bf]){document.documentElement.style.setProperty('--font-body',fm[bf]);document.documentElement.style.setProperty('--font-main',fm[bf]);}}catch(e){}})();`,
           }}
         />
       </head>
@@ -65,8 +96,10 @@ export default function RootLayout({
           <AppStateHydrator />
           <UserOnboardingModal />
           <AuthModal />
+          <BetaFeedbackDrawer />
           <CreateFoodPostModal />
           <ToastBanner />
+          <FontSwitcher />
         </AuthProvider>
       </body>
     </html>

@@ -4,6 +4,11 @@ import { NextResponse, type NextRequest } from "next/server";
 /**
  * Refreshes the Supabase auth session on every request and guards `/admin`.
  *
+ * `@supabase/ssr` stores the session in cookies. Refreshing here (as Supabase
+ * recommends) keeps that cookie fresh and lets server code read the signed-in
+ * user, so testers aren't bounced back to the sign-in screen on reloads or
+ * after the ~1h access token lapses on a long-lived tab.
+ *
  * - `getUser()` is used (not `getSession()`) so the JWT is validated against
  *   Supabase Auth before we trust it.
  * - Cookies are read from `request` and written to the fresh `response`.
@@ -13,13 +18,6 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export async function middleware(request: NextRequest) {
-  // The Supabase `getUser()` round-trip below is only needed to guard /admin.
-  // Every other route is public, and the browser client refreshes its own
-  // session cookies — so we skip the network call entirely (removing a Supabase
-  // Auth round-trip from the critical path of every feed page load).
-  const isAdminRoute = request.nextUrl.pathname.startsWith("/admin");
-  if (!isAdminRoute) return NextResponse.next({ request });
-
   // Supabase not configured yet (beta fallback) — let requests through.
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return NextResponse.next({ request });
 
@@ -42,15 +40,18 @@ export async function middleware(request: NextRequest) {
     },
   });
 
+  // IMPORTANT: this call is what refreshes / rotates the session cookie.
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  const isAdminRoute = request.nextUrl.pathname.startsWith("/admin");
 
   // The client-only "Beta Dev Access" bypass can't produce a server session, so
   // outside production we defer /admin protection to the client-side role gate.
   const devBypassAllowed = process.env.NODE_ENV !== "production";
 
-  if (!user && !devBypassAllowed) {
+  if (isAdminRoute && !user && !devBypassAllowed) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/";
     redirectUrl.search = "";
