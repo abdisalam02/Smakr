@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import maplibregl from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { MapControls } from "@/components/map/MapControls";
 import { fetchVenueDetail } from "@/lib/api";
@@ -497,6 +497,10 @@ export function MapRadarView() {
       minZoom: 9,
       maxZoom: 19,
       doubleClickZoom: true,
+      // Prevents the browser from discarding the WebGL buffer between frames,
+      // which otherwise leaves partially blank ("blocked") map regions when the
+      // canvas is composited under translucent/blurred chrome.
+      canvasContextAttributes: { preserveDrawingBuffer: true },
     });
 
     mapInstance.current = map;
