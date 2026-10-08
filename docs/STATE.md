@@ -46,3 +46,5 @@
 - Map popup: zoom<13.8 auto-dismiss now only fires while zooming OUT — programmatic fly-ins no longer clear the just-opened card (fixes "click twice"). `moveend` now resizes + repaints to clear stale canvas regions.
 - Logged-out "find me" puck is a neutral orange dot (was a random Open Peeps avatar); signed-in users keep their avatar/mascot.
 - Geolocation: two-stage (fast network fix, then background GPS refine) — "find me" is near-instant instead of ~3s.
+- Onboarding: a duplicate @handle (23505) now shows "already taken — try adding a number" and keeps the modal open on the handle step instead of hanging.
+- SSR session: the root layout reads the session (cookies) and passes the user to `Header` + `AuthProvider`, so the first painted frame shows the signed-in user (no logged-out flash on hard refresh). App is now `force-dynamic`.

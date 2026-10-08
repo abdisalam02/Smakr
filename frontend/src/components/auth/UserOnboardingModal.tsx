@@ -192,13 +192,23 @@ export function UserOnboardingModal() {
     setSaving(true);
     const avatarUrl = buildOpenPeepsDataUri(config);
     const cleanName = displayName.trim();
-    const persisted = await persistOnboarding({
+    const result = await persistOnboarding({
       userId: currentUser.id,
       handle: cleanHandle,
       name: cleanName,
       avatarConfig: config,
       avatarUrl,
     });
+
+    // Duplicate @handle (unique_violation) — keep the modal open, jump back to
+    // the handle step, and give an actionable message instead of hanging.
+    if (!result.success && result.code === "23505") {
+      setSaving(false);
+      setStep(0);
+      showToast(`@${cleanHandle.replace(/^@/, "")} is already taken — try adding a number.`);
+      return;
+    }
+
     // Hydrate locally regardless — the UI reflects the choice instantly.
     setCurrentUser({
       ...currentUser,
@@ -212,7 +222,7 @@ export function UserOnboardingModal() {
     setDismissed(true);
     setIsStudioOpen(false);
     showToast(
-      persisted
+      result.success
         ? isEditMode
           ? "Avatar updated ✨ Looking sharp."
           : "Welcome to Smakr ✨ Your foodie profile is ready."

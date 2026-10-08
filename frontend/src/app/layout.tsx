@@ -9,11 +9,17 @@ import { ThemeStudioModal } from "@/components/ui/ThemeStudioModal";
 import { MascotConfigHydrator } from "@/components/avatar/MascotConfigHydrator";
 import { AppStateHydrator } from "@/components/state/AppStateHydrator";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { fetchCurrentUserServer } from "@/lib/supabase/serverData";
 import { UserOnboardingModal } from "@/components/auth/UserOnboardingModal";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { BetaFeedbackDrawer } from "@/components/feedback/BetaFeedbackDrawer";
 import { CreateFoodPostModal } from "@/components/food/CreateFoodPostModal";
 import { ToastBanner } from "@/components/ui/ToastBanner";
+
+// The root layout reads the auth session (cookies) to SSR the header, so every
+// route is rendered on demand — declare it explicitly to avoid static-generation
+// `DYNAMIC_SERVER_USAGE` warnings.
+export const dynamic = "force-dynamic";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -64,11 +70,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Read the session server-side so the very first painted frame already knows
+  // the signed-in user (no logged-out flash on hard refresh).
+  const initialUser = await fetchCurrentUserServer();
   return (
     <html
       lang="en"
@@ -83,8 +92,8 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen flex flex-col antialiased selection:bg-[var(--accent)] selection:text-white transition-colors duration-300">
-        <AuthProvider>
-          <Header />
+        <AuthProvider initialUser={initialUser}>
+          <Header initialUser={initialUser} />
           <main className="flex-1 flex flex-col relative overflow-hidden">
             {children}
           </main>

@@ -42,7 +42,13 @@ function formatHandle(raw: string | null | undefined, email?: string): string {
   return `@${cleaned}`;
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({
+  children,
+  initialUser,
+}: {
+  children: ReactNode;
+  initialUser?: UserProfile | null;
+}) {
   const setCurrentUser = useCityPulseStore((state) => state.setCurrentUser);
   const setIsAuthModalOpen = useCityPulseStore((state) => state.setIsAuthModalOpen);
   const setIsAuthResolved = useCityPulseStore((state) => state.setIsAuthResolved);
@@ -50,6 +56,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const showToast = useCityPulseStore((state) => state.showToast);
 
   useEffect(() => {
+    // Seed the SSR-resolved user before anything else so the client matches the
+    // server-rendered header instantly (no logged-out flash on refresh).
+    if (initialUser) {
+      setCurrentUser(initialUser);
+      setIsAuthResolved(true);
+    }
+
     const supabase = getSupabaseBrowserClient();
     if (!supabase) {
       // No Supabase configured (local dev bypass) → stop showing the skeleton.
@@ -212,7 +225,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       subscription.unsubscribe();
     };
-  }, [setCurrentUser, setIsAuthResolved, hydrateMascotConfig]);
+  }, [setCurrentUser, setIsAuthResolved, hydrateMascotConfig, initialUser]);
 
   // Surface middleware / callback bounces: `?auth=required` opens the modal,
   // `?auth_error=...` explains a failed PKCE exchange.

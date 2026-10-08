@@ -170,10 +170,19 @@ export interface OnboardingPersistInput {
   avatarUrl: string;
 }
 
-/** Persists the onboarding result. Returns false when the columns are missing. */
-export async function persistOnboarding(input: OnboardingPersistInput): Promise<boolean> {
+export interface OnboardingPersistResult {
+  success: boolean;
+  /** Postgres error code, e.g. "23505" for a unique_violation (handle taken). */
+  code?: string;
+  message?: string;
+}
+
+/** Persists the onboarding result. */
+export async function persistOnboarding(
+  input: OnboardingPersistInput
+): Promise<OnboardingPersistResult> {
   const supabase = getSupabaseBrowserClient();
-  if (!supabase) return false;
+  if (!supabase) return { success: false, message: "Supabase isn't configured." };
   try {
     const { error } = await supabase
       .from("profiles")
@@ -187,12 +196,12 @@ export async function persistOnboarding(input: OnboardingPersistInput): Promise<
       .eq("id", input.userId);
     if (error) {
       console.warn("[data] persistOnboarding failed:", error.message);
-      return false;
+      return { success: false, code: error.code, message: error.message };
     }
-    return true;
+    return { success: true };
   } catch (err) {
     console.warn("[data] persistOnboarding threw:", err);
-    return false;
+    return { success: false, message: String(err) };
   }
 }
 

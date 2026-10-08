@@ -2,9 +2,12 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import {
   DEFAULT_WEEKLY_PICK,
   type FoodPost,
+  type UserProfile,
   type Venue,
   type WeeklyPick,
 } from "@/types";
+import type { OnboardingAvatarConfig } from "@/types/onboarding";
+import { getSupabaseServerClient } from "./server";
 import {
   mapFoodPostRow,
   mapVenueRow,
@@ -119,5 +122,48 @@ export async function fetchActiveWeeklyDropServer(): Promise<WeeklyPick> {
   } catch (err) {
     console.warn("[serverData] fetchActiveWeeklyDropServer failed — default pick:", err);
     return DEFAULT_WEEKLY_PICK;
+  }
+}
+
+/**
+ * SSR session read — the signed-in user + profile, or `null` when logged out.
+ * Uses the cookie-aware server client so the first rendered frame (the Header)
+ * already knows who is signed in, removing the logged-out flash on hard refresh.
+ */
+export async function fetchCurrentUserServer(): Promise<UserProfile | null> {
+  try {
+    const supabase = await getSupabaseServerClient();
+    if (!supabase) return null;
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .maybeSingle();
+    const p = (profile ?? {}) as Record<string, unknown>;
+
+    const fallback = (user.email ?? "foodie").split("@")[0];
+    const rawHandle = typeof p.handle === "string" && p.handle.trim() ? p.handle : fallback;
+    const cleaned = rawHandle.replace(/^[@_\s]+/, "") || fallback;
+
+    return {
+      id: user.id,
+      email: user.email,
+      handle: `@${cleaned}`,
+      name: typeof p.name === "string" ? p.name : undefined,
+      role: p.role === "admin" ? "admin" : "foodie",
+      is_official: Boolean(p.is_official),
+      avatar_url: typeof p.avatar_url === "string" ? p.avatar_url : undefined,
+      avatar_config: (p.avatar_config as OnboardingAvatarConfig) ?? null,
+      onboarding_completed: Boolean(p.onboarding_completed),
+    };
+  } catch (err) {
+    console.warn("[serverData] fetchCurrentUserServer failed:", err);
+    return null;
   }
 }

@@ -11,14 +11,19 @@ import {
   Palette,
 } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
+import type { UserProfile } from "@/types";
 import SmakrLogo from "@/components/ui/SmakrLogo";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { MascotCharacter } from "@/components/avatar/MascotCharacter";
 
-export function Header() {
+export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
   const openCreateDish = useCityPulseStore((state) => state.openCreateDish);
-  const currentUser = useCityPulseStore((state) => state.currentUser);
-  const isAuthResolved = useCityPulseStore((state) => state.isAuthResolved);
+  const storeUser = useCityPulseStore((state) => state.currentUser);
+  const storeResolved = useCityPulseStore((state) => state.isAuthResolved);
+  // Prefer the client store once hydrated; fall back to the SSR user so the very
+  // first painted frame already shows the signed-in user.
+  const currentUser = storeUser ?? initialUser ?? null;
+  const isAuthResolved = storeResolved || initialUser !== undefined;
   const mascotConfig = useCityPulseStore((state) => state.mascotConfig);
   const setIsAuthModalOpen = useCityPulseStore((state) => state.setIsAuthModalOpen);
   const openAvatarStudio = useCityPulseStore((state) => state.openAvatarStudio);

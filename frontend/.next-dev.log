@@ -1,0 +1,237 @@
+
+> citypulse-frontend@1.0.0 dev
+> next dev -p 3001
+
+   ▲ Next.js 15.5.25
+   - Local:        http://localhost:3001
+   - Network:      http://10.0.0.7:3001
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 2.5s
+ ○ Compiling /middleware ...
+ ✓ Compiled /middleware in 1012ms (173 modules)
+ ○ Compiling / ...
+<w> [webpack.cache.PackFileCacheStrategy] Serializing big strings (113kiB) impacts deserialization performance (consider using Buffer instead and decode when needed)
+<w> [webpack.cache.PackFileCacheStrategy] Serializing big strings (268kiB) impacts deserialization performance (consider using Buffer instead and decode when needed)
+ ✓ Compiled / in 8.8s (2057 modules)
+ ✓ Compiled in 1516ms (904 modules)
+ GET / 200 in 10998ms
+ GET / 200 in 348ms
+ ○ Compiling /admin ...
+ ✓ Compiled /admin in 822ms (2033 modules)
+ GET /admin 200 in 1223ms
+ ✓ Compiled /collections in 471ms (2058 modules)
+ GET /collections 200 in 905ms
+ ✓ Compiled /mascot-studio in 411ms (2071 modules)
+ GET /mascot-studio 200 in 834ms
+ GET / 200 in 528ms
+ GET / 200 in 406ms
+ GET /mascot-studio 200 in 131ms
+ ⨯ ./src/lib/supabase/serverData.ts
+Error:   [31mx[0m Return statement is not allowed here
+    ,-[[36;1;4mC:\xampp\htdocs\CityPulse\frontend\src\lib\supabase\serverData.ts[0m:58:1]
+ [2m55[0m | 
+ [2m56[0m | /** Live Oslo venues (server prefetch). Returns `[]` when unavailable. */
+ [2m57[0m |   const supabase = getServerClient();
+ [2m58[0m |   if (!supabase) return [];
+    : [35;1m                 ^^^^^^^^^^[0m
+ [2m59[0m |   try {
+ [2m60[0m |     const { data, error } = await supabase
+ [2m61[0m |       .from("venues")
+    `----
+  [31mx[0m Return statement is not allowed here
+    ,-[[36;1;4mC:\xampp\htdocs\CityPulse\frontend\src\lib\supabase\serverData.ts[0m:64:1]
+ [2m61[0m |       .from("venues")
+ [2m62[0m |       .select("*")
+ [2m63[0m |       .order("name", { ascending: true });
+ [2m64[0m |     if (error || !data || data.length === 0) return [];
+    : [35;1m                                             ^^^^^^^^^^[0m
+ [2m65[0m |     return (data as VenueRow[])
+ [2m66[0m |       .map(mapVenueRow)
+ [2m67[0m |       .filter((v) => Number.isFinite(v.latitude) && Number.isFinite(v.longitude) && v.latitude !== 0);
+    `----
+  [31mx[0m Return statement is not allowed here
+    ,-[[36;1;4mC:\xampp\htdocs\CityPulse\frontend\src\lib\supabase\serverData.ts[0m:65:1]
+ [2m62[0m |           .select("*")
+ [2m63[0m |           .order("name", { ascending: true });
+ [2m64[0m |         if (error || !data || data.length === 0) return [];
+ [2m65[0m | [35;1m,[0m[35;1m-[0m[35;1m>[0m     return (data as VenueRow[])
+ [2m66[0m | [35;1m|[0m         .map(mapVenueRow)
+ [2m67[0m | [35;1m`[0m[35;1m-[0m[35;1m>[0m       .filter((v) => Number.isFinite(v.latitude) && Number.isFinite(v.longitude) && v.latitude !== 0);
+ [2m68[0m |       } catch (err) {
+ [2m69[0m |         console.warn("[serverData] fetchVenuesServer failed — returning []:", err);
+ [2m70[0m |         return [];
+    `----
+  [31mx[0m Return statement is not allowed here
+    ,-[[36;1;4mC:\xampp\htdocs\CityPulse\frontend\src\lib\supabase\serverData.ts[0m:70:1]
+ [2m67[0m |       .filter((v) => Number.isFinite(v.latitude) && Number.isFinite(v.longitude) && v.latitude !== 0);
+ [2m68[0m |   } catch (err) {
+ [2m69[0m |     console.warn("[serverData] fetchVenuesServer failed — returning []:", err);
+ [2m70[0m |     return [];
+    : [35;1m    ^^^^^^^^^^[0m
+ [2m71[0m |   }
+ [2m72[0m | }
+    `----
+  [31mx[0m Expression expected
+    ,-[[36;1;4mC:\xampp\htdocs\CityPulse\frontend\src\lib\supabase\serverData.ts[0m:72:1]
+ [2m69[0m |     console.warn("[serverData] fetchVenuesServer failed — returning []:", err);
+ [2m70[0m |     return [];
+ [2m71[0m |   }
+ [2m72[0m | }
+    : [35;1m^[0m
+ [2m73[0m | 
+ [2m74[0m | /** Live dish feed (server prefetch). Returns `[]` when unavailable. */
+ [2m75[0m | export async function fetchFoodPostsServer(): Promise<FoodPost[]> {
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/lib/supabase/serverData.ts
+./src/app/page.tsx
+ ⨯ ./src/lib/supabase/serverData.ts
+Error:   [31mx[0m Return statement is not allowed here
+    ,-[[36;1;4mC:\xampp\htdocs\CityPulse\frontend\src\lib\supabase\serverData.ts[0m:58:1]
+ [2m55[0m | 
+ [2m56[0m | /** Live Oslo venues (server prefetch). Returns `[]` when unavailable. */
+ [2m57[0m |   const supabase = getServerClient();
+ [2m58[0m |   if (!supabase) return [];
+    : [35;1m                 ^^^^^^^^^^[0m
+ [2m59[0m |   try {
+ [2m60[0m |     const { data, error } = await supabase
+ [2m61[0m |       .from("venues")
+    `----
+  [31mx[0m Return statement is not allowed here
+    ,-[[36;1;4mC:\xampp\htdocs\CityPulse\frontend\src\lib\supabase\serverData.ts[0m:64:1]
+ [2m61[0m |       .from("venues")
+ [2m62[0m |       .select("*")
+ [2m63[0m |       .order("name", { ascending: true });
+ [2m64[0m |     if (error || !data || data.length === 0) return [];
+    : [35;1m                                             ^^^^^^^^^^[0m
+ [2m65[0m |     return (data as VenueRow[])
+ [2m66[0m |       .map(mapVenueRow)
+ [2m67[0m |       .filter((v) => Number.isFinite(v.latitude) && Number.isFinite(v.longitude) && v.latitude !== 0);
+    `----
+  [31mx[0m Return statement is not allowed here
+    ,-[[36;1;4mC:\xampp\htdocs\CityPulse\frontend\src\lib\supabase\serverData.ts[0m:65:1]
+ [2m62[0m |           .select("*")
+ [2m63[0m |           .order("name", { ascending: true });
+ [2m64[0m |         if (error || !data || data.length === 0) return [];
+ [2m65[0m | [35;1m,[0m[35;1m-[0m[35;1m>[0m     return (data as VenueRow[])
+ [2m66[0m | [35;1m|[0m         .map(mapVenueRow)
+ [2m67[0m | [35;1m`[0m[35;1m-[0m[35;1m>[0m       .filter((v) => Number.isFinite(v.latitude) && Number.isFinite(v.longitude) && v.latitude !== 0);
+ [2m68[0m |       } catch (err) {
+ [2m69[0m |         console.warn("[serverData] fetchVenuesServer failed — returning []:", err);
+ [2m70[0m |         return [];
+    `----
+  [31mx[0m Return statement is not allowed here
+    ,-[[36;1;4mC:\xampp\htdocs\CityPulse\frontend\src\lib\supabase\serverData.ts[0m:70:1]
+ [2m67[0m |       .filter((v) => Number.isFinite(v.latitude) && Number.isFinite(v.longitude) && v.latitude !== 0);
+ [2m68[0m |   } catch (err) {
+ [2m69[0m |     console.warn("[serverData] fetchVenuesServer failed — returning []:", err);
+ [2m70[0m |     return [];
+    : [35;1m    ^^^^^^^^^^[0m
+ [2m71[0m |   }
+ [2m72[0m | }
+    `----
+  [31mx[0m Expression expected
+    ,-[[36;1;4mC:\xampp\htdocs\CityPulse\frontend\src\lib\supabase\serverData.ts[0m:72:1]
+ [2m69[0m |     console.warn("[serverData] fetchVenuesServer failed — returning []:", err);
+ [2m70[0m |     return [];
+ [2m71[0m |   }
+ [2m72[0m | }
+    : [35;1m^[0m
+ [2m73[0m | 
+ [2m74[0m | /** Live dish feed (server prefetch). Returns `[]` when unavailable. */
+ [2m75[0m | export async function fetchFoodPostsServer(): Promise<FoodPost[]> {
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/lib/supabase/serverData.ts
+./src/app/page.tsx
+ ○ Compiling /_error ...
+ ⨯ ./src/lib/supabase/serverData.ts
+Error:   [31mx[0m Return statement is not allowed here
+    ,-[[36;1;4mC:\xampp\htdocs\CityPulse\frontend\src\lib\supabase\serverData.ts[0m:58:1]
+ [2m55[0m | 
+ [2m56[0m | /** Live Oslo venues (server prefetch). Returns `[]` when unavailable. */
+ [2m57[0m |   const supabase = getServerClient();
+ [2m58[0m |   if (!supabase) return [];
+    : [35;1m                 ^^^^^^^^^^[0m
+ [2m59[0m |   try {
+ [2m60[0m |     const { data, error } = await supabase
+ [2m61[0m |       .from("venues")
+    `----
+  [31mx[0m Return statement is not allowed here
+    ,-[[36;1;4mC:\xampp\htdocs\CityPulse\frontend\src\lib\supabase\serverData.ts[0m:64:1]
+ [2m61[0m |       .from("venues")
+ [2m62[0m |       .select("*")
+ [2m63[0m |       .order("name", { ascending: true });
+ [2m64[0m |     if (error || !data || data.length === 0) return [];
+    : [35;1m                                             ^^^^^^^^^^[0m
+ [2m65[0m |     return (data as VenueRow[])
+ [2m66[0m |       .map(mapVenueRow)
+ [2m67[0m |       .filter((v) => Number.isFinite(v.latitude) && Number.isFinite(v.longitude) && v.latitude !== 0);
+    `----
+  [31mx[0m Return statement is not allowed here
+    ,-[[36;1;4mC:\xampp\htdocs\CityPulse\frontend\src\lib\supabase\serverData.ts[0m:65:1]
+ [2m62[0m |           .select("*")
+ [2m63[0m |           .order("name", { ascending: true });
+ [2m64[0m |         if (error || !data || data.length === 0) return [];
+ [2m65[0m | [35;1m,[0m[35;1m-[0m[35;1m>[0m     return (data as VenueRow[])
+ [2m66[0m | [35;1m|[0m         .map(mapVenueRow)
+ [2m67[0m | [35;1m`[0m[35;1m-[0m[35;1m>[0m       .filter((v) => Number.isFinite(v.latitude) && Number.isFinite(v.longitude) && v.latitude !== 0);
+ [2m68[0m |       } catch (err) {
+ [2m69[0m |         console.warn("[serverData] fetchVenuesServer failed — returning []:", err);
+ [2m70[0m |         return [];
+    `----
+  [31mx[0m Return statement is not allowed here
+    ,-[[36;1;4mC:\xampp\htdocs\CityPulse\frontend\src\lib\supabase\serverData.ts[0m:70:1]
+ [2m67[0m |       .filter((v) => Number.isFinite(v.latitude) && Number.isFinite(v.longitude) && v.latitude !== 0);
+ [2m68[0m |   } catch (err) {
+ [2m69[0m |     console.warn("[serverData] fetchVenuesServer failed — returning []:", err);
+ [2m70[0m |     return [];
+    : [35;1m    ^^^^^^^^^^[0m
+ [2m71[0m |   }
+ [2m72[0m | }
+    `----
+  [31mx[0m Expression expected
+    ,-[[36;1;4mC:\xampp\htdocs\CityPulse\frontend\src\lib\supabase\serverData.ts[0m:72:1]
+ [2m69[0m |     console.warn("[serverData] fetchVenuesServer failed — returning []:", err);
+ [2m70[0m |     return [];
+ [2m71[0m |   }
+ [2m72[0m | }
+    : [35;1m^[0m
+ [2m73[0m | 
+ [2m74[0m | /** Live dish feed (server prefetch). Returns `[]` when unavailable. */
+ [2m75[0m | export async function fetchFoodPostsServer(): Promise<FoodPost[]> {
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/lib/supabase/serverData.ts
+./src/app/page.tsx
+ GET /admin 500 in 5017ms
+ ✓ Compiled /_error in 1035ms (1343 modules)
+ GET /admin 200 in 539ms
+ ✓ Compiled in 398ms (1364 modules)
+ ✓ Compiled in 1770ms (2454 modules)
+ ✓ Compiled in 876ms (2440 modules)
+ ✓ Compiled in 743ms (1963 modules)
+ ✓ Compiled in 810ms (1197 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 905ms (1227 modules)
+ GET / 200 in 2290ms
+ ✓ Compiled /admin in 177ms (1247 modules)
+ GET /admin 200 in 626ms
+ ✓ Compiled /collections in 234ms (1261 modules)
+ GET /collections 200 in 798ms
+ ✓ Compiled /mascot-studio in 235ms (1269 modules)
+ GET /mascot-studio 200 in 766ms
