@@ -550,10 +550,10 @@ export function MapRadarView() {
       }
     });
 
-    // After any camera flight settles, force a full repaint so no canvas region
-    // is left blank ("blocked out") after big pans / pitches.
+    // After a large pan / pitch, nudge a repaint so no canvas region is left
+    // blank. Do NOT call `map.resize()` here — resize can re-enter `moveend`
+    // and blow the call stack (RangeError: Maximum call stack size exceeded).
     map.on("moveend", () => {
-      map.resize();
       map.triggerRepaint();
     });
 
