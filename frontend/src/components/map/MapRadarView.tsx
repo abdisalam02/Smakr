@@ -95,7 +95,7 @@ function buildUserAvatarPuckElement(
   // Small "You're here" caption above the puck.
   const badge = document.createElement("div");
   badge.className =
-    "puck-badge bg-white/90 text-zinc-700 font-semibold text-[10px] leading-none px-2 py-1 rounded-full shadow-sm border border-black/5 whitespace-nowrap mb-0.5 transition-opacity duration-200";
+    "puck-badge bg-white/95 text-zinc-800 font-bold text-[10px] leading-none px-2.5 py-1 rounded-full shadow-sm border border-black/10 whitespace-nowrap mb-1 transition-opacity duration-200";
   badge.textContent = "You're here";
 
   // Character body wrapper with radar ripple under the feet
@@ -105,18 +105,18 @@ function buildUserAvatarPuckElement(
   // Radar ripple: soft pulsing circle under the avatar
   const ripple = document.createElement("div");
   ripple.className =
-    "absolute -bottom-1 w-10 h-3 rounded-full bg-[#e84a27] animate-ping opacity-35 pointer-events-none";
+    "absolute -bottom-1 w-12 h-3.5 rounded-full bg-[#e84a27] animate-ping opacity-35 pointer-events-none";
   ripple.style.animationDuration = "2.4s";
 
   // Soft shadow oval under avatar feet
   const shadow = document.createElement("div");
   shadow.className =
-    "absolute -bottom-0.5 w-8 h-2 rounded-full bg-black/25 blur-[1px] pointer-events-none";
+    "absolute -bottom-0.5 w-10 h-2.5 rounded-full bg-black/25 blur-[1px] pointer-events-none";
 
-  // Compact character avatar container showing head + torso (unclipped)
+  // Character avatar container showing head + torso (unclipped)
   const charContainer = document.createElement("div");
   charContainer.className =
-    "relative w-9 h-11 flex items-center justify-center filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.18)]";
+    "relative w-12 h-14 flex items-center justify-center filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.22)]";
 
   const renderSvgInto = (svgStr: string) => {
     charContainer.innerHTML = svgStr;
@@ -131,7 +131,7 @@ function buildUserAvatarPuckElement(
 
   if (useMascot) {
     // Admins / official accounts use the Smakr mascot — matching the header avatar.
-    renderSvgInto(buildMascotSVGString(mascotConfig ?? undefined, false, 36, 44));
+    renderSvgInto(buildMascotSVGString(mascotConfig ?? undefined, false, 48, 56));
   } else if (avatarUrl) {
     const img = document.createElement("img");
     img.src = avatarUrl;
@@ -157,24 +157,27 @@ function buildUserAvatarPuckElement(
 }
 
 /**
- * Dynamically scales the avatar puck smaller as the map zooms out so it never
- * covers city blocks, while staying compact and proportional at street-level zoom.
- * Strictly transforms `.puck-scale` so MapLibre's marker translate is never touched.
+ * Dynamically scales the avatar puck so it stays clear and prominent across zoom levels.
+ * At street zoom (16+) it holds a clean 1.0 base ratio; as the map zooms out to city
+ * overview (14–12), it slightly scales up (up to ~1.18x) so you can easily spot where
+ * you are on the wider city canvas without covering too much detail.
  */
 function applyPuckZoomScale(rootEl: HTMLElement, zoom: number) {
   const scaleEl = rootEl.querySelector<HTMLElement>(".puck-scale") ?? rootEl;
-  // Compact avatar scaling:
-  // At zoom 16+ (street level): 0.82
-  // At zoom 15 (neighborhood): 0.68
-  // At zoom 14 (district): 0.52
-  // At zoom 13 (city center): 0.38
-  // At zoom <= 12 (overview): 0.25
-  const scale = Math.max(0.25, Math.min(0.82, 0.82 - (16.0 - zoom) * 0.14));
+  // Subtle inverse scaling: slightly larger as the map zooms out so the user puck remains
+  // easily spotted against the wider city landscape, without growing excessively.
+  // At zoom >= 16.5: 0.98
+  // At zoom 16.0: 1.00
+  // At zoom 15.0: 1.05
+  // At zoom 14.0: 1.09
+  // At zoom 13.0: 1.14
+  // At zoom <= 12.0: 1.18 (capped)
+  const scale = Math.max(0.95, Math.min(1.18, 1.0 + (16.0 - zoom) * 0.045));
   scaleEl.style.transform = `scale(${scale.toFixed(3)})`;
 
   const badge = rootEl.querySelector<HTMLElement>(".puck-badge");
   if (badge) {
-    badge.style.opacity = zoom < 14.2 ? "0" : "1";
+    badge.style.opacity = zoom < 12.8 ? "0" : "1";
     badge.style.pointerEvents = "none";
   }
 }

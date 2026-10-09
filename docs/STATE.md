@@ -74,3 +74,4 @@
 - Instant sign-out: Header uses storeUser once hydrated, immediately showing Sign In without page refresh.
 - Mascot unified: admin avatar is strictly the Smakr mascot across header, map puck, and dish posts; foodie Customize Profile hidden for admins.
 - Mascot persistence: Mascot Studio saves immediately to profiles.mascot_config and clears avatar_url; hydrated across SSR and sign-in.
+- Avatar puck scaling: sized up base mascot to 48x56px and calibrated zoom curve to scale up slightly (0.95x-1.18x) when zooming out.
