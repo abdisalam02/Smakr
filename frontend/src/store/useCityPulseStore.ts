@@ -524,6 +524,7 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
   flyToSpot: (coords, spotId) => {
     const { venues, viewMode } = get();
     const spot = spotId ? venues.find((v) => v.id === spotId) : null;
+    console.info("[locate] store.flyToSpot", { coords, spotId });
     set({
       mapCenter: [coords[0], coords[1]],
       mapZoom: 16,
@@ -609,11 +610,13 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
       };
     }),
 
-  setMapCenter: (coords, zoom) =>
-    set((state) => ({
+  setMapCenter: (coords, zoom) => {
+    console.info("[locate] store.setMapCenter", { coords, zoom });
+    return set((state) => ({
       mapCenter: coords,
       mapZoom: zoom ?? state.mapZoom,
-    })),
+    }));
+  },
 
   openCheckInModal: (venue) => {
     if (venue && !get().selectedVenue) {

@@ -9,6 +9,13 @@ import * as maplibregl from "maplibre-gl";
 if (typeof window !== "undefined") {
   maplibregl.setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
 }
+
+/**
+ * Increments for every MapLibre instance so the `[locate]` diagnostics can tell
+ * apart "the camera moved" from "the whole map was torn down and re-created at
+ * its initial centre" (a common cause of an unexpected jump to the start spot).
+ */
+let MAP_INSTANCE_SEQ = 0;
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { MapControls } from "@/components/map/MapControls";
 import { useGeolocation } from "@/hooks/useGeolocation";
@@ -263,57 +270,53 @@ export function MapRadarView() {
   const { requestLocation } = useGeolocation();
 
   // Unified smooth flight logic matching the venue pins on the map
-  const flyToTarget = useCallback((lng: number, lat: number, targetZoom = 15.5) => {
-    const map = mapInstance.current;
-    if (!map) return;
+  const flyToTarget = useCallback(
+    (lng: number, lat: number, targetZoom = 15.5, reason = "unspecified") => {
+      const map = mapInstance.current;
+      if (!map) {
+        console.info("[locate] flyTo skipped (no map).", { reason });
+        return;
+      }
 
-    const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
-    const containerH =
-      map.getContainer()?.clientHeight ||
-      (typeof window !== "undefined" ? window.innerHeight : 650);
-    const bottomPad = isMobile
-      ? Math.min(390, Math.max(300, Math.round(containerH * 0.48)))
-      : 0;
+      const isMobile = typeof window !== "undefined" && window.innerWidth < 1024;
+      const containerH =
+        map.getContainer()?.clientHeight ||
+        (typeof window !== "undefined" ? window.innerHeight : 650);
+      const bottomPad = isMobile
+        ? Math.min(390, Math.max(300, Math.round(containerH * 0.48)))
+        : 0;
 
-    const from = map.getCenter();
-    console.info("[locate] flyTo", {
-      target: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
-      from: `${from.lat.toFixed(6)}, ${from.lng.toFixed(6)}`,
-      zoom: targetZoom,
-      bottomPad,
-    });
-
-    map.flyTo({
-      center: [lng, lat],
-      zoom: targetZoom,
-      essential: true,
-      // Explicit duration instead of speed + maxDuration: MapLibre derives the
-      // duration from distance and clamps it to 0 once it exceeds maxDuration,
-      // which made longer flights snap instantly while short ones glided. A
-      // fixed duration makes every camera move (venue pins, feed "Map" pills and
-      // the locate-me button) animate identically and smoothly.
-      duration: 850,
-      curve: 1.35,
-      pitch: 0,
-      padding: {
-        top: isMobile ? 60 : 0,
-        bottom: bottomPad,
-        left: 0,
-        right: 0,
-      },
-    });
-
-    // Diagnostic: report where the camera actually settled (traces the
-    // "locate pans elsewhere" report in the console under [locate]).
-    map.once("moveend", () => {
-      const c = map.getCenter();
-      console.info("[locate] flyTo landed", {
-        lng: +c.lng.toFixed(6),
-        lat: +c.lat.toFixed(6),
-        zoom: +map.getZoom().toFixed(2),
+      const from = map.getCenter();
+      console.info("[locate] flyTo", {
+        reason,
+        target: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+        from: `${from.lat.toFixed(6)}, ${from.lng.toFixed(6)}`,
+        zoom: targetZoom,
+        bottomPad,
       });
-    });
-  }, []);
+
+      map.flyTo({
+        center: [lng, lat],
+        zoom: targetZoom,
+        essential: true,
+        // Explicit duration instead of speed + maxDuration: MapLibre derives the
+        // duration from distance and clamps it to 0 once it exceeds maxDuration,
+        // which made longer flights snap instantly while short ones glided. A
+        // fixed duration makes every camera move (venue pins, feed "Map" pills and
+        // the locate-me button) animate identically and smoothly.
+        duration: 850,
+        curve: 1.35,
+        pitch: 0,
+        padding: {
+          top: isMobile ? 60 : 0,
+          bottom: bottomPad,
+          left: 0,
+          right: 0,
+        },
+      });
+    },
+    []
+  );
 
   const handleLocateMe = useCallback(() => {
     const store = useCityPulseStore.getState();
@@ -329,7 +332,7 @@ export function MapRadarView() {
     store.setMobileSheetState("peek");
 
     if (userLocation) {
-      flyToTarget(userLocation.lon, userLocation.lat, 15.5);
+      flyToTarget(userLocation.lon, userLocation.lat, 15.5, "locate-button");
     }
     requestLocation();
   }, [userLocation, flyToTarget, requestLocation]);
@@ -421,7 +424,7 @@ export function MapRadarView() {
           });
         }
 
-        flyToTarget(current.longitude, current.latitude, 15.5);
+        flyToTarget(current.longitude, current.latitude, 15.5, "venue-pin");
       };
 
       const el = createAquarellePinElement(venue, isSelected, handleSelect);
@@ -584,6 +587,12 @@ export function MapRadarView() {
     });
 
     mapInstance.current = map;
+    const instanceId = ++MAP_INSTANCE_SEQ;
+    console.info("[locate] map created", {
+      instanceId,
+      initialCenter: `${mapCenter[1].toFixed(6)}, ${mapCenter[0].toFixed(6)}`,
+      initialZoom: mapZoom,
+    });
 
     // Attach marker DOM only when the main thread is idle so the MapLibre boot
     // never competes with hydration/paint for frame budget. Falls back to rAF.
@@ -661,6 +670,12 @@ export function MapRadarView() {
     // `moveend`, which recurses/loops and can leave the canvas half-rendered.
     map.on("moveend", () => {
       map.triggerRepaint();
+      const c = map.getCenter();
+      console.info("[locate] camera settled", {
+        instanceId,
+        center: `${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}`,
+        zoom: +map.getZoom().toFixed(2),
+      });
     });
 
     // Single click on empty map: deselects venue card and minimizes feed to peek if expanded
@@ -792,7 +807,12 @@ export function MapRadarView() {
 
   // 4. Synchronize MapLibre camera with store `mapCenter` & `mapZoom`
   useEffect(() => {
-    flyToTarget(mapCenter[0], mapCenter[1], mapZoom);
+    console.info("[locate] mapCenter effect fired", {
+      mapCenter: `${mapCenter[1].toFixed(6)}, ${mapCenter[0].toFixed(6)}`,
+      mapZoom,
+      hasStoredUserLocation: Boolean(userLocation),
+    });
+    flyToTarget(mapCenter[0], mapCenter[1], mapZoom, "mapCenter-effect");
   }, [mapCenter, mapZoom, flyToTarget]);
 
   // 4b. Synchronize User Avatar Geolocation Puck
