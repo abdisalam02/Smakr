@@ -32,13 +32,13 @@ export function MapControls({
 
   return (
     <div className="absolute right-3.5 top-20 z-20 flex flex-col items-end gap-2 pointer-events-auto select-none">
-      {/* Locate Me button — compact brand pill */}
+      {/* Locate Me button — matches the other glass controls, brand-tinted */}
       <button
         onClick={handleLocateClick}
         disabled={loading}
         title="Find my location"
         aria-label="Find my location"
-        className="inline-flex items-center gap-1 h-9 px-2.5 rounded-xl bg-[#e84a27] hover:bg-[#d23e1d] disabled:opacity-70 text-white border border-white/40 shadow-md shadow-[#e84a27]/30 transition-all active:scale-95"
+        className="inline-flex items-center gap-1 h-9 px-2.5 rounded-xl bg-white/95 hover:bg-white disabled:opacity-70 text-[#e84a27] border border-zinc-200 shadow-md transition-all active:scale-95 backdrop-blur-md"
       >
         <Navigation className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
         <span className="text-[10px] font-bold leading-none">

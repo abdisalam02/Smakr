@@ -277,8 +277,8 @@ export function MapRadarView() {
 
     const from = map.getCenter();
     console.info("[locate] flyTo", {
-      targetLngLat: [+lng.toFixed(6), +lat.toFixed(6)],
-      fromLngLat: [+from.lng.toFixed(6), +from.lat.toFixed(6)],
+      target: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+      from: `${from.lat.toFixed(6)}, ${from.lng.toFixed(6)}`,
       zoom: targetZoom,
       bottomPad,
     });
