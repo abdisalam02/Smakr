@@ -32,16 +32,16 @@ export function MapControls({
 
   return (
     <div className="absolute right-3.5 top-20 z-20 flex flex-col items-end gap-2 pointer-events-auto select-none">
-      {/* Locate Me button — brand-coloured + labelled so it's easy to spot */}
+      {/* Locate Me button — compact brand pill */}
       <button
         onClick={handleLocateClick}
         disabled={loading}
         title="Find my location"
         aria-label="Find my location"
-        className="inline-flex items-center gap-1.5 h-11 px-3.5 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] disabled:opacity-70 text-white border border-white/40 shadow-lg shadow-[#e84a27]/35 transition-all active:scale-95"
+        className="inline-flex items-center gap-1 h-9 px-2.5 rounded-xl bg-[#e84a27] hover:bg-[#d23e1d] disabled:opacity-70 text-white border border-white/40 shadow-md shadow-[#e84a27]/30 transition-all active:scale-95"
       >
-        <Navigation className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-        <span className="text-[11px] font-bold leading-none">
+        <Navigation className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+        <span className="text-[10px] font-bold leading-none">
           {loading ? "Finding…" : "Find me"}
         </span>
       </button>

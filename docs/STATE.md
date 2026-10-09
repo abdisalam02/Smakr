@@ -65,4 +65,5 @@
 - Migration `20261014` also ensures the `dish-photos` storage bucket + owner-scoped upload/read policies exist.
 - Geolocation: restored + hardened the two-stage fix (fast coarse recenter, then a silent high-accuracy refine). Removed the fake Sentrum fallback that made the locate button fly to the Smakr Pick marker — a failed/blocked fix now leaves `userLocation` null instead of inventing a position.
 - New `LocationPrompt` (mounted in `HomeView`) watches the browser permission state, fires the native permission popup once on first load, and shows an actionable "allow it, then Retry" card when location is blocked.
-- Map controls: "Locate me" is now a brand-coloured labelled pill ("Find me") instead of a small white square, so it's easy to spot.
+- Map controls: "Locate me" is now a compact brand-coloured pill ("Find me") — small and easy to spot.
+- Geolocation diagnostics: the whole locate flow logs under the `[locate]` console prefix (button press, coarse/refined fix + accuracy, drift, flyTo target/from, where the camera landed). A refined fix that disagrees with the coarse one by >150m now re-centres on the accurate position.

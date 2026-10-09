@@ -275,6 +275,14 @@ export function MapRadarView() {
       ? Math.min(390, Math.max(300, Math.round(containerH * 0.48)))
       : 0;
 
+    const from = map.getCenter();
+    console.info("[locate] flyTo", {
+      targetLngLat: [+lng.toFixed(6), +lat.toFixed(6)],
+      fromLngLat: [+from.lng.toFixed(6), +from.lat.toFixed(6)],
+      zoom: targetZoom,
+      bottomPad,
+    });
+
     map.flyTo({
       center: [lng, lat],
       zoom: targetZoom,
@@ -294,10 +302,27 @@ export function MapRadarView() {
         right: 0,
       },
     });
+
+    // Diagnostic: report where the camera actually settled (traces the
+    // "locate pans elsewhere" report in the console under [locate]).
+    map.once("moveend", () => {
+      const c = map.getCenter();
+      console.info("[locate] flyTo landed", {
+        lng: +c.lng.toFixed(6),
+        lat: +c.lat.toFixed(6),
+        zoom: +map.getZoom().toFixed(2),
+      });
+    });
   }, []);
 
   const handleLocateMe = useCallback(() => {
     const store = useCityPulseStore.getState();
+    console.info("[locate] button pressed", {
+      storedUserLocation: store.userLocation,
+      willFlyTo: store.userLocation
+        ? [store.userLocation.lon, store.userLocation.lat]
+        : "no stored fix — asking the browser only",
+    });
     if (store.selectedVenue) {
       store.setSelectedVenue(null);
     }
