@@ -19,6 +19,7 @@ import {
   insertFoodPost,
   insertVenue,
   updateVenue as updateVenueDb,
+  uploadDishPhoto,
   type VibeTag,
   type VenueInsertInput,
 } from "@/lib/supabase/data";
@@ -170,6 +171,9 @@ export function CreateFoodPostModal() {
   const [uploadState, setUploadState] = useState<"idle" | "uploading" | "error">("idle");
   const [fallbackPhoto, setFallbackPhoto] = useState<string | null>(null);
   const [showFallback, setShowFallback] = useState(false);
+  /** Extra curated dish shots, fetched on demand for the "load more" grid. */
+  const [extraPhotos, setExtraPhotos] = useState<string[]>([]);
+  const [showAllPhotos, setShowAllPhotos] = useState(false);
   const uploadPromiseRef = useRef<Promise<string | null> | null>(null);
   const objectUrlRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -219,6 +223,8 @@ export function CreateFoodPostModal() {
       setUploadState("idle");
       setFallbackPhoto(null);
       setShowFallback(false);
+      setExtraPhotos([]);
+      setShowAllPhotos(false);
       setSubmitting(false);
       uploadPromiseRef.current = null;
     }
@@ -325,35 +331,15 @@ export function CreateFoodPostModal() {
 
   /* ---- photo upload ---- */
   const uploadPhoto = useCallback(async (file: File): Promise<string | null> => {
-    const supabase = getSupabaseBrowserClient();
-    if (!supabase) {
-      setUploadState("error");
-      return null;
-    }
     setUploadState("uploading");
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData.session?.user.id;
-      if (!userId) {
-        setUploadState("error");
-        return null;
-      }
-      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-      const filePath = `${userId}/${Date.now()}.${ext}`;
-      const { error } = await supabase.storage
-        .from("dish-photos")
-        .upload(filePath, file, { cacheControl: "3600", upsert: false, contentType: file.type });
-      if (error) throw error;
-      const { data } = supabase.storage.from("dish-photos").getPublicUrl(filePath);
-      const publicUrl = data.publicUrl;
-      setUploadedUrl(publicUrl);
-      setUploadState("idle");
-      return publicUrl;
-    } catch (err) {
-      console.warn("[CreateFoodPostModal] photo upload failed:", err);
+    const { url } = await uploadDishPhoto(file);
+    if (!url) {
       setUploadState("error");
       return null;
     }
+    setUploadedUrl(url);
+    setUploadState("idle");
+    return url;
   }, []);
 
   const handleFileSelected = (file: File) => {
@@ -555,9 +541,28 @@ export function CreateFoodPostModal() {
   if (!isOpen) return null;
 
   const fallbackOptions = [
-    ...listingPhotos.slice(0, 4).map((ref, i) => photoProxy(ref, i)),
+    ...listingPhotos.map((ref, i) => photoProxy(ref, i)),
+    ...extraPhotos,
     ...(listingCover && !listingPhotos.length ? [listingCover] : []),
   ];
+  // Show four at a time; "load more" reveals the rest and pulls extra curated
+  // dish shots, so a listing never feels like it only has a handful of options.
+  const visibleFallbackOptions = showAllPhotos ? fallbackOptions : fallbackOptions.slice(0, 4);
+  const hasMorePhotos = fallbackOptions.length > visibleFallbackOptions.length;
+
+  const loadMorePhotos = async () => {
+    if (extraPhotos.length === 0) {
+      try {
+        const q = dishName.trim() || selectedName || "Oslo food";
+        const res = await fetch(`/api/places/dish?q=${encodeURIComponent(q)}&count=12`);
+        const json = (await res.json()) as { images?: string[] };
+        setExtraPhotos((json.images ?? []).filter((url) => !fallbackOptions.includes(url)));
+      } catch {
+        // keep whatever listing photos we already have
+      }
+    }
+    setShowAllPhotos(true);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/45 backdrop-blur-xs animate-in fade-in duration-150 sm:p-4">
@@ -938,32 +943,53 @@ export function CreateFoodPostModal() {
                   </button>
 
                   {showFallback && fallbackOptions.length > 0 && (
-                    <div className="grid grid-cols-4 gap-2">
-                      {fallbackOptions.map((url, i) => (
+                    <>
+                      <div className="grid grid-cols-4 gap-2">
+                        {visibleFallbackOptions.map((url, i) => (
+                          <button
+                            key={`${url}-${i}`}
+                            type="button"
+                            onClick={() => setFallbackPhoto(url)}
+                            className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all ${
+                              fallbackPhoto === url
+                                ? "border-[#e84a27] ring-2 ring-[#e84a27]/20"
+                                : "border-transparent hover:border-[#e84a27]/40"
+                            }`}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={url}
+                              alt={`Listing photo ${i + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                            {fallbackPhoto === url && (
+                              <span className="absolute top-1 right-1 w-5 h-5 rounded-full bg-[#e84a27] text-white flex items-center justify-center">
+                                <Check className="w-3 h-3" />
+                              </span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+
+                      {hasMorePhotos && (
                         <button
-                          key={`${url}-${i}`}
                           type="button"
-                          onClick={() => setFallbackPhoto(url)}
-                          className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all ${
-                            fallbackPhoto === url
-                              ? "border-[#e84a27] ring-2 ring-[#e84a27]/20"
-                              : "border-transparent hover:border-[#e84a27]/40"
-                          }`}
+                          onClick={loadMorePhotos}
+                          className="w-full py-2.5 rounded-2xl text-xs font-bold border border-[#e2d8c8] bg-white text-[#221e19] hover:border-[#221e19]/30 transition-all"
                         >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={url}
-                            alt={`Listing photo ${i + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                          {fallbackPhoto === url && (
-                            <span className="absolute top-1 right-1 w-5 h-5 rounded-full bg-[#e84a27] text-white flex items-center justify-center">
-                              <Check className="w-3 h-3" />
-                            </span>
-                          )}
+                          Load more photos ({fallbackOptions.length - visibleFallbackOptions.length} more)
                         </button>
-                      ))}
-                    </div>
+                      )}
+                      {showAllPhotos && fallbackOptions.length > 4 && (
+                        <button
+                          type="button"
+                          onClick={() => setShowAllPhotos(false)}
+                          className="w-full text-center text-[11px] font-semibold text-[#a89d8c] hover:text-[#221e19] transition-colors"
+                        >
+                          Show fewer
+                        </button>
+                      )}
+                    </>
                   )}
 
                   {showFallback && fallbackOptions.length === 0 && (

@@ -228,6 +228,35 @@ export async function persistMascotConfig(userId: string, config: unknown): Prom
   }
 }
 
+/**
+ * Uploads a dish photo to the public `dish-photos` Supabase Storage bucket and
+ * returns its public URL. Files are namespaced by user id so the storage
+ * policies can keep uploads owner-scoped.
+ */
+export async function uploadDishPhoto(
+  file: File
+): Promise<{ url: string | null; error: string | null }> {
+  const supabase = getSupabaseBrowserClient();
+  if (!supabase) return { url: null, error: "Supabase is not configured." };
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const userId = sessionData.session?.user.id;
+    if (!userId) return { url: null, error: "Sign in to upload a photo." };
+
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const filePath = `${userId}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage
+      .from("dish-photos")
+      .upload(filePath, file, { cacheControl: "3600", upsert: false, contentType: file.type });
+    if (error) return { url: null, error: error.message };
+
+    const { data } = supabase.storage.from("dish-photos").getPublicUrl(filePath);
+    return { url: data.publicUrl, error: null };
+  } catch (err) {
+    return { url: null, error: err instanceof Error ? err.message : "Upload failed." };
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /* Admin writes — Google Places import & data cleanup                  */
 /* ------------------------------------------------------------------ */
@@ -678,5 +707,68 @@ export async function clearFoodPosts(): Promise<{ deleted: number; error: string
     return { deleted: (data as { id: string }[] | null)?.length ?? 0, error: null };
   } catch (err) {
     return { deleted: 0, error: err instanceof Error ? err.message : "Delete failed." };
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Row deletes (admin Control Center)                                 */
+/* ------------------------------------------------------------------ */
+
+function isPermissionError(message: string, code: string): boolean {
+  return (
+    code === "42501" ||
+    code === "401" ||
+    /row-level security|permission denied|not authorized|jwt/i.test(message)
+  );
+}
+
+const ADMIN_DELETE_PERMISSION_MESSAGE =
+  "Database permission denied: ensure your user role in public.profiles is set to 'admin'.";
+
+/** Deletes a single venue (admin). Cascades its dishes + weekly picks in the DB. */
+export async function deleteVenueById(
+  venueId: string
+): Promise<{ success: boolean; error: string | null }> {
+  const supabase = getSupabaseBrowserClient();
+  if (!supabase) return { success: false, error: "Supabase is not configured." };
+  if (!isUuid(venueId)) return { success: false, error: "This venue isn't synced to Supabase." };
+
+  try {
+    const { error } = await supabase.from("venues").delete().eq("id", venueId);
+    if (!error) return { success: true, error: null };
+
+    const message = error.message ?? "";
+    const pgCode = (error as { code?: string } | null)?.code ?? "";
+    if (isPermissionError(message, pgCode)) {
+      return { success: false, error: ADMIN_DELETE_PERMISSION_MESSAGE };
+    }
+    console.error("[data] deleteVenueById failed:", message);
+    return { success: false, error: message || "Delete failed." };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Delete failed." };
+  }
+}
+
+/** Deletes a single dish / food post (admin). Cascades likes + saves in the DB. */
+export async function deleteFoodPostById(
+  postId: string
+): Promise<{ success: boolean; error: string | null }> {
+  const supabase = getSupabaseBrowserClient();
+  if (!supabase) return { success: false, error: "Supabase is not configured." };
+  if (!isUuid(postId)) return { success: false, error: "This dish isn't synced to Supabase." };
+
+  try {
+    const { error } = await supabase.from("food_posts").delete().eq("id", postId);
+    if (!error) return { success: true, error: null };
+
+    const message = error.message ?? "";
+    const pgCode = (error as { code?: string } | null)?.code ?? "";
+    if (isPermissionError(message, pgCode)) {
+      return { success: false, error: ADMIN_DELETE_PERMISSION_MESSAGE };
+    }
+    console.error("[data] deleteFoodPostById failed:", message);
+    return { success: false, error: message || "Delete failed." };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Delete failed." };
   }
 }

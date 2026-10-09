@@ -52,6 +52,7 @@ export function AuthProvider({
   const setCurrentUser = useCityPulseStore((state) => state.setCurrentUser);
   const setIsAuthModalOpen = useCityPulseStore((state) => state.setIsAuthModalOpen);
   const setIsAuthResolved = useCityPulseStore((state) => state.setIsAuthResolved);
+  const setProfileResolved = useCityPulseStore((state) => state.setProfileResolved);
   const hydrateMascotConfig = useCityPulseStore((state) => state.hydrateMascotConfig);
   const showToast = useCityPulseStore((state) => state.showToast);
 
@@ -61,12 +62,16 @@ export function AuthProvider({
     if (initialUser) {
       setCurrentUser(initialUser);
       setIsAuthResolved(true);
+      // The SSR payload already read `public.profiles`, so onboarding can decide
+      // immediately without waiting for a client round-trip.
+      setProfileResolved(true);
     }
 
     const supabase = getSupabaseBrowserClient();
     if (!supabase) {
       // No Supabase configured (local dev bypass) → stop showing the skeleton.
       setIsAuthResolved(true);
+      setProfileResolved(true);
       return;
     }
 
@@ -198,14 +203,29 @@ export function AuthProvider({
       };
     };
 
+    // Which account's profile we have already read, so a token refresh never
+    // re-triggers the "profile unresolved" state (and the onboarding card
+    // cannot reappear mid-flow).
+    let hydratedUserId: string | null = null;
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT" || !session) {
         // No session → never leave a stale (cached) user on screen.
+        hydratedUserId = null;
         setCurrentUser(null);
         setIsAuthResolved(true);
+        setProfileResolved(true);
         return;
+      }
+
+      const uid = session.user.id;
+      // A different account (or the first resolve after sign-in) → block
+      // onboarding until its `profiles` row has actually been read.
+      if (hydratedUserId !== uid) {
+        hydratedUserId = uid;
+        setProfileResolved(false);
       }
 
       // Instant, network-free hydration so the header shows the user on the
@@ -217,7 +237,10 @@ export function AuthProvider({
 
       // Never await inside the callback — defer the async work instead.
       setTimeout(() => {
-        void hydrate(session);
+        void hydrate(session).finally(() => {
+          // Only now do we know whether this account still needs onboarding.
+          if (!cancelled && hydratedUserId === uid) setProfileResolved(true);
+        });
       }, 0);
     });
 
@@ -225,7 +248,7 @@ export function AuthProvider({
       cancelled = true;
       subscription.unsubscribe();
     };
-  }, [setCurrentUser, setIsAuthResolved, hydrateMascotConfig, initialUser]);
+  }, [setCurrentUser, setIsAuthResolved, setProfileResolved, hydrateMascotConfig, initialUser]);
 
   // Surface middleware / callback bounces: `?auth=required` opens the modal,
   // `?auth_error=...` explains a failed PKCE exchange.

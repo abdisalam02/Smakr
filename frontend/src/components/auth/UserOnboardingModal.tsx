@@ -9,6 +9,7 @@ import {
   ArrowRight,
   ArrowLeft,
   Check,
+  CheckCircle2,
 } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import {
@@ -94,6 +95,7 @@ export function UserOnboardingModal() {
   const showToast = useCityPulseStore((state) => state.showToast);
   const isStudioOpen = useCityPulseStore((state) => state.isAvatarStudioOpen);
   const setIsStudioOpen = useCityPulseStore((state) => state.setIsAvatarStudioOpen);
+  const profileResolved = useCityPulseStore((state) => state.profileResolved);
 
   const [config, setConfig] = useState<OpenPeepsConfig>(DEFAULT_OPEN_PEEPS_CONFIG);
   const [handle, setHandle] = useState("");
@@ -101,6 +103,8 @@ export function UserOnboardingModal() {
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  /** First-run only: show the "account confirmed" welcome before the builder. */
+  const [introDone, setIntroDone] = useState(false);
   const [hairCategory, setHairCategory] = useState<HairCategoryKey>("fades");
   const seededFor = useRef<string | null>(null);
 
@@ -121,6 +125,7 @@ export function UserOnboardingModal() {
     setConfig(seeded);
     setHairCategory(categoryForHead(seeded.genderPreset.startsWith("male"), seeded.headType));
     setStep(0);
+    setIntroDone(false);
     setHandle(
       (currentUser.handle || "").replace(/^[@_\s]+/, "") ||
         (currentUser.email ? currentUser.email.split("@")[0] : "")
@@ -151,6 +156,9 @@ export function UserOnboardingModal() {
 
   const shouldShowOnboarding =
     Boolean(currentUser) &&
+    // Wait until `public.profiles` has actually been read — otherwise a returning
+    // user briefly sees the setup card before their stored flag arrives.
+    profileResolved &&
     currentUser!.onboarding_completed !== true &&
     !currentUser!.is_official &&
     currentUser!.role !== "admin" &&
@@ -159,6 +167,8 @@ export function UserOnboardingModal() {
   const shouldShow = Boolean(currentUser) && (isEditMode || shouldShowOnboarding);
 
   if (!shouldShow || !currentUser) return null;
+
+  const showIntro = !isEditMode && !introDone;
 
   const update = (patch: Partial<OpenPeepsConfig>) =>
     setConfig((c) => ({ ...c, ...patch }));
@@ -440,6 +450,81 @@ export function UserOnboardingModal() {
         );
     }
   };
+
+  // ---------------------------------------------------------------------
+  // First-run confirmation screen — reassures the user their account is
+  // created before sending them into the avatar builder.
+  // ---------------------------------------------------------------------
+  if (showIntro) {
+    const firstName = (currentUser.name || "").trim().split(/\s+/)[0];
+    const shownHandle = `@${handle.trim().replace(/^@+/, "") || "foodie"}`;
+    return (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-black/55 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="relative w-full max-w-md bg-white rounded-3xl border border-zinc-200 shadow-2xl overflow-hidden flex flex-col">
+          <button
+            onClick={close}
+            aria-label="Skip onboarding"
+            className="absolute top-3.5 right-3.5 z-10 text-zinc-400 hover:text-zinc-700 p-1.5 rounded-full hover:bg-zinc-100 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+
+          <div className="px-6 pt-9 pb-4 text-center space-y-3">
+            <div className="mx-auto w-14 h-14 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center">
+              <CheckCircle2 className="w-7 h-7 text-emerald-600" />
+            </div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-50 text-[#e84a27] border border-orange-200/60 text-[10px] font-bold uppercase tracking-wider">
+              ✦ OSLO BETA CONTRIBUTOR
+            </div>
+            <h2 className="font-comico text-2xl leading-tight text-zinc-900">
+              {firstName ? `Welcome, ${firstName}!` : "You're in!"}
+            </h2>
+            <p className="text-xs text-zinc-500 leading-relaxed max-w-xs mx-auto">
+              Your Smakr account is confirmed. Last step: build the foodie avatar that
+              shows up on the map, the feed and every review you post.
+            </p>
+          </div>
+
+          <div className="px-6 space-y-2">
+            <div className="flex items-center gap-2.5 rounded-xl border border-zinc-100 bg-zinc-50/60 px-3.5 py-2.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                  Account
+                </p>
+                <p className="text-xs font-semibold text-zinc-800 truncate">
+                  {currentUser.email ?? "confirmed"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2.5 rounded-xl border border-zinc-100 bg-zinc-50/60 px-3.5 py-2.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                  Handle
+                </p>
+                <p className="text-xs font-semibold text-zinc-800 truncate">{shownHandle}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="px-6 py-5">
+            <button
+              onClick={() => setIntroDone(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] text-white font-bold text-sm shadow-md shadow-[#e84a27]/25 transition-all active:scale-[0.99]"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Confirm &amp; build my avatar</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+            <p className="text-[10px] text-zinc-400 text-center mt-2.5">
+              You can change your display name and @handle in the next step.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-black/55 backdrop-blur-sm animate-in fade-in duration-200">

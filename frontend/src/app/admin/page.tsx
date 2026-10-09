@@ -32,7 +32,7 @@ import {
 import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
 import { VenueImporter, DataCleanupCard } from "@/components/admin/VenueImporter";
 import { EditPostModal } from "@/components/admin/EditPostModal";
-import { broadcastWeeklyPick, fetchFoodPosts, fetchVenues } from "@/lib/supabase/data";
+import { broadcastWeeklyPick, fetchFoodPosts, fetchVenues, deleteVenueById, deleteFoodPostById } from "@/lib/supabase/data";
 import { BodyFontPicker } from "@/components/ui/FontSwitcher";
 
 /* ------------------------------------------------------------------ */
@@ -813,7 +813,12 @@ export default function AdminControlCenterPage() {
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
                             <button
-                              onClick={() => {
+                              onClick={async () => {
+                                const res = await deleteVenueById(v.id);
+                                if (!res.success) {
+                                  showToast(res.error ?? "Couldn't delete this venue.");
+                                  return;
+                                }
                                 deleteVenue(v.id);
                                 showToast(`Removed ${v.name}`);
                               }}
@@ -905,7 +910,12 @@ export default function AdminControlCenterPage() {
                             <span>Toggle ✦ Smakr Pick</span>
                           </button>
                           <button
-                            onClick={() => {
+                            onClick={async () => {
+                              const res = await deleteFoodPostById(post.id);
+                              if (!res.success) {
+                                showToast(res.error ?? "Couldn't delete this dish.");
+                                return;
+                              }
                               deletePost(post.id);
                               showToast("Post removed from the feed.");
                             }}

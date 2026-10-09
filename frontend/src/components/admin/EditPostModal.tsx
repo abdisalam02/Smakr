@@ -1,10 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
-import { X, Save, Loader2, ImageIcon, Pencil, Plus, Trash2, Check, Sparkles } from "lucide-react";
+import React, { useRef, useState } from "react";
+import { X, Save, Loader2, ImageIcon, Pencil, Plus, Trash2, Check, Sparkles, Upload } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { DietaryTag, FoodPost, ReviewItem } from "@/types";
-import { updateFoodPost, updateVenue as updateVenueRecord } from "@/lib/supabase/data";
+import { updateFoodPost, updateVenue as updateVenueRecord, uploadDishPhoto } from "@/lib/supabase/data";
+
+/** Google Places photo resource → size-capped proxied URL. */
+const photoProxy = (ref: string, i = 0) =>
+  `/api/places/photos?ref=${encodeURIComponent(ref)}&i=${i}&w=600`;
 
 const DIETARY_OPTIONS: { id: DietaryTag; label: string; emoji: string }[] = [
   { id: "vegan", label: "Vegan", emoji: "🌿" },
@@ -57,7 +61,58 @@ export function EditPostModal({ post, onClose }: EditPostModalProps) {
   const [fetchingReviews, setFetchingReviews] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Photo picker (Google listing shots + direct upload)
+  const [googlePhotos, setGooglePhotos] = useState<string[]>([]);
+  const [loadingPhotos, setLoadingPhotos] = useState(false);
+  const [showAllPhotos, setShowAllPhotos] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   const selectedVenue = venues.find((v) => v.id === venueId);
+
+  const visibleGooglePhotos = showAllPhotos ? googlePhotos : googlePhotos.slice(0, 4);
+
+  /** Pulls the venue's live Google listing photos (Place Details or text search). */
+  const loadGooglePhotos = async () => {
+    const v = venues.find((x) => x.id === venueId);
+    if (!v) {
+      showToast("Pick a venue first.");
+      return;
+    }
+    setLoadingPhotos(true);
+    try {
+      const cat = v.food_category ?? "all";
+      const url = v.google_place_id
+        ? `/api/places/details?place_id=${encodeURIComponent(v.google_place_id)}&category=${cat}`
+        : `/api/places/search?q=${encodeURIComponent(`${v.name} ${v.address}`)}&category=${cat}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const refs: string[] = data.place?.photos ?? [];
+      setGooglePhotos(refs);
+      setShowAllPhotos(false);
+      showToast(
+        refs.length
+          ? `Loaded ${refs.length} Google photo${refs.length === 1 ? "" : "s"} — tap one to use it.`
+          : "No Google photos found for this spot."
+      );
+    } catch {
+      showToast("Could not fetch Google photos — please try again.");
+    } finally {
+      setLoadingPhotos(false);
+    }
+  };
+
+  const handlePhotoUpload = async (file: File) => {
+    setUploadingPhoto(true);
+    const { url, error } = await uploadDishPhoto(file);
+    setUploadingPhoto(false);
+    if (!url) {
+      showToast(error ?? "Upload failed.");
+      return;
+    }
+    setImageUrl(url);
+    showToast("Photo uploaded ✅");
+  };
 
   const toggleDietary = (tag: DietaryTag) =>
     setDietary((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
@@ -273,6 +328,105 @@ export function EditPostModal({ post, onClose }: EditPostModalProps) {
             </div>
           </div>
         </Field>
+
+        {/* Change photo — upload, or pick a different Google listing shot */}
+        <div className="rounded-2xl border border-zinc-200 bg-zinc-50/60 p-3 space-y-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+              Change photo
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingPhoto}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 disabled:opacity-60 text-white text-[10px] font-bold transition-all active:scale-[0.98]"
+              >
+                {uploadingPhoto ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Upload className="w-3 h-3" />
+                )}
+                <span>{uploadingPhoto ? "Uploading…" : "Upload"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={loadGooglePhotos}
+                disabled={loadingPhotos}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#e84a27] hover:bg-[#d23e1d] disabled:opacity-60 text-white text-[10px] font-bold transition-all active:scale-[0.98]"
+              >
+                {loadingPhotos ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Sparkles className="w-3 h-3" />
+                )}
+                <span>{loadingPhotos ? "Loading…" : "Google photos"}</span>
+              </button>
+            </div>
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void handlePhotoUpload(f);
+              e.target.value = "";
+            }}
+          />
+
+          {googlePhotos.length > 0 ? (
+            <>
+              <div className="grid grid-cols-4 gap-2">
+                {visibleGooglePhotos.map((ref, i) => {
+                  const url = photoProxy(ref, i);
+                  const active = imageUrl === url;
+                  return (
+                    <button
+                      key={`${ref}-${i}`}
+                      type="button"
+                      onClick={() => setImageUrl(url)}
+                      className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all ${
+                        active
+                          ? "border-[#e84a27] ring-2 ring-[#e84a27]/20"
+                          : "border-transparent hover:border-[#e84a27]/40"
+                      }`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={url}
+                        alt={`Google photo ${i + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      {active && (
+                        <span className="absolute top-1 right-1 w-5 h-5 rounded-full bg-[#e84a27] text-white flex items-center justify-center">
+                          <Check className="w-3 h-3" />
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              {googlePhotos.length > 4 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllPhotos((s) => !s)}
+                  className="w-full py-2 rounded-xl text-[11px] font-bold border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 transition-all"
+                >
+                  {showAllPhotos
+                    ? "Show fewer"
+                    : `Load more photos (${googlePhotos.length - 4} more)`}
+                </button>
+              )}
+            </>
+          ) : (
+            <p className="text-[10px] text-zinc-400">
+              Upload a photo, or load this spot&apos;s Google listing photos and tap the one you want.
+            </p>
+          )}
+        </div>
 
         <Field label="Review / Editorial Text">
           <textarea

@@ -80,6 +80,13 @@ interface PulseStoreState {
   isHydratingData: boolean;
   /** True once the Supabase auth session has been resolved (or confirmed absent). */
   isAuthResolved: boolean;
+  /**
+   * True once `public.profiles` has actually been read for the signed-in user
+   * (not merely seeded from the JWT metadata). Onboarding must wait for this so
+   * returning users don't get a flash of the avatar-setup card before their
+   * stored `onboarding_completed` arrives.
+   */
+  profileResolved: boolean;
   /** True once the server-prefetched payload has been applied to the store. */
   serverDataApplied: boolean;
   toastMessage: string | null;
@@ -159,6 +166,7 @@ interface PulseStoreState {
   setIsLoadingVenues: (loading: boolean) => void;
   setIsHydratingData: (loading: boolean) => void;
   setIsAuthResolved: (resolved: boolean) => void;
+  setProfileResolved: (resolved: boolean) => void;
   markServerDataApplied: () => void;
 
   // Weekly Dispatch (Mascot Pick of the Week)
@@ -205,6 +213,7 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
   isLoadingVenues: false,
   isHydratingData: true,
   isAuthResolved: false,
+  profileResolved: false,
   serverDataApplied: false,
   toastMessage: null,
   mapCategory: "all",
@@ -661,6 +670,7 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
   setIsHydratingData: (isHydratingData) => set({ isHydratingData }),
 
   setIsAuthResolved: (isAuthResolved) => set({ isAuthResolved }),
+  setProfileResolved: (profileResolved) => set({ profileResolved }),
 
   markServerDataApplied: () => set({ serverDataApplied: true }),
 }));

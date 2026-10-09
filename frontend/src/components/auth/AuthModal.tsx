@@ -69,6 +69,11 @@ function friendlyAuthError(message: string): string {
   if (m.includes("rate limit") || m.includes("too many")) {
     return "Too many attempts — please wait a moment and try again.";
   }
+  // Supabase returns a generic 500 when the `auth.users` → `profiles` trigger
+  // fails (see supabase/migrations/20261014_fix_signup_and_deletes.sql).
+  if (m.includes("database error")) {
+    return "We couldn't finish setting up your account on our side. Please try again in a moment — if it keeps happening the signup service is being fixed.";
+  }
   return message;
 }
 
@@ -210,7 +215,7 @@ export function AuthModal() {
 
     // Confirmation required — guide the user, don't hang.
     setNotice(
-      `Account created! We sent a confirmation link to ${cleanEmail}. Confirm it, then sign in.`
+      `Account created! We sent a confirmation link to ${cleanEmail}. Open it to confirm, then sign in to build your foodie avatar. (Check spam if it's not there in a minute.)`
     );
   };
 
