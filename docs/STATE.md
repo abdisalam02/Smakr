@@ -53,6 +53,7 @@
 - Venue details sheet: fluid touch pull-down and 0.38s cubic-bezier ease matching feed modal; bottom nav bound to modal open state so it restores immediately on close.
 - Map venue popup: elevated bottom padding (300-390px / ~48% container) so pin and descending card sit in upper-middle of screen clear of the peek sheet.
 - Geolocation pan: deduplicated setMapCenter triggers so locate runs a single un-interrupted flight curve matching venue pins.
+- Map auto-fit keyed on category + venue IDs (not the venues array): setUserLocation's distance recalc was re-firing it and flying "find me" to Oslo centre.
 - User avatar scaling: root element returned to MapLibre while zoom scaling targets inner .puck-scale, preventing translate wipes and position jumping.
 - Puck proportions: compact 36px base avatar scaling down to 0.28x on zoom out; guest users receive stable randomized Open Peeps.
 - Mobile map clarity: the feed sheet and its sticky header are now opaque (they were `#FAF7F2]/85` and `/65` + `backdrop-blur-xl`). A translucent sibling made Chrome composite the WebGL canvas through a translucent surface, so the map above/behind the sheet rendered washed-out ("blocked"). Dropped the now-unneeded `preserveDrawingBuffer`.
@@ -67,3 +68,7 @@
 - New `LocationPrompt` (mounted in `HomeView`) watches the browser permission state, fires the native permission popup once on first load, and shows an actionable "allow it, then Retry" card when location is blocked.
 - Map controls: "Locate me" is now a compact brand-coloured pill ("Find me") — small and easy to spot.
 - Geolocation diagnostics: the whole locate flow logs under the `[locate]` console prefix (button press, coarse/refined fix + accuracy, drift, flyTo target/from, where the camera landed). A refined fix that disagrees with the coarse one by >150m now re-centres on the accurate position.
+- MapRadarView unified: single persistent map instance across mobile full-bleed and desktop split views (no unmount/remount churn or dual instances).
+- Category auto-fit guarded on actual category filter changes: never overrides geolocation camera flights on mount or store data updates.
+- Avatar puck centering: calibrated locate padding to keep the user avatar in the viewport center above the peek sheet with smooth zoom scaling.
+- Instant sign-out: Header uses storeUser once hydrated, immediately showing Sign In without page refresh.

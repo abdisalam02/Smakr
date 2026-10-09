@@ -442,7 +442,14 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
 
   setCurrentUser: (user) => set({ currentUser: user, isAuthModalOpen: false }),
 
-  logout: () => set({ currentUser: null }),
+  logout: () => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("smakr_app_cache_v1");
+      } catch {}
+    }
+    set({ currentUser: null, isAuthResolved: true, profileResolved: true });
+  },
 
   setWeeklyPick: (pick) => {
     set({ weeklyPick: pick });

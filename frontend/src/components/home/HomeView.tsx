@@ -455,25 +455,23 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   };
 
   return (
-    <div className="relative flex-1 w-full h-screen h-[100dvh] min-h-[100dvh] max-h-[100dvh] overflow-hidden bg-zinc-100">
+    <div className="relative flex-1 w-full h-screen h-[100dvh] min-h-[100dvh] max-h-[100dvh] overflow-hidden bg-zinc-100 lg:flex lg:pt-[57px]">
       {/* Ask for location when we don't have a fix yet (map-wide). */}
       <LocationPrompt />
       {/* ========================================================================= */}
-      {/* DESKTOP SPLIT VIEW (Visible on lg screens) */}
+      {/* DESKTOP FEED STREAM (Visible on lg screens)                              */}
       {/* ========================================================================= */}
-      <div className="hidden lg:flex w-full h-full pt-[57px]">
-        {/* Left: Feed Stream */}
-        <div
-          className={`${
-            selectedVenue
-              ? "w-[46%] xl:w-[42%] opacity-100 border-r border-zinc-200/80"
-              : viewMode === "map"
-              ? "w-0 max-w-0 opacity-0 pointer-events-none p-0 border-r-0"
-              : viewMode === "feed"
-              ? "w-full max-w-5xl mx-auto opacity-100 border-r-0"
-              : "w-[46%] xl:w-[42%] opacity-100 border-r border-zinc-200/80"
-          } h-full bg-[#FAF7F2] dark:bg-[#181615] flex flex-col overflow-hidden transition-all duration-350 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[width,opacity] relative`}
-        >
+      <div
+        className={`hidden lg:flex ${
+          selectedVenue
+            ? "w-[46%] xl:w-[42%] opacity-100 border-r border-zinc-200/80"
+            : viewMode === "map"
+            ? "w-0 max-w-0 opacity-0 pointer-events-none p-0 border-r-0"
+            : viewMode === "feed"
+            ? "w-full max-w-5xl mx-auto opacity-100 border-r-0"
+            : "w-[46%] xl:w-[42%] opacity-100 border-r border-zinc-200/80"
+        } h-full bg-[#FAF7F2] dark:bg-[#181615] flex-col overflow-hidden transition-all duration-350 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[width,opacity] relative shrink-0`}
+      >
           {selectedVenue ? (
             <VenueDetailPane
               venue={selectedVenue}
@@ -558,41 +556,42 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
           )}
         </div>
 
-        {/* Right: Map with Pins */}
-        <div
-          className={`${
+      {/* ========================================================================= */}
+      {/* SINGLE PERSISTENT MAP INSTANCE                                            */}
+      {/* Full-bleed background on mobile; right split pane on desktop.            */}
+      {/* Initialized once — never recreated on breakpoint changes or layout flips. */}
+      {/* ========================================================================= */}
+      <div
+        className={`
+          absolute inset-0 w-full h-full z-0
+          lg:static lg:h-full lg:z-0
+          ${
             selectedVenue
-              ? "w-[54%] xl:w-[58%] opacity-100"
+              ? "lg:w-[54%] lg:xl:w-[58%] lg:opacity-100"
               : viewMode === "feed"
-              ? "w-0 max-w-0 opacity-0 pointer-events-none"
+              ? "lg:w-0 lg:max-w-0 lg:opacity-0 lg:pointer-events-none"
               : viewMode === "map"
-              ? "w-full opacity-100"
-              : "w-[54%] xl:w-[58%] opacity-100"
-          } h-full relative transition-all duration-350 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[width,opacity]`}
-        >
-          {isDesktop && <MapRadarView />}
-        </div>
+              ? "lg:w-full lg:opacity-100"
+              : "lg:w-[54%] lg:xl:w-[58%] lg:opacity-100"
+          }
+          transition-all duration-350 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[width,opacity]
+        `}
+      >
+        <MapRadarView />
       </div>
 
       {/* ========================================================================= */}
-      {/* MOBILE AIRBNB-STYLE HOTEL/RADAR SLIDE-UP VIEW (< lg screens) */}
+      {/* MOBILE AIRBNB-STYLE SLIDE-UP FEED SHEET (< lg screens)                   */}
       {/* ========================================================================= */}
-      <div className="flex lg:hidden w-full h-full relative overflow-hidden">
-        {/* Full-bleed Map in Background (flows right under the translucent nav) */}
-        <div className="absolute inset-0 w-full h-full z-0">
-          {!isDesktop && <MapRadarView />}
-        </div>
-
-        {/* Slide-Up Feed Sheet with 0 Gap Continuous Fluid Expansion */}
-        <div
-          ref={sheetRef}
-          style={{
-            height: `calc(100dvh - 57px + 140px)`,
-            transform: `translate3d(0, ${getSnapTranslateY(mobileSheet)}px, 0)`,
-            transition: "transform 0.38s cubic-bezier(0.16, 1, 0.3, 1)",
-          }}
-          className="absolute left-0 right-0 top-[57px] z-20 bg-[#FAF7F2] dark:bg-[#181615] rounded-t-3xl border-t border-black/[0.08] shadow-2xl flex flex-col will-change-transform pb-[140px]"
-        >
+      <div
+        ref={sheetRef}
+        style={{
+          height: `calc(100dvh - 57px + 140px)`,
+          transform: `translate3d(0, ${getSnapTranslateY(mobileSheet)}px, 0)`,
+          transition: "transform 0.38s cubic-bezier(0.16, 1, 0.3, 1)",
+        }}
+        className="lg:hidden absolute left-0 right-0 top-[57px] z-20 bg-[#FAF7F2] dark:bg-[#181615] rounded-t-3xl border-t border-black/[0.08] shadow-2xl flex flex-col will-change-transform pb-[140px]"
+      >
           {/* Sticky Sheet Header: Grab Handle + Mascot Drop Pill + Category Filter Bar */}
           <div className="sticky top-0 z-20 bg-[#FAF7F2] dark:bg-[#181615] border-b border-black/[0.06] rounded-t-3xl shrink-0">
             <div
@@ -695,7 +694,6 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
             )}
           </div>
         </div>
-      </div>
 
       {/* ========================================================================= */}
       {/* MOBILE FLOATING GLASSMORPHIC FOOD VS LOCATIONS TOGGLE                    */}

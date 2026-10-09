@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import * as maplibregl from "maplibre-gl";
 
 // Next.js/Turbopack cannot emit MapLibre v6's ESM worker (it would 404 next to
@@ -116,7 +116,7 @@ function buildUserAvatarPuckElement(
   // Compact character avatar container showing head + torso (unclipped)
   const charContainer = document.createElement("div");
   charContainer.className =
-    "relative w-10 h-12 flex items-center justify-center filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.18)]";
+    "relative w-9 h-11 flex items-center justify-center filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.18)]";
 
   const renderSvgInto = (svgStr: string) => {
     charContainer.innerHTML = svgStr;
@@ -137,7 +137,7 @@ function buildUserAvatarPuckElement(
     charContainer.appendChild(img);
   } else if (useMascot) {
     // Admins / official accounts use the Smakr mascot — matching the header avatar.
-    renderSvgInto(buildMascotSVGString(mascotConfig ?? undefined, false, 40, 48));
+    renderSvgInto(buildMascotSVGString(mascotConfig ?? undefined, false, 36, 44));
   } else if (avatarConfig) {
     // Signed-in user with an Open Peeps avatar.
     renderSvgInto(buildOpenPeepsSvg(avatarConfig));
@@ -164,13 +164,12 @@ function buildUserAvatarPuckElement(
 function applyPuckZoomScale(rootEl: HTMLElement, zoom: number) {
   const scaleEl = rootEl.querySelector<HTMLElement>(".puck-scale") ?? rootEl;
   // Compact avatar scaling:
-  // At zoom 16+ (street level): 0.88
-  // At zoom 15 (neighborhood): 0.74
-  // At zoom 14 (district): 0.60
-  // At zoom 13 (city center): 0.46
-  // At zoom 12 (greater city): 0.36
-  // At zoom <= 11 (overview): 0.28
-  const scale = Math.max(0.28, Math.min(0.88, 0.88 - (16.0 - zoom) * 0.14));
+  // At zoom 16+ (street level): 0.82
+  // At zoom 15 (neighborhood): 0.68
+  // At zoom 14 (district): 0.52
+  // At zoom 13 (city center): 0.38
+  // At zoom <= 12 (overview): 0.25
+  const scale = Math.max(0.25, Math.min(0.82, 0.82 - (16.0 - zoom) * 0.14));
   scaleEl.style.transform = `scale(${scale.toFixed(3)})`;
 
   const badge = rootEl.querySelector<HTMLElement>(".puck-badge");
@@ -282,8 +281,15 @@ export function MapRadarView() {
       const containerH =
         map.getContainer()?.clientHeight ||
         (typeof window !== "undefined" ? window.innerHeight : 650);
+      // Venue pins need bottom clearance for the descending inspection card.
+      // Avatar locate centering uses compact clearance so the puck sits at screen center.
+      const isVenuePin =
+        reason === "venue-pin" ||
+        (reason === "mapCenter-effect" && Boolean(useCityPulseStore.getState().selectedVenue));
       const bottomPad = isMobile
-        ? Math.min(390, Math.max(300, Math.round(containerH * 0.48)))
+        ? isVenuePin
+          ? Math.min(380, Math.max(280, Math.round(containerH * 0.45)))
+          : Math.min(160, Math.max(80, Math.round(containerH * 0.20)))
         : 0;
 
       const from = map.getCenter();
@@ -572,11 +578,14 @@ export function MapRadarView() {
     const styles = getMapStyles();
     const styleUrl = styles[activeTheme];
 
+    const currentCenter = useCityPulseStore.getState().mapCenter;
+    const currentZoom = useCityPulseStore.getState().mapZoom;
+
     const map = new maplibregl.Map({
       container: mapContainer.current,
       style: styleUrl,
-      center: mapCenter,
-      zoom: mapZoom,
+      center: currentCenter,
+      zoom: currentZoom,
       attributionControl: false,
       dragRotate: false,
       pitchWithRotate: false,
@@ -718,10 +727,17 @@ export function MapRadarView() {
     renderMarkers();
   }, [venues, selectedVenue, mapCategory, mapNeighborhood, openNow, weeklyPick.venue_id, renderMarkers]);
 
-  // 2.5 Auto-fit map camera when category filter changes
+  // 2.5 Auto-fit map camera ONLY when the user actively changes the category filter.
+  // Never fire on mount, and never fire on venue list updates or geolocation fixes.
+  const prevCategoryRef = useRef<string>(mapCategory);
   useEffect(() => {
     const map = mapInstance.current;
     if (!map) return;
+
+    if (prevCategoryRef.current === mapCategory) return;
+    prevCategoryRef.current = mapCategory;
+
+    const venues = useCityPulseStore.getState().venues;
 
     if (mapCategory === "all") {
       map.flyTo({
@@ -794,7 +810,7 @@ export function MapRadarView() {
     } catch (err) {
       console.warn("Map auto-fit failed gracefully:", err);
     }
-  }, [mapCategory, venues]);
+  }, [mapCategory]);
 
   // 3. Switch style safely on theme change
   useEffect(() => {

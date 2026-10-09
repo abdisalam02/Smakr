@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Plus,
   LogOut,
@@ -17,12 +18,13 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { MascotCharacter } from "@/components/avatar/MascotCharacter";
 
 export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
+  const router = useRouter();
   const openCreateDish = useCityPulseStore((state) => state.openCreateDish);
   const storeUser = useCityPulseStore((state) => state.currentUser);
   const storeResolved = useCityPulseStore((state) => state.isAuthResolved);
-  // Prefer the client store once hydrated; fall back to the SSR user so the very
-  // first painted frame already shows the signed-in user.
-  const currentUser = storeUser ?? initialUser ?? null;
+  // Before client auth resolves, show initialUser from SSR to avoid a logged-out flash.
+  // Once auth has resolved on the client, storeUser is authoritative (null means logged out).
+  const currentUser = storeResolved ? storeUser : (storeUser ?? initialUser ?? null);
   const isAuthResolved = storeResolved || initialUser !== undefined;
   const mascotConfig = useCityPulseStore((state) => state.mascotConfig);
   const setIsAuthModalOpen = useCityPulseStore((state) => state.setIsAuthModalOpen);
@@ -54,15 +56,16 @@ export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
 
   const handleSignOut = async () => {
     setMenuOpen(false);
+    logout();
     const supabase = getSupabaseBrowserClient();
     if (supabase) {
       try {
         await supabase.auth.signOut();
       } catch {
-        // Ignore — local state is cleared below regardless.
+        // Ignore — local state is cleared regardless.
       }
     }
-    logout();
+    router.refresh();
     showToast("Signed out of Smakr.");
   };
 
