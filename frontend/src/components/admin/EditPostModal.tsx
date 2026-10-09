@@ -3,8 +3,9 @@
 import React, { useRef, useState } from "react";
 import { X, Save, Loader2, ImageIcon, Pencil, Plus, Trash2, Check, Sparkles, Upload } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
-import { DietaryTag, FoodPost, ReviewItem } from "@/types";
+import { DietaryTag, FoodCategory, FoodPost, ReviewItem } from "@/types";
 import { updateFoodPost, updateVenue as updateVenueRecord, uploadDishPhoto } from "@/lib/supabase/data";
+import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
 
 /** Google Places photo resource → size-capped proxied URL. */
 const photoProxy = (ref: string, i = 0) =>
@@ -46,6 +47,7 @@ export function EditPostModal({ post, onClose }: EditPostModalProps) {
 
   const [dishName, setDishName] = useState(post.dish_name);
   const [venueId, setVenueId] = useState(post.spot_id);
+  const [category, setCategory] = useState<FoodCategory>(post.category ?? "all");
   const [price, setPrice] = useState(post.price_nok);
   const [imageUrl, setImageUrl] = useState(post.image_url);
   const [review, setReview] = useState(post.review_text);
@@ -203,20 +205,23 @@ export function EditPostModal({ post, onClose }: EditPostModalProps) {
     const name = dishName.trim() || post.dish_name;
     const venue = venues.find((v) => v.id === venueId);
 
+    const cleanDietary = dietary.filter((t) => !t.startsWith("cat_"));
+    const updatedDietary = [...cleanDietary, `cat_${category}`];
+
     const updates: Partial<FoodPost> = {
       dish_name: name,
       spot_id: venueId,
       price_nok: Number(price) || 0,
       image_url: imageUrl.trim(),
       review_text: review.trim(),
-      dietary_tags: dietary,
+      dietary_tags: cleanDietary,
       diner_quotes: quotes,
+      category: category,
     };
     if (venue) {
       updates.spot_name = venue.name;
       updates.spot_address = venue.address;
       updates.spot_coords = [venue.longitude, venue.latitude];
-      if (venue.food_category) updates.category = venue.food_category;
     }
 
     // Optimistic UI first, then persist.
@@ -228,7 +233,7 @@ export function EditPostModal({ post, onClose }: EditPostModalProps) {
       dishImage: imageUrl.trim() || null,
       reviewText: review.trim() || null,
       priceNok: Number(price) || 0,
-      dietaryTags: dietary,
+      dietaryTags: updatedDietary,
       dinerQuotes: quotes,
     });
 
@@ -272,7 +277,7 @@ export function EditPostModal({ post, onClose }: EditPostModalProps) {
           <input value={dishName} onChange={(e) => setDishName(e.target.value)} className={inputCls} />
         </Field>
 
-        <div className="grid grid-cols-1 sm:grid-cols-[1.6fr_1fr] gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-[1.4fr_1fr] gap-3">
           <Field label="Venue">
             <select
               value={venueId}
@@ -293,15 +298,29 @@ export function EditPostModal({ post, onClose }: EditPostModalProps) {
               ))}
             </select>
           </Field>
-          <Field label="Price (NOK)">
-            <input
-              type="number"
-              value={price}
-              onChange={(e) => setPrice(Number(e.target.value))}
+          <Field label="Food Category & Type">
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value as FoodCategory)}
               className={inputCls}
-            />
+            >
+              {FOOD_CATEGORIES.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.emoji} {c.label}
+                </option>
+              ))}
+            </select>
           </Field>
         </div>
+
+        <Field label="Price (NOK)">
+          <input
+            type="number"
+            value={price}
+            onChange={(e) => setPrice(Number(e.target.value))}
+            className={inputCls}
+          />
+        </Field>
 
         <Field label="Photo URL">
           <div className="flex items-center gap-2">

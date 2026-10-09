@@ -32,7 +32,7 @@ import {
 import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
 import { VenueImporter, DataCleanupCard } from "@/components/admin/VenueImporter";
 import { EditPostModal } from "@/components/admin/EditPostModal";
-import { broadcastWeeklyPick, fetchFoodPosts, fetchVenues, deleteVenueById, deleteFoodPostById } from "@/lib/supabase/data";
+import { broadcastWeeklyPick, fetchFoodPosts, fetchVenues, deleteVenueById, deleteFoodPostById, updateVenue as updateVenueDb } from "@/lib/supabase/data";
 import { BodyFontPicker } from "@/components/ui/FontSwitcher";
 
 /* ------------------------------------------------------------------ */
@@ -324,6 +324,8 @@ export default function AdminControlCenterPage() {
   const startEdit = (venue: Venue) => setEditing({ ...venue });
   const saveEdit = () => {
     if (!editing) return;
+    const cat = editing.food_category ?? "ramen";
+    const emoji = FOOD_CATEGORIES.find((c) => c.id === cat)?.emoji ?? editing.icon ?? "🥢";
     updateVenue(editing.id, {
       name: editing.name,
       address: editing.address,
@@ -332,6 +334,12 @@ export default function AdminControlCenterPage() {
       longitude: editing.longitude,
       open_now: editing.open_now,
       dietary_tags: editing.dietary_tags,
+      food_category: cat,
+      icon: emoji,
+    });
+    void updateVenueDb(editing.id, {
+      category: cat,
+      icon: emoji,
     });
     showToast(`Updated ${editing.name}`);
     setEditing(null);
@@ -723,6 +731,25 @@ export default function AdminControlCenterPage() {
                       {NEIGHBORHOODS.map((n) => (
                         <option key={n.id} value={n.id}>
                           {n.label}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Food Category">
+                    <select
+                      value={editing.food_category ?? "ramen"}
+                      onChange={(e) =>
+                        setEditing({
+                          ...editing,
+                          food_category: e.target.value as FoodCategory,
+                          icon: FOOD_CATEGORIES.find((c) => c.id === e.target.value)?.emoji ?? editing.icon,
+                        })
+                      }
+                      className={inputCls}
+                    >
+                      {FOOD_CATEGORIES.filter((c) => c.id !== "all").map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.emoji} {c.label}
                         </option>
                       ))}
                     </select>

@@ -2,7 +2,6 @@
 
 import React from "react";
 import { Navigation, Plus, Minus } from "lucide-react";
-import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { useGeolocation } from "@/hooks/useGeolocation";
 
 interface MapControlsProps {
@@ -17,10 +16,8 @@ export function MapControls({
   onZoomIn,
   onZoomOut,
   onLocate,
-  onToggleTheme,
 }: MapControlsProps) {
   const { requestLocation, loading } = useGeolocation();
-  const setMapCenter = useCityPulseStore((state) => state.setMapCenter);
 
   const handleLocateClick = () => {
     if (onLocate) {
@@ -32,7 +29,7 @@ export function MapControls({
 
   return (
     <div className="absolute right-3.5 top-20 z-20 flex flex-col items-end gap-2 pointer-events-auto select-none">
-      {/* Locate Me button — matches the other glass controls, brand-tinted */}
+      {/* Locate Me button — matches the glass controls, brand-tinted */}
       <button
         onClick={handleLocateClick}
         disabled={loading}
@@ -46,7 +43,7 @@ export function MapControls({
         </span>
       </button>
 
-      {/* Zoom Controls (Plus & Minus only) */}
+      {/* Zoom Controls (Plus & Minus in their original spot) */}
       <div className="flex flex-col rounded-xl bg-white/95 border border-zinc-200 shadow-md overflow-hidden backdrop-blur-md">
         <button
           onClick={onZoomIn}

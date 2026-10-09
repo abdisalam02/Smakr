@@ -58,7 +58,9 @@ const VENUE_CATEGORIES = FOOD_CATEGORIES.filter((c) => c.id !== "all");
  */
 const VENUE_ICONS: { emoji: string; label: string; category: FoodCategory }[] = [
   { emoji: "☕", label: "Coffee", category: "coffee" },
+  { emoji: "🍵", label: "Matcha", category: "matcha" },
   { emoji: "🥐", label: "Bakery", category: "bakery" },
+  { emoji: "🍝", label: "Pasta", category: "pasta" },
   { emoji: "🍜", label: "Ramen", category: "ramen" },
   { emoji: "🍔", label: "Burger", category: "burger" },
   { emoji: "🍕", label: "Pizza", category: "pizza" },

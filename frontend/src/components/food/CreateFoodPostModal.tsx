@@ -69,46 +69,125 @@ const CATEGORY_ICONS: {
   label: string;
   keywords: string[];
 }[] = [
-  { key: "pizza", category: "pizza", icon: "🍕", label: "Pizza", keywords: ["pizza", "pizzeria", "pizz"] },
   {
     key: "coffee",
     category: "coffee",
     icon: "☕",
     label: "Coffee",
-    keywords: ["coffee", "kaffe", "cafe", "café", "espresso", "latte", "brew", "roaster", "kaffebar", "barista", "kaffebrenneriet"],
+    keywords: ["coffee", "kaffe", "cafe", "café", "espresso", "latte", "brew", "roaster", "pour-over", "pourover", "v60", "kaffebar", "barista"],
+  },
+  {
+    key: "matcha",
+    category: "matcha",
+    icon: "🍵",
+    label: "Matcha & Tea",
+    keywords: ["matcha", "hojicha", "tea", "te", "sencha", "chai", "green tea"],
+  },
+  {
+    key: "boba",
+    category: "coffee",
+    icon: "🧋",
+    label: "Boba",
+    keywords: ["boba", "bubble", "bubble tea", "milk tea", "tapioca"],
   },
   {
     key: "bakery",
     category: "bakery",
     icon: "🥐",
     label: "Bakery",
-    keywords: ["bakery", "bakeri", "bake", "croissant", "bun", "bread", "brød", "pastry", "konditori", "cardamom"],
+    keywords: ["bakery", "bakeri", "bake", "croissant", "bun", "bolle", "kanelbolle", "bread", "brød", "pastry", "konditori", "cardamom"],
   },
-  { key: "ramen", category: "ramen", icon: "🍜", label: "Ramen", keywords: ["ramen", "noodle", "noodles", "tonkotsu"] },
-  { key: "burger", category: "burger", icon: "🍔", label: "Burger", keywords: ["burger", "smash", "grill"] },
   {
-    key: "street-food",
-    category: "street_food",
-    icon: "🌮",
-    label: "Street Food",
-    keywords: ["taco", "tacos", "street", "kebab", "falafel", "shawarma", "shaurma"],
+    key: "sourdough",
+    category: "bakery",
+    icon: "🥖",
+    label: "Sourdough",
+    keywords: ["sourdough", "surdeig", "baguette", "loaf"],
   },
-  { key: "drinks", category: "drinks", icon: "🍷", label: "Bar", keywords: ["bar", "wine", "cocktail", "pub", "beer", "brygg", "vin"] },
   {
-    key: "dessert",
-    category: "dessert",
-    icon: "🍦",
-    label: "Sweets",
-    keywords: ["ice cream", "gelato", "dessert", "sweet", "kake", "cake", "donut", "waffle", "vaffel", "sjokolade", "chocolate"],
+    key: "pasta",
+    category: "pasta",
+    icon: "🍝",
+    label: "Pasta",
+    keywords: ["pasta", "spaghetti", "carbonara", "tagliatelle", "ravioli", "lasagna", "rigatoni", "italian"],
+  },
+  {
+    key: "pizza",
+    category: "pizza",
+    icon: "🍕",
+    label: "Pizza",
+    keywords: ["pizza", "pizzeria", "pizz", "neapolitan"],
+  },
+  {
+    key: "ramen",
+    category: "ramen",
+    icon: "🍜",
+    label: "Ramen",
+    keywords: ["ramen", "noodle", "noodles", "tonkotsu", "miso", "shoyu", "tantanmen"],
   },
   {
     key: "asian",
     category: "ramen",
     icon: "🥢",
-    label: "Asian",
-    keywords: ["asian", "sushi", "dim sum", "wok", "thai", "chinese", "japanese", "korean", "vietnamese", "pho", "bánh mì", "banh mi"],
+    label: "Asian & Dim Sum",
+    keywords: ["asian", "dim sum", "dumpling", "dumplings", "bao", "wok", "thai", "chinese", "vietnamese", "pho", "curry"],
   },
-  { key: "deli", category: "street_food", icon: "🥪", label: "Deli", keywords: ["deli", "sandwich", "subs", "sub"] },
+  {
+    key: "sushi",
+    category: "sushi",
+    icon: "🍣",
+    label: "Sushi",
+    keywords: ["sushi", "nigiri", "maki", "sashimi", "omakase", "raw"],
+  },
+  {
+    key: "burger",
+    category: "burger",
+    icon: "🍔",
+    label: "Burger",
+    keywords: ["burger", "smash", "grill", "fries"],
+  },
+  {
+    key: "street-food",
+    category: "street_food",
+    icon: "🌮",
+    label: "Street Food & Tacos",
+    keywords: ["taco", "tacos", "street", "kebab", "falafel", "shawarma", "shaurma"],
+  },
+  {
+    key: "sandwich",
+    category: "street_food",
+    icon: "🥪",
+    label: "Sandwich & Deli",
+    keywords: ["sandwich", "deli", "toast", "subs", "sub", "panini", "focaccia", "bánh mì", "banh mi", "bagel"],
+  },
+  {
+    key: "dessert",
+    category: "dessert",
+    icon: "🍦",
+    label: "Gelato",
+    keywords: ["ice cream", "gelato", "soft serve", "sorbet"],
+  },
+  {
+    key: "cake",
+    category: "dessert",
+    icon: "🍰",
+    label: "Cakes & Sweets",
+    keywords: ["cake", "kake", "dessert", "sweet", "donut", "waffle", "vaffel", "chocolate", "sjokolade", "cookie"],
+  },
+  {
+    key: "drinks",
+    category: "drinks",
+    icon: "🍷",
+    label: "Wine & Drinks",
+    keywords: ["bar", "wine", "vin", "cocktail", "pub", "naturvin", "cider"],
+  },
+  {
+    key: "beer",
+    category: "drinks",
+    icon: "🍺",
+    label: "Craft Beer",
+    keywords: ["beer", "brewery", "bryggeri", "ipa", "pilsner", "øl"],
+  },
 ];
 
 /** Word-ish keyword match so "bar" doesn't match "Barcode". */
@@ -261,15 +340,25 @@ export function CreateFoodPostModal() {
   }, [query, isOpen]);
 
   /* ---- listing photos for the Google fallback ---- */
-  const loadListingPhotos = useCallback(async (placeId: string | null | undefined) => {
-    if (!placeId) {
-      setListingPhotos([]);
-      return;
-    }
+  const loadListingPhotos = useCallback(async (placeId: string | null | undefined, venueName?: string, venueAddress?: string) => {
     try {
-      const res = await fetch(`/api/places/details?place_id=${encodeURIComponent(placeId)}`);
-      const json = (await res.json()) as { place?: PlaceResult };
-      setListingPhotos(json.place?.photos ?? []);
+      if (placeId) {
+        const res = await fetch(`/api/places/details?place_id=${encodeURIComponent(placeId)}`);
+        const json = (await res.json()) as { place?: PlaceResult };
+        const photos = json.place?.photos ?? [];
+        if (photos.length > 0) {
+          setListingPhotos(photos);
+          return;
+        }
+      }
+      if (venueName) {
+        const res = await fetch(`/api/places/search?q=${encodeURIComponent(`${venueName} ${venueAddress || "Oslo"}`)}`);
+        const json = (await res.json()) as { place?: PlaceResult; results?: PlaceResult[] };
+        const photos = json.place?.photos ?? json.results?.[0]?.photos ?? [];
+        setListingPhotos(photos);
+      } else {
+        setListingPhotos([]);
+      }
     } catch {
       setListingPhotos([]);
     }
@@ -304,7 +393,7 @@ export function CreateFoodPostModal() {
     setFallbackPhoto(null);
     setQuery("");
     setResults([]);
-    setListingPhotos([]);
+    void loadListingPhotos(v.google_place_id, v.name, v.address);
     setCategoryKey(
       CATEGORY_ICONS.find((c) => c.icon === v.icon)?.key ?? detectCategoryKey(v.name)
     );
@@ -404,14 +493,16 @@ export function CreateFoodPostModal() {
       // 1) Resolve the venue (inserting a new Google spot when needed).
       let finalVenue: Venue | null = existingVenue;
       if (google) {
+        const venueCatKey = detectCategoryKey(google.name);
+        const venueCatDef = CATEGORY_ICONS.find((c) => c.key === venueCatKey) ?? activeCategory;
         const input: VenueInsertInput = {
           name: google.name,
           address: google.formatted_address,
           neighborhood: google.neighborhood,
           latitude: google.location.lat,
           longitude: google.location.lng,
-          category: activeCategory.category,
-          icon: activeCategory.icon,
+          category: venueCatDef.category,
+          icon: venueCatDef.icon,
           imageUrl: google.photos?.[0] ? photoProxy(google.photos[0]) : null,
           priceLevel: google.price_level ?? undefined,
           openNow: true,
@@ -440,19 +531,18 @@ export function CreateFoodPostModal() {
         return;
       }
 
-      // 1b) Existing spots adopt the chosen category + emoji so the radar pin
-      // matches. Store update is instant; the DB write is best-effort (admin RLS).
-      if (!google) {
+      // 1b) Existing spots retain their original restaurant category and icon
+      // (e.g. an Asian restaurant stays Asian with 🥢 even when logging coffee ☕).
+      // Only set a default if the venue record literally has none.
+      if (!google && (!finalVenue.food_category || !finalVenue.icon)) {
         const patch: Partial<Venue> = {};
-        if (finalVenue.icon !== activeCategory.icon) patch.icon = activeCategory.icon;
-        if (finalVenue.food_category !== activeCategory.category) {
-          patch.food_category = activeCategory.category;
-        }
+        if (!finalVenue.icon) patch.icon = activeCategory.icon;
+        if (!finalVenue.food_category) patch.food_category = activeCategory.category;
         if (Object.keys(patch).length > 0) {
           updateVenueLocal(finalVenue.id, patch);
           void updateVenueDb(finalVenue.id, {
-            category: activeCategory.category,
-            icon: activeCategory.icon,
+            category: patch.food_category ?? activeCategory.category,
+            icon: patch.icon ?? activeCategory.icon,
           });
         }
       }
@@ -463,16 +553,47 @@ export function CreateFoodPostModal() {
         const uploaded = await uploadPromiseRef.current;
         image = uploaded ?? uploadedUrl ?? image;
       }
-      const finalImage =
-        image ||
-        fallbackPhoto ||
-        (google?.photos?.[0] ? photoProxy(google.photos[0]) : "") ||
-        finalVenue.cover_image_url ||
-        getCulinaryImageForDish(dishName, finalVenue.food_category);
+      let finalImage = image || fallbackPhoto;
+
+      // If user hasn't uploaded or picked a photo, auto-fetch from Google Places
+      if (!finalImage) {
+        if (listingPhotos.length > 0) {
+          finalImage = photoProxy(listingPhotos[0]);
+        } else if (google?.photos?.[0]) {
+          finalImage = photoProxy(google.photos[0]);
+        } else {
+          try {
+            const placeId = google?.place_id || finalVenue.google_place_id;
+            let photoRef: string | null = null;
+            if (placeId) {
+              const res = await fetch(`/api/places/details?place_id=${encodeURIComponent(placeId)}`);
+              const data = (await res.json()) as { place?: { photos?: string[] } };
+              photoRef = data.place?.photos?.[0] ?? null;
+            }
+            if (!photoRef) {
+              const q = `${finalVenue.name} ${finalVenue.address || "Oslo"}`;
+              const res = await fetch(`/api/places/search?q=${encodeURIComponent(q)}`);
+              const data = (await res.json()) as { place?: { photos?: string[] }; results?: { photos?: string[] }[] };
+              photoRef = data.place?.photos?.[0] ?? data.results?.[0]?.photos?.[0] ?? null;
+            }
+            if (photoRef) {
+              finalImage = photoProxy(photoRef);
+            }
+          } catch {
+            // Keep fallback
+          }
+        }
+      }
+
+      if (!finalImage) {
+        finalImage =
+          finalVenue.cover_image_url ||
+          getCulinaryImageForDish(dishName, activeCategory.category);
+      }
 
       // 3) Persist the dish.
       const numericPrice =
-        Number(priceNok) || getRealisticPrice(dishName, finalVenue.food_category);
+        Number(priceNok) || getRealisticPrice(dishName, activeCategory.category);
       const insert = await insertFoodPost({
         venueId: finalVenue.id,
         authorId: userId,
@@ -481,7 +602,7 @@ export function CreateFoodPostModal() {
         reviewText: reviewText.trim(),
         priceNok: numericPrice,
         rating: 0,
-        dietaryTags: [],
+        dietaryTags: [`cat_${activeCategory.category}`],
         isOfficialPick: false,
         vibe: vibe ?? undefined,
         dinerQuotes: [],
@@ -750,10 +871,6 @@ export function CreateFoodPostModal() {
                   >
                     Change spot
                   </button>
-
-                  <div className="mt-4 pt-4 border-t border-[#efe7da]">
-                    <CategoryIconRow value={categoryKey} onChange={setCategoryKey} />
-                  </div>
                 </div>
               )}
             </div>
@@ -1118,7 +1235,7 @@ function CategoryIconRow({
   return (
     <div>
       <label className="block text-xs font-bold text-[#221e19] mb-1.5">
-        Category &amp; icon
+        Food item category &amp; icon
       </label>
       <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 pb-1">
         {CATEGORY_ICONS.map((c) => {
@@ -1148,7 +1265,7 @@ function CategoryIconRow({
 function FlashNote() {
   return (
     <p className="text-center text-[11px] text-[#a89d8c] leading-relaxed">
-      No photo? That's fine — pick the Google listing shot above, or we'll match a Smakr photo.
+      No photo? That's fine — we'll automatically attach a photo from Google Places.
     </p>
   );
 }

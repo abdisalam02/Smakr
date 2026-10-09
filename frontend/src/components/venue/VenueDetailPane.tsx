@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import {
   ArrowLeft,
@@ -17,11 +17,12 @@ import {
   Clock,
   Heart,
 } from "lucide-react";
-import { Neighborhood, Venue } from "@/types";
+import { FoodPost, Neighborhood, Venue } from "@/types";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { useVenueDetail } from "@/hooks/useVenueDetail";
 import { DietaryBadge } from "@/components/ui/DietaryBadge";
 import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
+import { DishDetailPopup } from "@/components/food/DishDetailPopup";
 
 const NEIGHBORHOOD_LABELS: Record<Neighborhood, string> = {
   all: "Oslo",
@@ -81,7 +82,7 @@ function ReactionButton({
   label,
 }: {
   active: boolean;
-  onClick: () => void;
+  onClick: (e: React.MouseEvent) => void;
   activeClass: string;
   icon: React.ComponentType<{ className?: string }>;
   label: string;
@@ -102,6 +103,7 @@ function ReactionButton({
 }
 
 export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
+  const [selectedDish, setSelectedDish] = useState<FoodPost | null>(null);
   const openCreateDish = useCityPulseStore((state) => state.openCreateDish);
   const showToast = useCityPulseStore((state) => state.showToast);
 
@@ -395,7 +397,8 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
               return (
                 <div
                   key={dish.id}
-                  className="p-3 rounded-2xl bg-[var(--surface)] border border-[var(--surface-border)] shadow-xs flex gap-3"
+                  onClick={() => setSelectedDish(dish)}
+                  className="p-3 rounded-2xl bg-[var(--surface)] border border-[var(--surface-border)] shadow-xs flex gap-3 cursor-pointer hover:border-[#e84a27]/30 transition-all hover:shadow-sm"
                 >
                   <div className="relative w-24 h-24 rounded-xl overflow-hidden bg-zinc-200 shrink-0 border border-[var(--surface-border)]">
                     <Image
@@ -444,21 +447,30 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
                     <div className="mt-auto pt-2 flex items-center gap-1.5">
                       <ReactionButton
                         active={activeReaction === "craving"}
-                        onClick={() => handleReaction(dish.id, "craving")}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleReaction(dish.id, "craving");
+                        }}
                         activeClass="bg-[#e84a27] text-white border-[#e84a27]"
                         icon={Flame}
                         label="Craving"
                       />
                       <ReactionButton
                         active={activeReaction === "must_try"}
-                        onClick={() => handleReaction(dish.id, "must_try")}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleReaction(dish.id, "must_try");
+                        }}
                         activeClass="bg-amber-500 text-white border-amber-500"
                         icon={Star}
                         label="Must Try"
                       />
                       <ReactionButton
                         active={activeReaction === "ate_here"}
-                        onClick={() => handleReaction(dish.id, "ate_here")}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleReaction(dish.id, "ate_here");
+                        }}
                         activeClass="bg-emerald-600 text-white border-emerald-600"
                         icon={CheckCircle2}
                         label="Tried"
@@ -466,7 +478,10 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
 
                       <div className="ml-auto flex items-center gap-1">
                         <button
-                          onClick={() => toggleLikePost(dish.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleLikePost(dish.id);
+                          }}
                           className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-semibold transition-all active:scale-95 ${
                             isLiked
                               ? "bg-[#e84a27] text-white border-[#e84a27]"
@@ -480,7 +495,10 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
                           <span className="font-mono">{dish.likes_count}</span>
                         </button>
                         <button
-                          onClick={() => toggleSavePost(dish.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleSavePost(dish.id);
+                          }}
                           className={`p-1.5 rounded-lg border transition-all ${
                             isSaved
                               ? "bg-zinc-900 text-white border-zinc-900"
@@ -512,6 +530,16 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
           <span>Open in Google Maps</span>
         </a>
       </div>
+
+      {/* Dish Detail Popup */}
+      <DishDetailPopup
+        dish={selectedDish}
+        venue={venue}
+        isOpen={Boolean(selectedDish)}
+        onClose={() => setSelectedDish(null)}
+        activeReaction={selectedDish ? reactions[selectedDish.id] : null}
+        onReaction={handleReaction}
+      />
     </div>
   );
 }

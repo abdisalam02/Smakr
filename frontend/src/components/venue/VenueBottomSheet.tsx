@@ -17,7 +17,8 @@ import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { motion, AnimatePresence } from "motion/react";
 import { useVenueDetail } from "@/hooks/useVenueDetail";
 import { formatDistance } from "@/lib/math";
-import { ReviewItem } from "@/types";
+import { FoodPost, ReviewItem } from "@/types";
+import { DishDetailPopup } from "@/components/food/DishDetailPopup";
 
 /**
  * True on desktop (lg and above), where the in-place VenueDetailPane takes
@@ -72,6 +73,7 @@ export function VenueBottomSheet() {
     googleMapsUrl,
   } = useVenueDetail(selectedVenue);
 
+  const [selectedDish, setSelectedDish] = useState<FoodPost | null>(null);
   const [showAllReviews, setShowAllReviews] = useState(false);
 
   // Reviews: curated venue reviews, diner quotes, or post reviews
@@ -457,7 +459,8 @@ export function VenueBottomSheet() {
                     return (
                       <div
                         key={dish.id}
-                        className="p-3.5 rounded-2xl bg-white border border-zinc-200/80 shadow-xs flex flex-col sm:flex-row gap-3.5"
+                        onClick={() => setSelectedDish(dish)}
+                        className="p-3.5 rounded-2xl bg-white border border-zinc-200/80 shadow-xs flex flex-col sm:flex-row gap-3.5 cursor-pointer hover:border-[#e84a27]/30 transition-all hover:shadow-sm"
                       >
                         {/* Dish Photo */}
                         <div className="relative w-full sm:w-28 h-32 sm:h-28 rounded-xl overflow-hidden bg-zinc-100 shrink-0 border border-zinc-100">
@@ -510,7 +513,10 @@ export function VenueBottomSheet() {
                           <div className="pt-2 mt-2 border-t border-zinc-100 flex items-center justify-between gap-1.5 text-[10px]">
                             <div className="flex items-center gap-1">
                               <button
-                                onClick={() => handleReaction(dish.id, "craving")}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleReaction(dish.id, "craving");
+                                }}
                                 className={`flex items-center gap-1 px-2 py-1 rounded-lg border font-semibold transition-all ${
                                   activeReaction === "craving"
                                     ? "bg-[#e84a27] text-white border-[#e84a27]"
@@ -522,7 +528,10 @@ export function VenueBottomSheet() {
                               </button>
 
                               <button
-                                onClick={() => handleReaction(dish.id, "must_try")}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleReaction(dish.id, "must_try");
+                                }}
                                 className={`flex items-center gap-1 px-2 py-1 rounded-lg border font-semibold transition-all ${
                                   activeReaction === "must_try"
                                     ? "bg-amber-500 text-white border-amber-500"
@@ -534,7 +543,10 @@ export function VenueBottomSheet() {
                               </button>
 
                               <button
-                                onClick={() => handleReaction(dish.id, "ate_here")}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleReaction(dish.id, "ate_here");
+                                }}
                                 className={`flex items-center gap-1 px-2 py-1 rounded-lg border font-semibold transition-all ${
                                   activeReaction === "ate_here"
                                     ? "bg-emerald-600 text-white border-emerald-600"
@@ -547,7 +559,10 @@ export function VenueBottomSheet() {
                             </div>
 
                             <button
-                              onClick={() => toggleSavePost(dish.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleSavePost(dish.id);
+                              }}
                               className={`p-1.5 rounded-lg border transition-all ${
                                 isSaved
                                   ? "bg-zinc-900 text-white border-zinc-900"
@@ -643,6 +658,15 @@ export function VenueBottomSheet() {
         </div>
       )}
     </AnimatePresence>
+
+    <DishDetailPopup
+      dish={selectedDish}
+      venue={selectedVenue}
+      isOpen={Boolean(selectedDish)}
+      onClose={() => setSelectedDish(null)}
+      activeReaction={selectedDish ? reactions[selectedDish.id] : null}
+      onReaction={handleReaction}
+    />
   </>
   );
 }

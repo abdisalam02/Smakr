@@ -14,6 +14,8 @@ import {
   SushiIcon,
   DessertIcon,
   DrinksIcon,
+  MatchaIcon,
+  PastaIcon,
 } from "@/components/food/FoodIcons";
 
 const CATEGORY_ICON_MAP: Record<
@@ -30,6 +32,8 @@ const CATEGORY_ICON_MAP: Record<
   sushi: SushiIcon,
   dessert: DessertIcon,
   drinks: DrinksIcon,
+  matcha: MatchaIcon,
+  pasta: PastaIcon,
 };
 
 type Pill =
@@ -44,8 +48,10 @@ type Pill =
 const PILLS: Pill[] = [
   { kind: "category", id: "all", label: "All" },
   { kind: "category", id: "coffee", label: "Coffee & Drinks" },
+  { kind: "category", id: "matcha", label: "Matcha" },
   { kind: "category", id: "bakery", label: "Bakeries" },
   { kind: "category", id: "ramen", label: "Ramen" },
+  { kind: "category", id: "pasta", label: "Pasta" },
   { kind: "category", id: "burger", label: "Burgers" },
   { kind: "dietary", id: "vegan", label: "Vegan", emoji: "🌱" },
   { kind: "dietary", id: "halal", label: "Halal", emoji: "" },

@@ -15,6 +15,8 @@ import {
   SushiIcon,
   DessertIcon,
   DrinksIcon,
+  MatchaIcon,
+  PastaIcon,
 } from "./FoodIcons";
 
 interface FoodCategoryBarProps {
@@ -32,6 +34,8 @@ const CATEGORY_ICON_MAP: Record<FoodCategory, React.ComponentType<{ className?: 
   sushi: SushiIcon,
   dessert: DessertIcon,
   drinks: DrinksIcon,
+  matcha: MatchaIcon,
+  pasta: PastaIcon,
 };
 
 export function FoodCategoryBar({ compact = false }: FoodCategoryBarProps) {

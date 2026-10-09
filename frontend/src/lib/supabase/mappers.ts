@@ -79,6 +79,7 @@ export interface FoodPostRow {
   saves_count?: number | null;
   diner_quotes?: unknown;
   created_at?: string | null;
+  category?: string | null;
   venue?: VenueRow | null;
   author?: ProfileLite | null;
 }
@@ -102,6 +103,8 @@ const NEIGHBORHOODS: Neighborhood[] = [
 export function mapCategory(raw?: string | null): FoodCategory {
   const key = (raw ?? "").toLowerCase().replace(/[^a-z]/g, "");
   if (!key) return "all";
+  if (key.includes("matcha") || key.includes("hojicha")) return "matcha";
+  if (key.includes("pasta") || key.includes("spaghetti") || key.includes("italian")) return "pasta";
   if (key.includes("ramen") || key.includes("noodle") || key.includes("asian")) return "ramen";
   if (key.includes("burger") || key.includes("smash")) return "burger";
   if (key.includes("pizza")) return "pizza";
@@ -109,7 +112,7 @@ export function mapCategory(raw?: string | null): FoodCategory {
     return "bakery";
   if (key.includes("dessert") || key.includes("sweet") || key.includes("gelato") || key.includes("icecream"))
     return "dessert";
-  if (key.includes("coffee") || key.includes("cafe") || key.includes("tea")) return "coffee";
+  if (key.includes("coffee") || key.includes("cafe") || key.includes("tea") || key.includes("brew") || key.includes("espresso")) return "coffee";
   if (key.includes("street") || key.includes("viet") || key.includes("taco") || key.includes("banh"))
     return "street_food";
   if (key.includes("sushi") || key.includes("seafood") || key.includes("fish") || key.includes("raw"))
@@ -257,7 +260,14 @@ export function mapFoodPostRow(row: FoodPostRow): FoodPost {
       : "Oslo",
     spot_coords: [lng, lat],
     dish_name: row.dish_name ?? "Untitled dish",
-    category: mapCategory(venue?.category),
+    category: (() => {
+      if (row.category) return mapCategory(row.category);
+      const catTag = row.dietary_tags?.find((t) => t.startsWith("cat_"));
+      if (catTag) return mapCategory(catTag.slice(4));
+      const inferredFromDish = mapCategory(row.dish_name);
+      if (inferredFromDish !== "all") return inferredFromDish;
+      return mapCategory(venue?.category);
+    })(),
     image_url: row.dish_image ?? "",
     price_nok: row.price_nok ?? 0,
     rating: Number(row.rating ?? 0),

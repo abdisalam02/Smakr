@@ -177,11 +177,41 @@ export function DrinksIcon({ className = "w-4 h-4" }: IconProps) {
   );
 }
 
+// 11. Matcha & Ceremonial Tea (Chawan bowl with whisked emerald froth)
+export function MatchaIcon({ className = "w-4 h-4" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M4 10C4 16 7.5 19.5 12 19.5C16.5 19.5 20 16 20 10H4Z" fill="#1c1917" stroke="#0c0a09" strokeWidth="1.4" />
+      <ellipse cx="12" cy="10" rx="8" ry="2.2" fill="#10b981" />
+      <ellipse cx="11.5" cy="9.8" rx="5.5" ry="1.4" fill="#34d399" />
+      <circle cx="10" cy="9.8" r="0.8" fill="#a7f3d0" />
+      <circle cx="13" cy="9.8" r="0.6" fill="#a7f3d0" />
+      <path d="M15 4L13 8.5" stroke="#d97706" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// 12. Handmade Pasta & Italian (Golden twirled spaghetti in pomodoro)
+export function PastaIcon({ className = "w-4 h-4" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M3 12C3 17 7 20 12 20C17 20 21 17 21 12H3Z" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1.4" />
+      <ellipse cx="12" cy="11.5" rx="8" ry="2.5" fill="#fef08a" />
+      <path d="M6 11.5C8 9.5 11 13 13 10C15 12.5 17 10 18 11.5" stroke="#f59e0b" strokeWidth="1.8" strokeLinecap="round" />
+      <circle cx="12" cy="10.5" r="2.2" fill="#ef4444" />
+      <path d="M13 9C14 7.5 15.5 8 15 9.5Z" fill="#16a34a" />
+      <path d="M11 2V7M12.5 2V7M14 2V7M12.5 7V10" stroke="#64748b" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 // Helper dictionary of raw SVG strings for MapLibre map pins
 export const FOOD_PIN_SVG_MAP: Record<string, string> = {
   all: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><circle cx="12" cy="12" r="10" fill="#ffedd5" stroke="#e84a27" stroke-width="1.5"/><path d="M12 6L13.5 10.5L18 12L13.5 13.5L12 18L10.5 13.5L6 12L10.5 10.5L12 6Z" fill="#e84a27"/></svg>`,
   bakery: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M4 14C3 10.5 5.5 6.5 12 6.5C18.5 6.5 21 10.5 20 14C19.5 16 17 17.5 15 16C13.5 15 13 13.5 12 13.5C11 13.5 10.5 15 9 16C7 17.5 4.5 16 4 14Z" fill="#fbbf24" stroke="#b45309" stroke-width="1.4"/><path d="M8 8.5C9 10 10.5 11 12 11C13.5 11 15 10 16 8.5" stroke="#d97706" stroke-width="1.3"/></svg>`,
   coffee: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M5 8H17V15C17 17.8 14.8 20 12 20C9.2 20 7 17.8 7 15V8H5Z" fill="#78350f" stroke="#451a03" stroke-width="1.4"/><path d="M5 8H17V11H5V8Z" fill="#ffedd5"/><path d="M17 9H19.5C20.6 9 21.5 9.9 21.5 11C21.5 12.1 20.6 13 19.5 13H17" stroke="#451a03" stroke-width="1.4"/></svg>`,
+  matcha: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M4 10C4 16 7.5 19.5 12 19.5C16.5 19.5 20 16 20 10H4Z" fill="#1c1917" stroke="#0c0a09" stroke-width="1.4"/><ellipse cx="12" cy="10" rx="8" ry="2.2" fill="#10b981"/><ellipse cx="11.5" cy="9.8" rx="5.5" ry="1.4" fill="#34d399"/><circle cx="10" cy="9.8" r="0.8" fill="#a7f3d0"/><path d="M15 4L13 8.5" stroke="#d97706" stroke-width="1.3"/></svg>`,
+  pasta: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M3 12C3 17 7 20 12 20C17 20 21 17 21 12H3Z" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.4"/><ellipse cx="12" cy="11.5" rx="8" ry="2.5" fill="#fef08a"/><path d="M6 11.5C8 9.5 11 13 13 10C15 12.5 17 10 18 11.5" stroke="#f59e0b" stroke-width="1.8"/><circle cx="12" cy="10.5" r="2" fill="#ef4444"/><path d="M13 9C14 7.5 15.5 8 15 9.5Z" fill="#16a34a"/></svg>`,
   ramen: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M3 11C3 16.5 7 20 12 20C17 20 21 16.5 21 11H3Z" fill="#ef4444" stroke="#991b1b" stroke-width="1.4"/><ellipse cx="12" cy="11" rx="9" ry="2.2" fill="#fbbf24"/><circle cx="9" cy="11" r="1.5" fill="#f97316"/><rect x="14" y="8" width="3" height="4.5" rx="0.5" fill="#18181b"/><path d="M2 4L18 9" stroke="#78350f" stroke-width="1.3"/></svg>`,
   burger: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M4 11C4 7 7.5 4.5 12 4.5C16.5 4.5 20 7 20 11H4Z" fill="#f59e0b" stroke="#b45309" stroke-width="1.4"/><circle cx="12" cy="7" r="0.8" fill="#fff"/><path d="M3.5 12.5C7 11.5 11 13.5 15 12.5C18 11.5 20.5 12.5 20.5 12.5" stroke="#22c55e" stroke-width="1.6"/><path d="M4 14L8 14L10 16L12 14L20 14" fill="#fbbf24"/><rect x="4" y="14.5" width="16" height="2.5" rx="1.2" fill="#78350f"/><path d="M5 17.5H19C19 19.5 16.5 20.5 12 20.5C7.5 20.5 5 19.5 5 17.5Z" fill="#f59e0b" stroke="#b45309" stroke-width="1.4"/></svg>`,
   pizza: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M12 2.5L3 19C7 21.5 17 21.5 21 19L12 2.5Z" fill="#fef08a" stroke="#b45309" stroke-width="1.4"/><path d="M3 19C7 21.5 17 21.5 21 19" stroke="#b45309" stroke-width="2.5"/><circle cx="12" cy="11" r="1.8" fill="#ef4444"/><circle cx="9" cy="15.5" r="1.5" fill="#ef4444"/><circle cx="15" cy="15.5" r="1.5" fill="#ef4444"/></svg>`,

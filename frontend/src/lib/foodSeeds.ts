@@ -2,8 +2,10 @@ import { FoodCategoryDef, FoodPost, Venue } from "@/types";
 
 export const FOOD_CATEGORIES: FoodCategoryDef[] = [
   { id: "all", label: "All", emoji: "✨", shortDesc: "All spots in Oslo" },
-  { id: "coffee", label: "Coffee & Drinks", emoji: "☕", shortDesc: "Vietnamese coconut brew & pour-overs" },
+  { id: "coffee", label: "Specialty Coffee", emoji: "☕", shortDesc: "Pour-overs, espresso & brews" },
+  { id: "matcha", label: "Matcha & Tea", emoji: "🍵", shortDesc: "Ceremonial matcha, hojicha & milk teas" },
   { id: "bakery", label: "Bakery", emoji: "🥐", shortDesc: "Cardamom buns & sourdough" },
+  { id: "pasta", label: "Pasta", emoji: "🍝", shortDesc: "Handmade pasta & classic Italian" },
   { id: "ramen", label: "Ramen", emoji: "🍜", shortDesc: "Rich broth & noodles" },
   { id: "burger", label: "Burgers", emoji: "🍔", shortDesc: "Smash burgers & fries" },
   { id: "pizza", label: "Pizza", emoji: "🍕", shortDesc: "Wood-fired sourdough crusts" },

@@ -10,6 +10,8 @@ export type FoodCategory =
   | "ramen"
   | "pizza"
   | "coffee"
+  | "matcha"
+  | "pasta"
   | "street_food"
   | "sushi"
   | "dessert"

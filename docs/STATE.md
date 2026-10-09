@@ -74,4 +74,10 @@
 - Instant sign-out: Header uses storeUser once hydrated, immediately showing Sign In without page refresh.
 - Mascot unified: admin avatar is strictly the Smakr mascot across header, map puck, and dish posts; foodie Customize Profile hidden for admins.
 - Mascot persistence: Mascot Studio saves immediately to profiles.mascot_config and clears avatar_url; hydrated across SSR and sign-in.
-- Avatar puck scaling: sized up base mascot to 48x56px and calibrated zoom curve to scale up slightly (0.95x-1.18x) when zooming out.
+- Avatar puck calibrated to 36x42px with overflow clipping and progressive 0.68x-1.0x scale (compact overview, crisp street view).
+- Restored original Plus and Minus zoom pill in the top-right cluster under Find me.
+- Rebuilt MapZoomTrackpad as a sleek glass bar rectangle positioned right above the closed bottom sheet for laptop-style scrolling.
+- Disabled map zoom trackpad per request; original +/- controls retained.
+- Added food category selector to Admin Control Centre for both dishes and venues.
+- Live spots classified in Supabase (Ochaya to Matcha, Em Oi to Street Food, Digg Pizza to Pizza).
+- Log-a-dish automatically pulls and attaches Google Places photos when no custom image is selected.
