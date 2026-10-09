@@ -10,6 +10,7 @@ import { FoodSpotCard } from "@/components/food/FoodSpotCard";
 import { FoodViewSlider } from "@/components/food/FoodViewSlider";
 import dynamic from "next/dynamic";
 import { VenueBottomSheet } from "@/components/venue/VenueBottomSheet";
+import { LocationPrompt } from "@/components/location/LocationPrompt";
 import { VenueDetailPane } from "@/components/venue/VenueDetailPane";
 import { QuickCheckInModal } from "@/components/checkin/QuickCheckInModal";
 import { SpeedTestWidget } from "@/components/checkin/SpeedTestWidget";
@@ -455,6 +456,8 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
 
   return (
     <div className="relative flex-1 w-full h-screen h-[100dvh] min-h-[100dvh] max-h-[100dvh] overflow-hidden bg-zinc-100">
+      {/* Ask for location when we don't have a fix yet (map-wide). */}
+      <LocationPrompt />
       {/* ========================================================================= */}
       {/* DESKTOP SPLIT VIEW (Visible on lg screens) */}
       {/* ========================================================================= */}

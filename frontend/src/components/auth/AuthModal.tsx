@@ -20,7 +20,7 @@ import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/c
 
 const ADMIN_HANDLE = "@smakr_oslo";
 const GOOGLE_DISABLED_MESSAGE =
-  "Google login is currently disabled in Supabase. Please use email sign-in for the beta.";
+  "Google sign-in isn't switched on yet. Enable the Google provider in Supabase (Authentication → Providers), or use email sign-in for the beta.";
 
 type AuthTab = "signin" | "signup";
 type BusyState = null | "google" | "signin" | "signup" | "magic";
@@ -118,8 +118,11 @@ export function AuthModal() {
     const m = (message || "").toLowerCase();
     return (
       code === "provider_disabled" ||
+      code === "validation_failed" ||
       m.includes("provider_disabled") ||
       m.includes("unsupported provider") ||
+      m.includes("provider is not enabled") ||
+      m.includes("not enabled") ||
       (m.includes("provider") && (m.includes("disabled") || m.includes("enabled")))
     );
   };
@@ -136,11 +139,12 @@ export function AuthModal() {
     // On success the browser is redirected to Google, so we only reset on error.
     setBusy(null);
     if (error) {
-      setError(
-        isGoogleDisabledError(error.message, (error as { code?: string }).code)
-          ? GOOGLE_DISABLED_MESSAGE
-          : error.message
+      const disabled = isGoogleDisabledError(
+        error.message,
+        (error as { code?: string }).code
       );
+      if (!disabled) console.warn("[auth] Google sign-in failed:", error.message);
+      setError(disabled ? GOOGLE_DISABLED_MESSAGE : friendlyAuthError(error.message));
     }
   };
 

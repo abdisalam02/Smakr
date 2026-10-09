@@ -3,7 +3,17 @@
 import { useState, useCallback } from "react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 
-const FALLBACK_COORDS = { lat: 59.9171, lon: 10.7516 }; // Oslo Sentrum
+/**
+ * Two-stage geolocation:
+ *   1) a fast, coarse (network / Wi-Fi) fix — resolves in about a second and
+ *      flies the camera straight away;
+ *   2) a background high-accuracy GPS fix that only nudges the puck, never
+ *      re-flies the camera.
+ *
+ * It never *invents* a location: if the browser blocks or fails geolocation we
+ * leave `userLocation` null (the LocationPrompt asks for permission instead)
+ * rather than dropping a fake "You're here" puck on top of the Smakr Pick.
+ */
 
 export function useGeolocation() {
   const setUserLocation = useCityPulseStore((state) => state.setUserLocation);
@@ -17,40 +27,30 @@ export function useGeolocation() {
     setLoading(true);
     setError(null);
 
-    const store = useCityPulseStore.getState();
-
-    // Dismiss active venue card so the map cleanly focuses on the user puck
-    if (store.selectedVenue) {
-      store.setSelectedVenue(null);
+    // Dismiss an active venue card so the puck becomes the focus.
+    if (useCityPulseStore.getState().selectedVenue) {
+      useCityPulseStore.getState().setSelectedVenue(null);
     }
 
     const place = (lat: number, lon: number, recenter: boolean) => {
-      const coords = { lat, lon };
       const current = useCityPulseStore.getState().userLocation;
-      setUserLocation(coords);
-
-      if (recenter) {
-        // Only trigger camera fly if location is new or moved significantly (> 25m)
-        const movedSignificantly =
-          !current ||
-          Math.abs(current.lat - lat) > 0.00025 ||
-          Math.abs(current.lon - lon) > 0.00025;
-
-        if (movedSignificantly) {
-          setMapCenter([coords.lon, coords.lat], 15.5);
-          setMobileSheetState("peek");
-        }
-        setLoading(false);
+      setUserLocation({ lat, lon });
+      if (!recenter) return;
+      // Only fly when the fix is new or meaningfully different (> ~25m).
+      const moved =
+        !current ||
+        Math.abs(current.lat - lat) > 0.00025 ||
+        Math.abs(current.lon - lon) > 0.00025;
+      if (moved) {
+        setMapCenter([lon, lat], 15.5);
+        setMobileSheetState("peek");
       }
     };
 
     if (typeof window === "undefined" || !navigator.geolocation) {
       setError("Geolocation is not supported by your browser.");
-      if (!useCityPulseStore.getState().userLocation) {
-        place(FALLBACK_COORDS.lat, FALLBACK_COORDS.lon, true);
-      }
-      showToast("📍 Geolocation is not supported by your browser.", 4500);
       setLoading(false);
+      showToast("📍 This browser can't share your location.", 4500);
       return;
     }
 
@@ -59,55 +59,55 @@ export function useGeolocation() {
       window.location.hostname !== "localhost" &&
       window.location.hostname !== "127.0.0.1";
 
-    const onError = (err: GeolocationPositionError) => {
-      console.warn("Geolocation request failed or blocked:", err.message);
+    const fail = (err: GeolocationPositionError) => {
+      console.warn("Geolocation failed or blocked:", err.message);
       setError(err.message);
       setLoading(false);
 
+      // If we already have a fix, just re-centre on it — never jump elsewhere.
       const currentLoc = useCityPulseStore.getState().userLocation;
-      if (!currentLoc) {
-        // Default to Torggata / Youngstorget so the puck is on the map.
-        place(FALLBACK_COORDS.lat, FALLBACK_COORDS.lon, true);
-      } else {
+      if (currentLoc) {
         setMapCenter([currentLoc.lon, currentLoc.lat], 15.5);
         setMobileSheetState("peek");
       }
 
-      if (isHttpMobile) {
+      if (err.code === err.PERMISSION_DENIED) {
         showToast(
-          "📍 Mobile browsers require HTTPS for GPS over Wi-Fi.",
-          5000
+          "📍 Location is blocked — allow it for this site in your browser settings to see spots near you.",
+          6000
         );
+      } else if (isHttpMobile) {
+        showToast("📍 Mobile browsers need HTTPS for GPS over Wi-Fi.", 5000);
       } else {
-        showToast(
-          "📍 GPS unavailable or permission denied.",
-          4500
-        );
+        showToast("📍 Couldn't get your location — check that GPS is switched on.", 4500);
       }
     };
 
-    // Use high accuracy directly so it resolves the user's actual GPS / Wi-Fi position
-    // instead of coarse ISP routing nodes.
+    // Stage 1 — fast coarse fix (network / Wi-Fi), usually well under a second.
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const { latitude, longitude } = position.coords;
-        place(latitude, longitude, true);
+        place(position.coords.latitude, position.coords.longitude, true);
+        setLoading(false);
+
+        // Stage 2 — refine in the background; nudges the puck only.
+        navigator.geolocation.getCurrentPosition(
+          (refined) => place(refined.coords.latitude, refined.coords.longitude, false),
+          () => {},
+          { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+        );
       },
-      (geoErr) => {
-        // If high-accuracy timed out, fall back to coarse network lookup
-        if (geoErr.code === geoErr.TIMEOUT) {
-          navigator.geolocation.getCurrentPosition(
-            (fallbackPos) => {
-              place(fallbackPos.coords.latitude, fallbackPos.coords.longitude, true);
-            },
-            onError,
-            { enableHighAccuracy: false, timeout: 6000, maximumAge: 30000 }
-          );
-        } else {
-          onError(geoErr);
-        }
+      () => {
+        // Coarse fix failed → attempt a single high-accuracy fix before failing.
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            place(position.coords.latitude, position.coords.longitude, true);
+            setLoading(false);
+          },
+          fail,
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
       },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 10000 }
+      { enableHighAccuracy: false, maximumAge: 60000, timeout: 5000 }
     );
   }, [setUserLocation, setMapCenter, setMobileSheetState, showToast]);
 

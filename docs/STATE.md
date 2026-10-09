@@ -63,3 +63,6 @@
 - Auth errors: Supabase's generic 500 on signup now maps to a friendly message; the "confirmation required" notice is clearer (mentions spam + the next avatar step).
 - Dish photos: `uploadDishPhoto()` is now a shared data-layer helper (used by both Log-a-Dish and the admin Edit-Dish drawer). The Google photo picker no longer caps at 4 — it shows the whole listing (up to 10) with "Load more photos" and pulls extra curated dish shots from the existing `/api/places/dish` endpoint. Admin Edit Dish gained a "Change photo" block: upload straight to the `dish-photos` bucket, or load the venue's Google photos and tap one.
 - Migration `20261014` also ensures the `dish-photos` storage bucket + owner-scoped upload/read policies exist.
+- Geolocation: restored + hardened the two-stage fix (fast coarse recenter, then a silent high-accuracy refine). Removed the fake Sentrum fallback that made the locate button fly to the Smakr Pick marker — a failed/blocked fix now leaves `userLocation` null instead of inventing a position.
+- New `LocationPrompt` (mounted in `HomeView`) watches the browser permission state, fires the native permission popup once on first load, and shows an actionable "allow it, then Retry" card when location is blocked.
+- Map controls: "Locate me" is now a brand-coloured labelled pill ("Find me") instead of a small white square, so it's easy to spot.
