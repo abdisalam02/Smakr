@@ -129,15 +129,15 @@ function buildUserAvatarPuckElement(
     }
   };
 
-  if (avatarUrl) {
+  if (useMascot) {
+    // Admins / official accounts use the Smakr mascot — matching the header avatar.
+    renderSvgInto(buildMascotSVGString(mascotConfig ?? undefined, false, 36, 44));
+  } else if (avatarUrl) {
     const img = document.createElement("img");
     img.src = avatarUrl;
     img.alt = "You";
     img.className = "w-full h-full object-contain block pointer-events-none";
     charContainer.appendChild(img);
-  } else if (useMascot) {
-    // Admins / official accounts use the Smakr mascot — matching the header avatar.
-    renderSvgInto(buildMascotSVGString(mascotConfig ?? undefined, false, 36, 44));
   } else if (avatarConfig) {
     // Signed-in user with an Open Peeps avatar.
     renderSvgInto(buildOpenPeepsSvg(avatarConfig));
@@ -849,7 +849,9 @@ export function MapRadarView() {
 
     const isNiwacheOrAdmin =
       currentUser?.role === "admin" ||
-      (currentUser?.handle || "").toLowerCase().includes("niwache");
+      Boolean(currentUser?.is_official) ||
+      (currentUser?.handle || "").toLowerCase().includes("niwache") ||
+      (currentUser?.handle || "").toLowerCase().includes("smak");
     const avatarSig = `${currentUser?.avatar_url || ""}:${currentUser?.role || ""}:${JSON.stringify(currentUser?.avatar_config || {})}:${JSON.stringify(mascotConfig || {})}`;
 
     // If marker already exists and avatar identity has not changed, just update position smoothly
@@ -868,7 +870,7 @@ export function MapRadarView() {
       currentUser?.avatar_url,
       currentUser?.avatar_config,
       mascotConfig,
-      !currentUser?.avatar_url && isNiwacheOrAdmin
+      Boolean(isNiwacheOrAdmin)
     );
     applyPuckZoomScale(el, map.getZoom());
 

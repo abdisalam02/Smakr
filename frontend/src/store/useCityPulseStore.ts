@@ -29,6 +29,12 @@ import { persistMascotConfig } from "@/lib/supabase/data";
 
 /* Debounced, best-effort sync of the mascot config to the signed-in profile. */
 let mascotPersistTimer: ReturnType<typeof setTimeout> | null = null;
+export function cancelMascotPersist() {
+  if (mascotPersistTimer) {
+    clearTimeout(mascotPersistTimer);
+    mascotPersistTimer = null;
+  }
+}
 function scheduleMascotPersist(userId: string, config: MascotConfig) {
   if (typeof window === "undefined") return;
   if (mascotPersistTimer) clearTimeout(mascotPersistTimer);
@@ -443,12 +449,19 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
   setCurrentUser: (user) => set({ currentUser: user, isAuthModalOpen: false }),
 
   logout: () => {
+    cancelMascotPersist();
     if (typeof window !== "undefined") {
       try {
         localStorage.removeItem("smakr_app_cache_v1");
+        localStorage.removeItem(MASCOT_STORAGE_KEY);
       } catch {}
     }
-    set({ currentUser: null, isAuthResolved: true, profileResolved: true });
+    set({
+      currentUser: null,
+      mascotConfig: DEFAULT_MASCOT_CONFIG,
+      isAuthResolved: true,
+      profileResolved: true,
+    });
   },
 
   setWeeklyPick: (pick) => {

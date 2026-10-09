@@ -1,4 +1,5 @@
 import type { OnboardingAvatarConfig } from "./onboarding";
+import type { MascotConfig } from "./mascot";
 
 export type VibeStatus = "optimal" | "moderate" | "packed";
 
@@ -50,6 +51,8 @@ export interface UserProfile {
   avatar_url?: string;
   /** Onboarding avatar levers persisted to `public.profiles.avatar_config`. */
   avatar_config?: OnboardingAvatarConfig | null;
+  /** Custom mascot configuration persisted to `public.profiles.mascot_config`. */
+  mascot_config?: MascotConfig | null;
   /** Whether the 15-second onboarding flow has been completed. */
   onboarding_completed?: boolean;
   badge?: "Verified Foodie" | "Chef" | "Local Guide" | "Top Taster";

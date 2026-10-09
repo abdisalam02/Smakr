@@ -72,3 +72,5 @@
 - Category auto-fit guarded on actual category filter changes: never overrides geolocation camera flights on mount or store data updates.
 - Avatar puck centering: calibrated locate padding to keep the user avatar in the viewport center above the peek sheet with smooth zoom scaling.
 - Instant sign-out: Header uses storeUser once hydrated, immediately showing Sign In without page refresh.
+- Mascot unified: admin avatar is strictly the Smakr mascot across header, map puck, and dish posts; foodie Customize Profile hidden for admins.
+- Mascot persistence: Mascot Studio saves immediately to profiles.mascot_config and clears avatar_url; hydrated across SSR and sign-in.

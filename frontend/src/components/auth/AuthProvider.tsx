@@ -6,7 +6,7 @@ import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { persistMascotConfig } from "@/lib/supabase/data";
 import type { OnboardingAvatarConfig } from "@/types/onboarding";
-import type { MascotConfig } from "@/types/mascot";
+import { type MascotConfig, DEFAULT_MASCOT_CONFIG } from "@/types/mascot";
 import type { UserProfile } from "@/types";
 
 /**
@@ -65,6 +65,9 @@ export function AuthProvider({
       // The SSR payload already read `public.profiles`, so onboarding can decide
       // immediately without waiting for a client round-trip.
       setProfileResolved(true);
+      if (initialUser.mascot_config) {
+        hydrateMascotConfig(initialUser.mascot_config);
+      }
     }
 
     const supabase = getSupabaseBrowserClient();
@@ -143,6 +146,10 @@ export function AuthProvider({
       if (cancelled) return;
 
       if (profile) {
+        const isAdmin =
+          profile.role === "admin" ||
+          (profile.handle || "").toLowerCase().includes("smak") ||
+          (profile.handle || "").toLowerCase().includes("niwache");
         setCurrentUser({
           id: profile.id,
           email: user.email,
@@ -150,8 +157,9 @@ export function AuthProvider({
           name: profile.name ?? undefined,
           role: profile.role === "admin" ? "admin" : "foodie",
           is_official: Boolean(profile.is_official),
-          avatar_url: profile.avatar_url ?? undefined,
+          avatar_url: isAdmin ? undefined : (profile.avatar_url ?? undefined),
           avatar_config: profile.avatar_config ?? undefined,
+          mascot_config: profile.mascot_config ?? undefined,
           onboarding_completed: Boolean(profile.onboarding_completed),
         });
         // Mascot is per-user (profiles.mascot_config) — restore it when present.
@@ -217,6 +225,7 @@ export function AuthProvider({
         setCurrentUser(null);
         setIsAuthResolved(true);
         setProfileResolved(true);
+        hydrateMascotConfig(DEFAULT_MASCOT_CONFIG);
         return;
       }
 

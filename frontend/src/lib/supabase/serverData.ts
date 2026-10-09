@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import {
   DEFAULT_WEEKLY_PICK,
   type FoodPost,
+  type MascotConfig,
   type UserProfile,
   type Venue,
   type WeeklyPick,
@@ -160,6 +161,7 @@ export async function fetchCurrentUserServer(): Promise<UserProfile | null> {
       is_official: Boolean(p.is_official),
       avatar_url: typeof p.avatar_url === "string" ? p.avatar_url : undefined,
       avatar_config: (p.avatar_config as OnboardingAvatarConfig) ?? null,
+      mascot_config: (p.mascot_config as MascotConfig) ?? null,
       onboarding_completed: Boolean(p.onboarding_completed),
     };
   } catch (err) {

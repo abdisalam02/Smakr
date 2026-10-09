@@ -55,7 +55,11 @@ export const FoodPostCard = React.memo(function FoodPostCard({
       : "4.7";
 
   const isNiwacheAdmin = Boolean(
-    post.author?.handle?.toLowerCase().includes("niwache") ||
+    post.is_official_pick ||
+    (post.author?.handle && (
+      post.author.handle.toLowerCase().includes("niwache") ||
+      post.author.handle.toLowerCase().includes("smak")
+    )) ||
     (currentUser?.role === "admin" && currentUser?.handle === post.author?.handle)
   );
 

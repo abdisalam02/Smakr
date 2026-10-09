@@ -215,7 +215,7 @@ export async function persistMascotConfig(userId: string, config: unknown): Prom
   try {
     const { error } = await supabase
       .from("profiles")
-      .update({ mascot_config: config })
+      .update({ mascot_config: config, avatar_url: null })
       .eq("id", userId);
     if (error) {
       console.warn("[data] persistMascotConfig failed:", error.message);

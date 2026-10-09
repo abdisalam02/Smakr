@@ -72,7 +72,9 @@ export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
   const isAdmin = currentUser?.role === "admin";
   const isNiwacheOrAdmin =
     isAdmin ||
-    currentUser?.handle?.toLowerCase().includes("niwache");
+    Boolean(currentUser?.is_official) ||
+    (currentUser?.handle || "").toLowerCase().includes("niwache") ||
+    (currentUser?.handle || "").toLowerCase().includes("smak");
 
   const initials = currentUser
     ? (currentUser.name || currentUser.handle || "?")
@@ -107,15 +109,15 @@ export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
                 title="Account menu"
               >
                 <span className="w-7 h-7 rounded-full bg-zinc-100 flex items-center justify-center overflow-hidden ring-1 ring-black/5 shrink-0">
-                  {currentUser.avatar_url ? (
+                  {isNiwacheOrAdmin ? (
+                    <MascotCharacter config={mascotConfig} size={28} />
+                  ) : currentUser.avatar_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={currentUser.avatar_url}
                       alt={currentUser.handle}
                       className="w-full h-full object-cover"
                     />
-                  ) : isNiwacheOrAdmin ? (
-                    <MascotCharacter config={mascotConfig} size={28} />
                   ) : (
                     <span className="w-full h-full bg-zinc-900 text-white flex items-center justify-center text-[10px] font-bold tracking-tight">
                       {initials}
@@ -182,17 +184,19 @@ export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
                     </Link>
                   )}
 
-                  <button
-                    onClick={() => {
-                      setMenuOpen(false);
-                      openAvatarStudio();
-                    }}
-                    role="menuitem"
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950 transition-colors text-left"
-                  >
-                    <Palette className="w-3.5 h-3.5 text-[#e84a27]" />
-                    <span>Customize Profile</span>
-                  </button>
+                  {!isNiwacheOrAdmin && (
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        openAvatarStudio();
+                      }}
+                      role="menuitem"
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950 transition-colors text-left"
+                    >
+                      <Palette className="w-3.5 h-3.5 text-[#e84a27]" />
+                      <span>Customize Profile</span>
+                    </button>
+                  )}
 
                   <button
                     onClick={() => {
@@ -206,7 +210,7 @@ export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
                     <span>Send Beta Feedback</span>
                   </button>
 
-                  {isAdmin && (
+                  {isNiwacheOrAdmin && (
                     <Link
                       href="/mascot-studio"
                       role="menuitem"

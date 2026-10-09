@@ -13,6 +13,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
+import { persistMascotConfig } from "@/lib/supabase/data";
 import {
   MascotCharacter,
   buildMascotSVGString,
@@ -243,6 +244,8 @@ export default function MascotStudioPage() {
   const updateMascotConfig = useCityPulseStore((state) => state.updateMascotConfig);
   const resetMascotConfig = useCityPulseStore((state) => state.resetMascotConfig);
   const showToast = useCityPulseStore((state) => state.showToast);
+  const currentUser = useCityPulseStore((state) => state.currentUser);
+  const setCurrentUser = useCityPulseStore((state) => state.setCurrentUser);
 
   const [stage, setStage] = useState<StageBg>("oat");
   const [tab, setTab] = useState<TabId>("anatomy");
@@ -254,8 +257,16 @@ export default function MascotStudioPage() {
 
   const isPeeps = config.engine === "open-peeps";
 
-  const handleSave = () => {
+  const handleSave = async () => {
     updateMascotConfig(config);
+    if (currentUser?.id) {
+      await persistMascotConfig(currentUser.id, config);
+      setCurrentUser({
+        ...currentUser,
+        avatar_url: undefined,
+        mascot_config: config,
+      });
+    }
     showToast("Mascot saved to the map! 🗺️");
     setSaved(true);
     setTimeout(() => setSaved(false), 1800);
@@ -274,8 +285,16 @@ export default function MascotStudioPage() {
     }
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
     resetMascotConfig();
+    if (currentUser?.id) {
+      await persistMascotConfig(currentUser.id, DEFAULT_MASCOT_CONFIG);
+      setCurrentUser({
+        ...currentUser,
+        avatar_url: undefined,
+        mascot_config: DEFAULT_MASCOT_CONFIG,
+      });
+    }
     showToast("Character reset to the Smakr default.");
   };
 
