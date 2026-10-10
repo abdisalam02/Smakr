@@ -3,6 +3,7 @@
 import React from "react";
 import { Navigation, Plus, Minus } from "lucide-react";
 import { useGeolocation } from "@/hooks/useGeolocation";
+import { useCityPulseStore } from "@/store/useCityPulseStore";
 
 interface MapControlsProps {
   onZoomIn: () => void;
@@ -17,29 +18,46 @@ export function MapControls({
   onZoomOut,
   onLocate,
 }: MapControlsProps) {
+  const isLocating = useCityPulseStore((state) => state.isLocating);
   const { requestLocation, loading } = useGeolocation();
+  const locating = isLocating || loading;
 
   const handleLocateClick = () => {
+    useCityPulseStore.getState().setIsLocating(true);
     if (onLocate) {
       onLocate();
     } else {
-      requestLocation();
+      requestLocation(true);
     }
   };
 
   return (
     <div className="absolute right-3.5 top-20 z-20 flex flex-col items-end gap-2 pointer-events-auto select-none">
-      {/* Locate Me button — matches the glass controls, brand-tinted */}
+      {/* Locate Me button — immediate visual feedback & radar animation when locating */}
       <button
         onClick={handleLocateClick}
-        disabled={loading}
+        disabled={locating}
         title="Find my location"
         aria-label="Find my location"
-        className="inline-flex items-center gap-1 h-9 px-2.5 rounded-xl bg-white/95 hover:bg-white disabled:opacity-70 text-[#e84a27] border border-zinc-200 shadow-md transition-all active:scale-95 backdrop-blur-md"
+        className={`relative inline-flex items-center gap-1.5 h-9 px-3 rounded-xl shadow-md transition-all duration-200 select-none active:scale-95 backdrop-blur-md overflow-visible ${
+          locating
+            ? "bg-[#e84a27] text-white border border-[#e84a27] shadow-[#e84a27]/30 ring-2 ring-[#e84a27]/40 scale-[1.02]"
+            : "bg-white/95 hover:bg-white text-[#e84a27] border border-zinc-200/90 hover:border-zinc-300 hover:shadow-lg"
+        }`}
       >
-        <Navigation className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-        <span className="text-[10px] font-bold leading-none">
-          {loading ? "Finding…" : "Find me"}
+        {locating && (
+          <span
+            aria-hidden="true"
+            className="absolute -inset-1 rounded-xl bg-[#e84a27] opacity-35 animate-ping pointer-events-none"
+          />
+        )}
+        <Navigation
+          className={`w-3.5 h-3.5 transition-transform duration-300 ${
+            locating ? "animate-spin text-white" : "text-[#e84a27]"
+          }`}
+        />
+        <span className="text-[10px] font-bold leading-none tracking-tight">
+          {locating ? "Locating…" : "Find me"}
         </span>
       </button>
 

@@ -15,6 +15,7 @@ import { AuthModal } from "@/components/auth/AuthModal";
 import { BetaFeedbackDrawer } from "@/components/feedback/BetaFeedbackDrawer";
 import { CreateFoodPostModal } from "@/components/food/CreateFoodPostModal";
 import { ToastBanner } from "@/components/ui/ToastBanner";
+import { AutumnLeavesBurst } from "@/components/effects/AutumnLeavesBurst";
 
 // The root layout reads the auth session (cookies) to SSR the header, so every
 // route is rendered on demand — declare it explicitly to avoid static-generation
@@ -92,6 +93,7 @@ export default async function RootLayout({
         />
       </head>
       <body className="min-h-screen flex flex-col antialiased selection:bg-[var(--accent)] selection:text-white transition-colors duration-300">
+        <AutumnLeavesBurst />
         <AuthProvider initialUser={initialUser}>
           <Header initialUser={initialUser} />
           <main className="flex-1 flex flex-col relative overflow-hidden">

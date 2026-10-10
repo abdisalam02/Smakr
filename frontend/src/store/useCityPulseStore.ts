@@ -173,6 +173,8 @@ interface PulseStoreState {
   setIsHydratingData: (loading: boolean) => void;
   setIsAuthResolved: (resolved: boolean) => void;
   setProfileResolved: (resolved: boolean) => void;
+  isLocating: boolean;
+  setIsLocating: (isLocating: boolean) => void;
   markServerDataApplied: () => void;
 
   // Weekly Dispatch (Mascot Pick of the Week)
@@ -221,6 +223,7 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
   isAuthResolved: false,
   profileResolved: false,
   serverDataApplied: false,
+  isLocating: false,
   toastMessage: null,
   mapCategory: "all",
   feedCategory: "all",
@@ -695,6 +698,7 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
   setIsAuthResolved: (isAuthResolved) => set({ isAuthResolved }),
   setProfileResolved: (profileResolved) => set({ profileResolved }),
 
+  setIsLocating: (isLocating) => set({ isLocating }),
   markServerDataApplied: () => set({ serverDataApplied: true }),
 }));
 

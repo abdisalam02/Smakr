@@ -328,6 +328,7 @@ export function MapRadarView() {
 
   const handleLocateMe = useCallback(() => {
     const store = useCityPulseStore.getState();
+    store.setIsLocating(true);
     console.info("[locate] button pressed", {
       storedUserLocation: store.userLocation,
       willFlyTo: store.userLocation
@@ -342,7 +343,7 @@ export function MapRadarView() {
     if (userLocation) {
       flyToTarget(userLocation.lon, userLocation.lat, 15.5, "locate-button");
     }
-    requestLocation();
+    requestLocation(true);
   }, [userLocation, flyToTarget, requestLocation]);
 
   // Trigger map resize on mobile sheet gestures and initial load

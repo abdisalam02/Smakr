@@ -38,10 +38,28 @@ export function useGeolocation() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const requestLocation = useCallback(() => {
+  const requestLocation = useCallback((interactive = false) => {
     setLoading(true);
     setError(null);
-    console.info("[locate] requesting geolocation…");
+    if (interactive) {
+      useCityPulseStore.getState().setIsLocating(true);
+    }
+    console.info("[locate] requesting geolocation…", { interactive });
+
+    // Safety timeout in case the browser prompt or GPS hangs
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+      useCityPulseStore.getState().setIsLocating(false);
+    }, 10000);
+
+    const finishLocating = () => {
+      clearTimeout(safetyTimer);
+      setLoading(false);
+      // Synchronize with MapLibre's 850ms flight duration before resetting
+      setTimeout(() => {
+        useCityPulseStore.getState().setIsLocating(false);
+      }, 900);
+    };
 
     // Dismiss an active venue card so the puck becomes the focus.
     if (useCityPulseStore.getState().selectedVenue) {
@@ -68,8 +86,10 @@ export function useGeolocation() {
     };
 
     if (typeof window === "undefined" || !navigator.geolocation) {
+      clearTimeout(safetyTimer);
       setError("Geolocation is not supported by your browser.");
       setLoading(false);
+      useCityPulseStore.getState().setIsLocating(false);
       console.warn("[locate] geolocation unsupported");
       showToast("📍 This browser can't share your location.", 4500);
       return;
@@ -81,6 +101,7 @@ export function useGeolocation() {
       window.location.hostname !== "127.0.0.1";
 
     const fail = (err: GeolocationPositionError, stage: string) => {
+      clearTimeout(safetyTimer);
       console.warn("[locate] failed", { stage, code: err.code, message: err.message });
       setError(err.message);
       setLoading(false);
@@ -91,6 +112,11 @@ export function useGeolocation() {
         console.info("[locate] re-centring on last known fix", currentLoc);
         setMapCenter([currentLoc.lon, currentLoc.lat], 15.5);
         setMobileSheetState("peek");
+        setTimeout(() => {
+          useCityPulseStore.getState().setIsLocating(false);
+        }, 900);
+      } else {
+        useCityPulseStore.getState().setIsLocating(false);
       }
 
       if (err.code === err.PERMISSION_DENIED) {
@@ -115,7 +141,7 @@ export function useGeolocation() {
         };
         console.info("[locate] coarse fix", coarse);
         place(coarse.lat, coarse.lon, true, "coarse");
-        setLoading(false);
+        finishLocating();
 
         // Stage 2 — refine in the background.
         navigator.geolocation.getCurrentPosition(
@@ -145,7 +171,7 @@ export function useGeolocation() {
               true,
               "high-accuracy-fallback"
             );
-            setLoading(false);
+            finishLocating();
           },
           (err) => fail(err, "high-accuracy"),
           { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
