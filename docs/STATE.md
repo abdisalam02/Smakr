@@ -83,4 +83,5 @@
 - Log-a-dish automatically pulls and attaches Google Places photos when no custom image is selected.
 - Autumn leaves normalized to uniform scale across all 6 leaves with 1 -> 2 -> 1 -> 2 wave cadence and flowing wind finale.
 - Locate button: softened feedback to a gentle ambient pulse and breathing icon on neutral glass, softening orange accents.
+- Social studio: multi-slide visual creator with orange gradient wallpaper, photo canvas, interactive map snapshot camera, and 2K PNG/JPEG export.
 
