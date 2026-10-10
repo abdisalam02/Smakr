@@ -82,4 +82,5 @@
 - Live spots classified in Supabase (Ochaya to Matcha, Em Oi to Street Food, Digg Pizza to Pizza).
 - Log-a-dish automatically pulls and attaches Google Places photos when no custom image is selected.
 - Autumn leaves normalized to uniform scale across all 6 leaves with 1 -> 2 -> 1 -> 2 wave cadence and flowing wind finale.
-- Locate button: immediate feedback with radar ping ripple, spinning icon, and "Locating…" state synchronized with camera flight.
+- Locate button: softened feedback to a gentle ambient pulse and breathing icon on neutral glass, softening orange accents.
+

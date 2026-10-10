@@ -33,30 +33,53 @@ export function MapControls({
 
   return (
     <div className="absolute right-3.5 top-20 z-20 flex flex-col items-end gap-2 pointer-events-auto select-none">
-      {/* Locate Me button — immediate visual feedback & radar animation when locating */}
+      <style>{`
+        @keyframes gentleLocatePulse {
+          0%, 100% {
+            box-shadow: 0 2px 6px -1px rgba(0, 0, 0, 0.08), 0 0 0 0 rgba(232, 74, 39, 0);
+            border-color: rgba(228, 228, 231, 0.9);
+          }
+          50% {
+            box-shadow: 0 4px 12px -1px rgba(0, 0, 0, 0.1), 0 0 0 3px rgba(232, 74, 39, 0.16);
+            border-color: rgba(232, 74, 39, 0.35);
+          }
+        }
+        @keyframes gentleIconBreath {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 0.8;
+          }
+          50% {
+            transform: scale(1.12);
+            opacity: 1;
+          }
+        }
+        .locating-pulse {
+          animation: gentleLocatePulse 1.8s ease-in-out infinite;
+        }
+        .locating-icon {
+          animation: gentleIconBreath 1.8s ease-in-out infinite;
+        }
+      `}</style>
+
+      {/* Locate Me button — clean white glass pill with smooth, light ambient pulsing */}
       <button
         onClick={handleLocateClick}
         disabled={locating}
         title="Find my location"
         aria-label="Find my location"
-        className={`relative inline-flex items-center gap-1.5 h-9 px-3 rounded-xl shadow-md transition-all duration-200 select-none active:scale-95 backdrop-blur-md overflow-visible ${
+        className={`inline-flex items-center gap-1.5 h-9 px-2.5 rounded-xl bg-white/95 hover:bg-white text-zinc-700 border shadow-md transition-all duration-300 select-none active:scale-95 backdrop-blur-md ${
           locating
-            ? "bg-[#e84a27] text-white border border-[#e84a27] shadow-[#e84a27]/30 ring-2 ring-[#e84a27]/40 scale-[1.02]"
-            : "bg-white/95 hover:bg-white text-[#e84a27] border border-zinc-200/90 hover:border-zinc-300 hover:shadow-lg"
+            ? "locating-pulse text-zinc-900 cursor-wait"
+            : "border-zinc-200 hover:border-zinc-300 hover:text-zinc-900"
         }`}
       >
-        {locating && (
-          <span
-            aria-hidden="true"
-            className="absolute -inset-1 rounded-xl bg-[#e84a27] opacity-35 animate-ping pointer-events-none"
-          />
-        )}
         <Navigation
-          className={`w-3.5 h-3.5 transition-transform duration-300 ${
-            locating ? "animate-spin text-white" : "text-[#e84a27]"
+          className={`w-3.5 h-3.5 text-[#e84a27] transition-transform duration-300 ${
+            locating ? "locating-icon" : ""
           }`}
         />
-        <span className="text-[10px] font-bold leading-none tracking-tight">
+        <span className="text-[10px] font-semibold leading-none tracking-tight">
           {locating ? "Locating…" : "Find me"}
         </span>
       </button>
