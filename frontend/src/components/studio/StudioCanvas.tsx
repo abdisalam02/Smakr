@@ -388,6 +388,29 @@ function ElementView({
       />
     );
   } else if (el.kind === 'mascot') {
+    const activeConfig = el.expression
+      ? {
+          ...mascotConfig,
+          peepsFace: el.expression,
+          micahMouth:
+            el.expression === 'smileBig'
+              ? 'laughing'
+              : el.expression === 'cheeky'
+              ? 'smirk'
+              : el.expression === 'awe'
+              ? 'surprised'
+              : el.expression === 'eatingHappy'
+              ? 'pucker'
+              : 'smile',
+          micahEyes:
+            el.expression === 'smileBig' || el.expression === 'cute'
+              ? 'smiling'
+              : el.expression === 'awe'
+              ? 'round'
+              : 'eyes',
+        }
+      : mascotConfig;
+
     content = (
       <div className="relative">
         {el.bubble && (
@@ -406,7 +429,7 @@ function ElementView({
             opacity: el.opacity ?? 1,
           }}
         >
-          <MascotCharacter config={mascotConfig} size={320} />
+          <MascotCharacter config={activeConfig} size={320} />
         </div>
       </div>
     );

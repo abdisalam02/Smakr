@@ -4,6 +4,7 @@ import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { StudioCanvas } from '@/components/studio/StudioCanvas';
 import { StudioControls } from '@/components/studio/StudioControls';
+import { useCityPulseStore } from '@/store/useCityPulseStore';
 import {
   downloadFiles,
   makeFile,
@@ -275,6 +276,51 @@ export default function StudioPage() {
       setExporting(false);
     }
   };
+
+  const currentUser = useCityPulseStore((s) => s.currentUser);
+  const isAuthResolved = useCityPulseStore((s) => s.isAuthResolved);
+
+  const devBypass =
+    typeof window !== 'undefined' &&
+    (window.location.search.includes('preview=admin') ||
+      window.sessionStorage.getItem('smakr_admin_preview') === '1');
+
+  const isAdmin =
+    devBypass ||
+    currentUser?.role === 'admin' ||
+    Boolean(currentUser?.is_official) ||
+    (currentUser?.handle || '').toLowerCase().includes('niwache') ||
+    (currentUser?.handle || '').toLowerCase().includes('smak');
+
+  if (isAuthResolved && !isAdmin) {
+    return (
+      <div className="flex h-dvh w-full items-center justify-center p-4 bg-[#141211] font-jakarta select-none">
+        <div className="max-w-md w-full rounded-3xl border border-white/10 bg-[#1c1a19] p-8 text-center shadow-2xl">
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-4 text-red-500 text-2xl">
+            🛡️
+          </div>
+          <h1 className="text-xl font-extrabold text-white tracking-tight">Access Restricted</h1>
+          <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+            The Smakr Visual Studio is restricted exclusively to administrators. Sign in with an admin account to create branded assets.
+          </p>
+          <div className="mt-6 flex flex-col gap-2.5">
+            <Link
+              href="/"
+              className="inline-flex items-center justify-center gap-2 w-full px-4 py-3 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] text-white font-bold text-sm shadow-lg transition-all active:scale-98"
+            >
+              ← Back to Food Radar
+            </Link>
+            <Link
+              href="/admin"
+              className="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-2xl bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-semibold transition-all"
+            >
+              Go to Admin Control Center
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const selected = (state.elements[activeSlide] || []).find((e) => e.id === selectedId) ?? null;
 

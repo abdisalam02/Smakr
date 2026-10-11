@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import {
   PALETTES,
+  MASCOT_EXPRESSIONS,
   type AspectRatio,
   type BubbleSide,
   type BubbleStyle,
@@ -20,7 +21,7 @@ import {
 } from '@/types/studio';
 import type { Venue } from '@/types';
 import { fetchVenues } from '@/lib/supabase/data';
-import { Color, Slider, Toggle, field, pill, readFile } from './StudioUi';
+import { Color, HighlightRowPicker, Slider, Toggle, field, pill, readFile } from './StudioUi';
 
 type WpTab = 'grid' | 'effects' | 'add' | 'export';
 type MapTab = 'spot' | 'card' | 'add' | 'export';
@@ -99,11 +100,11 @@ export function StudioControls(props: Props) {
   return (
     <div className="flex h-full w-full max-w-full flex-col font-jakarta select-none overflow-hidden">
       {/* 3-Slide Top Switcher Pill Bar */}
-      <div className="flex items-center justify-between gap-2 px-3 py-2 bg-[#FAF7F2] dark:bg-[#191716] border-b border-black/5 dark:border-white/5 overflow-x-auto">
-        <div className="flex items-center gap-1 shrink-0">
+      <div className="flex items-center px-3 py-2 bg-[#FAF7F2] dark:bg-[#191716] border-b border-black/5 dark:border-white/5">
+        <div className="flex items-center gap-1.5 w-full">
           <button
             onClick={() => onSelectSlide('wallpaper')}
-            className={`min-h-[38px] px-3.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+            className={`min-h-[38px] flex-1 px-3 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
               activeSlide === 'wallpaper'
                 ? 'bg-zinc-900 text-white shadow-sm dark:bg-white dark:text-zinc-900'
                 : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400'
@@ -113,7 +114,7 @@ export function StudioControls(props: Props) {
           </button>
           <button
             onClick={() => onSelectSlide('map')}
-            className={`min-h-[38px] px-3.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+            className={`min-h-[38px] flex-1 px-3 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
               activeSlide === 'map'
                 ? 'bg-[#e84a27] text-white shadow-sm'
                 : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400'
@@ -123,7 +124,7 @@ export function StudioControls(props: Props) {
           </button>
           <button
             onClick={() => onSelectSlide('photo')}
-            className={`min-h-[38px] px-3.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+            className={`min-h-[38px] flex-1 px-3 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
               activeSlide === 'photo'
                 ? 'bg-zinc-900 text-white shadow-sm dark:bg-white dark:text-zinc-900'
                 : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400'
@@ -131,23 +132,6 @@ export function StudioControls(props: Props) {
           >
             3. Custom Photo
           </button>
-        </div>
-
-        {/* Aspect Ratio Selector */}
-        <div className="flex gap-1 shrink-0 ml-2">
-          {(['9:16', '4:5', '1:1'] as AspectRatio[]).map((r) => (
-            <button
-              key={r}
-              onClick={() => update({ aspectRatio: r })}
-              className={`px-2 py-1 text-xs font-bold rounded-lg border ${
-                state.aspectRatio === r
-                  ? 'bg-[#e84a27] border-[#e84a27] text-white'
-                  : 'bg-white/80 dark:bg-white/5 border-black/10 dark:border-white/10 text-zinc-600 dark:text-zinc-300'
-              }`}
-            >
-              {r}
-            </button>
-          ))}
         </div>
       </div>
 
@@ -230,6 +214,38 @@ export function StudioControls(props: Props) {
 
       {/* Main Drawer Controls Area */}
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
+        {/* Instagram Format / Dimensions Bar */}
+        <div className="flex items-center justify-between p-3 rounded-2xl bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 shadow-xs">
+          <div>
+            <span className="block text-xs font-bold text-zinc-900 dark:text-zinc-100">
+              Format Dimensions
+            </span>
+            <span className="text-[10px] text-zinc-500">
+              {state.aspectRatio === '9:16'
+                ? 'Story (1080 × 1920)'
+                : state.aspectRatio === '4:5'
+                ? 'Feed (1080 × 1350)'
+                : 'Square (1080 × 1080)'}
+            </span>
+          </div>
+          <div className="flex gap-1.5">
+            {(['9:16', '4:5', '1:1'] as AspectRatio[]).map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => update({ aspectRatio: r })}
+                className={`min-h-[38px] px-3.5 rounded-xl text-xs font-bold transition-all ${
+                  state.aspectRatio === r
+                    ? 'bg-[#e84a27] text-white shadow-xs'
+                    : 'bg-black/5 dark:bg-white/5 text-zinc-600 dark:text-zinc-400 hover:bg-black/10'
+                }`}
+              >
+                {r === '9:16' ? '📱 9:16' : r === '4:5' ? '🖼️ 4:5' : '⏹️ 1:1'}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* ======================================================== */}
         {/* SLIDE 1: WALLPAPER CONTROLS */}
         {/* ======================================================== */}
@@ -281,11 +297,11 @@ export function StudioControls(props: Props) {
               </button>
             )}
 
-            <div className="space-y-1">
+            <div className="space-y-2">
               <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
                 Preset Palettes
               </span>
-              <div className="flex gap-2.5">
+              <div className="flex gap-2.5 overflow-x-auto pb-1 no-scrollbar">
                 {PALETTES.map((pal) => (
                   <button
                     key={pal.label}
@@ -298,19 +314,46 @@ export function StudioControls(props: Props) {
                       })
                     }
                     title={pal.label}
-                    className="h-10 w-10 rounded-full border-2 border-black/10 shadow-sm transition-transform active:scale-95"
-                    style={{
-                      background: `linear-gradient(135deg, ${pal.bgColor} 50%, ${pal.baseColor} 50%)`,
-                    }}
-                  />
+                    className="flex shrink-0 items-center gap-2 px-3 py-2 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-white/5 shadow-xs transition-transform active:scale-95 text-xs font-semibold"
+                  >
+                    <span
+                      className="h-5 w-5 rounded-full border border-black/10 shrink-0"
+                      style={{
+                        background: `linear-gradient(135deg, ${pal.bgColor} 50%, ${pal.baseColor} 50%)`,
+                      }}
+                    />
+                    <span>{pal.label}</span>
+                  </button>
                 ))}
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-4 items-center pt-1">
-              <Color name="Background" value={w.bgColor} onChange={(v) => wp({ bgColor: v })} />
-              <Color name="Logo Base" value={w.baseColor} onChange={(v) => wp({ baseColor: v })} />
-              <Color name="Highlight Row" value={w.heroColor} onChange={(v) => wp({ heroColor: v })} />
+            <div className="space-y-3 pt-1">
+              <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                Curated Color Swatches
+              </span>
+              <div className="grid grid-cols-2 gap-2.5">
+                <Color name="Background" value={w.bgColor} onChange={(v) => wp({ bgColor: v })} />
+                <Color name="Logo Base" value={w.baseColor} onChange={(v) => wp({ baseColor: v })} />
+              </div>
+
+              {/* Highlight Row Picker & Color */}
+              <div className="p-3 rounded-2xl bg-white dark:bg-white/5 border border-black/5 dark:border-white/10 space-y-3">
+                <HighlightRowPicker
+                  totalRows={w.rows}
+                  heroRow={w.heroRow}
+                  onChange={(r) => wp({ heroRow: r })}
+                />
+                {w.heroRow >= 0 && (
+                  <div className="pt-2 border-t border-black/5 dark:border-white/5">
+                    <Color
+                      name="Highlight Row Color"
+                      value={w.heroColor}
+                      onChange={(v) => wp({ heroColor: v })}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="space-y-2 pt-1 border-t border-black/5 dark:border-white/5">
@@ -348,14 +391,6 @@ export function StudioControls(props: Props) {
               max={1.6}
               step={0.05}
               onChange={(v) => wp({ size: v })}
-            />
-
-            <Slider
-              name="Highlight Row Index (0 = None)"
-              value={w.heroRow + 1}
-              min={0}
-              max={w.rows}
-              onChange={(v) => wp({ heroRow: v - 1 })}
             />
           </>
         )}
@@ -479,14 +514,10 @@ export function StudioControls(props: Props) {
               />
             </div>
 
-            <Slider
-              name="Radar Marker Height"
-              value={m.pinY}
-              min={0.15}
-              max={0.8}
-              step={0.02}
-              onChange={(v) => mp({ pinY: v })}
-            />
+            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-[11px] font-medium">
+              <span className="shrink-0">📍</span>
+              <span>Accurate GPS alignment: Map center and marker pin are statically locked to the venue coordinates.</span>
+            </div>
 
             <div className="space-y-2 pt-2 border-t border-black/5 dark:border-white/5">
               <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
@@ -537,55 +568,17 @@ export function StudioControls(props: Props) {
             {/* Proportional Card Uniform Scale */}
             <div className="space-y-1 pt-1">
               <Slider
-                name="Proportional Card Scale (Uniform)"
+                name="Proportional Card Scale"
                 value={m.cardScale}
-                min={0.6}
+                min={0.35}
                 max={1.35}
                 step={0.05}
                 onChange={(v) => mp({ cardScale: v })}
               />
               <p className="text-[11px] text-zinc-500">
-                Scales title, photo, badge, and buttons proportionally with zero text cramping.
+                Scales cleanly from compact (0.35x) to prominent (1.35x) with zero text cramping.
               </p>
             </div>
-
-            {/* Card Anchor Position */}
-            <div className="space-y-1 pt-1">
-              <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
-                Card Anchor Position
-              </span>
-              <div className="flex gap-2">
-                <button
-                  className={pill(m.cardPosition === 'below')}
-                  onClick={() => mp({ cardPosition: 'below' })}
-                >
-                  Anchor Below Pin
-                </button>
-                <button
-                  className={pill(m.cardPosition === 'above')}
-                  onClick={() => mp({ cardPosition: 'above' })}
-                >
-                  Anchor Above Pin
-                </button>
-                <button
-                  className={pill(m.cardPosition === 'custom')}
-                  onClick={() => mp({ cardPosition: 'custom' })}
-                >
-                  Custom Height
-                </button>
-              </div>
-            </div>
-
-            {m.cardPosition === 'custom' && (
-              <Slider
-                name="Custom Card Height"
-                value={m.cardY ?? 0.55}
-                min={0.15}
-                max={0.85}
-                step={0.02}
-                onChange={(v) => mp({ cardY: v })}
-              />
-            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               <Slider
@@ -895,8 +888,34 @@ export function StudioControls(props: Props) {
                       />
                     </div>
 
-                    <div className="space-y-1">
-                      <span className="text-xs font-semibold text-zinc-500">Speech Bubble Text</span>
+                    {/* Mascot Expression & Mood Picker */}
+                    <div className="space-y-1.5 pt-1">
+                      <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                        Mascot Mood & Expression
+                      </span>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                        {MASCOT_EXPRESSIONS.map((exp) => (
+                          <button
+                            key={exp.id}
+                            type="button"
+                            onClick={() => patchElement(selected.id, { expression: exp.id })}
+                            className={`px-2.5 py-1.5 rounded-xl text-xs font-medium border text-left flex items-center justify-between transition-all ${
+                              (selected.expression || 'smile') === exp.id
+                                ? 'bg-[#e84a27] border-[#e84a27] text-white shadow-xs'
+                                : 'bg-white dark:bg-white/5 border-black/10 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:border-[#e84a27]/40'
+                            }`}
+                          >
+                            <span>{exp.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-zinc-500">Speech Bubble Text</span>
+                        <span className="text-[10px] text-zinc-400">{selected.bubble.length}/60</span>
+                      </div>
                       <textarea
                         className={`${field} py-2`}
                         rows={2}
@@ -905,7 +924,26 @@ export function StudioControls(props: Props) {
                         value={selected.bubble}
                         onChange={(e) => patchElement(selected.id, { bubble: e.target.value })}
                       />
-                      <p className="text-[10px] text-zinc-500">{selected.bubble.length}/60 chars</p>
+
+                      {/* Quick Catchphrases */}
+                      <div className="flex flex-wrap gap-1.5 pt-0.5">
+                        {[
+                          'Week 41 Drop is live! ✦',
+                          'Crust was insane 🔥',
+                          '100% Certified Gem 💎',
+                          'Best coffee in Oslo ☕',
+                          'Save this for the weekend! ↗',
+                        ].map((phrase) => (
+                          <button
+                            key={phrase}
+                            type="button"
+                            className="px-2 py-1 rounded-lg text-[10px] font-medium bg-white dark:bg-white/5 border border-black/10 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:border-[#e84a27] hover:text-[#e84a27] transition-colors"
+                            onClick={() => patchElement(selected.id, { bubble: phrase })}
+                          >
+                            {phrase}
+                          </button>
+                        ))}
+                      </div>
                     </div>
 
                     {selected.bubble && (

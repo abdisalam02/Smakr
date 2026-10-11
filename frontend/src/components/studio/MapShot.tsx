@@ -56,6 +56,9 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
   useEffect(() => {
     if (!mapContainer.current) return;
 
+    const pinCy = 0.36 * h;
+    const bottomPadding = Math.max(0, Math.round(h - 2 * pinCy));
+
     const pr = Math.min(2, typeof window !== 'undefined' ? window.devicePixelRatio || 2 : 2);
     const map = new maplibregl.Map({
       container: mapContainer.current,
@@ -63,26 +66,20 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
       center: [s.lng, s.lat],
       zoom: s.zoom,
       pitch: s.pitch,
-      interactive: interactive,
+      interactive: false, // Static camera locked to venue coordinate
       attributionControl: false,
       canvasContextAttributes: { preserveDrawingBuffer: true },
       pixelRatio: pr,
     });
+    map.setPadding({ top: 0, bottom: bottomPadding, left: 0, right: 0 });
     mapRef.current = map;
-
-    if (interactive && onMapChange) {
-      map.on('moveend', () => {
-        const c = map.getCenter();
-        onMapChange([c.lng, c.lat], map.getZoom(), map.getPitch());
-      });
-    }
 
     return () => {
       map.remove();
       mapRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [interactive]);
+  }, []);
 
   // Synchronize style and camera changes
   useEffect(() => {
@@ -96,53 +93,32 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
 
     map.resize();
 
-    const curr = map.getCenter();
-    const currZoom = map.getZoom();
-    const currPitch = map.getPitch();
+    const pinCy = 0.36 * h;
+    const bottomPadding = Math.max(0, Math.round(h - 2 * pinCy));
 
-    const dist = Math.hypot(curr.lng - s.lng, curr.lat - s.lat);
-    const zoomDiff = Math.abs(currZoom - s.zoom);
-    const pitchDiff = Math.abs(currPitch - s.pitch);
-
-    if (dist > 0.0001 || zoomDiff > 0.1 || pitchDiff > 1) {
-      map.jumpTo({
-        center: [s.lng, s.lat],
-        zoom: s.zoom,
-        pitch: s.pitch,
-      });
-    }
+    map.jumpTo({
+      center: [s.lng, s.lat],
+      padding: { top: 0, bottom: bottomPadding, left: 0, right: 0 },
+      zoom: s.zoom,
+      pitch: s.pitch,
+    });
   }, [s.style, s.lng, s.lat, s.zoom, s.pitch, w, h]);
 
   const t = THEMES[s.cardTheme] || THEMES.cream;
   const pinSize = 140 * (s.pinScale || 1);
-  const pinCy = (s.pinY ?? 0.35) * h;
+  const pinCy = 0.36 * h;
   const pinCx = w / 2;
 
   // Baseline Card Width (860px on a 1080px canvas gives generous 110px margins)
   const baselineCardWidth = s.cardWidth || 860;
   const scale = s.cardScale || 1;
 
-  let cardStyle: React.CSSProperties = {};
-  if (s.cardPosition === 'above') {
-    cardStyle = {
-      bottom: h - (pinCy - pinSize / 2 - 32),
-      transform: `scale(${scale})`,
-      transformOrigin: 'bottom center',
-    };
-  } else if (s.cardPosition === 'custom') {
-    cardStyle = {
-      top: (s.cardY ?? 0.55) * h,
-      transform: `scale(${scale})`,
-      transformOrigin: 'center center',
-    };
-  } else {
-    // Default: 'below' pin
-    cardStyle = {
-      top: pinCy + pinSize / 2 + 32,
-      transform: `scale(${scale})`,
-      transformOrigin: 'top center',
-    };
-  }
+  // Static card positioning directly anchored below marker pin
+  const cardStyle: React.CSSProperties = {
+    top: pinCy + pinSize / 2 + 28,
+    transform: `scale(${scale})`,
+    transformOrigin: 'top center',
+  };
 
   return (
     <div

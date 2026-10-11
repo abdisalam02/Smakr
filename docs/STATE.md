@@ -87,3 +87,5 @@
 - Venue card geometry updated to proportional uniform scaling with exact horizontal centering, preventing text cramping and button cutoffs.
 - Studio layout updated with responsive desktop sidebar workbench and zero-overflow mobile drawer navigation.
 - Export pipeline updated with full-bleed aspect ratio enforcement and font-readiness safeguards for 2K retina capture.
+- Studio locked behind admin guard; non-admins directed to restricted notice.
+- Studio map camera aligned statically on venue coordinates with 0.35x card scaling, curated swatch modal, and mascot mood expressions.

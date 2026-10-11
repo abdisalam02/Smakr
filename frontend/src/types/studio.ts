@@ -33,6 +33,8 @@ export interface StudioElement {
   bubbleBg: string;
   bubbleInk: string;
   flip: boolean;
+  /** Mascot facial expression mood */
+  expression?: string;
   /** Data URL of an image the creator owns (image kind only). */
   src: string | null;
 }
@@ -151,3 +153,76 @@ export const CAPTURE_SIZES: Record<CaptureSize, { label: string; w: number; h: n
   '4:3': { label: 'Standard 4:3', w: 1200, h: 900 },
   '16:9': { label: 'Landscape 16:9', w: 1920, h: 1080 },
 };
+
+export interface ColorSwatch {
+  label: string;
+  hex: string;
+  category: 'oat' | 'paprika' | 'amber' | 'dark' | 'green' | 'berry';
+}
+
+export const CURATED_SWATCHES: ColorSwatch[] = [
+  // Creams & Oats (Backgrounds & Soft Cards)
+  { label: 'Warm Oat', hex: '#FAF7F2', category: 'oat' },
+  { label: 'Porcelain', hex: '#F4EFEA', category: 'oat' },
+  { label: 'Alabaster', hex: '#FFFDF9', category: 'oat' },
+  { label: 'Nordic Linen', hex: '#EFE8DF', category: 'oat' },
+  { label: 'Vanilla Cream', hex: '#FDF6EC', category: 'oat' },
+  { label: 'Oat Milk', hex: '#F5ECE1', category: 'oat' },
+
+  // Paprika & Citrus (Brand Heroes & Accents)
+  { label: 'Burnt Paprika', hex: '#e84a27', category: 'paprika' },
+  { label: 'Seville Orange', hex: '#ff5416', category: 'paprika' },
+  { label: 'Flame Orange', hex: '#ea580c', category: 'paprika' },
+  { label: 'Maple Tangerine', hex: '#f97316', category: 'paprika' },
+  { label: 'Russet Paprika', hex: '#c2410c', category: 'paprika' },
+  { label: 'Spiced Chili', hex: '#dc2626', category: 'paprika' },
+
+  // Ambers & Baked Crusts (Warm Accents)
+  { label: 'Golden Amber', hex: '#f59e0b', category: 'amber' },
+  { label: 'Birch Ochre', hex: '#d97706', category: 'amber' },
+  { label: 'Caramel Crust', hex: '#b45309', category: 'amber' },
+  { label: 'Honey Glaze', hex: '#fbbf24', category: 'amber' },
+  { label: 'Warm Cinnamon', hex: '#92400e', category: 'amber' },
+  { label: 'Espresso Amber', hex: '#78350f', category: 'amber' },
+
+  // Dark Roast & Late Night Oslo (High Contrast & Inks)
+  { label: 'Late Night Oslo', hex: '#181615', category: 'dark' },
+  { label: 'Espresso Ink', hex: '#2B1810', category: 'dark' },
+  { label: 'Dark Roast', hex: '#1F1B18', category: 'dark' },
+  { label: 'Obsidian Black', hex: '#11100f', category: 'dark' },
+  { label: 'Charcoal Slate', hex: '#27272a', category: 'dark' },
+  { label: 'Graphite Stone', hex: '#3f3f46', category: 'dark' },
+
+  // Matcha & Herbs (Natural Foodie Greens)
+  { label: 'Nordic Matcha', hex: '#2d372e', category: 'green' },
+  { label: 'Forest Pine', hex: '#1b2d1d', category: 'green' },
+  { label: 'Sage Herb', hex: '#4a6741', category: 'green' },
+  { label: 'Matcha Foam', hex: '#86efac', category: 'green' },
+  { label: 'Fresh Basil', hex: '#4ade80', category: 'green' },
+  { label: 'Pistachio', hex: '#bbf7d0', category: 'green' },
+
+  // Nordic Berry & Wine
+  { label: 'Lingonberry', hex: '#831843', category: 'berry' },
+  { label: 'Bordeaux Wine', hex: '#9f1239', category: 'berry' },
+  { label: 'Wild Blackberry', hex: '#4c0519', category: 'berry' },
+  { label: 'Cherry Glaze', hex: '#e11d48', category: 'berry' },
+  { label: 'Pale Plum', hex: '#fbcfe8', category: 'berry' },
+];
+
+export interface MascotExpressionOption {
+  id: string;
+  label: string;
+  emoji: string;
+  hint: string;
+}
+
+export const MASCOT_EXPRESSIONS: MascotExpressionOption[] = [
+  { id: 'smile', label: 'Warm Smile', emoji: '🙂', hint: 'Friendly' },
+  { id: 'smileBig', label: 'Big Smile', emoji: '😄', hint: 'Beaming joy' },
+  { id: 'eatingHappy', label: 'Tasting / Yum', emoji: '😋', hint: 'Delicious bite' },
+  { id: 'cheeky', label: 'Cheeky Critic', emoji: '😏', hint: 'Playful food critic' },
+  { id: 'awe', label: 'Wowed / Awe', emoji: '😮', hint: 'Mind-blown dish' },
+  { id: 'calm', label: 'Calm & Content', emoji: '😌', hint: 'Satisfied diner' },
+  { id: 'cute', label: 'Cute & Sweet', emoji: '🥰', hint: 'Loving the vibe' },
+];
+
