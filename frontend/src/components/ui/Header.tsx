@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Plus,
   LogOut,
@@ -19,6 +19,8 @@ import { MascotCharacter } from "@/components/avatar/MascotCharacter";
 
 export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
   const router = useRouter();
+  const pathname = usePathname();
+  if (pathname === "/studio") return null;
   const openCreateDish = useCityPulseStore((state) => state.openCreateDish);
   const storeUser = useCityPulseStore((state) => state.currentUser);
   const storeResolved = useCityPulseStore((state) => state.isAuthResolved);

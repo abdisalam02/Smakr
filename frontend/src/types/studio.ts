@@ -1,12 +1,13 @@
 export type AspectRatio = '9:16' | '4:5' | '1:1';
-export type SlideId = 'background' | 'photo';
+export type SlideId = 'wallpaper' | 'map' | 'photo';
 export type MapStyleKey = 'streets' | 'dataviz' | 'aquarelle';
 export type CardTheme = 'cream' | 'dark' | 'paprika';
 export type ElementKind = 'text' | 'mascot' | 'badge' | 'image';
 export type BubbleStyle = 'round' | 'shout' | 'thought' | 'box';
 export type BubbleSide = 'top' | 'left' | 'right' | 'bottom';
 export type ColorMode = 'oranges' | 'solid' | 'tint' | 'greyscale';
-export type CaptureSize = '1:1' | '4:5' | '4:3' | '16:9';
+export type ExportFormat = 'png' | 'jpeg';
+export type ExportQuality = '1080p' | '2160p';
 
 export interface StudioElement {
   id: string;
@@ -85,13 +86,17 @@ export interface MapShotState {
   style: MapStyleKey;
   zoom: number;
   pitch: number;
-  /** Vertical pin position as a fraction of capture height. */
+  /** Vertical pin position as a fraction of canvas height (0.1 to 0.9). */
   pinY: number;
   showPin: boolean;
   pinScale: number;
-  cardPosition: 'below' | 'above';
+  /** Card position: 'below' (anchored to pin), 'above' (anchored to pin), or 'custom' (using cardY). */
+  cardPosition: 'below' | 'above' | 'custom';
+  cardY: number; // 0.1 to 0.9
   cardTheme: CardTheme;
-  cardScale: number;
+  /** Geometric uniform scale applied via transform: scale() */
+  cardScale: number; // 0.6 to 1.4
+  cardWidth: number; // baseline width in canvas px (e.g. 880)
   cardRadius: number;
   showPhoto: boolean;
   showRating: boolean;
@@ -106,9 +111,8 @@ export interface StudioState {
   showSafeZones: boolean;
   showNoiseTexture: boolean;
   wallpaper: WallpaperState;
-  photo: PhotoState;
   map: MapShotState;
-  captureSize: CaptureSize;
+  photo: PhotoState;
   elements: Record<SlideId, StudioElement[]>;
 }
 
@@ -116,13 +120,6 @@ export const CANVAS_SIZES: Record<AspectRatio, { w: number; h: number }> = {
   '9:16': { w: 1080, h: 1920 },
   '4:5': { w: 1080, h: 1350 },
   '1:1': { w: 1080, h: 1080 },
-};
-
-export const CAPTURE_SIZES: Record<CaptureSize, { w: number; h: number }> = {
-  '1:1': { w: 1080, h: 1080 },
-  '4:5': { w: 1080, h: 1350 },
-  '4:3': { w: 1080, h: 810 },
-  '16:9': { w: 1080, h: 608 },
 };
 
 export const PALETTES: {
@@ -145,4 +142,12 @@ export const MAP_STYLE_URLS: Record<MapStyleKey, string> = {
   streets: `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}`,
   dataviz: `https://api.maptiler.com/maps/dataviz-light/style.json?key=${MAPTILER_KEY}`,
   aquarelle: `https://api.maptiler.com/maps/aquarelle-v4/style.json?key=${MAPTILER_KEY}`,
+};
+
+export type CaptureSize = '1:1' | '4:5' | '4:3' | '16:9';
+export const CAPTURE_SIZES: Record<CaptureSize, { label: string; w: number; h: number }> = {
+  '1:1': { label: 'Square 1:1', w: 1080, h: 1080 },
+  '4:5': { label: 'Portrait 4:5', w: 1080, h: 1350 },
+  '4:3': { label: 'Standard 4:3', w: 1200, h: 900 },
+  '16:9': { label: 'Landscape 16:9', w: 1920, h: 1080 },
 };

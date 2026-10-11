@@ -22,7 +22,9 @@ export function Slider(p: {
 }) {
   return (
     <label className={label}>
-      {p.name}: {Number.isInteger(p.value) ? p.value : p.value.toFixed(2)}
+      <span className="block truncate text-xs font-semibold">
+        {p.name}: {Number.isInteger(p.value) ? p.value : p.value.toFixed(2)}
+      </span>
       <input
         type="range"
         min={p.min}

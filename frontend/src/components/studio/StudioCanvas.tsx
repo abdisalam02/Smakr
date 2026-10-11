@@ -3,6 +3,7 @@
 import { forwardRef } from 'react';
 import { MascotCharacter } from '@/components/avatar/MascotCharacter';
 import { useCityPulseStore } from '@/store/useCityPulseStore';
+import { MapShot } from './MapShot';
 import {
   CANVAS_SIZES,
   type SlideId,
@@ -10,6 +11,7 @@ import {
   type StudioState,
   type WallpaperState,
   type PhotoState,
+  type MapShotState,
 } from '@/types/studio';
 
 const ORANGE_SHADES = [
@@ -41,6 +43,7 @@ interface Props {
   selectedId: string | null;
   onSelect: (id: string | null) => void;
   onMove: (id: string, x: number, y: number) => void;
+  onMapChange?: (coords: [number, number], zoom: number, pitch: number) => void;
 }
 
 function getLogoColor(
@@ -65,7 +68,6 @@ function getLogoColor(
   }
 
   if (wp.colorMode === 'tint') {
-    // Generate subtle alpha variation
     const alpha = 0.35 + (((r + c * 2) % 5) / 5) * 0.65 * (wp.variation || 1);
     return wp.baseColor + Math.round(alpha * 255).toString(16).padStart(2, '0');
   }
@@ -160,9 +162,9 @@ function PhotoLayer({ s, w, h }: { s: PhotoState; w: number; h: number }) {
         <div className="w-32 h-32 rounded-3xl bg-white/5 border-2 border-dashed border-white/20 flex items-center justify-center text-5xl mb-6">
           📷
         </div>
-        <h3 className="text-4xl font-bold text-white mb-3">No Photo Uploaded</h3>
+        <h3 className="text-4xl font-bold text-white mb-3">No Custom Photo</h3>
         <p className="text-2xl text-zinc-400 max-w-md">
-          Tap “Upload Photo” or “Capture Map Shot” in the controls below to build your slide.
+          Tap “Upload Photo” in the drawer below to add your dish image.
         </p>
       </div>
     );
@@ -191,7 +193,6 @@ function PhotoLayer({ s, w, h }: { s: PhotoState; w: number; h: number }) {
         }}
       />
 
-      {/* Dim scrim */}
       {s.dim > 0 && (
         <div
           className="absolute inset-0 pointer-events-none"
@@ -199,7 +200,6 @@ function PhotoLayer({ s, w, h }: { s: PhotoState; w: number; h: number }) {
         />
       )}
 
-      {/* Vignette */}
       {s.vignette && (
         <div
           className="absolute inset-0 pointer-events-none"
@@ -256,7 +256,6 @@ function SpeechBubble({
         {text}
       </div>
 
-      {/* Pointer tail */}
       {isTop && (
         <svg
           width="40"
@@ -272,7 +271,7 @@ function SpeechBubble({
           width="40"
           height="24"
           viewBox="0 0 40 24"
-          className="absolute left-1/2 -translate-x-1/2 bottom-full rotate-180"
+          className="absolute left-1/2 -translate-x-1/2 top-full -scale-y-100"
         >
           <path d="M0 0 L20 24 L40 0 Z" fill={bg} />
         </svg>
@@ -292,7 +291,7 @@ function SpeechBubble({
           width="24"
           height="40"
           viewBox="0 0 24 40"
-          className="absolute top-1/2 -translate-y-1/2 right-full rotate-180"
+          className="absolute top-1/2 -translate-y-1/2 right-full -scale-x-100"
         >
           <path d="M0 0 L24 20 L0 40 Z" fill={bg} />
         </svg>
@@ -435,7 +434,7 @@ function ElementView({
 }
 
 export const StudioCanvas = forwardRef<HTMLDivElement, Props>(function StudioCanvas(
-  { state, activeSlide, previewScale, selectedId, onSelect, onMove },
+  { state, activeSlide, previewScale, selectedId, onSelect, onMove, onMapChange },
   ref
 ) {
   const { w, h } = CANVAS_SIZES[state.aspectRatio];
@@ -448,14 +447,22 @@ export const StudioCanvas = forwardRef<HTMLDivElement, Props>(function StudioCan
       className="relative overflow-hidden font-jakarta select-none"
       onPointerDown={() => onSelect(null)}
     >
-      {/* Slide base layer */}
-      {activeSlide === 'background' ? (
+      {/* Slide Base Layer: Wallpaper, Live Map, or Custom Photo */}
+      {activeSlide === 'wallpaper' ? (
         <WallpaperLayer s={state.wallpaper} w={w} h={h} />
+      ) : activeSlide === 'map' ? (
+        <MapShot
+          s={state.map}
+          w={w}
+          h={h}
+          interactive={true}
+          onMapChange={onMapChange}
+        />
       ) : (
         <PhotoLayer s={state.photo} w={w} h={h} />
       )}
 
-      {/* Free draggable elements on active slide */}
+      {/* Draggable Free Elements on Active Slide */}
       {elements.map((el) => (
         <ElementView
           key={el.id}
@@ -467,7 +474,7 @@ export const StudioCanvas = forwardRef<HTMLDivElement, Props>(function StudioCan
         />
       ))}
 
-      {/* Risograph grain overlay */}
+      {/* Risograph Noise Texture Overlay */}
       {state.showNoiseTexture && (
         <svg
           aria-hidden

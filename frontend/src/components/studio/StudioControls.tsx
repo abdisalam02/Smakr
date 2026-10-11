@@ -1,23 +1,29 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   PALETTES,
   type AspectRatio,
   type BubbleSide,
   type BubbleStyle,
+  type CardTheme,
   type ColorMode,
   type ElementKind,
+  type ExportFormat,
+  type MapShotState,
+  type MapStyleKey,
   type PhotoState,
   type SlideId,
   type StudioElement,
   type StudioState,
   type WallpaperState,
 } from '@/types/studio';
+import type { Venue } from '@/types';
+import { fetchVenues } from '@/lib/supabase/data';
 import { Color, Slider, Toggle, field, pill, readFile } from './StudioUi';
-import { ExportFormat } from '@/lib/studioExport';
 
-type WallpaperTab = 'grid' | 'effects' | 'add' | 'export';
+type WpTab = 'grid' | 'effects' | 'add' | 'export';
+type MapTab = 'spot' | 'card' | 'add' | 'export';
 type PhotoTab = 'photo' | 'adjust' | 'add' | 'export';
 
 interface Props {
@@ -26,15 +32,15 @@ interface Props {
   onSelectSlide: (slide: SlideId) => void;
   update: (patch: Partial<StudioState>) => void;
   wp: (patch: Partial<WallpaperState>) => void;
+  mp: (patch: Partial<MapShotState>) => void;
   pp: (patch: Partial<PhotoState>) => void;
   selected: StudioElement | null;
   addElement: (kind: ElementKind, extra?: Partial<StudioElement>) => void;
   patchElement: (id: string, patch: Partial<StudioElement>) => void;
   removeElement: (id: string) => void;
   selectElement: (id: string | null) => void;
-  onOpenMapCapture: () => void;
-  onExport: (format: ExportFormat, bothSlides: boolean) => void;
-  onDownloadOnly: (format: ExportFormat, bothSlides: boolean) => void;
+  onExport: (format: ExportFormat, allSlides: boolean, pixelRatio: number) => void;
+  onDownloadOnly: (format: ExportFormat, allSlides: boolean, pixelRatio: number) => void;
   exporting: boolean;
   exportError: string | null;
 }
@@ -46,57 +52,89 @@ export function StudioControls(props: Props) {
     onSelectSlide,
     update,
     wp,
+    mp,
     pp,
     selected,
     addElement,
     patchElement,
     removeElement,
     selectElement,
-    onOpenMapCapture,
     onExport,
     onDownloadOnly,
     exporting,
     exportError,
   } = props;
 
-  const [wpTab, setWpTab] = useState<WallpaperTab>('grid');
+  const [wpTab, setWpTab] = useState<WpTab>('grid');
+  const [mapTab, setMapTab] = useState<MapTab>('spot');
   const [ppTab, setPpTab] = useState<PhotoTab>('photo');
+
+  const [venues, setVenues] = useState<Venue[]>([]);
   const [exportFormat, setExportFormat] = useState<ExportFormat>('png');
-  const [exportBoth, setExportBoth] = useState(false);
+  const [exportAll, setExportAll] = useState(false);
+  const [exportRetina, setExportRetina] = useState(false);
+
+  useEffect(() => {
+    fetchVenues().then(setVenues).catch(() => setVenues([]));
+  }, []);
+
+  const pickVenue = (v: Venue) => {
+    mp({
+      venueId: v.id,
+      name: v.name,
+      address: v.address,
+      icon: v.icon || '🍽️',
+      rating: v.google_rating ?? null,
+      photo: v.cover_image_url ?? null,
+      lng: v.longitude,
+      lat: v.latitude,
+    });
+  };
 
   const w = state.wallpaper;
+  const m = state.map;
   const p = state.photo;
   const currentElements = state.elements[activeSlide] || [];
 
   return (
-    <div className="flex h-full flex-col font-jakarta">
-      {/* Slide Switcher Header Bar */}
-      <div className="flex items-center justify-between px-3 py-2 bg-[#FAF7F2] dark:bg-[#1a1817] border-b border-black/5 dark:border-white/5">
-        <div className="flex items-center gap-1.5">
+    <div className="flex h-full w-full max-w-full flex-col font-jakarta select-none overflow-hidden">
+      {/* 3-Slide Top Switcher Pill Bar */}
+      <div className="flex items-center justify-between gap-2 px-3 py-2 bg-[#FAF7F2] dark:bg-[#191716] border-b border-black/5 dark:border-white/5 overflow-x-auto">
+        <div className="flex items-center gap-1 shrink-0">
           <button
-            onClick={() => onSelectSlide('background')}
-            className={`min-h-[38px] px-3.5 rounded-full text-xs font-bold transition-all ${
-              activeSlide === 'background'
+            onClick={() => onSelectSlide('wallpaper')}
+            className={`min-h-[38px] px-3.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+              activeSlide === 'wallpaper'
                 ? 'bg-zinc-900 text-white shadow-sm dark:bg-white dark:text-zinc-900'
                 : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400'
             }`}
           >
-            1. Logo Wallpaper
+            1. Wallpaper
+          </button>
+          <button
+            onClick={() => onSelectSlide('map')}
+            className={`min-h-[38px] px-3.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+              activeSlide === 'map'
+                ? 'bg-[#e84a27] text-white shadow-sm'
+                : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400'
+            }`}
+          >
+            2. Map Spotlight
           </button>
           <button
             onClick={() => onSelectSlide('photo')}
-            className={`min-h-[38px] px-3.5 rounded-full text-xs font-bold transition-all ${
+            className={`min-h-[38px] px-3.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
               activeSlide === 'photo'
                 ? 'bg-zinc-900 text-white shadow-sm dark:bg-white dark:text-zinc-900'
                 : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400'
             }`}
           >
-            2. Photo Canvas
+            3. Custom Photo
           </button>
         </div>
 
-        {/* Aspect Ratio Pill Selector */}
-        <div className="flex gap-1">
+        {/* Aspect Ratio Selector */}
+        <div className="flex gap-1 shrink-0 ml-2">
           {(['9:16', '4:5', '1:1'] as AspectRatio[]).map((r) => (
             <button
               key={r}
@@ -113,21 +151,21 @@ export function StudioControls(props: Props) {
         </div>
       </div>
 
-      {/* Segmented Sub-navigation Tabs */}
+      {/* Secondary Contextual Tabs */}
       <nav
-        className="sticky top-0 z-10 flex gap-1 overflow-x-auto bg-[#FAF7F2] p-2 dark:bg-[#1f1d1b] border-b border-black/5 dark:border-white/5"
+        className="sticky top-0 z-10 flex gap-1 overflow-x-auto bg-[#FAF7F2] p-2 dark:bg-[#1d1b1a] border-b border-black/5 dark:border-white/5"
         role="tablist"
       >
-        {activeSlide === 'background' ? (
+        {activeSlide === 'wallpaper' ? (
           <>
             {(
               [
                 ['grid', '🎨 Grid & Colors'],
                 ['effects', '✨ Effects'],
-                ['add', '✦ Add Ons'],
+                ['add', '✦ Addons'],
                 ['export', '💾 Export'],
-              ] as [WallpaperTab, string][]
-            ).map(([t, label]) => (
+              ] as [WpTab, string][]
+            ).map(([t, l]) => (
               <button
                 key={t}
                 onClick={() => setWpTab(t)}
@@ -137,7 +175,30 @@ export function StudioControls(props: Props) {
                     : 'text-zinc-600 dark:text-zinc-300'
                 }`}
               >
-                {label}
+                {l}
+              </button>
+            ))}
+          </>
+        ) : activeSlide === 'map' ? (
+          <>
+            {(
+              [
+                ['spot', '📍 Spot & Map'],
+                ['card', '🪪 Card Style'],
+                ['add', '✦ Addons'],
+                ['export', '💾 Export'],
+              ] as [MapTab, string][]
+            ).map(([t, l]) => (
+              <button
+                key={t}
+                onClick={() => setMapTab(t)}
+                className={`min-h-[40px] flex-1 whitespace-nowrap rounded-xl px-3 text-xs font-bold transition-colors ${
+                  mapTab === t
+                    ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900'
+                    : 'text-zinc-600 dark:text-zinc-300'
+                }`}
+              >
+                {l}
               </button>
             ))}
           </>
@@ -145,12 +206,12 @@ export function StudioControls(props: Props) {
           <>
             {(
               [
-                ['photo', '🖼️ Photo & Source'],
+                ['photo', '🖼️ Photo & Fit'],
                 ['adjust', '✨ Adjustments'],
-                ['add', '✦ Add Ons'],
+                ['add', '✦ Addons'],
                 ['export', '💾 Export'],
               ] as [PhotoTab, string][]
-            ).map(([t, label]) => (
+            ).map(([t, l]) => (
               <button
                 key={t}
                 onClick={() => setPpTab(t)}
@@ -160,22 +221,23 @@ export function StudioControls(props: Props) {
                     : 'text-zinc-600 dark:text-zinc-300'
                 }`}
               >
-                {label}
+                {l}
               </button>
             ))}
           </>
         )}
       </nav>
 
-      {/* Main Controls Content Pane */}
+      {/* Main Drawer Controls Area */}
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
+        {/* ======================================================== */}
         {/* SLIDE 1: WALLPAPER CONTROLS */}
-        {activeSlide === 'background' && wpTab === 'grid' && (
+        {/* ======================================================== */}
+        {activeSlide === 'wallpaper' && wpTab === 'grid' && (
           <>
-            {/* Word input */}
             <div className="space-y-1">
               <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
-                Wallpaper Text
+                Wallpaper Word
               </span>
               <input
                 className={`${field} font-comico uppercase tracking-wider`}
@@ -186,42 +248,39 @@ export function StudioControls(props: Props) {
               />
             </div>
 
-            {/* Color Mode selector */}
             <div className="space-y-1">
               <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
-                Logo Color Palette
+                Grid Logo Colors
               </span>
               <div className="flex flex-wrap gap-2">
                 {(
                   [
-                    ['oranges', '🔥 Shades of Orange (Default)'],
+                    ['oranges', '🔥 Nordic Orange Shades (Default)'],
                     ['tint', '🎨 Single Tint'],
                     ['greyscale', '🔘 Greyscale'],
                     ['solid', '⬛ Solid Color'],
                   ] as [ColorMode, string][]
-                ).map(([m, l]) => (
+                ).map(([mode, label]) => (
                   <button
-                    key={m}
-                    className={pill(w.colorMode === m)}
-                    onClick={() => wp({ colorMode: m })}
+                    key={mode}
+                    className={pill(w.colorMode === mode)}
+                    onClick={() => wp({ colorMode: mode })}
                   >
-                    {l}
+                    {label}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Shuffle orange shades button */}
             {w.colorMode === 'oranges' && (
               <button
-                onClick={() => wp({ seed: Math.floor(Math.random() * 50) + 1 })}
+                onClick={() => wp({ seed: Math.floor(Math.random() * 80) + 1 })}
                 className="w-full min-h-[42px] rounded-xl bg-orange-100 hover:bg-orange-200 dark:bg-orange-950/40 text-orange-800 dark:text-orange-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors border border-orange-300/40"
               >
                 🔀 Shuffle Orange Shades Across Grid
               </button>
             )}
 
-            {/* Preset Color Swatches */}
             <div className="space-y-1">
               <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
                 Preset Palettes
@@ -248,14 +307,12 @@ export function StudioControls(props: Props) {
               </div>
             </div>
 
-            {/* Color Pickers */}
             <div className="flex flex-wrap gap-4 items-center pt-1">
               <Color name="Background" value={w.bgColor} onChange={(v) => wp({ bgColor: v })} />
               <Color name="Logo Base" value={w.baseColor} onChange={(v) => wp({ baseColor: v })} />
               <Color name="Highlight Row" value={w.heroColor} onChange={(v) => wp({ heroColor: v })} />
             </div>
 
-            {/* Background gradient option */}
             <div className="space-y-2 pt-1 border-t border-black/5 dark:border-white/5">
               <div className="flex items-center justify-between">
                 <Toggle
@@ -273,8 +330,7 @@ export function StudioControls(props: Props) {
               </div>
             </div>
 
-            {/* Grid dimension sliders */}
-            <div className="grid grid-cols-2 gap-3 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               <Slider
                 name="Rows"
                 value={w.rows}
@@ -304,7 +360,7 @@ export function StudioControls(props: Props) {
           </>
         )}
 
-        {activeSlide === 'background' && wpTab === 'effects' && (
+        {activeSlide === 'wallpaper' && wpTab === 'effects' && (
           <>
             <div className="space-y-1">
               <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
@@ -315,8 +371,16 @@ export function StudioControls(props: Props) {
                 <Toggle name="Outline Only" on={w.outline} onChange={(v) => wp({ outline: v })} />
                 <Toggle name="Glassmorphism Cards" on={w.glass} onChange={(v) => wp({ glass: v })} />
                 <Toggle name="Deep Text Shadow" on={w.shadow} onChange={(v) => wp({ shadow: v })} />
-                <Toggle name="Noise Grain" on={state.showNoiseTexture} onChange={(v) => update({ showNoiseTexture: v })} />
-                <Toggle name="Safe Zones" on={state.showSafeZones} onChange={(v) => update({ showSafeZones: v })} />
+                <Toggle
+                  name="Noise Grain"
+                  on={state.showNoiseTexture}
+                  onChange={(v) => update({ showNoiseTexture: v })}
+                />
+                <Toggle
+                  name="Safe Zones"
+                  on={state.showSafeZones}
+                  onChange={(v) => update({ showSafeZones: v })}
+                />
               </div>
             </div>
 
@@ -347,45 +411,262 @@ export function StudioControls(props: Props) {
           </>
         )}
 
-        {/* SLIDE 2: PHOTO CONTROLS */}
+        {/* ======================================================== */}
+        {/* SLIDE 2: LIVE MAP SPOTLIGHT CONTROLS */}
+        {/* ======================================================== */}
+        {activeSlide === 'map' && mapTab === 'spot' && (
+          <>
+            <div className="space-y-1">
+              <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                Select Oslo Venue
+              </span>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {venues.map((v) => (
+                  <button
+                    key={v.id}
+                    onClick={() => pickVenue(v)}
+                    className={`flex shrink-0 items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                      m.venueId === v.id
+                        ? 'bg-[#e84a27] border-[#e84a27] text-white shadow-sm'
+                        : 'bg-white dark:bg-white/5 border-black/10 dark:border-white/10 text-zinc-700 dark:text-zinc-200'
+                    }`}
+                  >
+                    <span>{v.icon || '🍽️'}</span>
+                    <span>{v.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                Map Vector Theme
+              </span>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {(
+                  [
+                    ['streets', 'Streets v2 (Color)'],
+                    ['dataviz', 'Dataviz (Light Monochrome)'],
+                    ['aquarelle', 'Aquarelle (Artistic)'],
+                  ] as [MapStyleKey, string][]
+                ).map(([styleKey, label]) => (
+                  <button
+                    key={styleKey}
+                    className={pill(m.style === styleKey)}
+                    onClick={() => mp({ style: styleKey })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <Slider
+                name="Map Zoom"
+                value={m.zoom}
+                min={12}
+                max={18}
+                step={0.1}
+                onChange={(v) => mp({ zoom: v })}
+              />
+              <Slider
+                name="3D Building Pitch"
+                value={m.pitch}
+                min={0}
+                max={60}
+                onChange={(v) => mp({ pitch: v })}
+              />
+            </div>
+
+            <Slider
+              name="Radar Marker Height"
+              value={m.pinY}
+              min={0.15}
+              max={0.8}
+              step={0.02}
+              onChange={(v) => mp({ pinY: v })}
+            />
+
+            <div className="space-y-2 pt-2 border-t border-black/5 dark:border-white/5">
+              <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                Venue Custom Text
+              </span>
+              <input
+                className={field}
+                placeholder="Venue Name"
+                value={m.name}
+                onChange={(e) => mp({ name: e.target.value })}
+              />
+              <input
+                className={field}
+                placeholder="Address"
+                value={m.address}
+                onChange={(e) => mp({ address: e.target.value })}
+              />
+            </div>
+          </>
+        )}
+
+        {activeSlide === 'map' && mapTab === 'card' && (
+          <>
+            {/* Card Theme Picker */}
+            <div className="space-y-1">
+              <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                Card Visual Theme
+              </span>
+              <div className="flex gap-2">
+                {(
+                  [
+                    ['cream', 'Warm Cream (Oat)'],
+                    ['dark', 'Espresso Dark'],
+                    ['paprika', 'Burnt Paprika'],
+                  ] as [CardTheme, string][]
+                ).map(([themeKey, label]) => (
+                  <button
+                    key={themeKey}
+                    className={pill(m.cardTheme === themeKey)}
+                    onClick={() => mp({ cardTheme: themeKey })}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Proportional Card Uniform Scale */}
+            <div className="space-y-1 pt-1">
+              <Slider
+                name="Proportional Card Scale (Uniform)"
+                value={m.cardScale}
+                min={0.6}
+                max={1.35}
+                step={0.05}
+                onChange={(v) => mp({ cardScale: v })}
+              />
+              <p className="text-[11px] text-zinc-500">
+                Scales title, photo, badge, and buttons proportionally with zero text cramping.
+              </p>
+            </div>
+
+            {/* Card Anchor Position */}
+            <div className="space-y-1 pt-1">
+              <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                Card Anchor Position
+              </span>
+              <div className="flex gap-2">
+                <button
+                  className={pill(m.cardPosition === 'below')}
+                  onClick={() => mp({ cardPosition: 'below' })}
+                >
+                  Anchor Below Pin
+                </button>
+                <button
+                  className={pill(m.cardPosition === 'above')}
+                  onClick={() => mp({ cardPosition: 'above' })}
+                >
+                  Anchor Above Pin
+                </button>
+                <button
+                  className={pill(m.cardPosition === 'custom')}
+                  onClick={() => mp({ cardPosition: 'custom' })}
+                >
+                  Custom Height
+                </button>
+              </div>
+            </div>
+
+            {m.cardPosition === 'custom' && (
+              <Slider
+                name="Custom Card Height"
+                value={m.cardY ?? 0.55}
+                min={0.15}
+                max={0.85}
+                step={0.02}
+                onChange={(v) => mp({ cardY: v })}
+              />
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <Slider
+                name="Corner Radius"
+                value={m.cardRadius || 44}
+                min={12}
+                max={68}
+                onChange={(v) => mp({ cardRadius: v })}
+              />
+              <Slider
+                name="Pin Size"
+                value={m.pinScale || 1}
+                min={0.6}
+                max={1.5}
+                step={0.05}
+                onChange={(v) => mp({ pinScale: v })}
+              />
+            </div>
+
+            {/* Elements Visibility Toggles */}
+            <div className="space-y-1 pt-2 border-t border-black/5 dark:border-white/5">
+              <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                Card Elements Visibility
+              </span>
+              <div className="flex flex-wrap gap-2">
+                <Toggle name="Show Rating" on={m.showRating} onChange={(v) => mp({ showRating: v })} />
+                <Toggle name="Show Address" on={m.showAddress} onChange={(v) => mp({ showAddress: v })} />
+                <Toggle name="Show Buttons" on={m.showButtons} onChange={(v) => mp({ showButtons: v })} />
+                <Toggle name="Show Photo" on={m.showPhoto} onChange={(v) => mp({ showPhoto: v })} />
+                <Toggle name="Show Marker Pin" on={m.showPin} onChange={(v) => mp({ showPin: v })} />
+              </div>
+            </div>
+
+            {m.showButtons && (
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <input
+                  className={field}
+                  placeholder="Left Button"
+                  value={m.mapLabel}
+                  onChange={(e) => mp({ mapLabel: e.target.value })}
+                />
+                <input
+                  className={field}
+                  placeholder="Right Button"
+                  value={m.detailsLabel}
+                  onChange={(e) => mp({ detailsLabel: e.target.value })}
+                />
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ======================================================== */}
+        {/* SLIDE 3: CUSTOM PHOTO CONTROLS */}
+        {/* ======================================================== */}
         {activeSlide === 'photo' && ppTab === 'photo' && (
           <>
             <div className="space-y-3">
               <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
-                Photo Source
+                Upload Custom Photo
               </span>
-              <div className="grid grid-cols-2 gap-3">
-                <label className={`${pill(false)} flex cursor-pointer items-center justify-center gap-2 text-center`}>
-                  📁 Upload Photo
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="sr-only"
-                    onChange={(e) =>
-                      readFile(e.target.files?.[0], (src) =>
-                        pp({ src, fit: 'cover', zoom: 1 })
-                      )
-                    }
-                  />
-                </label>
-
-                <button
-                  onClick={onOpenMapCapture}
-                  className="min-h-[44px] rounded-full px-4 text-sm font-bold bg-[#e84a27] text-white shadow-md active:scale-95 transition-all flex items-center justify-center gap-1.5"
-                >
-                  🗺️ Map Snapshot
-                </button>
-              </div>
-              <p className="text-xs text-zinc-500">
-                Tap “Map Snapshot” to interactively frame any Oslo venue with live pins & styled cards.
-              </p>
+              <label className={`${pill(false)} flex cursor-pointer items-center justify-center gap-2 text-center`}>
+                📁 Pick Photo from Device
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={(e) =>
+                    readFile(e.target.files?.[0], (src) =>
+                      pp({ src, fit: 'cover', zoom: 1 })
+                    )
+                  }
+                />
+              </label>
             </div>
 
             {p.src && (
               <div className="space-y-3 pt-2 border-t border-black/5 dark:border-white/5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
-                    Framing
+                    Framing Fit
                   </span>
                   <div className="flex gap-2">
                     <button
@@ -413,7 +694,7 @@ export function StudioControls(props: Props) {
                 />
 
                 <Color
-                  name="Letterbox Canvas Color"
+                  name="Letterbox Fill"
                   value={p.bgColor || '#181615'}
                   onChange={(v) => pp({ bgColor: v })}
                 />
@@ -462,7 +743,7 @@ export function StudioControls(props: Props) {
                 name="Dark Scrim / Dim"
                 value={p.dim || 0}
                 min={0}
-                max={0.8}
+                max={0.85}
                 step={0.05}
                 onChange={(v) => pp({ dim: v })}
               />
@@ -478,13 +759,16 @@ export function StudioControls(props: Props) {
           </>
         )}
 
-        {/* ADD ONS TAB (FOR EITHER SLIDE) */}
-        {((activeSlide === 'background' && wpTab === 'add') ||
+        {/* ======================================================== */}
+        {/* ADDONS TAB (SHARED ACROSS ALL 3 SLIDES) */}
+        {/* ======================================================== */}
+        {((activeSlide === 'wallpaper' && wpTab === 'add') ||
+          (activeSlide === 'map' && mapTab === 'add') ||
           (activeSlide === 'photo' && ppTab === 'add')) && (
           <>
             <div className="space-y-2">
               <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
-                Add Elements to {activeSlide === 'background' ? 'Wallpaper' : 'Photo'}
+                Add Elements to Active Slide ({activeSlide.toUpperCase()})
               </span>
               <div className="flex flex-wrap gap-2">
                 <button
@@ -522,13 +806,10 @@ export function StudioControls(props: Props) {
                     }
                   />
                 </label>
-                <button className={pill(false)} onClick={onOpenMapCapture}>
-                  + Map Snapshot Sticker
-                </button>
               </div>
             </div>
 
-            {/* List of active elements */}
+            {/* Layers List */}
             {currentElements.length > 0 && (
               <div className="space-y-1 pt-2">
                 <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
@@ -714,7 +995,7 @@ export function StudioControls(props: Props) {
                 )}
 
                 {/* COMMON TRANSFORM SLIDERS */}
-                <div className="grid grid-cols-2 gap-3 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                   <Slider
                     name="Size"
                     value={selected.scale}
@@ -736,8 +1017,11 @@ export function StudioControls(props: Props) {
           </>
         )}
 
-        {/* EXPORT TAB (FOR BOTH SLIDES) */}
-        {((activeSlide === 'background' && wpTab === 'export') ||
+        {/* ======================================================== */}
+        {/* EXPORT TAB (FOR ALL SLIDES) */}
+        {/* ======================================================== */}
+        {((activeSlide === 'wallpaper' && wpTab === 'export') ||
+          (activeSlide === 'map' && mapTab === 'export') ||
           (activeSlide === 'photo' && ppTab === 'export')) && (
           <div className="space-y-4">
             <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
@@ -746,13 +1030,13 @@ export function StudioControls(props: Props) {
 
             {/* Format Selection */}
             <div className="space-y-1">
-              <span className="text-xs text-zinc-500">File Format</span>
-              <div className="flex gap-2">
+              <span className="text-xs text-zinc-500">Image Format</span>
+              <div className="flex gap-2 overflow-x-auto pb-1">
                 <button
                   className={pill(exportFormat === 'png')}
                   onClick={() => setExportFormat('png')}
                 >
-                  PNG (Crisp 2K Retina)
+                  PNG (Lossless 2K)
                 </button>
                 <button
                   className={pill(exportFormat === 'jpeg')}
@@ -763,29 +1047,48 @@ export function StudioControls(props: Props) {
               </div>
             </div>
 
-            {/* Target Selection */}
+            {/* Export Scope */}
             <div className="space-y-1">
               <span className="text-xs text-zinc-500">Export Scope</span>
-              <div className="flex gap-2">
+              <div className="flex gap-2 overflow-x-auto pb-1">
                 <button
-                  className={pill(!exportBoth)}
-                  onClick={() => setExportBoth(false)}
+                  className={pill(!exportAll)}
+                  onClick={() => setExportAll(false)}
                 >
-                  Current Slide ({activeSlide === 'background' ? '1. Wallpaper' : '2. Photo'})
+                  Current Slide ({activeSlide.toUpperCase()})
                 </button>
                 <button
-                  className={pill(exportBoth)}
-                  onClick={() => setExportBoth(true)}
+                  className={pill(exportAll)}
+                  onClick={() => setExportAll(true)}
                 >
-                  Both Slides (Carousel Set)
+                  All 3 Slides (Carousel Set)
                 </button>
               </div>
             </div>
 
-            {/* Action Buttons */}
+            {/* Resolution Mode */}
+            <div className="space-y-1">
+              <span className="text-xs text-zinc-500">Resolution</span>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                <button
+                  className={pill(!exportRetina)}
+                  onClick={() => setExportRetina(false)}
+                >
+                  1080p Standard (Exact Instagram Fit)
+                </button>
+                <button
+                  className={pill(exportRetina)}
+                  onClick={() => setExportRetina(true)}
+                >
+                  2160p 2K Retina (Ultra Crisp)
+                </button>
+              </div>
+            </div>
+
+            {/* Actions */}
             <div className="space-y-2 pt-2">
               <button
-                onClick={() => onExport(exportFormat, exportBoth)}
+                onClick={() => onExport(exportFormat, exportAll, exportRetina ? 2 : 1)}
                 disabled={exporting}
                 className="min-h-[52px] w-full rounded-2xl bg-[#e84a27] font-comico text-lg text-white shadow-lg active:scale-95 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
               >
@@ -793,11 +1096,11 @@ export function StudioControls(props: Props) {
               </button>
 
               <button
-                onClick={() => onDownloadOnly(exportFormat, exportBoth)}
+                onClick={() => onDownloadOnly(exportFormat, exportAll, exportRetina ? 2 : 1)}
                 disabled={exporting}
                 className="min-h-[46px] w-full rounded-xl bg-white dark:bg-white/10 text-zinc-900 dark:text-white font-bold text-sm border border-black/10 dark:border-white/10 shadow-sm active:scale-95 transition-all disabled:opacity-60 flex items-center justify-center gap-1.5"
               >
-                ⬇️ Direct Download Only ({exportFormat.toUpperCase()})
+                ⬇️ Direct Download Image ({exportFormat.toUpperCase()})
               </button>
             </div>
 
@@ -810,7 +1113,7 @@ export function StudioControls(props: Props) {
             {exportError && <p className="text-sm text-red-600 font-medium">{exportError}</p>}
 
             <p className="text-xs text-zinc-400">
-              Selection dashed outlines and safe-zone hatched bars are automatically excluded from the final exported image.
+              Selection dashed outlines and safe-zone guides are automatically excluded from the final exported image.
             </p>
           </div>
         )}

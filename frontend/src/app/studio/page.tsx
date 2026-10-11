@@ -4,18 +4,16 @@ import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { StudioCanvas } from '@/components/studio/StudioCanvas';
 import { StudioControls } from '@/components/studio/StudioControls';
-import { MapCaptureModal } from '@/components/studio/MapCaptureModal';
 import {
   downloadFiles,
   makeFile,
   renderSlide,
   shareFiles,
-  type ExportFormat,
 } from '@/lib/studioExport';
 import {
   CANVAS_SIZES,
-  type CaptureSize,
   type ElementKind,
+  type ExportFormat,
   type MapShotState,
   type PhotoState,
   type SlideId,
@@ -33,7 +31,7 @@ const INITIAL: StudioState = {
     rows: 9,
     cols: 2,
     size: 1,
-    colorMode: 'oranges', // Default: each logo in the grid has a shade of orange
+    colorMode: 'oranges', // Default: each logo in the grid has a Nordic orange shade
     baseColor: '#e84a27',
     variation: 1,
     seed: 1,
@@ -50,6 +48,35 @@ const INITIAL: StudioState = {
     opacity: 1,
     blur: 0,
   },
+  map: {
+    venueId: null,
+    name: 'Digg Pizza - Grønland',
+    address: 'Grønlandsleiret 1, 0190 Oslo, Norway',
+    icon: '🍕',
+    rating: 4.9,
+    photo:
+      'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=400&q=80',
+    lng: 10.761,
+    lat: 59.913,
+    style: 'streets',
+    zoom: 15.5,
+    pitch: 0,
+    pinY: 0.35,
+    showPin: true,
+    pinScale: 1,
+    cardPosition: 'below',
+    cardY: 0.55,
+    cardTheme: 'cream',
+    cardScale: 1,
+    cardWidth: 860,
+    cardRadius: 44,
+    showPhoto: true,
+    showRating: true,
+    showAddress: true,
+    showButtons: true,
+    mapLabel: 'Map ↗',
+    detailsLabel: 'Details →',
+  },
   photo: {
     src: null,
     fit: 'cover',
@@ -60,35 +87,9 @@ const INITIAL: StudioState = {
     vignette: false,
     bgColor: '#181615',
   },
-  map: {
-    venueId: null,
-    name: 'Ochaya - The Matcha Bar',
-    address: 'Bernt Ankers gate 6a, 0183 Oslo, Norway',
-    icon: '🍵',
-    rating: 4.9,
-    photo: null,
-    lng: 10.7516,
-    lat: 59.9171,
-    style: 'streets',
-    zoom: 15.2,
-    pitch: 0,
-    pinY: 0.34,
-    showPin: true,
-    pinScale: 1,
-    cardPosition: 'below',
-    cardTheme: 'cream',
-    cardScale: 1,
-    cardRadius: 48,
-    showPhoto: false,
-    showRating: true,
-    showAddress: true,
-    showButtons: true,
-    mapLabel: 'Map ↗',
-    detailsLabel: 'Details →',
-  },
-  captureSize: '4:5',
   elements: {
-    background: [],
+    wallpaper: [],
+    map: [],
     photo: [],
   },
 };
@@ -107,25 +108,33 @@ const DEFAULTS: Record<ElementKind, Partial<StudioElement>> = {
   image: { opacity: 1 },
 };
 
+const SLIDES_ORDER: SlideId[] = ['wallpaper', 'map', 'photo'];
+
 export default function StudioPage() {
   const [state, setState] = useState<StudioState>(INITIAL);
-  const [activeSlide, setActiveSlide] = useState<SlideId>('background');
+  const [activeSlide, setActiveSlide] = useState<SlideId>(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search).get('slide');
+      if (p === 'wallpaper' || p === 'map' || p === 'photo') return p;
+    }
+    return 'map';
+  });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [scale, setScale] = useState(0.3);
-  const [isMapCaptureOpen, setIsMapCaptureOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
-  const offscreenCanvasRef = useRef<HTMLDivElement>(null);
+  const offscreenRef = useRef<HTMLDivElement>(null);
+  const [offscreenSlide, setOffscreenSlide] = useState<SlideId>('wallpaper');
 
   const { w, h } = CANVAS_SIZES[state.aspectRatio];
 
   const update = useCallback((patch: Partial<StudioState>) => setState((s) => ({ ...s, ...patch })), []);
   const wp = useCallback((patch: Partial<WallpaperState>) => setState((s) => ({ ...s, wallpaper: { ...s.wallpaper, ...patch } })), []);
-  const pp = useCallback((patch: Partial<PhotoState>) => setState((s) => ({ ...s, photo: { ...s.photo, ...patch } })), []);
   const mp = useCallback((patch: Partial<MapShotState>) => setState((s) => ({ ...s, map: { ...s.map, ...patch } })), []);
+  const pp = useCallback((patch: Partial<PhotoState>) => setState((s) => ({ ...s, photo: { ...s.photo, ...patch } })), []);
 
   const patchElement = useCallback(
     (id: string, patch: Partial<StudioElement>) =>
@@ -133,7 +142,7 @@ export default function StudioPage() {
         ...s,
         elements: {
           ...s.elements,
-          [activeSlide]: s.elements[activeSlide].map((e) => (e.id === id ? { ...e, ...patch } : e)),
+          [activeSlide]: (s.elements[activeSlide] || []).map((e) => (e.id === id ? { ...e, ...patch } : e)),
         },
       })),
     [activeSlide]
@@ -171,7 +180,7 @@ export default function StudioPage() {
         ...s,
         elements: {
           ...s.elements,
-          [activeSlide]: [...s.elements[activeSlide], el],
+          [activeSlide]: [...(s.elements[activeSlide] || []), el],
         },
       }));
       setSelectedId(id);
@@ -185,7 +194,7 @@ export default function StudioPage() {
         ...s,
         elements: {
           ...s.elements,
-          [activeSlide]: s.elements[activeSlide].filter((e) => e.id !== id),
+          [activeSlide]: (s.elements[activeSlide] || []).filter((e) => e.id !== id),
         },
       }));
       setSelectedId(null);
@@ -193,46 +202,62 @@ export default function StudioPage() {
     [activeSlide]
   );
 
+  // Maintain preview scale proportional to stage container bounds
   useLayoutEffect(() => {
     const el = stageRef.current;
     if (!el) return;
-    const fit = () => setScale(Math.min((el.clientWidth - 24) / w, (el.clientHeight - 24) / h));
+    const fit = () => {
+      const padding = 20;
+      setScale(Math.min((el.clientWidth - padding) / w, (el.clientHeight - padding) / h));
+    };
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(el);
     return () => ro.disconnect();
   }, [w, h]);
 
-  const handleMapCaptured = (dataUrl: string, target: 'slide-bg' | 'sticker') => {
-    if (target === 'slide-bg') {
-      pp({ src: dataUrl, fit: 'cover', zoom: 1 });
-      setActiveSlide('photo');
-    } else {
-      addElement('image', { src: dataUrl });
-    }
+  const cycleSlide = (dir: 'prev' | 'next') => {
+    const idx = SLIDES_ORDER.indexOf(activeSlide);
+    const nextIdx =
+      dir === 'next'
+        ? (idx + 1) % SLIDES_ORDER.length
+        : (idx - 1 + SLIDES_ORDER.length) % SLIDES_ORDER.length;
+    setActiveSlide(SLIDES_ORDER[nextIdx]);
+    setSelectedId(null);
   };
 
-  const executeExport = async (format: ExportFormat, bothSlides: boolean, mode: 'share' | 'download') => {
+  const executeExport = async (
+    format: ExportFormat,
+    allSlides: boolean,
+    pixelRatio: number,
+    mode: 'share' | 'download'
+  ) => {
     if (!canvasRef.current) return;
     setExporting(true);
     setExportError(null);
     setSelectedId(null);
 
     try {
-      await new Promise((r) => setTimeout(r, 300));
+      await new Promise((r) => setTimeout(r, 350));
       const files: File[] = [];
 
       // 1. Current active slide
-      const blob1 = await renderSlide(canvasRef.current, format);
-      const name1 = `smakr-${activeSlide}-${state.aspectRatio.replace(':', 'x')}`;
-      files.push(makeFile(blob1, name1, format));
+      const blobActive = await renderSlide(canvasRef.current, format, w, h, pixelRatio);
+      const nameActive = `smakr-${activeSlide}-${state.aspectRatio.replace(':', 'x')}`;
+      files.push(makeFile(blobActive, nameActive, format));
 
-      // 2. Secondary slide if both requested
-      if (bothSlides && offscreenCanvasRef.current) {
-        const otherSlide: SlideId = activeSlide === 'background' ? 'photo' : 'background';
-        const blob2 = await renderSlide(offscreenCanvasRef.current, format);
-        const name2 = `smakr-${otherSlide}-${state.aspectRatio.replace(':', 'x')}`;
-        files.push(makeFile(blob2, name2, format));
+      // 2. Additional slides if all requested
+      if (allSlides && offscreenRef.current) {
+        const others = SLIDES_ORDER.filter((s) => s !== activeSlide);
+        for (const other of others) {
+          setOffscreenSlide(other);
+          await new Promise((r) => setTimeout(r, 400));
+          if (offscreenRef.current) {
+            const blobOther = await renderSlide(offscreenRef.current, format, w, h, pixelRatio);
+            const nameOther = `smakr-${other}-${state.aspectRatio.replace(':', 'x')}`;
+            files.push(makeFile(blobOther, nameOther, format));
+          }
+        }
       }
 
       if (mode === 'share') {
@@ -245,133 +270,163 @@ export default function StudioPage() {
       }
     } catch (err) {
       console.error('Export failed', err);
-      setExportError('Export failed. If using high-resolution images, check that they are fully loaded.');
+      setExportError('Export failed. Ensure all images and map tiles are fully loaded.');
     } finally {
       setExporting(false);
     }
   };
 
-  const selected = state.elements[activeSlide]?.find((e) => e.id === selectedId) ?? null;
-  const otherSlide: SlideId = activeSlide === 'background' ? 'photo' : 'background';
+  const selected = (state.elements[activeSlide] || []).find((e) => e.id === selectedId) ?? null;
 
   return (
-    <main className="flex h-dvh flex-col overflow-hidden bg-[#141211] font-jakarta select-none">
-      {/* Header Bar */}
-      <header className="flex h-12 shrink-0 items-center justify-between px-3 border-b border-white/5 bg-[#1a1817]">
-        <Link href="/" className="min-h-[44px] content-center text-xs font-bold text-zinc-300 hover:text-white">
+    <div className="flex h-dvh w-full max-w-full flex-col overflow-hidden bg-[#141211] font-jakarta select-none">
+      {/* Top Header Chrome */}
+      <header className="flex h-12 shrink-0 items-center justify-between px-3 border-b border-white/5 bg-[#191716]">
+        <Link
+          href="/"
+          className="min-h-[44px] content-center text-xs font-bold text-zinc-300 hover:text-white transition-colors"
+        >
           ← Back to Radar
         </Link>
 
-        {/* Center slide switch pill */}
+        {/* Center Slide Indicator Pills */}
         <div className="flex rounded-full bg-white/10 p-0.5">
           <button
-            onClick={() => setActiveSlide('background')}
+            onClick={() => {
+              setActiveSlide('wallpaper');
+              setSelectedId(null);
+            }}
             className={`min-h-[30px] rounded-full px-3 text-xs font-bold transition-all ${
-              activeSlide === 'background' ? 'bg-[#e84a27] text-white shadow-xs' : 'text-zinc-400 hover:text-white'
+              activeSlide === 'wallpaper'
+                ? 'bg-[#e84a27] text-white shadow-xs'
+                : 'text-zinc-400 hover:text-white'
             }`}
           >
-            Slide 1: Wallpaper
+            Wallpaper
           </button>
           <button
-            onClick={() => setActiveSlide('photo')}
+            onClick={() => {
+              setActiveSlide('map');
+              setSelectedId(null);
+            }}
             className={`min-h-[30px] rounded-full px-3 text-xs font-bold transition-all ${
-              activeSlide === 'photo' ? 'bg-[#e84a27] text-white shadow-xs' : 'text-zinc-400 hover:text-white'
+              activeSlide === 'map'
+                ? 'bg-[#e84a27] text-white shadow-xs'
+                : 'text-zinc-400 hover:text-white'
             }`}
           >
-            Slide 2: Photo
+            Live Map
+          </button>
+          <button
+            onClick={() => {
+              setActiveSlide('photo');
+              setSelectedId(null);
+            }}
+            className={`min-h-[30px] rounded-full px-3 text-xs font-bold transition-all ${
+              activeSlide === 'photo'
+                ? 'bg-[#e84a27] text-white shadow-xs'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            Photo
           </button>
         </div>
 
-        {/* Quick Map Viewfinder Action */}
-        <button
-          onClick={() => setIsMapCaptureOpen(true)}
-          className="min-h-[30px] px-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-semibold border border-white/10 flex items-center gap-1"
-        >
-          <span>🗺️</span>
-          <span className="hidden sm:inline">Map Snapshot</span>
-        </button>
+        <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest">
+          {state.aspectRatio}
+        </span>
       </header>
 
-      {/* Main Preview Stage (upper ~46vh) */}
-      <section ref={stageRef} className="relative flex min-h-0 basis-[46%] items-center justify-center p-2 bg-[#12100f]">
-        {/* Left / Right Slide Arrow Buttons */}
-        <button
-          onClick={() => setActiveSlide(activeSlide === 'background' ? 'photo' : 'background')}
-          className="absolute left-3 z-30 w-8 h-8 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center backdrop-blur-md border border-white/10 text-xs"
-          title="Switch Slide"
+      {/* Main Content Area: Responsive Stack (Mobile: Column, Desktop: Row) */}
+      <div className="flex flex-1 flex-col lg:flex-row overflow-hidden min-h-0 w-full max-w-full">
+        {/* Main Preview Stage */}
+        <section
+          ref={stageRef}
+          className="relative flex min-h-0 basis-[46%] lg:basis-auto lg:flex-1 items-center justify-center p-3 bg-[#100e0d] overflow-hidden w-full max-w-full"
         >
-          ‹
-        </button>
-        <button
-          onClick={() => setActiveSlide(activeSlide === 'background' ? 'photo' : 'background')}
-          className="absolute right-3 z-30 w-8 h-8 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center backdrop-blur-md border border-white/10 text-xs"
-          title="Switch Slide"
-        >
-          ›
-        </button>
+          {/* Left / Right Slide Navigation Chevrons */}
+          <button
+            onClick={() => cycleSlide('prev')}
+            className="absolute left-3 z-30 w-10 h-10 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center backdrop-blur-md border border-white/10 text-base active:scale-95 transition-all shadow-lg"
+            title="Previous Slide"
+          >
+            ‹
+          </button>
+          <button
+            onClick={() => cycleSlide('next')}
+            className="absolute right-3 z-30 w-10 h-10 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center backdrop-blur-md border border-white/10 text-base active:scale-95 transition-all shadow-lg"
+            title="Next Slide"
+          >
+            ›
+          </button>
 
-        {/* Live Scaled Canvas */}
-        <div style={{ width: w * scale, height: h * scale }} className="relative shrink-0 overflow-hidden rounded-xl shadow-2xl ring-1 ring-white/10">
-          <div style={{ width: w, height: h, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
+          {/* Live Scaled Canvas */}
+          <div
+            style={{ width: w * scale, height: h * scale }}
+            className="relative shrink-0 overflow-hidden rounded-xl shadow-2xl ring-1 ring-white/10"
+          >
+            <div
+              style={{
+                width: w,
+                height: h,
+                transform: `scale(${scale})`,
+                transformOrigin: 'top left',
+              }}
+            >
+              <StudioCanvas
+                ref={canvasRef}
+                state={state}
+                activeSlide={activeSlide}
+                previewScale={scale}
+                selectedId={selectedId}
+                onSelect={setSelectedId}
+                onMove={(id, x, y) => patchElement(id, { x, y })}
+                onMapChange={(coords, zoom, pitch) => {
+                  mp({ lng: coords[0], lat: coords[1], zoom, pitch });
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Hidden Offscreen Canvas for Exporting Non-Active Slides */}
+          <div className="fixed -top-[99999px] -left-[99999px] pointer-events-none opacity-0 overflow-hidden w-0 h-0" aria-hidden>
             <StudioCanvas
-              ref={canvasRef}
+              ref={offscreenRef}
               state={state}
-              activeSlide={activeSlide}
-              previewScale={scale}
-              selectedId={selectedId}
-              onSelect={setSelectedId}
-              onMove={(id, x, y) => patchElement(id, { x, y })}
+              activeSlide={offscreenSlide}
+              previewScale={1}
+              selectedId={null}
+              onSelect={() => {}}
+              onMove={() => {}}
             />
           </div>
-        </div>
+        </section>
 
-        {/* Hidden offscreen canvas for rendering secondary slide in dual export */}
-        <div className="absolute -left-[9999px] top-0 pointer-events-none" aria-hidden>
-          <StudioCanvas
-            ref={offscreenCanvasRef}
+        {/* Controls Drawer (Mobile: bottom drawer, Desktop: right inspector sidebar) */}
+        <section className="min-h-0 flex-1 lg:flex-initial lg:w-[420px] lg:h-full overflow-hidden rounded-t-3xl lg:rounded-none border-t lg:border-t-0 lg:border-l border-black/10 dark:border-white/10 bg-[#FAF7F2] dark:bg-[#191716] w-full max-w-full">
+          <StudioControls
             state={state}
-            activeSlide={otherSlide}
-            previewScale={1}
-            selectedId={null}
-            onSelect={() => {}}
-            onMove={() => {}}
+            activeSlide={activeSlide}
+            onSelectSlide={(slide) => {
+              setActiveSlide(slide);
+              setSelectedId(null);
+            }}
+            update={update}
+            wp={wp}
+            mp={mp}
+            pp={pp}
+            selected={selected}
+            addElement={addElement}
+            patchElement={patchElement}
+            removeElement={removeElement}
+            selectElement={setSelectedId}
+            onExport={(format, all, pr) => executeExport(format, all, pr, 'share')}
+            onDownloadOnly={(format, all, pr) => executeExport(format, all, pr, 'download')}
+            exporting={exporting}
+            exportError={exportError}
           />
-        </div>
-      </section>
-
-      {/* Bottom Controls Drawer */}
-      <section className="min-h-0 flex-1 overflow-hidden rounded-t-3xl border-t border-black/10 bg-[#FAF7F2] dark:bg-[#1a1817]">
-        <StudioControls
-          state={state}
-          activeSlide={activeSlide}
-          onSelectSlide={setActiveSlide}
-          update={update}
-          wp={wp}
-          pp={pp}
-          selected={selected}
-          addElement={addElement}
-          patchElement={patchElement}
-          removeElement={removeElement}
-          selectElement={setSelectedId}
-          onOpenMapCapture={() => setIsMapCaptureOpen(true)}
-          onExport={(format, both) => executeExport(format, both, 'share')}
-          onDownloadOnly={(format, both) => executeExport(format, both, 'download')}
-          exporting={exporting}
-          exportError={exportError}
-        />
-      </section>
-
-      {/* Interactive Map Capture Viewfinder Modal */}
-      {isMapCaptureOpen && (
-        <MapCaptureModal
-          mapState={state.map}
-          captureSize={state.captureSize}
-          onUpdateMap={mp}
-          onUpdateCaptureSize={(sz: CaptureSize) => update({ captureSize: sz })}
-          onCapture={handleMapCaptured}
-          onClose={() => setIsMapCaptureOpen(false)}
-        />
-      )}
-    </main>
+        </section>
+      </div>
+    </div>
   );
 }
