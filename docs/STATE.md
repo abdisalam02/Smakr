@@ -94,3 +94,10 @@
 - Pop-up & food truck support: urgency badges, pulsing radar halo, 7-day post-close grace period (50% opacity), and auto-archive.
 - Expandable in-feed filter bar with smooth inline accordion (spot types, cuisines, dietary, vibe) without intrusive modals.
 - In-feed admin quick-editing drawer with 1-tap price clearing, date pickers, schedule inputs, photo swap, and status toggles.
+- Schema cache resilient retry added to food post creation/updates to gracefully tolerate unmigrated DB columns.
+- Prominent [✎ Edit] pills wired on food post and spot cards for @niwache12, official admins, and admin roles.
+- Unified migration 20261016 prepared for pop-up start/end dates, truck schedules, and nullable prices.
+- Real-time Oslo opening hours evaluator checks schedule intervals and flags accurate open/closed status.
+- Long review text truncated to 2-3 lines with "Read more" toggle in feed and venue drawers.
+- Google Places reviews auto-attached on dish creation; admin review picker and Drop of the Week editing wired in feed.
+- Map camera flight locks programmatic zoom to eliminate double-tap bug when opening venue cards.

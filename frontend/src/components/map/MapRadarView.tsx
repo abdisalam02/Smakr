@@ -30,6 +30,7 @@ import {
 import { FOOD_PIN_SVG_MAP } from "@/components/food/FoodIcons";
 import { formatDistance } from "@/lib/math";
 import { getPopupStatus } from "@/lib/popupUtils";
+import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import {
   buildOpenPeepsSvg,
   getOrCreateGuestOpenPeepsConfig,
@@ -281,6 +282,7 @@ export function MapRadarView() {
   const mobileSheetState = useCityPulseStore((state) => state.mobileSheetState);
   const userLocationMarkerRef = useRef<maplibregl.Marker | null>(null);
   const lastAvatarSigRef = useRef<string>("");
+  const isProgrammaticFlightRef = useRef(false);
   const { requestLocation } = useGeolocation();
 
   // Unified smooth flight logic matching the venue pins on the map
@@ -316,6 +318,7 @@ export function MapRadarView() {
         bottomPad,
       });
 
+      isProgrammaticFlightRef.current = true;
       map.flyTo({
         center: [lng, lat],
         zoom: targetZoom,
@@ -334,6 +337,10 @@ export function MapRadarView() {
           left: 0,
           right: 0,
         },
+      });
+
+      map.once("moveend", () => {
+        isProgrammaticFlightRef.current = false;
       });
     },
     []
@@ -685,7 +692,7 @@ export function MapRadarView() {
       const zoomingOut = z < lastZoom;
       lastZoom = z;
       setCurrentZoom(z);
-      if (z < 13.8 && zoomingOut) {
+      if (z < 13.8 && zoomingOut && !isProgrammaticFlightRef.current) {
         const state = useCityPulseStore.getState();
         if (state.selectedVenue) {
           state.setSelectedVenue(null);
@@ -939,6 +946,8 @@ export function MapRadarView() {
       ? selectedVenue.google_rating.toFixed(1)
       : "4.8";
 
+    const openStatus = getVenueLiveOpenStatus(selectedVenue);
+
     const distanceText = selectedVenue.distance_meters
       ? formatDistance(selectedVenue.distance_meters)
       : "";
@@ -1009,7 +1018,7 @@ export function MapRadarView() {
               ${selectedVenue.name}
             </div>
 
-            <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+            <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px; flex-wrap: wrap;">
               <span style="
                 background: #181615;
                 color: #ffffff;
@@ -1023,7 +1032,22 @@ export function MapRadarView() {
               ">
                 <span style="color: #f59e0b;">★</span> ${ratingVal}
               </span>
-              ${distanceText ? `<span style="font-size: 10.5px; color: #059669; font-weight: 600;">· ${distanceText}</span>` : ""}
+              <span style="
+                background: ${openStatus.isOpen ? '#ecfdf5' : '#fef2f2'};
+                color: ${openStatus.isOpen ? '#047857' : '#b91c1c'};
+                border: 1px solid ${openStatus.isOpen ? '#a7f3d0' : '#fecaca'};
+                font-size: 9.5px;
+                font-weight: 700;
+                padding: 1px 6px;
+                border-radius: 999px;
+                display: inline-flex;
+                align-items: center;
+                gap: 3px;
+              ">
+                <span style="width: 5px; height: 5px; border-radius: 50%; background: ${openStatus.isOpen ? '#10b981' : '#ef4444'};"></span>
+                ${openStatus.statusText}
+              </span>
+              ${distanceText ? `<span style="font-size: 10px; color: #059669; font-weight: 600;">· ${distanceText}</span>` : ""}
             </div>
 
             <div style="

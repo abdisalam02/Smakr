@@ -3,13 +3,14 @@
 import React from "react";
 import { useShallow } from "zustand/react/shallow";
 import Image from "next/image";
-import { MapPin, Sparkles, Star, ChevronRight } from "lucide-react";
-import { ReviewItem, Venue } from "@/types";
+import { MapPin, Sparkles, Star, ChevronRight, Pencil } from "lucide-react";
+import { ReviewItem, Venue, FoodPost } from "@/types";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { formatDistance } from "@/lib/math";
 import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
 import { DietaryBadge } from "@/components/ui/DietaryBadge";
 import { getPopupStatus } from "@/lib/popupUtils";
+import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 
 interface FoodSpotCardProps {
   venue: Venue;
@@ -23,7 +24,54 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
 }: FoodSpotCardProps) {
   const flyToSpot = useCityPulseStore((state) => state.flyToSpot);
   const selectVenueById = useCityPulseStore((state) => state.selectVenueById);
+  const currentUser = useCityPulseStore((state) => state.currentUser);
+  const setQuickEditPost = useCityPulseStore((state) => state.setQuickEditPost);
+  const foodPosts = useCityPulseStore((state) => state.foodPosts);
   const popupStatus = getPopupStatus(venue);
+  const liveOpenStatus = getVenueLiveOpenStatus(venue);
+
+  const isViewerAdmin = Boolean(
+    currentUser?.role === "admin" ||
+    currentUser?.is_official ||
+    (currentUser?.handle || "").toLowerCase().includes("niwache") ||
+    (currentUser?.handle || "").toLowerCase().includes("smak") ||
+    (currentUser?.email || "").toLowerCase().includes("niwache")
+  );
+
+  const handleAdminEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const existingPost = foodPosts.find((p) => p.spot_id === venue.id);
+    if (existingPost) {
+      setQuickEditPost(existingPost);
+    } else {
+      setQuickEditPost({
+        id: `synthetic-${venue.id}`,
+        spot_id: venue.id,
+        spot_name: venue.name,
+        spot_address: venue.address || "",
+        spot_neighborhood: venue.city || "Oslo",
+        spot_coords: [venue.longitude, venue.latitude],
+        dish_name: venue.signature_dishes?.[0] || venue.name,
+        category: (venue.food_category as any) || "all",
+        image_url: venue.cover_image_url || "",
+        price_nok: null,
+        rating: venue.google_rating ? Math.round(venue.google_rating) : 5,
+        taste_tags: [],
+        review_text: venue.curated_reviews?.[0]?.text || "",
+        author: {
+          name: currentUser?.name || "Admin",
+          handle: currentUser?.handle || "@admin",
+          avatar_url: currentUser?.avatar_url || "",
+        },
+        likes_count: 0,
+        saves_count: 0,
+        created_at_relative: "Just now",
+        is_official_pick: false,
+        is_published: true,
+        is_archived: false,
+      });
+    }
+  };
 
   const categoryDef = FOOD_CATEGORIES.find((c) => c.id === venue.food_category);
   const signature = venue.signature_dishes && venue.signature_dishes.length > 0 ? venue.signature_dishes[0] : null;
@@ -171,12 +219,39 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
                   <span>Food Truck</span>
                 </span>
               )}
-            </div>
-            {venue.price_level && (
-              <span className="text-[11px] font-comico font-bold text-zinc-700 dark:text-zinc-300 bg-black/5 dark:bg-white/10 px-2 py-0.5 rounded-full">
-                {venue.price_level}
+              <span
+                className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-1 border ${
+                  liveOpenStatus.isOpen
+                    ? "bg-emerald-50 text-emerald-800 border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-300"
+                    : "bg-red-50 text-red-700 border-red-200/80 dark:bg-red-950/40 dark:text-red-300"
+                }`}
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    liveOpenStatus.isOpen ? "bg-emerald-500" : "bg-red-500"
+                  }`}
+                />
+                <span>{liveOpenStatus.statusText}</span>
               </span>
-            )}
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {isViewerAdmin && (
+                <button
+                  type="button"
+                  onClick={handleAdminEdit}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-white dark:bg-zinc-800 text-[#e84a27] shadow-xs border border-black/10 dark:border-white/10 text-[11px] font-bold hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                  title="Admin Edit Spot"
+                >
+                  <Pencil className="w-3 h-3 text-[#e84a27]" />
+                  <span>Edit</span>
+                </button>
+              )}
+              {venue.price_level && (
+                <span className="text-[11px] font-comico font-bold text-zinc-700 dark:text-zinc-300 bg-black/5 dark:bg-white/10 px-2 py-0.5 rounded-full">
+                  {venue.price_level}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Venue Name */}

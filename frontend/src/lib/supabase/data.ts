@@ -579,32 +579,54 @@ export async function insertFoodPost(input: FoodPostInsertInput): Promise<FoodPo
   const supabase = getSupabaseBrowserClient();
   if (!supabase) return { success: false, dish: null, error: "Supabase is not configured." };
   try {
-    const { data, error } = await supabase
+    const dietaryTags = Array.isArray(input.dietaryTags) ? [...input.dietaryTags] : [];
+    if (input.category && !dietaryTags.some((t) => t === `cat_${input.category}`)) {
+      dietaryTags.push(`cat_${input.category}`);
+    }
+
+    const payload: Record<string, unknown> = {
+      venue_id: input.venueId,
+      author_id: input.authorId,
+      dish_name: input.dishName,
+      // Several `food_posts` columns are NOT NULL — always send concrete values.
+      dish_image: input.dishImage?.trim() || "",
+      review_text: input.reviewText?.trim() || "",
+      price_nok:
+        typeof input.priceNok === "number" && input.priceNok > 0
+          ? input.priceNok
+          : null,
+      rating: Number(input.rating ?? 0) || 0,
+      dietary_tags: dietaryTags,
+      is_official_pick: input.isOfficialPick ?? true,
+      diner_quotes: sanitizeReviews(input.dinerQuotes),
+      likes_count: 0,
+      saves_count: 0,
+      craving_count: input.vibe === "craving" ? 1 : 0,
+      must_try_count: input.vibe === "must_try" ? 1 : 0,
+      tried_count: input.vibe === "tried" ? 1 : 0,
+    };
+    if (input.category) {
+      payload.category = input.category;
+    }
+
+    let { data, error } = await supabase
       .from("food_posts")
-      .insert({
-        venue_id: input.venueId,
-        author_id: input.authorId,
-        dish_name: input.dishName,
-        // Several `food_posts` columns are NOT NULL — always send concrete values.
-        dish_image: input.dishImage?.trim() || "",
-        review_text: input.reviewText?.trim() || "",
-        price_nok:
-          typeof input.priceNok === "number" && input.priceNok > 0
-            ? input.priceNok
-            : null,
-        rating: Number(input.rating ?? 0) || 0,
-        category: input.category || null,
-        dietary_tags: input.dietaryTags ?? [],
-        is_official_pick: input.isOfficialPick ?? true,
-        diner_quotes: sanitizeReviews(input.dinerQuotes),
-        likes_count: 0,
-        saves_count: 0,
-        craving_count: input.vibe === "craving" ? 1 : 0,
-        must_try_count: input.vibe === "must_try" ? 1 : 0,
-        tried_count: input.vibe === "tried" ? 1 : 0,
-      })
+      .insert(payload)
       .select("id")
       .single();
+
+    // Fallback: If 'category' column hasn't been added to the database yet, retry without it
+    if (error && error.message.toLowerCase().includes("category")) {
+      delete payload.category;
+      const retry = await supabase
+        .from("food_posts")
+        .insert(payload)
+        .select("id")
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
+
     if (error || !data) {
       return { success: false, dish: null, error: error?.message || "Insert failed." };
     }
@@ -666,7 +688,18 @@ export async function updateFoodPost(
   if (Object.keys(patch).length === 0) return { error: null };
 
   try {
-    const { error } = await supabase.from("food_posts").update(patch).eq("id", postId);
+    let { error } = await supabase.from("food_posts").update(patch).eq("id", postId);
+    if (error && error.message.toLowerCase().includes("category")) {
+      delete patch.category;
+      const retry = await supabase.from("food_posts").update(patch).eq("id", postId);
+      error = retry.error;
+    }
+    if (error && (error.message.includes("is_published") || error.message.includes("is_archived"))) {
+      delete patch.is_published;
+      delete patch.is_archived;
+      const retry = await supabase.from("food_posts").update(patch).eq("id", postId);
+      error = retry.error;
+    }
     return { error: error?.message ?? null };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Update failed." };

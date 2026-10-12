@@ -14,6 +14,7 @@ import {
   Bookmark,
   Globe,
   Phone,
+  Clock,
 } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { motion, AnimatePresence } from "motion/react";
@@ -22,6 +23,8 @@ import { formatDistance } from "@/lib/math";
 import { FoodPost, ReviewItem } from "@/types";
 import { DishDetailPopup } from "@/components/food/DishDetailPopup";
 import { getPopupStatus } from "@/lib/popupUtils";
+import { getVenueLiveOpenStatus } from "@/lib/openingHours";
+import { ExpandableReviewText } from "./ExpandableReviewText";
 
 /**
  * True on desktop (lg and above), where the in-place VenueDetailPane takes
@@ -78,6 +81,7 @@ export function VenueBottomSheet() {
 
   const [selectedDish, setSelectedDish] = useState<FoodPost | null>(null);
   const [showAllReviews, setShowAllReviews] = useState(false);
+  const openStatus = getVenueLiveOpenStatus(selectedVenue);
 
   // Reviews: curated venue reviews, diner quotes, or post reviews
   const reviews = useMemo<ReviewItem[]>(() => {
@@ -464,35 +468,46 @@ export function VenueBottomSheet() {
                 </div>
               )}
 
-              {/* Editorial Venue Quick Stats (Rating / Price / Area) */}
-              <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-zinc-50 border border-zinc-200/70 text-center">
+              {/* Editorial Venue Quick Stats (Rating / Price / Status / Area) */}
+              <div className="grid grid-cols-4 gap-1 p-2.5 rounded-2xl bg-zinc-50 border border-zinc-200/70 text-center">
                 <div>
                   <div className="text-[10px] text-zinc-400 uppercase font-mono tracking-wider">Rating</div>
-                  <div className="flex items-center justify-center gap-1 mt-0.5">
+                  <div className="flex items-center justify-center gap-0.5 mt-0.5">
                     <span className="text-amber-500 text-xs">★</span>
                     <span className="font-comico text-sm text-zinc-950 font-bold">
                       {selectedVenue.google_rating != null
                         ? selectedVenue.google_rating.toFixed(1)
                         : "4.7"}
                     </span>
-                    <span className="text-[10px] text-zinc-400 font-normal">
-                      ({selectedVenue.google_reviews_count || "120+"})
-                    </span>
                   </div>
                 </div>
-                <div className="border-x border-zinc-200/80">
+                <div className="border-l border-zinc-200/80">
                   <div className="text-[10px] text-zinc-400 uppercase font-mono tracking-wider">Price</div>
-                  <div className="font-mono font-bold text-xs text-zinc-900 mt-0.5">
+                  <div className="font-mono font-bold text-xs text-zinc-900 mt-1">
                     {selectedVenue.price_level || "$$"}
                   </div>
                 </div>
-                <div>
+                <div className="border-l border-zinc-200/80">
+                  <div className="text-[10px] text-zinc-400 uppercase font-mono tracking-wider">Status</div>
+                  <div className="flex items-center justify-center gap-1 mt-1">
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                        openStatus.isOpen ? "bg-emerald-500" : "bg-red-500"
+                      }`}
+                    />
+                    <span
+                      className={`text-[11px] font-bold ${
+                        openStatus.isOpen ? "text-emerald-700" : "text-red-700"
+                      }`}
+                    >
+                      {openStatus.isOpen ? "Open" : "Closed"}
+                    </span>
+                  </div>
+                </div>
+                <div className="border-l border-zinc-200/80">
                   <div className="text-[10px] text-zinc-400 uppercase font-mono tracking-wider">Area</div>
-                  <div className="font-semibold text-xs text-zinc-900 truncate mt-0.5 capitalize px-1">
+                  <div className="font-semibold text-xs text-zinc-900 truncate mt-1 capitalize px-1">
                     {selectedVenue.neighborhood || selectedVenue.city || "Sentrum"}
-                    {selectedVenue.distance_meters
-                      ? ` · ${formatDistance(selectedVenue.distance_meters)}`
-                      : ""}
                   </div>
                 </div>
               </div>
@@ -638,6 +653,44 @@ export function VenueBottomSheet() {
                 </div>
               </div>
 
+              {/* Opening Hours & Venue Details */}
+              <div className="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-200/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-900">
+                    <Clock className="w-3.5 h-3.5 text-[#e84a27]" />
+                    <span>Opening Hours</span>
+                  </div>
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                      openStatus.isOpen
+                        ? "bg-emerald-50 text-emerald-800 border-emerald-200/80"
+                        : "bg-red-50 text-red-700 border-red-200/80"
+                    }`}
+                  >
+                    {openStatus.statusText}
+                    {openStatus.detailText ? ` · ${openStatus.detailText}` : ""}
+                  </span>
+                </div>
+                {selectedVenue.opening_hours_json && Object.keys(selectedVenue.opening_hours_json).length > 0 ? (
+                  <div className="space-y-1 pt-1 text-[11px] text-zinc-600 font-mono">
+                    {Object.entries(selectedVenue.opening_hours_json).map(([day, hours]) => (
+                      <div key={day} className="flex justify-between">
+                        <span className="font-medium text-zinc-500">{day}</span>
+                        <span>{hours}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-zinc-500 pt-1">
+                    {selectedVenue.spot_type === "food_truck"
+                      ? selectedVenue.location_schedule || "Operating schedule varies by day."
+                      : selectedVenue.food_category === "coffee" || selectedVenue.food_category === "bakery"
+                      ? "Daily 07:30 – 18:00 (approximate Oslo bakery hours)"
+                      : "Daily 11:30 – 22:30 (approximate Oslo restaurant hours)"}
+                  </p>
+                )}
+              </div>
+
               {/* Verified Diner Reviews (Show 2 + Toggle for more) */}
               <div className="space-y-2.5 pt-1">
                 <div className="flex items-center justify-between">
@@ -683,9 +736,7 @@ export function VenueBottomSheet() {
                           </span>
                         </div>
                       </div>
-                      <p className="text-xs text-zinc-600 leading-relaxed italic">
-                        &ldquo;{rev.text}&rdquo;
-                      </p>
+                      <ExpandableReviewText text={rev.text} />
                     </div>
                   ))}
                 </div>

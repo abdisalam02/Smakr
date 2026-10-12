@@ -83,6 +83,18 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
     try {
       const parsedPrice = priceNok.trim() === "" ? null : Number(priceNok);
 
+      const trimmedReview = reviewText.trim();
+      const curatedReviewItem = trimmedReview
+        ? {
+            id: `curated-${Date.now()}`,
+            author_name: "Smakr Editorial",
+            author_photo: null,
+            rating,
+            text: trimmedReview,
+            relative_time: "Recent",
+          }
+        : null;
+
       // 1. Update FoodPost in store and Supabase
       const postUpdates: Partial<FoodPost> = {
         dish_name: dishName.trim(),
@@ -90,24 +102,39 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
         price_nok: parsedPrice != null && !Number.isNaN(parsedPrice) ? parsedPrice : null,
         price_tier: priceTier || undefined,
         image_url: imageUrl,
-        review_text: reviewText.trim(),
+        review_text: trimmedReview,
         rating,
         is_official_pick: isOfficialPick,
         is_published: isPublished,
         is_archived: isArchived,
       };
 
-      storeUpdatePost(post.id, postUpdates);
-      await updateFoodPost(post.id, postUpdates);
+      if (curatedReviewItem) {
+        postUpdates.diner_quotes = [
+          curatedReviewItem,
+          ...(post.diner_quotes || []).filter((q) => q.text !== trimmedReview),
+        ];
+      }
+
+      if (!post.id.startsWith("synthetic-")) {
+        storeUpdatePost(post.id, postUpdates);
+        await updateFoodPost(post.id, postUpdates);
+      }
 
       // 2. Update Venue in store and Supabase if linked
       if (linkedVenue) {
+        const existingCurated = linkedVenue.curated_reviews || [];
+        const nextCurated = curatedReviewItem
+          ? [curatedReviewItem, ...existingCurated.filter((q) => q.text !== trimmedReview)]
+          : existingCurated;
+
         const venueUpdates: Partial<Venue> = {
           spot_type: spotType,
           popup_start_date: spotType === "popup" && popupStartDate ? popupStartDate : undefined,
           popup_end_date: spotType === "popup" && popupEndDate ? popupEndDate : undefined,
           location_schedule: spotType === "food_truck" && locationSchedule ? locationSchedule : undefined,
           icon: spotIcon || linkedVenue.icon,
+          curated_reviews: nextCurated,
           vibe_signals: {
             ...linkedVenue.vibe_signals,
             icon: spotIcon || linkedVenue.icon,
@@ -426,6 +453,34 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
                 placeholder="Crisp pastry with velvety pistachio cream…"
                 className="w-full text-xs px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-hidden focus:border-[#e84a27]"
               />
+
+              {linkedVenue?.curated_reviews && linkedVenue.curated_reviews.length > 0 && (
+                <div className="pt-2">
+                  <span className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider block mb-1.5">
+                    Pick from Google Reviews:
+                  </span>
+                  <div className="space-y-1.5 max-h-36 overflow-y-auto no-scrollbar">
+                    {linkedVenue.curated_reviews.map((rev, idx) => (
+                      <button
+                        key={rev.id || idx}
+                        type="button"
+                        onClick={() => {
+                          setReviewText(rev.text);
+                          setRating(Math.round(rev.rating));
+                        }}
+                        className="w-full text-left p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-colors cursor-pointer group"
+                      >
+                        <p className="text-[11px] text-zinc-300 italic line-clamp-2 group-hover:text-white">
+                          &ldquo;{rev.text}&rdquo;
+                        </p>
+                        <span className="text-[9px] text-zinc-400 mt-0.5 block">
+                          ★ {rev.rating} · {rev.author_name}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>

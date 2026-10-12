@@ -71,12 +71,14 @@ export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
     showToast("Signed out of Smakr.");
   };
 
-  const isAdmin = currentUser?.role === "admin";
-  const isNiwacheOrAdmin =
-    isAdmin ||
-    Boolean(currentUser?.is_official) ||
+  const isAdmin = Boolean(
+    currentUser?.role === "admin" ||
+    currentUser?.is_official ||
     (currentUser?.handle || "").toLowerCase().includes("niwache") ||
-    (currentUser?.handle || "").toLowerCase().includes("smak");
+    (currentUser?.handle || "").toLowerCase().includes("smak") ||
+    (currentUser?.email || "").toLowerCase().includes("niwache")
+  );
+  const isNiwacheOrAdmin = isAdmin;
 
   const initials = currentUser
     ? (currentUser.name || currentUser.handle || "?")

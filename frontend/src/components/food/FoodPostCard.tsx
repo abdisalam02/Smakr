@@ -49,7 +49,10 @@ export const FoodPostCard = React.memo(function FoodPostCard({
       ? linkedVenue.google_rating
       : null;
   const googleCount = linkedVenue?.google_reviews_count ?? 0;
-  const dinerQuotes = post.diner_quotes ?? [];
+  const dinerQuotes =
+    post.diner_quotes && post.diner_quotes.length > 0
+      ? post.diner_quotes
+      : linkedVenue?.curated_reviews ?? [];
 
   const displayRating =
     googleRating != null
@@ -58,13 +61,22 @@ export const FoodPostCard = React.memo(function FoodPostCard({
       ? (post.rating > 5 ? (post.rating / 2).toFixed(1) : post.rating.toFixed(1))
       : "4.7";
 
+  const isViewerAdmin = Boolean(
+    currentUser?.role === "admin" ||
+    currentUser?.is_official ||
+    (currentUser?.handle || "").toLowerCase().includes("niwache") ||
+    (currentUser?.handle || "").toLowerCase().includes("smak") ||
+    (currentUser?.email || "").toLowerCase().includes("niwache")
+  );
+
   const isNiwacheAdmin = Boolean(
     post.is_official_pick ||
     (post.author?.handle && (
       post.author.handle.toLowerCase().includes("niwache") ||
       post.author.handle.toLowerCase().includes("smak")
     )) ||
-    (currentUser?.role === "admin" && currentUser?.handle === post.author?.handle)
+    (currentUser?.role === "admin" && currentUser?.handle === post.author?.handle) ||
+    isViewerAdmin
   );
 
   const stars = (rating: number) => {
@@ -204,18 +216,19 @@ export const FoodPostCard = React.memo(function FoodPostCard({
 
           {/* Top-Right: Admin Quick Edit + Rating pill + Save bookmark */}
           <div className="flex items-center gap-1.5 shrink-0">
-            {currentUser?.role === "admin" && (
+            {isViewerAdmin && (
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setQuickEditPost(post);
                 }}
-                className="p-1.5 rounded-full bg-white/95 hover:bg-white text-zinc-900 shadow-md backdrop-blur-md border border-white/40 transition-transform active:scale-90"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/95 hover:bg-white text-[#e84a27] shadow-md backdrop-blur-md border border-white/50 text-[11px] font-bold tracking-wide transition-all hover:scale-105 active:scale-95 cursor-pointer"
                 title="Admin Quick Edit"
                 aria-label="Admin Quick Edit"
               >
-                <Pencil className="w-3.5 h-3.5 text-[#e84a27]" />
+                <Pencil className="w-3 h-3 text-[#e84a27]" />
+                <span>Edit</span>
               </button>
             )}
 

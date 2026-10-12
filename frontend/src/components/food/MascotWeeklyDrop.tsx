@@ -2,9 +2,10 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { MapPin, ArrowUpRight, X, ChevronDown } from "lucide-react";
+import { MapPin, ArrowUpRight, X, ChevronDown, Pencil } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { MascotCharacter } from "@/components/avatar/MascotCharacter";
+import { EditWeeklyDropModal } from "@/components/admin/EditWeeklyDropModal";
 
 /**
  * "✦ This Week's Drop" — a compact, expandable mascot capsule replacing the old
@@ -31,12 +32,22 @@ export function MascotWeeklyDrop({
   const mascotConfig = useCityPulseStore((state) => state.mascotConfig);
   const flyToSpot = useCityPulseStore((state) => state.flyToSpot);
   const selectVenueById = useCityPulseStore((state) => state.selectVenueById);
+  const currentUser = useCityPulseStore((state) => state.currentUser);
   // Derived slice: only re-renders when the weekly pick's own venue changes.
   const venue = useCityPulseStore(
     (state) => state.venues.find((v) => v.id === state.weeklyPick.venue_id) ?? null
   );
 
+  const isViewerAdmin = Boolean(
+    currentUser?.role === "admin" ||
+    currentUser?.is_official ||
+    (currentUser?.handle || "").toLowerCase().includes("niwache") ||
+    (currentUser?.handle || "").toLowerCase().includes("smak") ||
+    (currentUser?.email || "").toLowerCase().includes("niwache")
+  );
+
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const rootRef = useRef<HTMLElement>(null);
 
   const venueName = venue?.name ?? "This week's spot";
@@ -329,6 +340,17 @@ export function MascotWeeklyDrop({
                 <span>View Menu &amp; Vibes</span>
                 <ArrowUpRight className="w-3.5 h-3.5" />
               </button>
+              {isViewerAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="px-3 py-2 rounded-xl bg-white dark:bg-zinc-800 border border-black/10 dark:border-white/10 text-xs font-bold text-[#e84a27] shadow-xs hover:bg-amber-50 dark:hover:bg-zinc-700 transition-all active:scale-[0.98] flex items-center gap-1 shrink-0"
+                  title="Edit Weekly Drop"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  <span>Edit Drop</span>
+                </button>
+              )}
               <button
                 onClick={() => setIsExpanded(false)}
                 aria-label="Collapse weekly drop"
@@ -340,6 +362,11 @@ export function MascotWeeklyDrop({
           </div>
         </div>
       </div>
+
+      <EditWeeklyDropModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+      />
     </section>
   );
 }

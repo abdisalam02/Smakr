@@ -532,7 +532,7 @@ export function CreateFoodPostModal() {
           icon: venueCatDef.icon,
           imageUrl: google.photos?.[0] ? photoProxy(google.photos[0]) : null,
           priceLevel: google.price_level ?? undefined,
-          openNow: true,
+          openNow: typeof google.open_now === "boolean" ? google.open_now : false,
           googlePlaceId: google.place_id,
           googleRating: google.google_rating,
           googleReviewsCount: google.google_reviews_count,
@@ -624,6 +624,10 @@ export function CreateFoodPostModal() {
         typeof parsedPrice === "number" && !Number.isNaN(parsedPrice) && parsedPrice > 0
           ? parsedPrice
           : null;
+      const relevantQuotes = (finalVenue.curated_reviews && finalVenue.curated_reviews.length > 0)
+        ? finalVenue.curated_reviews
+        : (google?.reviews ?? []);
+
       const insert = await insertFoodPost({
         venueId: finalVenue.id,
         authorId: userId,
@@ -636,7 +640,7 @@ export function CreateFoodPostModal() {
         dietaryTags: [`cat_${activeCategory.category}`],
         isOfficialPick: false,
         vibe: vibe ?? undefined,
-        dinerQuotes: [],
+        dinerQuotes: relevantQuotes,
       });
       if (!insert.success) {
         showToast(insert.error ?? "Couldn't save your dish — please try again.");
@@ -658,6 +662,7 @@ export function CreateFoodPostModal() {
         rating: 0,
         taste_tags: vibe ? [VIBE_LABEL[vibe]] : [],
         review_text: reviewText.trim(),
+        diner_quotes: relevantQuotes,
         author: {
           name: currentUser.name || currentUser.handle,
           handle: currentUser.handle,
@@ -669,7 +674,6 @@ export function CreateFoodPostModal() {
         created_at_relative: "Just now",
         is_official_pick: false,
         dietary_tags: [],
-        diner_quotes: [],
       };
 
       addFoodPost(optimistic);

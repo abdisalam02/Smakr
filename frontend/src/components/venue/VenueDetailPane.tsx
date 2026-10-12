@@ -27,6 +27,8 @@ import { DietaryBadge } from "@/components/ui/DietaryBadge";
 import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
 import { DishDetailPopup } from "@/components/food/DishDetailPopup";
 import { getPopupStatus } from "@/lib/popupUtils";
+import { getVenueLiveOpenStatus } from "@/lib/openingHours";
+import { ExpandableReviewText } from "./ExpandableReviewText";
 
 const NEIGHBORHOOD_LABELS: Record<Neighborhood, string> = {
   all: "Oslo",
@@ -140,7 +142,8 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
       : venue.city || "Oslo";
 
   const isBookmarked = savedPostIds.has(venue.id);
-  const isOpenNow = venue.open_now !== false;
+  const liveOpenStatus = getVenueLiveOpenStatus(venue);
+  const isOpenNow = liveOpenStatus.isOpen;
   const vibe = venue.vibe;
 
   const handleLogDish = () => {
@@ -281,7 +284,7 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
                   isOpenNow ? "bg-emerald-500" : "bg-red-500"
                 }`}
               />
-              {isOpenNow ? "Open Now" : "Closed"}
+              {liveOpenStatus.statusText}
             </span>
             {googleRating != null && (
               <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200/70">
@@ -417,9 +420,7 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
                   key={r.id}
                   className="rounded-2xl bg-[var(--surface)] border border-[var(--surface-border)] p-3 shadow-xs"
                 >
-                  <p className="text-[11px] text-zinc-600 leading-relaxed italic">
-                    &ldquo;{r.text}&rdquo;
-                  </p>
+                  <ExpandableReviewText text={r.text} className="text-[11px] text-zinc-600 dark:text-zinc-300 leading-relaxed italic" />
                   <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                     <span className="text-amber-500 font-mono text-[11px]">{stars(r.rating)}</span>
                     <span className="text-[11px] font-semibold text-zinc-700">{r.author_name}</span>

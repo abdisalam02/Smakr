@@ -559,14 +559,47 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
   },
 
   flyToSpot: (coords, spotId) => {
-    const { venues, viewMode } = get();
-    const spot = spotId ? venues.find((v) => v.id === spotId) : null;
-    console.info("[locate] store.flyToSpot", { coords, spotId });
+    const { venues, foodPosts, viewMode } = get();
+    let spot = spotId ? venues.find((v) => v.id === spotId) : null;
+    if (!spot && spotId) {
+      const post = foodPosts.find((p) => p.spot_id === spotId);
+      if (post) {
+        spot = {
+          id: post.spot_id,
+          name: post.spot_name,
+          address: post.spot_address || "Oslo, Norway",
+          neighborhood: (post.spot_neighborhood?.toLowerCase() as any) || "sentrum",
+          latitude: post.spot_coords[1] || coords[1],
+          longitude: post.spot_coords[0] || coords[0],
+          city: "Oslo",
+          place_type: "cafe",
+          food_category: post.category,
+          cover_image_url: post.image_url,
+          vibe: {
+            seat_score: 8,
+            seat_label: "Available",
+            noise_score: 4,
+            noise_label: "Lively",
+            outlets_percentage: 50,
+          } as any,
+          has_wifi: true,
+          has_outlets: true,
+          silent_zone: false,
+          outdoor_seating: false,
+          dog_friendly: false,
+          open_late: false,
+          baseline_seats: 10,
+          baseline_noise: 5,
+          baseline_outlets: true,
+        };
+      }
+    }
+    console.info("[locate] store.flyToSpot", { coords, spotId, found: Boolean(spot) });
     set({
       mapCenter: [coords[0], coords[1]],
       mapZoom: 16,
-      mobileSheetState: "peek", // Smoothly slide down feed so map shows!
-      isVenueDetailModalOpen: false, // Ensure full detail drawer is dismissed so map is visible
+      mobileSheetState: "peek",
+      isVenueDetailModalOpen: false,
       selectedVenue: spot ? (spot as VenueDetail) : null,
       bottomSheetOpen: true,
       viewMode: viewMode === "feed" ? "split" : viewMode,

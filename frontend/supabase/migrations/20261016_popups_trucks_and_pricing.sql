@@ -19,6 +19,7 @@ alter table public.venues
 -- Food posts extensions
 alter table public.food_posts
   alter column price_nok drop not null,
+  add column if not exists category text,
   add column if not exists is_published boolean default true,
   add column if not exists is_archived boolean default false;
 
