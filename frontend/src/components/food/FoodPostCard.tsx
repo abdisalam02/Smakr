@@ -3,11 +3,12 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { motion } from "motion/react";
-import { ThumbsUp, MapPin, Bookmark } from "lucide-react";
+import { ThumbsUp, MapPin, Bookmark, Pencil } from "lucide-react";
 import { FoodPost } from "@/types";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { setPostLike, setPostSave } from "@/lib/supabase/data";
 import { MascotCharacter } from "@/components/avatar/MascotCharacter";
+import { getPopupStatus } from "@/lib/popupUtils";
 
 interface FoodPostCardProps {
   post: FoodPost;
@@ -33,10 +34,13 @@ export const FoodPostCard = React.memo(function FoodPostCard({
   const toggleSavePost = useCityPulseStore((state) => state.toggleSavePost);
   const flyToSpot = useCityPulseStore((state) => state.flyToSpot);
   const currentUser = useCityPulseStore((state) => state.currentUser);
+  const setQuickEditPost = useCityPulseStore((state) => state.setQuickEditPost);
   const linkedVenue = useCityPulseStore(
     (state) => state.venues.find((v) => v.id === post.spot_id) ?? null
   );
   const mascotConfig = useCityPulseStore((state) => state.mascotConfig);
+
+  const popupStatus = getPopupStatus(linkedVenue);
 
   const [showHeart, setShowHeart] = useState(false);
 
@@ -103,7 +107,9 @@ export const FoodPostCard = React.memo(function FoodPostCard({
       transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
       onClick={handleCardClick}
       onDoubleClick={handleDoubleTap}
-      className="group relative w-full rounded-[26px] overflow-hidden border border-black/[0.08] dark:border-white/10 bg-[#181615]/80 backdrop-blur-md shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer select-none"
+      className={`group relative w-full rounded-[26px] overflow-hidden border border-black/[0.08] dark:border-white/10 bg-[#181615]/80 backdrop-blur-md shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer select-none ${
+        popupStatus.isDimmedCard ? "opacity-50 grayscale-[20%]" : ""
+      }`}
     >
       {/* Repeating SMAKR Monogram Watermark Pattern across background layer */}
       <svg
@@ -163,17 +169,61 @@ export const FoodPostCard = React.memo(function FoodPostCard({
 
         {/* Floating Top Badges (Over Image) */}
         <div className="absolute top-3 inset-x-3 flex items-start justify-between gap-2 z-10 pointer-events-auto">
-          {/* Top-Left: Price Sticker */}
-          <span className="font-comico bg-[#e84a27] text-white px-3 py-1 rounded-full text-xs font-bold shadow-md rotate-[-1deg] tracking-tight">
-            {post.price_nok} NOK
-          </span>
+          {/* Top-Left: Price Sticker / Price Tier / Pop-up / Truck Badge */}
+          <div className="flex flex-wrap items-center gap-1.5 max-w-[70%]">
+            {typeof post.price_nok === "number" && post.price_nok > 0 ? (
+              <span className="font-comico bg-[#e84a27] text-white px-3 py-1 rounded-full text-xs font-bold shadow-md rotate-[-1deg] tracking-tight">
+                {post.price_nok} NOK
+              </span>
+            ) : (post.price_tier || linkedVenue?.price_level) ? (
+              <span className="font-comico bg-black/60 backdrop-blur-md text-zinc-200 border border-white/15 px-2.5 py-1 rounded-full text-xs font-bold shadow-md tracking-tight">
+                {post.price_tier || linkedVenue?.price_level}
+              </span>
+            ) : null}
 
-          {/* Top-Right: Rating pill + Save bookmark */}
-          <div className="flex items-center gap-1.5">
+            {/* Pop-up Badges */}
+            {popupStatus.status === "active" && (
+              <span className="bg-amber-500 text-zinc-950 font-bold px-2.5 py-1 rounded-full text-[11px] backdrop-blur-md shadow-md animate-pulse">
+                {popupStatus.label}
+              </span>
+            )}
+            {popupStatus.status === "grace" && (
+              <span className="bg-zinc-800/90 text-zinc-300 font-medium px-2.5 py-1 rounded-full text-[11px] backdrop-blur-md border border-white/10">
+                {popupStatus.label}
+              </span>
+            )}
+
+            {/* Food Truck Badge */}
+            {linkedVenue?.spot_type === "food_truck" && (
+              <span className="bg-emerald-600 text-white font-bold px-2.5 py-1 rounded-full text-[11px] backdrop-blur-md shadow-md flex items-center gap-1">
+                <span>🚚</span>
+                <span>Food Truck</span>
+              </span>
+            )}
+          </div>
+
+          {/* Top-Right: Admin Quick Edit + Rating pill + Save bookmark */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {currentUser?.role === "admin" && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setQuickEditPost(post);
+                }}
+                className="p-1.5 rounded-full bg-white/95 hover:bg-white text-zinc-900 shadow-md backdrop-blur-md border border-white/40 transition-transform active:scale-90"
+                title="Admin Quick Edit"
+                aria-label="Admin Quick Edit"
+              >
+                <Pencil className="w-3.5 h-3.5 text-[#e84a27]" />
+              </button>
+            )}
+
             <span className="bg-black/60 backdrop-blur-md text-amber-400 font-bold px-2.5 py-1 rounded-full text-xs border border-white/10 flex items-center gap-1 shadow-xs">
               <span className="text-amber-400 text-xs">★</span>
               <span className="font-comico text-white text-xs tracking-wide">{displayRating}</span>
             </span>
+
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -226,6 +276,12 @@ export const FoodPostCard = React.memo(function FoodPostCard({
                   <span className="text-white/60 font-normal">({googleCount})</span>
                 )}
               </span>
+            )}
+            {linkedVenue?.spot_type === "food_truck" && linkedVenue.location_schedule && (
+              <div className="w-full text-[11px] font-mono text-emerald-300 flex items-center gap-1 mt-0.5">
+                <span>🚚</span>
+                <span className="truncate">{linkedVenue.location_schedule}</span>
+              </div>
             )}
           </div>
 

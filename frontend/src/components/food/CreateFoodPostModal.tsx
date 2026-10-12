@@ -23,9 +23,10 @@ import {
   type VibeTag,
   type VenueInsertInput,
 } from "@/lib/supabase/data";
-import { getCulinaryImageForDish, getRealisticPrice } from "@/lib/culinaryImages";
+import { getCulinaryImageForDish } from "@/lib/culinaryImages";
 import type { FoodCategory, FoodPost, Venue } from "@/types";
 import type { PlaceResult } from "@/lib/places/google";
+import { resolveFoodCategoryAndIcon } from "@/lib/categoryResolver";
 
 /* ------------------------------------------------------------------ */
 /* Constants & helpers                                                  */
@@ -69,6 +70,27 @@ const CATEGORY_ICONS: {
   label: string;
   keywords: string[];
 }[] = [
+  {
+    key: "dumplings",
+    category: "dumplings",
+    icon: "🥟",
+    label: "Dumplings",
+    keywords: ["dumpling", "dumplings", "gyoza", "dim sum", "dimsum", "momo", "wonton", "potsticker"],
+  },
+  {
+    key: "bao",
+    category: "bao",
+    icon: "🥠",
+    label: "Bao Buns",
+    keywords: ["bao", "bun", "steamed bun"],
+  },
+  {
+    key: "tacos",
+    category: "tacos",
+    icon: "🌮",
+    label: "Tacos",
+    keywords: ["taco", "tacos", "burrito", "birria", "carnitas", "quesadilla"],
+  },
   {
     key: "coffee",
     category: "coffee",
@@ -348,6 +370,7 @@ export function CreateFoodPostModal() {
         const photos = json.place?.photos ?? [];
         if (photos.length > 0) {
           setListingPhotos(photos);
+          setFallbackPhoto((prev) => prev || photoProxy(photos[0]));
           return;
         }
       }
@@ -356,6 +379,9 @@ export function CreateFoodPostModal() {
         const json = (await res.json()) as { place?: PlaceResult; results?: PlaceResult[] };
         const photos = json.place?.photos ?? json.results?.[0]?.photos ?? [];
         setListingPhotos(photos);
+        if (photos.length > 0) {
+          setFallbackPhoto((prev) => prev || photoProxy(photos[0]));
+        }
       } else {
         setListingPhotos([]);
       }
@@ -390,7 +416,7 @@ export function CreateFoodPostModal() {
   const selectExisting = (v: Venue) => {
     setVenueId(v.id);
     setGoogle(null);
-    setFallbackPhoto(null);
+    setFallbackPhoto(v.cover_image_url || null);
     setQuery("");
     setResults([]);
     void loadListingPhotos(v.google_place_id, v.name, v.address);
@@ -402,10 +428,11 @@ export function CreateFoodPostModal() {
   const selectGooglePlace = (r: PlaceResult) => {
     setGoogle(r);
     setVenueId(null);
-    setFallbackPhoto(null);
+    const photos = r.photos ?? [];
+    setListingPhotos(photos);
+    setFallbackPhoto(photos.length > 0 ? photoProxy(photos[0]) : null);
     setQuery("");
     setResults([]);
-    setListingPhotos(r.photos ?? []);
     setCategoryKey(detectCategoryKey(r.name));
   };
 
@@ -592,12 +619,16 @@ export function CreateFoodPostModal() {
       }
 
       // 3) Persist the dish.
+      const parsedPrice = priceNok.trim() ? Number(priceNok) : null;
       const numericPrice =
-        Number(priceNok) || getRealisticPrice(dishName, activeCategory.category);
+        typeof parsedPrice === "number" && !Number.isNaN(parsedPrice) && parsedPrice > 0
+          ? parsedPrice
+          : null;
       const insert = await insertFoodPost({
         venueId: finalVenue.id,
         authorId: userId,
         dishName: dishName.trim(),
+        category: activeCategory.category,
         dishImage: finalImage,
         reviewText: reviewText.trim(),
         priceNok: numericPrice,
@@ -896,7 +927,12 @@ export function CreateFoodPostModal() {
                   autoFocus
                   type="text"
                   value={dishName}
-                  onChange={(e) => setDishName(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setDishName(val);
+                    const detected = detectCategoryKey(val);
+                    if (detected) setCategoryKey(detected);
+                  }}
                   placeholder="e.g. Cardamom Morning Bun"
                   className="w-full px-3.5 py-3 rounded-2xl bg-white border border-[#e2d8c8] text-sm text-[#221e19] placeholder-[#a89d8c] focus:outline-none focus:border-[#e84a27] focus:ring-1 focus:ring-[#e84a27]/30 transition-all"
                 />

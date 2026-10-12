@@ -236,7 +236,7 @@ export default function AdminControlCenterPage() {
     if (!post) return;
     setVenueId(post.spot_id);
     setDishName(post.dish_name);
-    setPrice(post.price_nok);
+    setPrice(post.price_nok ?? 0);
     setDishImage(post.image_url);
     setLat(post.spot_coords[1]);
     setLng(post.spot_coords[0]);

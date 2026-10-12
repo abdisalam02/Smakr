@@ -12,6 +12,8 @@ import {
   Star,
   CheckCircle2,
   Bookmark,
+  Globe,
+  Phone,
 } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { motion, AnimatePresence } from "motion/react";
@@ -19,6 +21,7 @@ import { useVenueDetail } from "@/hooks/useVenueDetail";
 import { formatDistance } from "@/lib/math";
 import { FoodPost, ReviewItem } from "@/types";
 import { DishDetailPopup } from "@/components/food/DishDetailPopup";
+import { getPopupStatus } from "@/lib/popupUtils";
 
 /**
  * True on desktop (lg and above), where the in-place VenueDetailPane takes
@@ -382,15 +385,43 @@ export function VenueBottomSheet() {
                 </div>
               )}
 
+              {/* Pop-up residency callout */}
+              {selectedVenue.spot_type === "popup" && getPopupStatus(selectedVenue).label && (
+                <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-amber-900">
+                  <span className="text-xl">🎪</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold">{getPopupStatus(selectedVenue).label}</p>
+                    {selectedVenue.popup_end_date && (
+                      <p className="text-[10px] text-zinc-500">
+                        Closing {new Date(selectedVenue.popup_end_date).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Food Truck schedule callout */}
+              {selectedVenue.spot_type === "food_truck" && selectedVenue.location_schedule && (
+                <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-900">
+                  <span className="text-xl">🚚</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold">Food Truck Schedule</p>
+                    <p className="text-[11px] font-mono text-emerald-700">
+                      {selectedVenue.location_schedule}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Action Buttons */}
               <div className="grid grid-cols-2 gap-2.5">
                 <a
-                  href={googleMapsUrl}
+                  href={selectedVenue.google_maps_uri || googleMapsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-1.5 py-2.5 rounded-2xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-zinc-800 font-semibold"
                 >
-                  <span>Google Maps</span>
+                  <span>Directions</span>
                   <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
                 </a>
 
@@ -402,9 +433,36 @@ export function VenueBottomSheet() {
                   className="flex items-center justify-center gap-1.5 py-2.5 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] text-white font-semibold shadow-md shadow-[#e84a27]/25 transition-all"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Log a Dish Here</span>
+                  <span>Log a Dish</span>
                 </button>
               </div>
+
+              {/* Extra Quick Links: Website / Phone */}
+              {(selectedVenue.website_uri || selectedVenue.phone_number) && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  {selectedVenue.website_uri && (
+                    <a
+                      href={selectedVenue.website_uri}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-xs font-medium text-zinc-700"
+                    >
+                      <Globe className="w-3.5 h-3.5 text-zinc-500" />
+                      <span>Website / Menu</span>
+                      <ExternalLink className="w-3 h-3 text-zinc-400" />
+                    </a>
+                  )}
+                  {selectedVenue.phone_number && (
+                    <a
+                      href={`tel:${selectedVenue.phone_number}`}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-xs font-medium text-zinc-700"
+                    >
+                      <Phone className="w-3.5 h-3.5 text-zinc-500" />
+                      <span>{selectedVenue.phone_number}</span>
+                    </a>
+                  )}
+                </div>
+              )}
 
               {/* Editorial Venue Quick Stats (Rating / Price / Area) */}
               <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-zinc-50 border border-zinc-200/70 text-center">

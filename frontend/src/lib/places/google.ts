@@ -19,6 +19,10 @@ export const PLACES_FIELD_MASK = [
   "priceLevel",
   "reviews",
   "photos",
+  "currentOpeningHours",
+  "websiteUri",
+  "googleMapsUri",
+  "nationalPhoneNumber",
 ]
   .map((f) => (f === "id" ? "places.id" : `places.${f}`))
   .join(",");
@@ -37,6 +41,10 @@ export const PLACE_DETAILS_FIELD_MASK = [
   "priceLevel",
   "reviews",
   "photos",
+  "currentOpeningHours",
+  "websiteUri",
+  "googleMapsUri",
+  "nationalPhoneNumber",
 ].join(",");
 
 const NEIGHBORHOOD_HINTS: [RegExp, string][] = [
@@ -70,6 +78,11 @@ export interface PlaceResult {
   user_ratings_total: number | null;
   /** Places API (New) photo resource names, e.g. `places/<id>/photos/<ref>`. */
   photos: string[];
+  open_now?: boolean;
+  opening_hours_text?: string[];
+  website_uri?: string;
+  google_maps_uri?: string;
+  phone_number?: string;
 }
 
 /** Shape of a single review in a Places API (New) result. */
@@ -94,6 +107,13 @@ export interface GooglePlaceNew {
   priceLevel?: string;
   reviews?: GoogleReviewNew[];
   photos?: { name?: string }[];
+  currentOpeningHours?: {
+    openNow?: boolean;
+    weekdayDescriptions?: string[];
+  };
+  websiteUri?: string;
+  googleMapsUri?: string;
+  nationalPhoneNumber?: string;
 }
 
 export function mapPriceLevel(raw?: string): "$" | "$$" | "$$$" | null {
@@ -148,6 +168,11 @@ export function mapGooglePlace(p: GooglePlaceNew, category = "all"): PlaceResult
       .map((photo) => photo.name)
       .filter((name): name is string => Boolean(name))
       .slice(0, 10),
+    open_now: p.currentOpeningHours?.openNow,
+    opening_hours_text: p.currentOpeningHours?.weekdayDescriptions,
+    website_uri: p.websiteUri,
+    google_maps_uri: p.googleMapsUri,
+    phone_number: p.nationalPhoneNumber,
   };
 }
 

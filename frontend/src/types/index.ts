@@ -3,6 +3,8 @@ import type { MascotConfig } from "./mascot";
 
 export type VibeStatus = "optimal" | "moderate" | "packed";
 
+export type SpotType = "restaurant" | "food_truck" | "popup";
+
 export type FoodCategory =
   | "all"
   | "bakery"
@@ -15,7 +17,10 @@ export type FoodCategory =
   | "street_food"
   | "sushi"
   | "dessert"
-  | "drinks";
+  | "drinks"
+  | "dumplings"
+  | "tacos"
+  | "bao";
 
 export type DietaryTag = "vegan" | "vegetarian" | "halal" | "gluten_free";
 
@@ -120,7 +125,7 @@ export interface FoodPost {
   dish_name: string;
   category: FoodCategory;
   image_url: string;
-  price_nok: number;
+  price_nok: number | null;
   rating: number; // e.g. 9.6 out of 10
   taste_tags: string[];
   review_text: string;
@@ -141,6 +146,10 @@ export interface FoodPost {
   is_official_pick?: boolean;
   /** Customer soundbites curated onto this dish (JSONB `diner_quotes`). */
   diner_quotes?: ReviewItem[];
+  spot_type?: SpotType;
+  price_tier?: string | null;
+  is_published?: boolean;
+  is_archived?: boolean;
 }
 
 export interface VibeMetrics {
@@ -168,6 +177,7 @@ export interface Venue {
   latitude: number;
   longitude: number;
   place_type: "cafe" | "library" | "coworking" | "hotel_lobby";
+  spot_type?: SpotType;
   food_category?: FoodCategory;
   /** Admin-curated emoji shown on the map pin & venue cards (stored in `vibe_signals.icon`). */
   icon?: string;
@@ -199,6 +209,15 @@ export interface Venue {
   neighborhood?: Neighborhood;
   dietary_tags?: DietaryTag[];
   open_now?: boolean;
+  popup_start_date?: string | null;
+  popup_end_date?: string | null;
+  location_schedule?: string | null;
+  website_uri?: string | null;
+  google_maps_uri?: string | null;
+  phone_number?: string | null;
+  current_opening_hours_text?: string | null;
+  is_official_pick?: boolean;
+  vibe_signals?: Record<string, unknown> | null;
 }
 
 export interface LiveCheckin {
@@ -242,6 +261,7 @@ export type ViewMode = "feed" | "map" | "split";
 
 export interface FilterState {
   place_type: "cafe" | "library" | "coworking" | "hotel_lobby" | null;
+  spot_type?: SpotType | "all" | null;
   food_category: FoodCategory;
   has_outlets: boolean | null;
   silent_zone: boolean | null;
@@ -254,6 +274,8 @@ export interface FilterState {
   dietary: DietaryTag[];
   neighborhood: Neighborhood;
   open_now: boolean | null;
+  price_tier?: string | null;
+  staff_picks_only?: boolean | null;
 }
 
 export interface LiveRadarEvent {

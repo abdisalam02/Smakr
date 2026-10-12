@@ -29,6 +29,7 @@ import {
 } from "@/components/avatar/MascotCharacter";
 import { FOOD_PIN_SVG_MAP } from "@/components/food/FoodIcons";
 import { formatDistance } from "@/lib/math";
+import { getPopupStatus } from "@/lib/popupUtils";
 import {
   buildOpenPeepsSvg,
   getOrCreateGuestOpenPeepsConfig,
@@ -197,10 +198,17 @@ function createAquarellePinElement(
   root.style.cursor = "pointer";
   root.style.userSelect = "none";
 
+  const popupStatus = getPopupStatus(venue);
   const categoryKey = venue.food_category || (venue.place_type === "cafe" ? "coffee" : "all");
   const iconSvg = FOOD_PIN_SVG_MAP[categoryKey] || FOOD_PIN_SVG_MAP.all;
   // A curated emoji (set by the admin importer) overrides the default SVG pin.
-  const curatedIcon = venue.icon ? String(venue.icon).replace(/[<>&"']/g, "").trim() : "";
+  const curatedIcon = venue.icon
+    ? String(venue.icon).replace(/[<>&"']/g, "").trim()
+    : venue.spot_type === "food_truck"
+    ? "🚚"
+    : venue.spot_type === "popup"
+    ? "🎪"
+    : "";
   const pinGlyph = curatedIcon
     ? `<span style="font-size:26px;line-height:1;">${curatedIcon}</span>`
     : iconSvg.replace('width="20" height="20"', 'width="32" height="32"');
@@ -215,8 +223,13 @@ function createAquarellePinElement(
   inner.style.position = "relative";
   inner.style.transition = "transform 0.15s cubic-bezier(0.16, 1, 0.3, 1)";
 
+  const haloHtml = popupStatus.isPulsingMarker
+    ? `<div style="position:absolute;inset:-6px;border-radius:9999px;border:2px solid #f59e0b;background:rgba(245,158,11,0.2);animation:ping 1.6s cubic-bezier(0,0,0.2,1) infinite;pointer-events:none;"></div>`
+    : "";
+
   inner.innerHTML = `
     <!-- Clean Standalone Food Icon with Soft Map Shadow -->
+    ${haloHtml}
     <div class="pin-glyph" style="
       width: 34px;
       height: 34px;
@@ -375,6 +388,11 @@ export function MapRadarView() {
     // Filter venues based on craving category, neighborhood & open status
     const visibleVenues = currentVenues.filter((venue) => {
       if (currentWeeklyVenueId && venue.id === currentWeeklyVenueId) return false;
+
+      // Suppress pins for ended pop-ups in grace period or expired pop-ups
+      const popupStatus = getPopupStatus(venue);
+      if (popupStatus.hideMapPin) return false;
+
       if (currentMapCategory !== "all") {
         const categoryMatch =
           venue.food_category === currentMapCategory ||
@@ -404,7 +422,8 @@ export function MapRadarView() {
     // A pin is only rebuilt when its visual identity (icon/category/name) changes.
     visibleVenues.forEach((venue) => {
       const isSelected = currentSelected?.id === venue.id;
-      const pinKey = `${venue.icon ?? ""}|${venue.food_category}|${venue.name}`;
+      const popupStatus = getPopupStatus(venue);
+      const pinKey = `${venue.icon ?? ""}|${venue.spot_type ?? ""}|${popupStatus.status}|${venue.food_category}|${venue.name}`;
 
       let existing = markersMap.current.get(venue.id);
       if (existing && existing.getElement().dataset.pinKey !== pinKey) {

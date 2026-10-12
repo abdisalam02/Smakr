@@ -3,9 +3,11 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   DEFAULT_WEEKLY_PICK,
+  type FoodCategory,
   type FoodPost,
   type OnboardingAvatarConfig,
   type ReviewItem,
+  type SpotType,
   type Venue,
   type WeeklyPick,
 } from "@/types";
@@ -454,6 +456,13 @@ export interface VenueUpdateInput {
   neighborhood?: string;
   category?: string;
   icon?: string;
+  spotType?: SpotType;
+  popupStartDate?: string | null;
+  popupEndDate?: string | null;
+  locationSchedule?: string | null;
+  websiteUri?: string | null;
+  googleMapsUri?: string | null;
+  phoneNumber?: string | null;
   latitude?: number;
   longitude?: number;
   imageUrl?: string | null;
@@ -481,6 +490,13 @@ export async function updateVenue(
   if (input.neighborhood !== undefined) patch.neighborhood = input.neighborhood;
   if (input.category !== undefined)
     patch.category = CATEGORY_LABELS[input.category] ?? input.category;
+  if (input.spotType !== undefined) patch.spot_type = input.spotType;
+  if (input.popupStartDate !== undefined) patch.popup_start_date = input.popupStartDate;
+  if (input.popupEndDate !== undefined) patch.popup_end_date = input.popupEndDate;
+  if (input.locationSchedule !== undefined) patch.location_schedule = input.locationSchedule;
+  if (input.websiteUri !== undefined) patch.website_uri = input.websiteUri;
+  if (input.googleMapsUri !== undefined) patch.google_maps_uri = input.googleMapsUri;
+  if (input.phoneNumber !== undefined) patch.phone_number = input.phoneNumber;
   if (input.latitude !== undefined) patch.latitude = input.latitude;
   if (input.longitude !== undefined) patch.longitude = input.longitude;
   if (input.imageUrl !== undefined)
@@ -492,7 +508,21 @@ export async function updateVenue(
   if (input.googleReviewsCount !== undefined) patch.google_reviews_count = input.googleReviewsCount;
   if (input.curatedReviews !== undefined)
     patch.curated_reviews = sanitizeReviews(input.curatedReviews);
-  if (input.icon !== undefined) patch.vibe_signals = { icon: input.icon };
+  if (
+    input.icon !== undefined ||
+    input.spotType !== undefined ||
+    input.popupStartDate !== undefined ||
+    input.popupEndDate !== undefined ||
+    input.locationSchedule !== undefined
+  ) {
+    patch.vibe_signals = {
+      ...(input.icon !== undefined ? { icon: input.icon } : {}),
+      ...(input.spotType !== undefined ? { spot_type: input.spotType } : {}),
+      ...(input.popupStartDate !== undefined ? { popup_start_date: input.popupStartDate } : {}),
+      ...(input.popupEndDate !== undefined ? { popup_end_date: input.popupEndDate } : {}),
+      ...(input.locationSchedule !== undefined ? { location_schedule: input.locationSchedule } : {}),
+    };
+  }
   if (Object.keys(patch).length === 0) return { success: true, error: null };
 
   try {
@@ -525,9 +555,10 @@ export interface FoodPostInsertInput {
   venueId: string;
   authorId: string;
   dishName: string;
+  category?: FoodCategory;
   dishImage?: string | null;
   reviewText?: string;
-  priceNok?: number;
+  priceNok?: number | null;
   rating?: number;
   dietaryTags?: string[];
   isOfficialPick?: boolean;
@@ -557,8 +588,12 @@ export async function insertFoodPost(input: FoodPostInsertInput): Promise<FoodPo
         // Several `food_posts` columns are NOT NULL — always send concrete values.
         dish_image: input.dishImage?.trim() || "",
         review_text: input.reviewText?.trim() || "",
-        price_nok: Number(input.priceNok ?? 0) || 0,
+        price_nok:
+          typeof input.priceNok === "number" && input.priceNok > 0
+            ? input.priceNok
+            : null,
         rating: Number(input.rating ?? 0) || 0,
+        category: input.category || null,
         dietary_tags: input.dietaryTags ?? [],
         is_official_pick: input.isOfficialPick ?? true,
         diner_quotes: sanitizeReviews(input.dinerQuotes),
@@ -586,12 +621,15 @@ export async function insertFoodPost(input: FoodPostInsertInput): Promise<FoodPo
 export interface FoodPostUpdateInput {
   dishName?: string;
   venueId?: string;
+  category?: FoodCategory;
   dishImage?: string | null;
   reviewText?: string | null;
-  priceNok?: number;
+  priceNok?: number | null;
   rating?: number | null;
   dietaryTags?: string[];
   isOfficialPick?: boolean;
+  isPublished?: boolean;
+  isArchived?: boolean;
   /** Customer soundbites persisted to `food_posts.diner_quotes`. */
   dinerQuotes?: ReviewItem[];
 }
@@ -611,10 +649,16 @@ export async function updateFoodPost(
   const patch: Record<string, unknown> = {};
   if (input.dishName !== undefined) patch.dish_name = input.dishName;
   if (input.venueId !== undefined) patch.venue_id = input.venueId;
+  if (input.category !== undefined) patch.category = input.category;
+  if (input.isPublished !== undefined) patch.is_published = input.isPublished;
+  if (input.isArchived !== undefined) patch.is_archived = input.isArchived;
   // `dish_image` / `review_text` / `rating` are NOT NULL — never send null.
   if (input.dishImage !== undefined) patch.dish_image = input.dishImage?.trim() || "";
   if (input.reviewText !== undefined) patch.review_text = (input.reviewText ?? "").trim();
-  if (input.priceNok !== undefined) patch.price_nok = Number(input.priceNok) || 0;
+  if (input.priceNok !== undefined) {
+    patch.price_nok =
+      typeof input.priceNok === "number" && input.priceNok > 0 ? input.priceNok : null;
+  }
   if (input.rating !== undefined) patch.rating = Number(input.rating ?? 0) || 0;
   if (input.dietaryTags !== undefined) patch.dietary_tags = input.dietaryTags;
   if (input.isOfficialPick !== undefined) patch.is_official_pick = input.isOfficialPick;

@@ -23,6 +23,7 @@ import {
   WeeklyPick,
   DEFAULT_WEEKLY_PICK,
   WEEKLY_PICK_STORAGE_KEY,
+  SpotType,
 } from "@/types";
 import { getDistanceInMeters } from "@/lib/math";
 import { persistMascotConfig } from "@/lib/supabase/data";
@@ -57,6 +58,9 @@ const INITIAL_FILTERS: FilterState = {
   dietary: [],
   neighborhood: "all",
   open_now: null,
+  spot_type: "all",
+  price_tier: null,
+  staff_picks_only: false,
 };
 
 interface PulseStoreState {
@@ -191,6 +195,15 @@ interface PulseStoreState {
   addVenue: (venue: Venue) => void;
   updateVenue: (venueId: string, updates: Partial<Venue>) => void;
   deleteVenue: (venueId: string) => void;
+
+  // In-Feed Admin Quick-Edit
+  quickEditPost: FoodPost | null;
+  setQuickEditPost: (post: FoodPost | null) => void;
+
+  // Enriched Filters
+  setSpotTypeFilter: (spotType: SpotType | 'all') => void;
+  setPriceTierFilter: (tier: string | null) => void;
+  toggleStaffPicksOnly: () => void;
 }
 
 export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
@@ -210,6 +223,7 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
   savedPostIds: new Set<string>(),
   currentUser: null,
   isAuthModalOpen: false,
+  quickEditPost: null,
   mobileSheetState: "half",
   isCheckInModalOpen: false,
   isSpeedTestModalOpen: false,
@@ -606,6 +620,26 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
     })),
 
   resetFilters: () => set({ filters: INITIAL_FILTERS }),
+
+  setQuickEditPost: (post) => set({ quickEditPost: post }),
+
+  setSpotTypeFilter: (spot_type) =>
+    set((state) => ({
+      filters: { ...state.filters, spot_type },
+    })),
+
+  setPriceTierFilter: (price_tier) =>
+    set((state) => ({
+      filters: { ...state.filters, price_tier },
+    })),
+
+  toggleStaffPicksOnly: () =>
+    set((state) => ({
+      filters: {
+        ...state.filters,
+        staff_picks_only: !state.filters.staff_picks_only,
+      },
+    })),
 
   setUserLocation: (loc) =>
     set((state) => {

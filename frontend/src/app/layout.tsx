@@ -14,6 +14,7 @@ import { UserOnboardingModal } from "@/components/auth/UserOnboardingModal";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { BetaFeedbackDrawer } from "@/components/feedback/BetaFeedbackDrawer";
 import { CreateFoodPostModal } from "@/components/food/CreateFoodPostModal";
+import { AdminQuickEditModal } from "@/components/admin/AdminQuickEditModal";
 import { ToastBanner } from "@/components/ui/ToastBanner";
 import { AutumnLeavesBurst } from "@/components/effects/AutumnLeavesBurst";
 
@@ -108,6 +109,7 @@ export default async function RootLayout({
           <AuthModal />
           <BetaFeedbackDrawer />
           <CreateFoodPostModal />
+          <AdminQuickEditModal />
           <ToastBanner />
         </AuthProvider>
       </body>

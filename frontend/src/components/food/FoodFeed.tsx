@@ -8,6 +8,7 @@ import { FoodViewSlider } from "./FoodViewSlider";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { Plus, UtensilsCrossed, MapPin } from "lucide-react";
 import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
+import { isVisibleInFeed } from "@/lib/popupUtils";
 
 export function FoodFeed() {
   const venues = useCityPulseStore((state) => state.venues);
@@ -15,13 +16,50 @@ export function FoodFeed() {
   const currentCategory = useCityPulseStore((state) => state.feedCategory);
   const feedMode = useCityPulseStore((state) => state.feedMode);
   const searchQuery = useCityPulseStore((state) => state.filters.search_query);
+  const spotTypeFilter = useCityPulseStore((state) => state.filters.spot_type);
+  const priceTierFilter = useCityPulseStore((state) => state.filters.price_tier);
+  const staffPicksOnly = useCityPulseStore((state) => state.filters.staff_picks_only);
+  const currentUser = useCityPulseStore((state) => state.currentUser);
   const setFeedCategory = useCityPulseStore((state) => state.setFeedCategory);
   const openCreateDish = useCityPulseStore((state) => state.openCreateDish);
 
   const filteredPosts = foodPosts.filter((post) => {
+    // Hide drafts from public
+    if (currentUser?.role !== "admin") {
+      if (post.is_published === false || post.is_archived === true) return false;
+    }
+
     if (currentCategory !== "all" && post.category !== currentCategory) {
       return false;
     }
+
+    const linkedVenue = venues.find((v) => v.id === post.spot_id);
+
+    // Expired pop-ups
+    if (!isVisibleInFeed(linkedVenue)) return false;
+
+    // Spot Type filter
+    if (spotTypeFilter && spotTypeFilter !== "all") {
+      const vType = linkedVenue?.spot_type || "restaurant";
+      if (vType !== spotTypeFilter) return false;
+    }
+
+    // Price Tier filter
+    if (priceTierFilter) {
+      if (post.price_tier && post.price_tier === priceTierFilter) {
+        // match
+      } else if (linkedVenue?.price_level && linkedVenue.price_level === priceTierFilter) {
+        // match
+      } else if (typeof post.price_nok === "number" && post.price_nok > 0) {
+        const tier = post.price_nok <= 120 ? "$" : post.price_nok <= 250 ? "$$" : "$$$";
+        if (tier !== priceTierFilter) return false;
+      } else {
+        return false;
+      }
+    }
+
+    // Staff Picks only
+    if (staffPicksOnly && !post.is_official_pick) return false;
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -39,6 +77,20 @@ export function FoodFeed() {
 
   const filteredVenues = venues
     .filter((venue) => {
+      if (!isVisibleInFeed(venue)) return false;
+
+      // Spot Type filter
+      if (spotTypeFilter && spotTypeFilter !== "all") {
+        const vType = venue.spot_type || "restaurant";
+        if (vType !== spotTypeFilter) return false;
+      }
+
+      // Price Tier filter
+      if (priceTierFilter && venue.price_level !== priceTierFilter) return false;
+
+      // Staff Picks only
+      if (staffPicksOnly && !venue.is_official_pick) return false;
+
       if (currentCategory !== "all") {
         if (currentCategory === "coffee" && venue.place_type === "cafe") {
           // match

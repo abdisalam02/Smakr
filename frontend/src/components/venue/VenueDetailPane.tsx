@@ -16,6 +16,9 @@ import {
   Armchair,
   Clock,
   Heart,
+  Globe,
+  Phone,
+  ExternalLink,
 } from "lucide-react";
 import { FoodPost, Neighborhood, Venue } from "@/types";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
@@ -23,6 +26,7 @@ import { useVenueDetail } from "@/hooks/useVenueDetail";
 import { DietaryBadge } from "@/components/ui/DietaryBadge";
 import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
 import { DishDetailPopup } from "@/components/food/DishDetailPopup";
+import { getPopupStatus } from "@/lib/popupUtils";
 
 const NEIGHBORHOOD_LABELS: Record<Neighborhood, string> = {
   all: "Oslo",
@@ -294,6 +298,71 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
             <p className="text-xs text-zinc-500 leading-relaxed line-clamp-2">
               {venue.description}
             </p>
+          )}
+
+          {/* Quick Action Links: Directions, Website, Phone */}
+          <div className="flex items-center gap-2 flex-wrap pt-1">
+            <a
+              href={venue.google_maps_uri || googleMapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--surface-raised)] hover:bg-zinc-100 dark:hover:bg-white/10 border border-[var(--surface-border)] text-xs font-semibold text-zinc-700 dark:text-zinc-200 transition-colors"
+            >
+              <MapPin className="w-3.5 h-3.5 text-[#e84a27]" />
+              <span>Directions</span>
+              <ExternalLink className="w-3 h-3 text-zinc-400" />
+            </a>
+
+            {venue.website_uri && (
+              <a
+                href={venue.website_uri}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--surface-raised)] hover:bg-zinc-100 dark:hover:bg-white/10 border border-[var(--surface-border)] text-xs font-semibold text-zinc-700 dark:text-zinc-200 transition-colors"
+              >
+                <Globe className="w-3.5 h-3.5 text-zinc-500" />
+                <span>Website / Menu</span>
+                <ExternalLink className="w-3 h-3 text-zinc-400" />
+              </a>
+            )}
+
+            {venue.phone_number && (
+              <a
+                href={`tel:${venue.phone_number}`}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--surface-raised)] hover:bg-zinc-100 dark:hover:bg-white/10 border border-[var(--surface-border)] text-xs font-semibold text-zinc-700 dark:text-zinc-200 transition-colors"
+              >
+                <Phone className="w-3.5 h-3.5 text-zinc-500" />
+                <span>{venue.phone_number}</span>
+              </a>
+            )}
+          </div>
+
+          {/* Pop-up residency callout */}
+          {venue.spot_type === "popup" && getPopupStatus(venue).label && (
+            <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-amber-900 dark:text-amber-200">
+              <span className="text-xl">🎪</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold">{getPopupStatus(venue).label}</p>
+                {venue.popup_end_date && (
+                  <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
+                    Residency closing {new Date(venue.popup_end_date).toLocaleDateString()}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Food Truck schedule callout */}
+          {venue.spot_type === "food_truck" && venue.location_schedule && (
+            <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-900 dark:text-emerald-200">
+              <span className="text-xl">🚚</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold">Food Truck Schedule</p>
+                <p className="text-[11px] font-mono text-emerald-700 dark:text-emerald-300">
+                  {venue.location_schedule}
+                </p>
+              </div>
+            </div>
           )}
         </div>
 

@@ -89,3 +89,8 @@
 - Export pipeline updated with full-bleed aspect ratio enforcement and font-readiness safeguards for 2K retina capture.
 - Studio locked behind admin guard; non-admins directed to restricted notice.
 - Studio map camera aligned statically on venue coordinates with 0.35x card scaling, curated swatch modal, and mascot mood expressions.
+- Strictly nullable dish prices (no phantom prices, Google tier fallback) with auto-attached Google photos on empty uploads.
+- Vector food icon system with auto-resolver and searchable admin icon picker modal persisting custom sticky glyphs.
+- Pop-up & food truck support: urgency badges, pulsing radar halo, 7-day post-close grace period (50% opacity), and auto-archive.
+- Expandable in-feed filter bar with smooth inline accordion (spot types, cuisines, dietary, vibe) without intrusive modals.
+- In-feed admin quick-editing drawer with 1-tap price clearing, date pickers, schedule inputs, photo swap, and status toggles.

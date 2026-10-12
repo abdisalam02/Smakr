@@ -9,6 +9,7 @@ import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { formatDistance } from "@/lib/math";
 import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
 import { DietaryBadge } from "@/components/ui/DietaryBadge";
+import { getPopupStatus } from "@/lib/popupUtils";
 
 interface FoodSpotCardProps {
   venue: Venue;
@@ -21,8 +22,8 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
   priority = false,
 }: FoodSpotCardProps) {
   const flyToSpot = useCityPulseStore((state) => state.flyToSpot);
-
   const selectVenueById = useCityPulseStore((state) => state.selectVenueById);
+  const popupStatus = getPopupStatus(venue);
 
   const categoryDef = FOOD_CATEGORIES.find((c) => c.id === venue.food_category);
   const signature = venue.signature_dishes && venue.signature_dishes.length > 0 ? venue.signature_dishes[0] : null;
@@ -70,7 +71,9 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
   return (
     <div
       onClick={handleClick}
-      className="group relative flex flex-col sm:flex-row gap-3.5 p-3 rounded-3xl bg-[#fbf9f5] dark:bg-[#181615] border-2 border-black/[0.08] dark:border-white/[0.08] shadow-[0_4px_16px_rgba(0,0,0,0.06)] hover:border-black/15 transition-all duration-200 cursor-pointer active:scale-[0.99] select-none overflow-hidden"
+      className={`group relative flex flex-col sm:flex-row gap-3.5 p-3 rounded-3xl bg-[#fbf9f5] dark:bg-[#181615] border-2 border-black/[0.08] dark:border-white/[0.08] shadow-[0_4px_16px_rgba(0,0,0,0.06)] hover:border-black/15 transition-all duration-200 cursor-pointer active:scale-[0.99] select-none overflow-hidden ${
+        popupStatus.isDimmedCard ? "opacity-50 grayscale-[20%]" : ""
+      }`}
     >
       {/* Repeating SMAKR Monogram Watermark Pattern */}
       <svg
@@ -147,32 +150,58 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
         <div>
           {/* Category & Price */}
           <div className="flex items-center justify-between gap-2 mb-1">
-            <span className="text-[11px] font-semibold text-[#e84a27] uppercase tracking-wider flex items-center gap-1 font-comico">
-              <span>{venue.icon || categoryDef?.emoji || "📍"}</span>
-              <span>{categoryDef?.label || venue.food_category || "Food Spot"}</span>
-            </span>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[11px] font-semibold text-[#e84a27] uppercase tracking-wider flex items-center gap-1 font-comico">
+                <span>{venue.icon || categoryDef?.emoji || "📍"}</span>
+                <span>{categoryDef?.label || venue.food_category || "Food Spot"}</span>
+              </span>
+              {popupStatus.status === "active" && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500 text-zinc-950 animate-pulse">
+                  {popupStatus.label}
+                </span>
+              )}
+              {popupStatus.status === "grace" && (
+                <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                  {popupStatus.label}
+                </span>
+              )}
+              {venue.spot_type === "food_truck" && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 flex items-center gap-0.5">
+                  <span>🚚</span>
+                  <span>Food Truck</span>
+                </span>
+              )}
+            </div>
             {venue.price_level && (
-              <span className="text-[11px] font-comico font-bold text-zinc-700 bg-black/5 px-2 py-0.5 rounded-full">
+              <span className="text-[11px] font-comico font-bold text-zinc-700 dark:text-zinc-300 bg-black/5 dark:bg-white/10 px-2 py-0.5 rounded-full">
                 {venue.price_level}
               </span>
             )}
           </div>
 
           {/* Venue Name */}
-          <h3 className="font-comico text-base text-zinc-950 group-hover:text-[#e84a27] transition-colors truncate">
+          <h3 className="font-comico text-base text-zinc-950 dark:text-white group-hover:text-[#e84a27] transition-colors truncate">
             {venue.name}
           </h3>
 
-          {/* Location & Distance */}
-          <p className="text-xs text-zinc-500 flex items-center gap-1 mt-1 truncate">
+          {/* Location & Distance / Truck Schedule */}
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-1 mt-1 truncate">
             <MapPin className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
             <span className="truncate">{venue.address}, {venue.city}</span>
             {venue.distance_meters && (
-              <span className="shrink-0 font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.2 rounded-full text-[10px] ml-1">
+              <span className="shrink-0 font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.2 rounded-full text-[10px] ml-1">
                 {formatDistance(venue.distance_meters)}
               </span>
             )}
           </p>
+
+          {/* Food Truck Schedule Callout */}
+          {venue.spot_type === "food_truck" && venue.location_schedule && (
+            <p className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-1 truncate">
+              <span>🚚</span>
+              <span className="truncate">{venue.location_schedule}</span>
+            </p>
+          )}
 
           {/* Dietary badges */}
           {venue.dietary_tags && venue.dietary_tags.length > 0 && (

@@ -48,7 +48,7 @@ export function EditPostModal({ post, onClose }: EditPostModalProps) {
   const [dishName, setDishName] = useState(post.dish_name);
   const [venueId, setVenueId] = useState(post.spot_id);
   const [category, setCategory] = useState<FoodCategory>(post.category ?? "all");
-  const [price, setPrice] = useState(post.price_nok);
+  const [price, setPrice] = useState<number | string>(post.price_nok != null ? post.price_nok : "");
   const [imageUrl, setImageUrl] = useState(post.image_url);
   const [review, setReview] = useState(post.review_text);
   const [dietary, setDietary] = useState<DietaryTag[]>(post.dietary_tags ?? []);
@@ -208,10 +208,12 @@ export function EditPostModal({ post, onClose }: EditPostModalProps) {
     const cleanDietary = dietary.filter((t) => !t.startsWith("cat_"));
     const updatedDietary = [...cleanDietary, `cat_${category}`];
 
+    const parsedPrice = price === "" || price == null ? null : Number(price);
+
     const updates: Partial<FoodPost> = {
       dish_name: name,
       spot_id: venueId,
-      price_nok: Number(price) || 0,
+      price_nok: parsedPrice,
       image_url: imageUrl.trim(),
       review_text: review.trim(),
       dietary_tags: cleanDietary,
@@ -232,7 +234,7 @@ export function EditPostModal({ post, onClose }: EditPostModalProps) {
       venueId,
       dishImage: imageUrl.trim() || null,
       reviewText: review.trim() || null,
-      priceNok: Number(price) || 0,
+      priceNok: parsedPrice,
       dietaryTags: updatedDietary,
       dinerQuotes: quotes,
     });
@@ -317,7 +319,8 @@ export function EditPostModal({ post, onClose }: EditPostModalProps) {
           <input
             type="number"
             value={price}
-            onChange={(e) => setPrice(Number(e.target.value))}
+            onChange={(e) => setPrice(e.target.value === "" ? "" : Number(e.target.value))}
+            placeholder="Optional (leave empty for none)"
             className={inputCls}
           />
         </Field>

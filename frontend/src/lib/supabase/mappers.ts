@@ -4,6 +4,7 @@ import type {
   FoodPost,
   Neighborhood,
   ReviewItem,
+  SpotType,
   Venue,
   VibeMetrics,
 } from "@/types";
@@ -42,6 +43,13 @@ export interface VenueRow {
   curated_reviews?: unknown;
   created_at?: string | null;
   updated_at?: string | null;
+  spot_type?: string | null;
+  popup_start_date?: string | null;
+  popup_end_date?: string | null;
+  location_schedule?: string | null;
+  website_uri?: string | null;
+  google_maps_uri?: string | null;
+  phone_number?: string | null;
 }
 
 export interface WeeklyPickRow {
@@ -82,6 +90,8 @@ export interface FoodPostRow {
   category?: string | null;
   venue?: VenueRow | null;
   author?: ProfileLite | null;
+  is_published?: boolean | null;
+  is_archived?: boolean | null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -103,6 +113,11 @@ const NEIGHBORHOODS: Neighborhood[] = [
 export function mapCategory(raw?: string | null): FoodCategory {
   const key = (raw ?? "").toLowerCase().replace(/[^a-z]/g, "");
   if (!key) return "all";
+  if (key.includes("dumpling") || key.includes("gyoza") || key.includes("dimsum") || key.includes("momo"))
+    return "dumplings";
+  if (key.includes("bao")) return "bao";
+  if (key.includes("taco") || key.includes("burrito") || key.includes("birria") || key.includes("mexic"))
+    return "tacos";
   if (key.includes("matcha") || key.includes("hojicha")) return "matcha";
   if (key.includes("pasta") || key.includes("spaghetti") || key.includes("italian")) return "pasta";
   if (key.includes("ramen") || key.includes("noodle") || key.includes("asian")) return "ramen";
@@ -113,7 +128,7 @@ export function mapCategory(raw?: string | null): FoodCategory {
   if (key.includes("dessert") || key.includes("sweet") || key.includes("gelato") || key.includes("icecream"))
     return "dessert";
   if (key.includes("coffee") || key.includes("cafe") || key.includes("tea") || key.includes("brew") || key.includes("espresso")) return "coffee";
-  if (key.includes("street") || key.includes("viet") || key.includes("taco") || key.includes("banh"))
+  if (key.includes("street") || key.includes("viet") || key.includes("banh"))
     return "street_food";
   if (key.includes("sushi") || key.includes("seafood") || key.includes("fish") || key.includes("raw"))
     return "sushi";
@@ -198,6 +213,7 @@ export function mapVenueRow(row: VenueRow): Venue {
     latitude: typeof row.latitude === "number" ? row.latitude : 0,
     longitude: typeof row.longitude === "number" ? row.longitude : 0,
     place_type: "cafe",
+    spot_type: ((row.spot_type || signals.spot_type) as SpotType) || "restaurant",
     food_category: mapCategory(row.category),
     icon: typeof signals.icon === "string" && signals.icon ? signals.icon : undefined,
     price_level: mapPriceLevel(row.price_level),
@@ -225,6 +241,12 @@ export function mapVenueRow(row: VenueRow): Venue {
     neighborhood: mapNeighborhood(row.neighborhood),
     dietary_tags: mapDietary(row.dietary_tags),
     open_now: Boolean(row.open_now),
+    popup_start_date: row.popup_start_date || (signals.popup_start_date as string) || null,
+    popup_end_date: row.popup_end_date || (signals.popup_end_date as string) || null,
+    location_schedule: row.location_schedule || (signals.location_schedule as string) || null,
+    website_uri: row.website_uri || (signals.website_uri as string) || null,
+    google_maps_uri: row.google_maps_uri || row.google_maps_url || (signals.google_maps_uri as string) || null,
+    phone_number: row.phone_number || (signals.phone_number as string) || null,
   };
 }
 
@@ -269,7 +291,7 @@ export function mapFoodPostRow(row: FoodPostRow): FoodPost {
       return mapCategory(venue?.category);
     })(),
     image_url: row.dish_image ?? "",
-    price_nok: row.price_nok ?? 0,
+    price_nok: typeof row.price_nok === "number" && row.price_nok > 0 ? row.price_nok : null,
     rating: Number(row.rating ?? 0),
     taste_tags: [],
     review_text: row.review_text ?? "",
@@ -285,5 +307,8 @@ export function mapFoodPostRow(row: FoodPostRow): FoodPost {
     is_official_pick: Boolean(row.is_official_pick),
     dietary_tags: mapDietary(row.dietary_tags),
     diner_quotes: mapReviews(row.diner_quotes),
+    spot_type: ((venue?.spot_type || (venue?.vibe_signals as any)?.spot_type) as SpotType) || "restaurant",
+    is_published: row.is_published ?? true,
+    is_archived: row.is_archived ?? false,
   };
 }

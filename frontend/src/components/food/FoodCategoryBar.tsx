@@ -36,6 +36,9 @@ const CATEGORY_ICON_MAP: Record<FoodCategory, React.ComponentType<{ className?: 
   drinks: DrinksIcon,
   matcha: MatchaIcon,
   pasta: PastaIcon,
+  dumplings: TacoIcon,
+  tacos: TacoIcon,
+  bao: TacoIcon,
 };
 
 export function FoodCategoryBar({ compact = false }: FoodCategoryBarProps) {

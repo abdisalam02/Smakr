@@ -21,6 +21,7 @@ import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
 import { SmakrSIcon } from "@/components/ui/SmakrSIcon";
 import { UtensilsCrossed, Plus, Map as MapIcon, LayoutGrid } from "lucide-react";
 import type { FoodPost, Venue, WeeklyPick } from "@/types";
+import { isVisibleInFeed } from "@/lib/popupUtils";
 
 /**
  * MapLibre is a large dependency — load it lazily (client-only) so it never
@@ -107,6 +108,10 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   const mapNeighborhood = useCityPulseStore((state) => state.mapNeighborhood);
   const openNow = useCityPulseStore((state) => state.filters.open_now);
   const searchQuery = useCityPulseStore((state) => state.filters.search_query);
+  const spotTypeFilter = useCityPulseStore((state) => state.filters.spot_type);
+  const priceTierFilter = useCityPulseStore((state) => state.filters.price_tier);
+  const staffPicksOnly = useCityPulseStore((state) => state.filters.staff_picks_only);
+  const currentUser = useCityPulseStore((state) => state.currentUser);
   const setFeedCategory = useCityPulseStore((state) => state.setFeedCategory);
   const setIsCreateBiteModalOpen = useCityPulseStore((state) => state.setIsCreateBiteModalOpen);
   const isVenueDetailModalOpen = useCityPulseStore((state) => state.isVenueDetailModalOpen);
@@ -118,6 +123,11 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   // Memoized food posts filtering to prevent unnecessary re-renders during mobile drag
   const filteredPosts = useMemo(() => {
     return foodPosts.filter((post) => {
+      // Unpublished / archived filter (admins see drafts)
+      if (currentUser?.role !== "admin") {
+        if (post.is_published === false || post.is_archived === true) return false;
+      }
+
       if (currentCategory !== "all" && post.category !== currentCategory) {
         return false;
       }
@@ -130,6 +140,32 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
       }
 
       const linkedVenue = venues.find((v) => v.id === post.spot_id);
+
+      // Exclude expired pop-ups (>7 days after closing)
+      if (!isVisibleInFeed(linkedVenue)) return false;
+
+      // Spot Type filter (sit-down restaurant, food truck, pop-up)
+      if (spotTypeFilter && spotTypeFilter !== "all") {
+        const venueType = linkedVenue?.spot_type || "restaurant";
+        if (venueType !== spotTypeFilter) return false;
+      }
+
+      // Price Tier filter ($, $$, $$$)
+      if (priceTierFilter) {
+        if (post.price_tier && post.price_tier === priceTierFilter) {
+          // match
+        } else if (linkedVenue?.price_level && linkedVenue.price_level === priceTierFilter) {
+          // match
+        } else if (typeof post.price_nok === "number" && post.price_nok > 0) {
+          const tier = post.price_nok <= 120 ? "$" : post.price_nok <= 250 ? "$$" : "$$$";
+          if (tier !== priceTierFilter) return false;
+        } else {
+          return false;
+        }
+      }
+
+      // Staff Picks only
+      if (staffPicksOnly && !post.is_official_pick) return false;
 
       // Dietary inclusion (all selected tags must be present)
       if (selectedDietary.length > 0) {
@@ -158,12 +194,31 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
     mapNeighborhood,
     openNow,
     venues,
+    spotTypeFilter,
+    priceTierFilter,
+    staffPicksOnly,
+    currentUser,
   ]);
 
   // Memoized food spots / venues filtering
   const filteredVenues = useMemo(() => {
     return venues
       .filter((venue) => {
+        // Exclude expired pop-ups (>7 days after closing)
+        if (!isVisibleInFeed(venue)) return false;
+
+        // Spot Type filter
+        if (spotTypeFilter && spotTypeFilter !== "all") {
+          const venueType = venue.spot_type || "restaurant";
+          if (venueType !== spotTypeFilter) return false;
+        }
+
+        // Price Tier filter
+        if (priceTierFilter && venue.price_level !== priceTierFilter) return false;
+
+        // Staff Picks only
+        if (staffPicksOnly && !venue.is_official_pick) return false;
+
         if (currentCategory !== "all") {
           if (currentCategory === "coffee" && venue.place_type === "cafe") {
             // match coffee
@@ -210,6 +265,9 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
     selectedDietary,
     mapNeighborhood,
     openNow,
+    spotTypeFilter,
+    priceTierFilter,
+    staffPicksOnly,
   ]);
 
   const activeCategoryDef = FOOD_CATEGORIES.find((c) => c.id === currentCategory) || FOOD_CATEGORIES[0];
