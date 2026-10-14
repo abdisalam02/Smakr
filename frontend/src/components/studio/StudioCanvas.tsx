@@ -1,30 +1,28 @@
 'use client';
 
-import { forwardRef } from 'react';
-import { MascotCharacter } from '@/components/avatar/MascotCharacter';
-import { useCityPulseStore } from '@/store/useCityPulseStore';
+import React, { forwardRef } from 'react';
+import { SmakrMascotRig } from './SmakrMascotRig';
 import { MapShot } from './MapShot';
 import {
   CANVAS_SIZES,
+  DEFAULT_MASCOT_CONFIG,
+  DEFAULT_DISH_TITLE_STATE,
   type SlideId,
-  type StudioElement,
   type StudioState,
   type WallpaperState,
-  type PhotoState,
-  type MapShotState,
 } from '@/types/studio';
 
 const ORANGE_SHADES = [
-  '#e84a27', // Burnt Paprika
-  '#f97316', // Maple Orange
-  '#ea580c', // Bright Flame
-  '#f59e0b', // Golden Amber
-  '#d97706', // Birch Gold
-  '#c2410c', // Russet Orange
-  '#ff5416', // Seville Orange
-  '#fb923c', // Warm Tangerine
-  '#fdba74', // Soft Amber
-  '#9a3412', // Deep Russet
+  '#e84a27',
+  '#f97316',
+  '#ea580c',
+  '#f59e0b',
+  '#d97706',
+  '#c2410c',
+  '#ff5416',
+  '#fb923c',
+  '#fdba74',
+  '#9a3412',
 ];
 
 const GREY_SHADES = [
@@ -38,12 +36,15 @@ const GREY_SHADES = [
 
 interface Props {
   state: StudioState;
-  activeSlide: SlideId;
-  previewScale: number;
-  selectedId: string | null;
-  onSelect: (id: string | null) => void;
-  onMove: (id: string, x: number, y: number) => void;
+  activeSlide?: SlideId;
+  previewScale?: number;
+  selectedId?: string | null;
+  isCanvasLocked?: boolean;
+  activeDockTab?: string | null;
+  onSelect?: (id: string | null) => void;
+  onMove?: (id: string, x: number, y: number) => void;
   onMapChange?: (coords: [number, number], zoom: number, pitch: number) => void;
+  onUploadClick?: () => void;
 }
 
 function getLogoColor(
@@ -56,92 +57,88 @@ function getLogoColor(
   if (wp.heroRow >= 0 && r === wp.heroRow) {
     return wp.heroColor;
   }
-
   if (wp.colorMode === 'oranges') {
     const idx = Math.abs((r * cols + c + wp.seed) % ORANGE_SHADES.length);
     return ORANGE_SHADES[idx];
   }
-
   if (wp.colorMode === 'greyscale') {
     const idx = Math.abs((r * cols + c + wp.seed) % GREY_SHADES.length);
     return GREY_SHADES[idx];
   }
-
   if (wp.colorMode === 'tint') {
     const alpha = 0.35 + (((r + c * 2) % 5) / 5) * 0.65 * (wp.variation || 1);
     return wp.baseColor + Math.round(alpha * 255).toString(16).padStart(2, '0');
   }
-
   return wp.baseColor;
 }
 
-function WallpaperLayer({ s, w, h }: { s: WallpaperState; w: number; h: number }) {
+function WallpaperLayer({
+  s,
+  w,
+  h,
+  transparentBg = false,
+}: {
+  s: WallpaperState;
+  w: number;
+  h: number;
+  transparentBg?: boolean;
+}) {
   const cellW = w / s.cols;
   const cellH = h / s.rows;
   const text = s.text || 'SMAKR';
   const fontSize = Math.min(cellH * 0.9, cellW / (text.length * 0.62)) * s.size;
 
   const bgStyle: React.CSSProperties = {
-    background: s.bgGradient
-      ? `linear-gradient(135deg, ${s.bgColor} 0%, ${s.bgColor2 || '#e84a27'} 100%)`
+    background: transparentBg
+      ? 'transparent'
+      : s.bgGradient
+      ? `linear-gradient(135deg, ${s.bgColor} 0%, ${s.bgColor2 || '#181615'} 100%)`
       : s.bgColor,
   };
 
+  const rowsArr = Array.from({ length: s.rows });
+  const colsArr = Array.from({ length: s.cols });
+
   return (
     <div
-      aria-hidden
-      className="absolute inset-0 overflow-hidden select-none"
-      style={bgStyle}
+      style={{ width: w, height: h, ...bgStyle }}
+      className="relative overflow-hidden flex flex-col justify-between p-4 select-none"
     >
       <div
-        className="w-full h-full flex flex-col justify-center"
+        className="w-full h-full flex flex-col justify-between"
         style={{
-          transform: s.tilt ? `rotate(${s.tilt}deg) scale(1.15)` : undefined,
-          filter: s.blur > 0 ? `blur(${s.blur}px)` : undefined,
+          transform: s.tilt ? `rotate(${s.tilt}deg)` : undefined,
           opacity: s.opacity ?? 1,
+          filter: s.blur ? `blur(${s.blur}px)` : undefined,
         }}
       >
-        {Array.from({ length: s.rows }, (_, r) => {
-          const rowShift = s.stagger && r % 2 !== 0 ? -cellW / 2 : 0;
+        {rowsArr.map((_, r) => {
+          const isShifted = s.stagger && r % 2 === 1;
           return (
             <div
               key={r}
-              className="flex"
+              className="flex justify-between items-center w-full"
               style={{
-                height: cellH,
-                width: w + cellW,
-                marginLeft: rowShift,
+                transform: isShifted ? `translateX(${cellW * 0.25}px)` : undefined,
               }}
             >
-              {Array.from({ length: s.cols + 2 }, (_, c) => {
+              {colsArr.map((__, c) => {
                 const color = getLogoColor(r, c, s.rows, s.cols, s);
                 return (
-                  <div
+                  <span
                     key={c}
-                    className="flex shrink-0 items-center justify-center whitespace-nowrap font-comico leading-none transition-all"
+                    className="font-comico font-black tracking-tighter uppercase whitespace-nowrap leading-none transition-colors"
                     style={{
-                      width: cellW,
-                      height: cellH,
                       fontSize,
                       color: s.outline ? 'transparent' : color,
-                      WebkitTextStroke: s.outline ? `2.5px ${color}` : undefined,
+                      WebkitTextStroke: s.outline ? `2px ${color}` : undefined,
                       textShadow: s.shadow
-                        ? '0 12px 24px rgba(0, 0, 0, 0.28)'
+                        ? '0 4px 12px rgba(0,0,0,0.3)'
                         : undefined,
-                      ...(s.glass
-                        ? {
-                            background: 'rgba(255, 255, 255, 0.08)',
-                            backdropFilter: 'blur(8px)',
-                            border: '1px solid rgba(255, 255, 255, 0.15)',
-                            borderRadius: '16px',
-                            margin: '4px',
-                            boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.12)',
-                          }
-                        : {}),
                     }}
                   >
                     {text}
-                  </div>
+                  </span>
                 );
               })}
             </div>
@@ -152,328 +149,119 @@ function WallpaperLayer({ s, w, h }: { s: WallpaperState; w: number; h: number }
   );
 }
 
-function PhotoLayer({ s, w, h }: { s: PhotoState; w: number; h: number }) {
-  if (!s.src) {
-    return (
-      <div
-        style={{ width: w, height: h, background: s.bgColor || '#181615' }}
-        className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center text-zinc-400 font-jakarta select-none"
-      >
-        <div className="w-32 h-32 rounded-3xl bg-white/5 border-2 border-dashed border-white/20 flex items-center justify-center text-5xl mb-6">
-          📷
-        </div>
-        <h3 className="text-4xl font-bold text-white mb-3">No Custom Photo</h3>
-        <p className="text-2xl text-zinc-400 max-w-md">
-          Tap “Upload Photo” in the drawer below to add your dish image.
-        </p>
-      </div>
-    );
-  }
-
+function SafeZoneOverlay() {
   return (
-    <div
-      style={{ width: w, height: h, background: s.bgColor || '#181615' }}
-      className="absolute inset-0 overflow-hidden select-none"
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={s.src}
-        alt=""
-        crossOrigin="anonymous"
-        className="w-full h-full"
-        style={{
-          objectFit: s.fit,
-          transform: `scale(${s.zoom || 1})`,
-          filter: [
-            s.grayscale ? 'grayscale(1)' : '',
-            s.blur > 0 ? `blur(${s.blur}px)` : '',
-          ]
-            .filter(Boolean)
-            .join(' ') || undefined,
-        }}
-      />
-
-      {s.dim > 0 && (
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: `rgba(0, 0, 0, ${s.dim})` }}
-        />
-      )}
-
-      {s.vignette && (
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            boxShadow: 'inset 0 0 160px 40px rgba(0, 0, 0, 0.75)',
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
-function SpeechBubble({
-  text,
-  side,
-  style,
-  bg,
-  ink,
-}: {
-  text: string;
-  side: 'top' | 'left' | 'right' | 'bottom';
-  style: 'round' | 'shout' | 'thought' | 'box';
-  bg: string;
-  ink: string;
-}) {
-  const isTop = side === 'top';
-  const isBottom = side === 'bottom';
-  const isLeft = side === 'left';
-  const isRight = side === 'right';
-
-  const positionClasses = isTop
-    ? 'bottom-full left-1/2 -translate-x-1/2 mb-6'
-    : isBottom
-    ? 'top-full left-1/2 -translate-x-1/2 mt-6'
-    : isLeft
-    ? 'right-full top-1/2 -translate-y-1/2 mr-6'
-    : 'left-full top-1/2 -translate-y-1/2 ml-6';
-
-  const roundedClasses =
-    style === 'round'
-      ? 'rounded-3xl'
-      : style === 'box'
-      ? 'rounded-xl'
-      : style === 'thought'
-      ? 'rounded-[32px]'
-      : 'rounded-2xl';
-
-  return (
-    <div
-      className={`absolute ${positionClasses} w-[420px] p-5 shadow-2xl ${roundedClasses} border-2 border-black/10 select-none z-20`}
-      style={{ background: bg, color: ink }}
-    >
-      <div className="font-semibold text-3xl text-center leading-snug font-jakarta">
-        {text}
+    <div className="absolute inset-0 pointer-events-none z-50 flex flex-col justify-between">
+      {/* Top 15% Safe Zone */}
+      <div className="h-[15%] w-full border-b-2 border-dashed border-red-500/70 bg-red-500/[0.05] flex items-end justify-center pb-2 px-4 text-center">
+        <span className="text-red-600 text-xs font-bold uppercase tracking-wider bg-white/95 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm">
+          Instagram UI Overlays Zone (Top Carousel Count)
+        </span>
       </div>
-
-      {isTop && (
-        <svg
-          width="40"
-          height="24"
-          viewBox="0 0 40 24"
-          className="absolute left-1/2 -translate-x-1/2 top-full"
-        >
-          <path d="M0 0 L20 24 L40 0 Z" fill={bg} />
-        </svg>
-      )}
-      {isBottom && (
-        <svg
-          width="40"
-          height="24"
-          viewBox="0 0 40 24"
-          className="absolute left-1/2 -translate-x-1/2 top-full -scale-y-100"
-        >
-          <path d="M0 0 L20 24 L40 0 Z" fill={bg} />
-        </svg>
-      )}
-      {isLeft && (
-        <svg
-          width="24"
-          height="40"
-          viewBox="0 0 24 40"
-          className="absolute top-1/2 -translate-y-1/2 left-full"
-        >
-          <path d="M0 0 L24 20 L0 40 Z" fill={bg} />
-        </svg>
-      )}
-      {isRight && (
-        <svg
-          width="24"
-          height="40"
-          viewBox="0 0 24 40"
-          className="absolute top-1/2 -translate-y-1/2 right-full -scale-x-100"
-        >
-          <path d="M0 0 L24 20 L0 40 Z" fill={bg} />
-        </svg>
-      )}
-    </div>
-  );
-}
-
-function ElementView({
-  el,
-  selected,
-  scale,
-  onSelect,
-  onMove,
-}: {
-  el: StudioElement;
-  selected: boolean;
-  scale: number;
-  onSelect: () => void;
-  onMove: (x: number, y: number) => void;
-}) {
-  const mascotConfig = useCityPulseStore((s) => s.mascotConfig);
-
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-    onSelect();
-    const target = e.currentTarget;
-    target.setPointerCapture(e.pointerId);
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const origX = el.x;
-    const origY = el.y;
-
-    const move = (ev: PointerEvent) => {
-      onMove(origX + (ev.clientX - startX) / scale, origY + (ev.clientY - startY) / scale);
-    };
-
-    const up = () => {
-      target.removeEventListener('pointermove', move);
-      target.removeEventListener('pointerup', up);
-    };
-
-    target.addEventListener('pointermove', move);
-    target.addEventListener('pointerup', up);
-  };
-
-  let content: React.ReactNode = null;
-
-  if (el.kind === 'text') {
-    content = (
-      <span
-        className={`inline-block px-6 py-2 leading-tight text-center ${
-          el.font === 'comico' ? 'font-comico' : 'font-jakarta font-extrabold'
-        }`}
-        style={{
-          color: el.color,
-          fontSize: 96,
-          background: el.bgColor || undefined,
-          borderRadius: el.bgColor ? '24px' : undefined,
-          WebkitTextStroke:
-            el.strokeWidth > 0 ? `${el.strokeWidth}px ${el.strokeColor}` : undefined,
-          textShadow: el.shadow ? '0 10px 24px rgba(0, 0, 0, 0.35)' : undefined,
-          opacity: el.opacity ?? 1,
-        }}
-      >
-        {el.text}
-      </span>
-    );
-  } else if (el.kind === 'badge') {
-    content = (
-      <span
-        className="whitespace-nowrap rounded-full border-4 px-10 py-4 font-comico text-5xl shadow-xl inline-block"
-        style={{
-          color: el.color,
-          borderColor: el.color,
-          background: el.bgColor || '#FAF7F2',
-          textShadow: el.shadow ? '0 8px 16px rgba(0,0,0,0.2)' : undefined,
-          opacity: el.opacity ?? 1,
-        }}
-      >
-        {el.text}
-      </span>
-    );
-  } else if (el.kind === 'image' && el.src) {
-    // eslint-disable-next-line @next/next/no-img-element
-    content = (
-      <img
-        src={el.src}
-        alt=""
-        crossOrigin="anonymous"
-        className="w-[520px] rounded-[26px] shadow-2xl select-none"
-        draggable={false}
-        style={{ opacity: el.opacity ?? 1 }}
-      />
-    );
-  } else if (el.kind === 'mascot') {
-    const activeConfig = el.expression
-      ? {
-          ...mascotConfig,
-          peepsFace: el.expression,
-          micahMouth:
-            el.expression === 'smileBig'
-              ? 'laughing'
-              : el.expression === 'cheeky'
-              ? 'smirk'
-              : el.expression === 'awe'
-              ? 'surprised'
-              : el.expression === 'eatingHappy'
-              ? 'pucker'
-              : 'smile',
-          micahEyes:
-            el.expression === 'smileBig' || el.expression === 'cute'
-              ? 'smiling'
-              : el.expression === 'awe'
-              ? 'round'
-              : 'eyes',
-        }
-      : mascotConfig;
-
-    content = (
-      <div className="relative">
-        {el.bubble && (
-          <SpeechBubble
-            text={el.bubble}
-            side={el.bubbleSide || 'top'}
-            style={el.bubbleStyle || 'round'}
-            bg={el.bubbleBg || '#ffffff'}
-            ink={el.bubbleInk || '#181615'}
-          />
-        )}
-        <div
-          className="drop-shadow-2xl transition-transform"
-          style={{
-            transform: el.flip ? 'scaleX(-1)' : undefined,
-            opacity: el.opacity ?? 1,
-          }}
-        >
-          <MascotCharacter config={activeConfig} size={320} />
-        </div>
+      {/* Middle Unobstructed Canvas */}
+      <div className="flex-1" />
+      {/* Bottom 15% Safe Zone */}
+      <div className="h-[15%] w-full border-t-2 border-dashed border-red-500/70 bg-red-500/[0.05] flex items-start justify-center pt-2 px-4 text-center">
+        <span className="text-red-600 text-xs font-bold uppercase tracking-wider bg-white/95 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm">
+          Instagram UI Overlays Zone (Bottom Captions)
+        </span>
       </div>
-    );
-  }
-
-  return (
-    <div
-      onPointerDown={handlePointerDown}
-      className="absolute cursor-grab touch-none select-none"
-      style={{
-        left: el.x,
-        top: el.y,
-        transform: `translate(-50%, -50%) rotate(${el.rotation}deg) scale(${el.scale})`,
-      }}
-    >
-      {content}
-      {selected && (
-        <div
-          data-export-ignore
-          className="pointer-events-none absolute -inset-4 rounded-2xl border-4 border-dashed border-[#e84a27]"
-        />
-      )}
     </div>
   );
 }
 
 export const StudioCanvas = forwardRef<HTMLDivElement, Props>(function StudioCanvas(
-  { state, activeSlide, previewScale, selectedId, onSelect, onMove, onMapChange },
+  { state, onMapChange },
   ref
 ) {
-  const { w, h } = CANVAS_SIZES[state.aspectRatio];
-  const elements = state.elements[activeSlide] || [];
+  const mode = state.mode || 'mascot';
+  const { w, h } = CANVAS_SIZES[state.aspectRatio || '9:16'];
 
-  return (
-    <div
-      ref={ref}
-      style={{ width: w, height: h }}
-      className="relative overflow-hidden font-jakarta select-none"
-      onPointerDown={() => onSelect(null)}
-    >
-      {/* Slide Base Layer: Wallpaper, Live Map, or Custom Photo */}
-      {activeSlide === 'wallpaper' ? (
-        <WallpaperLayer s={state.wallpaper} w={w} h={h} />
-      ) : activeSlide === 'map' ? (
+  const mascot = state.mascot || {
+    ...DEFAULT_MASCOT_CONFIG,
+    frameMode: 'bust-plus-bubble',
+    bubbleText: 'For the biscoff lovers',
+    bubbleStyle: 'round',
+    circleBg: '#FAF7F2',
+    customMascotDataUrl: null,
+  };
+
+  const dishTitle = state.dishTitle || DEFAULT_DISH_TITLE_STATE;
+
+  const stickerOutlineStyle = dishTitle.stickerOutline
+    ? {
+        filter:
+          'drop-shadow(4px 0 0 #FFFFFF) drop-shadow(-4px 0 0 #FFFFFF) drop-shadow(0 4px 0 #FFFFFF) drop-shadow(0 -4px 0 #FFFFFF) drop-shadow(0 12px 24px rgba(0,0,0,0.22))',
+      }
+    : {
+        filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.18))',
+      };
+
+  // 1. MASCOT & BUBBLE MODE
+  if (mode === 'mascot') {
+    return (
+      <div
+        ref={ref}
+        data-asset-builder="mascot"
+        className="relative flex items-center justify-center p-6 bg-transparent select-none"
+      >
+        <SmakrMascotRig
+          head={mascot.head}
+          face={mascot.face}
+          accessories={mascot.accessories}
+          facialHair={mascot.facialHair}
+          skinColor={mascot.skinColor}
+          clothingColor={mascot.clothingColor}
+          innerClothingColor={mascot.innerClothingColor}
+          headContrastColor={mascot.headContrastColor}
+          stickerOutline={mascot.stickerOutline}
+          frameMode={mascot.frameMode}
+          bodyPose={mascot.bodyPose}
+          bubbleText={mascot.bubbleText}
+          bubbleEyebrow={mascot.bubbleEyebrow}
+          bubbleStyle={mascot.bubbleStyle}
+          circleBg={mascot.circleBg}
+          customMascotDataUrl={mascot.customMascotDataUrl}
+          bubbleOffsetX={mascot.bubbleOffsetX}
+          bubbleOffsetY={mascot.bubbleOffsetY}
+          bubbleSide={mascot.bubbleSide}
+          bubbleScale={mascot.bubbleScale}
+          size={380}
+        />
+      </div>
+    );
+  }
+
+  // 2. VENUE & MAP MODE
+  if (mode === 'venue-map') {
+    const exportTarget = state.map.exportTarget || 'card-only';
+    const isIsolated = exportTarget === 'card-only' || exportTarget === 'pin-only';
+
+    if (isIsolated) {
+      return (
+        <div
+          ref={ref}
+          data-asset-builder="venue-map-isolated"
+          className="relative flex items-center justify-center p-4 sm:p-6 bg-transparent select-none"
+        >
+          <MapShot
+            s={state.map}
+            w={1080}
+            h={exportTarget === 'card-only' ? 680 : 400}
+            interactive={true}
+            onMapChange={onMapChange}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div
+        ref={ref}
+        data-asset-builder="venue-map-full"
+        style={{ width: w, height: h }}
+        className="relative overflow-hidden bg-transparent select-none shadow-2xl rounded-2xl"
+      >
         <MapShot
           s={state.map}
           w={w}
@@ -481,55 +269,104 @@ export const StudioCanvas = forwardRef<HTMLDivElement, Props>(function StudioCan
           interactive={true}
           onMapChange={onMapChange}
         />
-      ) : (
-        <PhotoLayer s={state.photo} w={w} h={h} />
-      )}
+        {state.showSafeZones && <SafeZoneOverlay />}
+      </div>
+    );
+  }
 
-      {/* Draggable Free Elements on Active Slide */}
-      {elements.map((el) => (
-        <ElementView
-          key={el.id}
-          el={el}
-          selected={el.id === selectedId}
-          scale={previewScale}
-          onSelect={() => onSelect(el.id)}
-          onMove={(x, y) => onMove(el.id, x, y)}
-        />
-      ))}
-
-      {/* Risograph Noise Texture Overlay */}
-      {state.showNoiseTexture && (
-        <svg
-          aria-hidden
-          className="pointer-events-none absolute inset-0 h-full w-full opacity-25 mix-blend-overlay"
-        >
-          <filter id="studio-noise">
-            <feTurbulence
-              type="fractalNoise"
-              baseFrequency="0.8"
-              numOctaves="2"
-              stitchTiles="stitch"
-            />
-            <feColorMatrix type="saturate" values="0" />
-          </filter>
-          <rect width="100%" height="100%" filter="url(#studio-noise)" />
-        </svg>
-      )}
-
-      {/* Instagram Story Safe Zones Overlay */}
-      {state.showSafeZones &&
-        [{ top: 0, height: 220 }, { bottom: 0, height: 280 }].map((pos, i) => (
+  // 3. DISH TITLE & BADGE STICKER MODE
+  if (mode === 'dish-title') {
+    return (
+      <div
+        ref={ref}
+        data-asset-builder="dish-title"
+        className="relative flex flex-col items-center justify-center p-8 bg-transparent select-none"
+      >
+        {dishTitle.template === 'stacked' ? (
           <div
-            key={i}
-            data-export-ignore
-            className="pointer-events-none absolute inset-x-0"
-            style={{
-              ...pos,
-              background:
-                'repeating-linear-gradient(45deg, rgba(220,38,38,0.35) 0 14px, rgba(220,38,38,0.1) 14px 28px)',
-            }}
-          />
-        ))}
+            className="flex flex-col items-center text-center max-w-[800px]"
+            style={stickerOutlineStyle}
+          >
+            {/* Line 1: Comico Marker Style */}
+            <span
+              className="font-comico tracking-wide text-8xl md:text-9xl leading-none"
+              style={{ color: dishTitle.line1Color || '#8B3A0E' }}
+            >
+              {dishTitle.line1Text || 'Biscoff'}
+            </span>
+
+            {/* Horizontal Underline Divider */}
+            {dishTitle.showUnderline && (
+              <div
+                className="w-full h-3 md:h-3.5 rounded-full my-3 md:my-4 transition-all"
+                style={{ backgroundColor: dishTitle.line1Color || '#8B3A0E' }}
+              />
+            )}
+
+            {/* Line 2: Bold Geometric Sans */}
+            <span
+              className="font-sans font-black uppercase tracking-tight text-7xl md:text-8xl leading-none"
+              style={{ color: dishTitle.line2Color || '#53A626' }}
+            >
+              {dishTitle.line2Text || 'Matcha'}
+            </span>
+          </div>
+        ) : (
+          <div style={stickerOutlineStyle} className="flex items-center justify-center">
+            {dishTitle.pillType === 'price' && (
+              <div className="px-9 py-4 rounded-full bg-[#e84a27] text-white shadow-xl flex items-center gap-3 border-4 border-white">
+                <span className="font-comico text-6xl tracking-wide">
+                  {dishTitle.priceText || '135 NOK'}
+                </span>
+              </div>
+            )}
+
+            {dishTitle.pillType === 'drop' && (
+              <div className="px-8 py-3.5 rounded-full bg-[#181615] text-[#FAF7F2] shadow-xl flex items-center gap-4 border-4 border-white">
+                <div className="w-11 h-11 rounded-full bg-[#e84a27] flex items-center justify-center overflow-hidden border-2 border-white">
+                  <SmakrMascotRig size={46} frameMode="bust-only" stickerOutline={false} />
+                </div>
+                <span className="font-sans font-extrabold text-3xl tracking-tight">
+                  {dishTitle.dropText || '✦ Drop 41 · Em Oi!'}
+                </span>
+              </div>
+            )}
+
+            {dishTitle.pillType === 'rating' && (
+              <div className="px-8 py-3.5 rounded-full bg-black/95 text-white shadow-xl flex items-center gap-3 border-4 border-white">
+                <span className="text-amber-400 text-4xl">★</span>
+                <span className="font-comico text-5xl tracking-wide">
+                  {dishTitle.ratingText || '4.9'}
+                </span>
+              </div>
+            )}
+
+            {dishTitle.pillType === 'status' && (
+              <div className="px-8 py-4 rounded-full bg-emerald-600 text-white shadow-xl flex items-center gap-3 border-4 border-white font-sans font-bold text-3xl">
+                <span>{dishTitle.statusText || '🟢 Open now'}</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 4. BRAND WALLPAPER MODE
+  return (
+    <div
+      ref={ref}
+      data-asset-builder="wallpaper"
+      style={{ width: w, height: h }}
+      className="relative overflow-hidden bg-transparent select-none shadow-2xl rounded-2xl"
+    >
+      <WallpaperLayer
+        s={state.wallpaper}
+        w={w}
+        h={h}
+        transparentBg={state.transparentBg}
+      />
+      {state.showSafeZones && <SafeZoneOverlay />}
     </div>
   );
 });

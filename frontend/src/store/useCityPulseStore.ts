@@ -44,6 +44,18 @@ function scheduleMascotPersist(userId: string, config: MascotConfig) {
   }, 1200);
 }
 
+function getInitialSavedSpots(): Set<string> {
+  if (typeof window === "undefined") return new Set<string>();
+  try {
+    const raw = localStorage.getItem("smakr_saved_spots");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return new Set(parsed);
+    }
+  } catch {}
+  return new Set<string>();
+}
+
 const INITIAL_FILTERS: FilterState = {
   place_type: null,
   food_category: "all",
@@ -61,6 +73,7 @@ const INITIAL_FILTERS: FilterState = {
   spot_type: "all",
   price_tier: null,
   staff_picks_only: false,
+  saved_only: false,
 };
 
 interface PulseStoreState {
@@ -204,6 +217,7 @@ interface PulseStoreState {
   setSpotTypeFilter: (spotType: SpotType | 'all') => void;
   setPriceTierFilter: (tier: string | null) => void;
   toggleStaffPicksOnly: () => void;
+  toggleSavedOnly: () => void;
 }
 
 export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
@@ -220,7 +234,7 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
   // The feed is DB-driven — start empty and hydrate via fetchFoodPosts().
   foodPosts: [],
   likedPostIds: new Set<string>(),
-  savedPostIds: new Set<string>(),
+  savedPostIds: getInitialSavedSpots(),
   currentUser: null,
   isAuthModalOpen: false,
   quickEditPost: null,
@@ -413,6 +427,12 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
         newSaved.delete(postId);
       } else {
         newSaved.add(postId);
+      }
+
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("smakr_saved_spots", JSON.stringify(Array.from(newSaved)));
+        } catch {}
       }
 
       const updatedPosts = state.foodPosts.map((post) => {
@@ -671,6 +691,14 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
       filters: {
         ...state.filters,
         staff_picks_only: !state.filters.staff_picks_only,
+      },
+    })),
+
+  toggleSavedOnly: () =>
+    set((state) => ({
+      filters: {
+        ...state.filters,
+        saved_only: !state.filters.saved_only,
       },
     })),
 

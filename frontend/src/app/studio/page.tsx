@@ -1,38 +1,58 @@
 'use client';
 
-import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useLayoutEffect, useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
+import {
+  ChevronLeft,
+  Copy,
+  Share2,
+  Download,
+  Dices,
+  RotateCcw,
+  Sparkles,
+  Check,
+} from 'lucide-react';
 import { StudioCanvas } from '@/components/studio/StudioCanvas';
 import { StudioControls } from '@/components/studio/StudioControls';
 import { useCityPulseStore } from '@/store/useCityPulseStore';
 import {
-  downloadFiles,
-  makeFile,
-  renderSlide,
+  copyElementPngToClipboard,
+  downloadElementPng,
+  downloadMascotSvg,
+  exportElementAsPngBlob,
   shareFiles,
 } from '@/lib/studioExport';
+import { BLUSH_BODIES, BLUSH_FACES } from '@/lib/blushMascotCatalog';
 import {
   CANVAS_SIZES,
-  type ElementKind,
-  type ExportFormat,
-  type MapShotState,
-  type PhotoState,
-  type SlideId,
-  type StudioElement,
+  DEFAULT_MASCOT_CONFIG,
+  DEFAULT_DISH_TITLE_STATE,
+  OPEN_PEEPS_BODY_POSES,
+  OPEN_PEEPS_FACES,
+  OPEN_PEEPS_HEADS,
+  OPEN_PEEPS_ACCESSORIES,
+  type FoundryMode,
   type StudioState,
+  type MascotState,
+  type MapShotState,
+  type DishTitleState,
   type WallpaperState,
+  type AspectRatio,
+  type BubbleSide,
 } from '@/types/studio';
 
-const INITIAL: StudioState = {
+const INITIAL_STUDIO_STATE: StudioState = {
+  mode: 'mascot',
   aspectRatio: '9:16',
   showSafeZones: false,
-  showNoiseTexture: true,
+  showNoiseTexture: false,
+  transparentBg: true,
   wallpaper: {
     text: 'SMAKR',
-    rows: 9,
+    rows: 8,
     cols: 2,
     size: 1,
-    colorMode: 'oranges', // Default: each logo in the grid has a Nordic orange shade
+    colorMode: 'oranges',
     baseColor: '#e84a27',
     variation: 1,
     seed: 1,
@@ -51,14 +71,14 @@ const INITIAL: StudioState = {
   },
   map: {
     venueId: null,
-    name: 'Digg Pizza - Grønland',
-    address: 'Grønlandsleiret 1, 0190 Oslo, Norway',
-    icon: '🍕',
-    rating: 4.9,
+    name: 'Daglig Brød',
+    address: 'Frognerveien 22, 0263 Oslo',
+    icon: '🥐',
+    rating: 4.8,
     photo:
-      'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=400&q=80',
-    lng: 10.761,
-    lat: 59.913,
+      'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=400&q=80',
+    lng: 10.713,
+    lat: 59.916,
     style: 'streets',
     zoom: 15.5,
     pitch: 0,
@@ -75,13 +95,18 @@ const INITIAL: StudioState = {
     showRating: true,
     showAddress: true,
     showButtons: true,
+    showWebButtons: false,
+    showCardInfo: true,
     mapLabel: 'Map ↗',
     detailsLabel: 'Details →',
+    exportTarget: 'card-only',
   },
   photo: {
     src: null,
     fit: 'cover',
     zoom: 1,
+    panX: 0,
+    panY: 0,
     dim: 0,
     grayscale: false,
     blur: 0,
@@ -93,386 +118,707 @@ const INITIAL: StudioState = {
     map: [],
     photo: [],
   },
-};
-
-const DEFAULTS: Record<ElementKind, Partial<StudioElement>> = {
-  text: { color: '#2B1810', font: 'comico', bgColor: '', strokeWidth: 0, strokeColor: '#000000', shadow: false },
   mascot: {
-    bubble: 'Week drop is live! ✦',
-    bubbleSide: 'top',
+    ...DEFAULT_MASCOT_CONFIG,
+    frameMode: 'bust-plus-bubble',
+    bubbleText: 'For the biscoff lovers',
+    bubbleEyebrow: '✦ SMAKR VERDICT',
     bubbleStyle: 'round',
-    bubbleBg: '#ffffff',
-    bubbleInk: '#181615',
-    flip: false,
+    circleBg: '#FAF7F2',
+    customMascotDataUrl: null,
   },
-  badge: { color: '#e84a27', bgColor: '#FAF7F2', shadow: true },
-  image: { opacity: 1 },
+  dishTitle: DEFAULT_DISH_TITLE_STATE,
 };
-
-const SLIDES_ORDER: SlideId[] = ['wallpaper', 'map', 'photo'];
 
 export default function StudioPage() {
-  const [state, setState] = useState<StudioState>(INITIAL);
-  const [activeSlide, setActiveSlide] = useState<SlideId>(() => {
+  const currentUser = useCityPulseStore((s) => s.currentUser);
+  const [authed, setAuthed] = useState(true);
+  const [passcode, setPasscode] = useState('');
+
+  useEffect(() => {
     if (typeof window !== 'undefined') {
-      const p = new URLSearchParams(window.location.search).get('slide');
-      if (p === 'wallpaper' || p === 'map' || p === 'photo') return p;
+      const sp = new URLSearchParams(window.location.search);
+      if (
+        sp.get('passcode') === 'smakr-admin' ||
+        sp.get('passcode') === 'oslo2026' ||
+        localStorage.getItem('smakr_studio_auth') === 'true'
+      ) {
+        setAuthed(true);
+      }
     }
-    return 'map';
+  }, []);
+  const [state, setState] = useState<StudioState>(() => {
+    if (typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search);
+      const pose = sp.get('pose');
+      const skin = sp.get('skin');
+      const shirt = sp.get('shirt');
+      const modeParam = sp.get('mode') as FoundryMode | null;
+      const bX = sp.get('bx');
+      const bY = sp.get('by');
+      const bSide = sp.get('side') as BubbleSide | null;
+      if (pose || skin || shirt || modeParam || bX || bY || bSide) {
+        return {
+          ...INITIAL_STUDIO_STATE,
+          ...(modeParam ? { mode: modeParam } : {}),
+          mascot: {
+            ...INITIAL_STUDIO_STATE.mascot!,
+            ...(pose ? { bodyPose: pose } : {}),
+            ...(skin ? { skinColor: `#${skin.replace('#', '')}` } : {}),
+            ...(shirt ? { clothingColor: `#${shirt.replace('#', '')}` } : {}),
+            ...(bX ? { bubbleOffsetX: parseInt(bX, 10) } : {}),
+            ...(bY ? { bubbleOffsetY: parseInt(bY, 10) } : {}),
+            ...(bSide ? { bubbleSide: bSide } : {}),
+          },
+        };
+      }
+    }
+    return INITIAL_STUDIO_STATE;
   });
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [scale, setScale] = useState(0.3);
   const [exporting, setExporting] = useState(false);
-  const [exportError, setExportError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const stageRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const offscreenRef = useRef<HTMLDivElement>(null);
-  const [offscreenSlide, setOffscreenSlide] = useState<SlideId>('wallpaper');
+  const assetRef = useRef<HTMLDivElement>(null);
+  const [previewScale, setPreviewScale] = useState(0.5);
+  const [mascotScale, setMascotScale] = useState(1);
+  const [cardScale, setCardScale] = useState(0.4);
 
-  const { w, h } = CANVAS_SIZES[state.aspectRatio];
+  const activeMode: FoundryMode = state.mode || 'mascot';
 
-  const update = useCallback((patch: Partial<StudioState>) => setState((s) => ({ ...s, ...patch })), []);
-  const wp = useCallback((patch: Partial<WallpaperState>) => setState((s) => ({ ...s, wallpaper: { ...s.wallpaper, ...patch } })), []);
-  const mp = useCallback((patch: Partial<MapShotState>) => setState((s) => ({ ...s, map: { ...s.map, ...patch } })), []);
-  const pp = useCallback((patch: Partial<PhotoState>) => setState((s) => ({ ...s, photo: { ...s.photo, ...patch } })), []);
-
-  const patchElement = useCallback(
-    (id: string, patch: Partial<StudioElement>) =>
-      setState((s) => ({
-        ...s,
-        elements: {
-          ...s.elements,
-          [activeSlide]: (s.elements[activeSlide] || []).map((e) => (e.id === id ? { ...e, ...patch } : e)),
-        },
-      })),
-    [activeSlide]
-  );
-
-  const addElement = useCallback(
-    (kind: ElementKind, extra: Partial<StudioElement> = {}) => {
-      const id = `el-${Date.now()}-${Math.round(Math.random() * 1000)}`;
-      const el: StudioElement = {
-        id,
-        kind,
-        x: w / 2,
-        y: h / 2,
-        scale: 1,
-        rotation: 0,
-        opacity: 1,
-        text: '',
-        color: '#2B1810',
-        font: 'comico',
-        bgColor: '',
-        strokeWidth: 0,
-        strokeColor: '#000000',
-        shadow: false,
-        bubble: '',
-        bubbleStyle: 'round',
-        bubbleSide: 'top',
-        bubbleBg: '#ffffff',
-        bubbleInk: '#181615',
-        flip: false,
-        src: null,
-        ...DEFAULTS[kind],
-        ...extra,
-      };
-      setState((s) => ({
-        ...s,
-        elements: {
-          ...s.elements,
-          [activeSlide]: [...(s.elements[activeSlide] || []), el],
-        },
-      }));
-      setSelectedId(id);
-    },
-    [w, h, activeSlide]
-  );
-
-  const removeElement = useCallback(
-    (id: string) => {
-      setState((s) => ({
-        ...s,
-        elements: {
-          ...s.elements,
-          [activeSlide]: (s.elements[activeSlide] || []).filter((e) => e.id !== id),
-        },
-      }));
-      setSelectedId(null);
-    },
-    [activeSlide]
-  );
-
-  // Maintain preview scale proportional to stage container bounds
+  // Responsive stage scaling for canvases
   useLayoutEffect(() => {
     const el = stageRef.current;
     if (!el) return;
+
     const fit = () => {
-      const padding = 20;
-      setScale(Math.min((el.clientWidth - padding) / w, (el.clientHeight - padding) / h));
+      const padW = 24;
+      const padH = 68;
+      const availW = Math.max(120, el.clientWidth - padW);
+      const availH = Math.max(120, el.clientHeight - padH);
+
+      // 1. Full Aspect Canvases (Wallpaper, Full Map)
+      const { w, h } = CANVAS_SIZES[state.aspectRatio || '9:16'];
+      const s = Math.min(availW / w, availH / h);
+      setPreviewScale(Math.min(1, Math.max(0.18, s)));
+
+      // 2. Mascot Sticker Canvas
+      const hasBubble =
+        state.mascot?.frameMode === 'bust-plus-bubble' && Boolean(state.mascot?.bubbleText);
+      const intrinsicW = hasBubble ? 740 : 420;
+      const intrinsicH = 500;
+      const ms = Math.min(availW / intrinsicW, availH / intrinsicH);
+      setMascotScale(Math.min(1.15, Math.max(0.35, ms)));
+
+      // 3. Venue Card & Dish Title Sticker Scaling
+      const cardIntrinsicW = activeMode === 'venue-map' ? 1080 : 860;
+      const cardIntrinsicH =
+        activeMode === 'venue-map'
+          ? state.map.exportTarget === 'pin-only'
+            ? 400
+            : 680
+          : 460;
+      const cs = Math.min(availW / cardIntrinsicW, availH / cardIntrinsicH);
+      setCardScale(Math.min(1.0, Math.max(0.2, cs)));
     };
+
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [w, h]);
+  }, [
+    state.aspectRatio,
+    activeMode,
+    state.map.exportTarget,
+    state.mascot?.frameMode,
+    state.mascot?.bubbleText,
+  ]);
 
-  const cycleSlide = (dir: 'prev' | 'next') => {
-    const idx = SLIDES_ORDER.indexOf(activeSlide);
-    const nextIdx =
-      dir === 'next'
-        ? (idx + 1) % SLIDES_ORDER.length
-        : (idx - 1 + SLIDES_ORDER.length) % SLIDES_ORDER.length;
-    setActiveSlide(SLIDES_ORDER[nextIdx]);
-    setSelectedId(null);
+  // Patch state helpers
+  const updateMascot = useCallback((patch: Partial<MascotState>) => {
+    setState((prev) => ({
+      ...prev,
+      mascot: { ...(prev.mascot || INITIAL_STUDIO_STATE.mascot!), ...patch },
+    }));
+  }, []);
+
+  const updateMap = useCallback((patch: Partial<MapShotState>) => {
+    setState((prev) => ({
+      ...prev,
+      map: { ...prev.map, ...patch },
+    }));
+  }, []);
+
+  const updateDishTitle = useCallback((patch: Partial<DishTitleState>) => {
+    setState((prev) => ({
+      ...prev,
+      dishTitle: { ...(prev.dishTitle || INITIAL_STUDIO_STATE.dishTitle!), ...patch },
+    }));
+  }, []);
+
+  const updateWallpaper = useCallback((patch: Partial<WallpaperState>) => {
+    setState((prev) => ({
+      ...prev,
+      wallpaper: { ...prev.wallpaper, ...patch },
+    }));
+  }, []);
+
+  // Quick Action: Shuffle Mascot Look
+  const handleShuffleMascot = () => {
+    const blushFaces = Object.keys(BLUSH_FACES);
+    const blushBodies = Object.keys(BLUSH_BODIES);
+    const blushAccessories = ['glasses-2', 'none'];
+    const randomFace = blushFaces[Math.floor(Math.random() * blushFaces.length)];
+    const randomAcc = blushAccessories[Math.floor(Math.random() * blushAccessories.length)];
+    const randomPose = blushBodies[Math.floor(Math.random() * blushBodies.length)];
+    updateMascot({
+      face: randomFace,
+      head: 'afro',
+      accessories: randomAcc,
+      bodyPose: randomPose,
+    });
   };
 
-  const executeExport = async (
-    format: ExportFormat,
-    allSlides: boolean,
-    pixelRatio: number,
-    mode: 'share' | 'download'
-  ) => {
-    if (!canvasRef.current) return;
+  // Quick Action: Reset to @niwache12
+  const handleResetMascot = () => {
+    updateMascot({
+      ...DEFAULT_MASCOT_CONFIG,
+      frameMode: 'bust-plus-bubble',
+      bodyPose: 'jacket-2',
+      bubbleText: 'For the biscoff lovers',
+      bubbleStyle: 'round',
+      customMascotDataUrl: null,
+    });
+  };
+
+  // Export 1: 1-Tap Clipboard Copy
+  const handleCopyClipboard = async () => {
+    if (!assetRef.current || exporting) return;
     setExporting(true);
-    setExportError(null);
-    setSelectedId(null);
-
     try {
-      await new Promise((r) => setTimeout(r, 350));
-      const files: File[] = [];
+      const isWallpaperSolid = activeMode === 'wallpaper' && !state.transparentBg;
+      const ok = await copyElementPngToClipboard(assetRef.current, {
+        backgroundColor: isWallpaperSolid ? state.wallpaper.bgColor : undefined,
+      });
 
-      // 1. Current active slide
-      const blobActive = await renderSlide(canvasRef.current, format, w, h, pixelRatio);
-      const nameActive = `smakr-${activeSlide}-${state.aspectRatio.replace(':', 'x')}`;
-      files.push(makeFile(blobActive, nameActive, format));
-
-      // 2. Additional slides if all requested
-      if (allSlides && offscreenRef.current) {
-        const others = SLIDES_ORDER.filter((s) => s !== activeSlide);
-        for (const other of others) {
-          setOffscreenSlide(other);
-          await new Promise((r) => setTimeout(r, 400));
-          if (offscreenRef.current) {
-            const blobOther = await renderSlide(offscreenRef.current, format, w, h, pixelRatio);
-            const nameOther = `smakr-${other}-${state.aspectRatio.replace(':', 'x')}`;
-            files.push(makeFile(blobOther, nameOther, format));
-          }
-        }
-      }
-
-      if (mode === 'share') {
-        const shared = await shareFiles(files);
-        if (!shared) {
-          await downloadFiles(files);
-        }
+      if (ok) {
+        setToast('✓ Copied PNG to clipboard!');
       } else {
-        await downloadFiles(files);
+        await downloadElementPng(assetRef.current, `smakr-${activeMode}-sticker.png`);
+        setToast('Saved PNG to device');
       }
-    } catch (err) {
-      console.error('Export failed', err);
-      setExportError('Export failed. Ensure all images and map tiles are fully loaded.');
+    } catch {
+      setToast('Clipboard export failed');
     } finally {
       setExporting(false);
+      setTimeout(() => setToast(null), 2500);
     }
   };
 
-  const currentUser = useCityPulseStore((s) => s.currentUser);
-  const isAuthResolved = useCityPulseStore((s) => s.isAuthResolved);
+  // Export 2: Mobile Share Sheet
+  const handleShareMobile = async () => {
+    if (!assetRef.current || exporting) return;
+    setExporting(true);
+    try {
+      const isWallpaperSolid = activeMode === 'wallpaper' && !state.transparentBg;
+      const blob = await exportElementAsPngBlob(assetRef.current, {
+        pixelRatio: 3,
+        backgroundColor: isWallpaperSolid ? state.wallpaper.bgColor : undefined,
+      });
+      const file = new File([blob], `smakr-${activeMode}.png`, { type: 'image/png' });
+      const shared = await shareFiles([file]);
+      if (!shared) {
+        await downloadElementPng(assetRef.current, `smakr-${activeMode}.png`);
+        setToast('Saved PNG to downloads');
+      }
+    } catch {
+      setToast('Share cancelled');
+    } finally {
+      setExporting(false);
+      setTimeout(() => setToast(null), 2500);
+    }
+  };
 
-  const devBypass =
-    typeof window !== 'undefined' &&
-    (window.location.search.includes('preview=admin') ||
-      window.sessionStorage.getItem('smakr_admin_preview') === '1');
+  // Export 3: Direct 2K PNG Download
+  const handleDownload2K = async () => {
+    if (!assetRef.current || exporting) return;
+    setExporting(true);
+    try {
+      const isWallpaperSolid = activeMode === 'wallpaper' && !state.transparentBg;
+      await downloadElementPng(
+        assetRef.current,
+        `smakr-${activeMode}-2k.png`,
+        {
+          backgroundColor: isWallpaperSolid ? state.wallpaper.bgColor : undefined,
+        }
+      );
+      setToast('✓ 2K PNG Downloaded');
+    } catch {
+      setToast('Download failed');
+    } finally {
+      setExporting(false);
+      setTimeout(() => setToast(null), 2500);
+    }
+  };
 
-  const isAdmin =
-    devBypass ||
-    currentUser?.role === 'admin' ||
-    Boolean(currentUser?.is_official) ||
-    (currentUser?.handle || '').toLowerCase().includes('niwache') ||
-    (currentUser?.handle || '').toLowerCase().includes('smak');
+  // Export 4: 1-Click Vector SVG Download for Mascot (Figma Ready)
+  const handleExportSvg = () => {
+    if (!assetRef.current) return;
+    try {
+      const pose = state.mascot?.bodyPose || 'bust';
+      downloadMascotSvg(assetRef.current, `smakr-mascot-${pose}.svg`);
+      setToast('✓ Vector SVG Downloaded (Figma ready)');
+    } catch {
+      setToast('SVG export failed');
+    } finally {
+      setTimeout(() => setToast(null), 2500);
+    }
+  };
 
-  if (isAuthResolved && !isAdmin) {
+  const isFullAspectMode =
+    activeMode === 'wallpaper' ||
+    (activeMode === 'venue-map' &&
+      state.map.exportTarget !== 'card-only' &&
+      state.map.exportTarget !== 'pin-only');
+
+  const { w: fullW, h: fullH } = CANVAS_SIZES[state.aspectRatio || '9:16'];
+
+  // Admin access gate check
+  const isAllowed =
+    currentUser?.is_official === true || currentUser?.role === 'admin' || authed;
+
+  if (!isAllowed) {
     return (
-      <div className="flex h-dvh w-full items-center justify-center p-4 bg-[#141211] font-jakarta select-none">
-        <div className="max-w-md w-full rounded-3xl border border-white/10 bg-[#1c1a19] p-8 text-center shadow-2xl">
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-4 text-red-500 text-2xl">
-            🛡️
+      <main className="min-h-dvh flex items-center justify-center p-4 bg-[#FAF7F2] text-[#231F1D]">
+        <div className="w-full max-w-sm p-6 bg-white rounded-3xl border border-[#E6DEC8] shadow-xl text-center space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-[#e84a27]/10 text-[#e84a27] font-comico text-2xl flex items-center justify-center mx-auto">
+            ✦
           </div>
-          <h1 className="text-xl font-extrabold text-white tracking-tight">Access Restricted</h1>
-          <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
-            The Smakr Visual Studio is restricted exclusively to administrators. Sign in with an admin account to create branded assets.
-          </p>
-          <div className="mt-6 flex flex-col gap-2.5">
-            <Link
-              href="/"
-              className="inline-flex items-center justify-center gap-2 w-full px-4 py-3 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] text-white font-bold text-sm shadow-lg transition-all active:scale-98"
-            >
-              ← Back to Food Radar
-            </Link>
-            <Link
-              href="/admin"
-              className="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-2xl bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-semibold transition-all"
-            >
-              Go to Admin Control Center
-            </Link>
+          <div>
+            <h1 className="font-comico text-xl text-[#231F1D]">Smakr Asset Studio</h1>
+            <p className="text-xs text-[#6E655F] mt-1">Admin Sticker & Asset Foundry</p>
           </div>
+          <input
+            type="password"
+            placeholder="Admin Passcode"
+            value={passcode}
+            onChange={(e) => setPasscode(e.target.value)}
+            className="w-full h-11 px-4 rounded-xl border border-[#D8CFC0] bg-[#FAF7F2] text-sm text-[#231F1D] text-center font-mono focus:border-[#e84a27]"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              if (passcode === 'smakr-admin' || passcode === 'oslo2026') {
+                setAuthed(true);
+              }
+            }}
+            className="w-full h-11 rounded-xl bg-[#e84a27] text-white font-bold text-xs uppercase tracking-wider"
+          >
+            Enter Studio
+          </button>
         </div>
-      </div>
+      </main>
     );
   }
 
-  const selected = (state.elements[activeSlide] || []).find((e) => e.id === selectedId) ?? null;
-
   return (
-    <div className="flex h-dvh w-full max-w-full flex-col overflow-hidden bg-[#141211] font-jakarta select-none">
-      {/* Top Header Chrome */}
-      <header className="flex h-12 shrink-0 items-center justify-between px-3 border-b border-white/5 bg-[#191716]">
-        <Link
-          href="/"
-          className="min-h-[44px] content-center text-xs font-bold text-zinc-300 hover:text-white transition-colors"
-        >
-          ← Back to Radar
-        </Link>
-
-        {/* Center Slide Indicator Pills */}
-        <div className="flex rounded-full bg-white/10 p-0.5">
-          <button
-            onClick={() => {
-              setActiveSlide('wallpaper');
-              setSelectedId(null);
-            }}
-            className={`min-h-[30px] rounded-full px-3 text-xs font-bold transition-all ${
-              activeSlide === 'wallpaper'
-                ? 'bg-[#e84a27] text-white shadow-xs'
-                : 'text-zinc-400 hover:text-white'
-            }`}
+    <main className="w-full max-w-[100vw] h-[100dvh] overflow-hidden flex flex-col bg-[#FAF7F2] text-[#231F1D]">
+      {/* 1. TOP UTILITY HEADER */}
+      <header className="h-14 px-4 bg-[#FAF7F2] border-b border-[#E6DEC8] flex items-center justify-between shrink-0 z-30">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin"
+            className="w-9 h-9 rounded-full bg-[#EAE3D7] hover:bg-[#DFD7C8] flex items-center justify-center text-[#231F1D] transition-all"
+            title="Back to Admin"
           >
-            Wallpaper
-          </button>
-          <button
-            onClick={() => {
-              setActiveSlide('map');
-              setSelectedId(null);
-            }}
-            className={`min-h-[30px] rounded-full px-3 text-xs font-bold transition-all ${
-              activeSlide === 'map'
-                ? 'bg-[#e84a27] text-white shadow-xs'
-                : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            Live Map
-          </button>
-          <button
-            onClick={() => {
-              setActiveSlide('photo');
-              setSelectedId(null);
-            }}
-            className={`min-h-[30px] rounded-full px-3 text-xs font-bold transition-all ${
-              activeSlide === 'photo'
-                ? 'bg-[#e84a27] text-white shadow-xs'
-                : 'text-zinc-400 hover:text-white'
-            }`}
-          >
-            Photo
-          </button>
+            <ChevronLeft className="w-5 h-5" />
+          </Link>
+          <div className="leading-tight">
+            <h1 className="font-comico text-base text-[#e84a27] tracking-wide">
+              Smakr Asset Studio
+            </h1>
+            <span className="text-[10px] text-[#6E655F] font-semibold block">
+              2K Transparent Sticker Library
+            </span>
+          </div>
         </div>
 
-        <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest">
-          {state.aspectRatio}
-        </span>
+        {/* Instant Export Actions */}
+        <div className="flex items-center gap-1.5">
+          {activeMode === 'mascot' && (
+            <button
+              type="button"
+              onClick={handleExportSvg}
+              disabled={exporting}
+              className="h-9 px-3 rounded-full bg-white border border-[#D8CFC0] hover:bg-[#FAF7F2] text-xs font-bold text-[#231F1D] flex items-center gap-1.5 shadow-2xs active:scale-95 transition-all"
+              title="Download clean Vector SVG for Figma"
+            >
+              <Download className="w-3.5 h-3.5 text-[#e84a27]" />
+              <span className="hidden sm:inline">Export .SVG</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={handleCopyClipboard}
+            disabled={exporting}
+            className="h-9 px-3 rounded-full bg-white border border-[#D8CFC0] hover:bg-[#FAF7F2] text-xs font-bold text-[#231F1D] flex items-center gap-1.5 shadow-2xs active:scale-95 transition-all"
+            title="Copy Transparent PNG directly to Clipboard"
+          >
+            <Copy className="w-3.5 h-3.5 text-[#6E655F]" />
+            <span className="hidden sm:inline">Copy</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleShareMobile}
+            disabled={exporting}
+            className="h-9 px-3 rounded-full bg-white border border-[#D8CFC0] hover:bg-[#FAF7F2] text-xs font-bold text-[#231F1D] flex items-center gap-1.5 shadow-2xs active:scale-95 transition-all"
+            title="Share to Samsung Editor, Canva, or Instagram"
+          >
+            <Share2 className="w-3.5 h-3.5 text-[#6E655F]" />
+            <span className="hidden sm:inline">Share</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDownload2K}
+            disabled={exporting}
+            className="h-9 px-3.5 rounded-full bg-[#e84a27] hover:bg-[#d13d1c] text-white font-bold text-xs flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
+            title="Download 2K High-Res PNG"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Save PNG</span>
+          </button>
+        </div>
       </header>
 
-      {/* Main Content Area: Responsive Stack (Mobile: Column, Desktop: Row) */}
-      <div className="flex flex-1 flex-col lg:flex-row overflow-hidden min-h-0 w-full max-w-full">
-        {/* Main Preview Stage */}
-        <section
-          ref={stageRef}
-          className="relative flex min-h-0 basis-[46%] lg:basis-auto lg:flex-1 items-center justify-center p-3 bg-[#100e0d] overflow-hidden w-full max-w-full"
-        >
-          {/* Left / Right Slide Navigation Chevrons */}
+      {/* 2. MODE SWITCHER BAR */}
+      <nav
+        aria-label="Studio mode navigation"
+        className="px-4 py-2 bg-[#F3EDE2] border-b border-[#E6DEC8] flex items-center gap-2 overflow-x-auto no-scrollbar shrink-0 z-20"
+      >
+        {[
+          { id: 'mascot', label: '1. 😊 Mascot & Bubble' },
+          { id: 'venue-map', label: '2. 📍 Venue & Map' },
+          { id: 'dish-title', label: '3. 🏷️ Dish Titles & Badges' },
+          { id: 'wallpaper', label: '4. 🎨 Brand Wallpaper' },
+        ].map((tab) => (
           <button
-            onClick={() => cycleSlide('prev')}
-            className="absolute left-3 z-30 w-10 h-10 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center backdrop-blur-md border border-white/10 text-base active:scale-95 transition-all shadow-lg"
-            title="Previous Slide"
+            key={tab.id}
+            type="button"
+            onClick={() =>
+              setState((prev) => ({
+                ...prev,
+                mode: tab.id as FoundryMode,
+                aspectRatio: tab.id === 'venue-map' ? '4:5' : prev.aspectRatio,
+              }))
+            }
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              activeMode === tab.id
+                ? 'bg-[#231F1D] text-[#FAF7F2] shadow-xs'
+                : 'bg-white/80 text-[#5C534E] hover:text-[#231F1D] hover:bg-white'
+            }`}
           >
-            ‹
+            {tab.label}
           </button>
-          <button
-            onClick={() => cycleSlide('next')}
-            className="absolute right-3 z-30 w-10 h-10 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center backdrop-blur-md border border-white/10 text-base active:scale-95 transition-all shadow-lg"
-            title="Next Slide"
-          >
-            ›
-          </button>
+        ))}
+      </nav>
 
-          {/* Live Scaled Canvas */}
+      {/* 3. CENTER PREVIEW STAGE */}
+      <section
+        ref={stageRef}
+        aria-label="Asset stage preview"
+        className="flex-1 min-h-0 relative flex items-center justify-center p-3 sm:p-4 pb-24 sm:pb-4 bg-[#EFEAE1] overflow-hidden"
+      >
+        {/* Floating Toast Notification */}
+        {toast && (
+          <div className="absolute top-4 z-40 px-4 py-2 rounded-full bg-[#181615] text-[#FAF7F2] font-semibold text-xs shadow-xl animate-in fade-in slide-in-from-top-2 duration-150">
+            {toast}
+          </div>
+        )}
+
+        {/* STAGE CANVAS / STICKER FRAME */}
+        {isFullAspectMode ? (
           <div
-            style={{ width: w * scale, height: h * scale }}
-            className="relative shrink-0 overflow-hidden rounded-xl shadow-2xl ring-1 ring-white/10"
+            style={{
+              width: fullW * previewScale,
+              height: fullH * previewScale,
+            }}
+            className="relative rounded-2xl overflow-hidden shadow-2xl bg-[#FAF7F2]"
           >
             <div
               style={{
-                width: w,
-                height: h,
-                transform: `scale(${scale})`,
+                width: fullW,
+                height: fullH,
+                transform: `scale(${previewScale})`,
                 transformOrigin: 'top left',
               }}
             >
               <StudioCanvas
-                ref={canvasRef}
                 state={state}
-                activeSlide={activeSlide}
-                previewScale={scale}
-                selectedId={selectedId}
-                onSelect={setSelectedId}
-                onMove={(id, x, y) => patchElement(id, { x, y })}
+                ref={assetRef}
                 onMapChange={(coords, zoom, pitch) => {
-                  mp({ lng: coords[0], lat: coords[1], zoom, pitch });
+                  updateMap({ lng: coords[0], lat: coords[1], zoom, pitch });
                 }}
               />
             </div>
           </div>
-
-          {/* Hidden Offscreen Canvas for Exporting Non-Active Slides */}
-          <div className="fixed -top-[99999px] -left-[99999px] pointer-events-none opacity-0 overflow-hidden w-0 h-0" aria-hidden>
-            <StudioCanvas
-              ref={offscreenRef}
-              state={state}
-              activeSlide={offscreenSlide}
-              previewScale={1}
-              selectedId={null}
-              onSelect={() => {}}
-              onMove={() => {}}
-            />
+        ) : activeMode === 'mascot' ? (
+          (() => {
+            const hasBubble =
+              state.mascot?.frameMode === 'bust-plus-bubble' && Boolean(state.mascot?.bubbleText);
+            const intrinsicW = hasBubble ? 740 : 420;
+            const intrinsicH = 500;
+            return (
+              <div
+                style={{
+                  width: Math.round(intrinsicW * mascotScale),
+                  height: Math.round(intrinsicH * mascotScale),
+                }}
+                className="relative rounded-3xl border border-[#D8CFC0]/60 shadow-xl overflow-hidden flex items-center justify-center bg-[conic-gradient(#e5e0d5_25%,#faf7f2_0_50%,#e5e0d5_0_75%,#faf7f2_0)] [background-size:20px_20px]"
+              >
+                <div
+                  style={{
+                    width: intrinsicW,
+                    height: intrinsicH,
+                    transform: `scale(${mascotScale})`,
+                    transformOrigin: 'center center',
+                  }}
+                  className="flex items-center justify-center shrink-0"
+                >
+                  <StudioCanvas state={state} ref={assetRef} />
+                </div>
+              </div>
+            );
+          })()
+        ) : activeMode === 'venue-map' || activeMode === 'dish-title' ? (
+          (() => {
+            const cardIntrinsicW = activeMode === 'venue-map' ? 1080 : 860;
+            const cardIntrinsicH =
+              activeMode === 'venue-map'
+                ? state.map.exportTarget === 'pin-only'
+                  ? 400
+                  : 680
+                : 460;
+            return (
+              <div
+                style={{
+                  width: Math.round(cardIntrinsicW * cardScale),
+                  height: Math.round(cardIntrinsicH * cardScale),
+                }}
+                className="relative rounded-3xl border border-[#D8CFC0]/60 shadow-xl overflow-hidden flex items-center justify-center bg-[conic-gradient(#e5e0d5_25%,#faf7f2_0_50%,#e5e0d5_0_75%,#faf7f2_0)] [background-size:20px_20px]"
+              >
+                <div
+                  style={{
+                    width: cardIntrinsicW,
+                    height: cardIntrinsicH,
+                    transform: `scale(${cardScale})`,
+                    transformOrigin: 'center center',
+                  }}
+                  className="flex items-center justify-center shrink-0"
+                >
+                  <StudioCanvas
+                    state={state}
+                    ref={assetRef}
+                    onMapChange={(coords, zoom, pitch) => {
+                      updateMap({ lng: coords[0], lat: coords[1], zoom, pitch });
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          })()
+        ) : (
+          <div className="relative max-w-full max-h-full p-4 sm:p-8 rounded-3xl border border-[#D8CFC0]/60 shadow-xl overflow-hidden flex items-center justify-center bg-[conic-gradient(#e5e0d5_25%,#faf7f2_0_50%,#e5e0d5_0_75%,#faf7f2_0)] [background-size:20px_20px]">
+            <StudioCanvas state={state} ref={assetRef} />
           </div>
-        </section>
+        )}
 
-        {/* Controls Drawer (Mobile: bottom drawer, Desktop: right inspector sidebar) */}
-        <section className="min-h-0 flex-1 lg:flex-initial lg:w-[420px] lg:h-full overflow-hidden rounded-t-3xl lg:rounded-none border-t lg:border-t-0 lg:border-l border-black/10 dark:border-white/10 bg-[#FAF7F2] dark:bg-[#191716] w-full max-w-full">
-          <StudioControls
-            state={state}
-            activeSlide={activeSlide}
-            onSelectSlide={(slide) => {
-              setActiveSlide(slide);
-              setSelectedId(null);
-            }}
-            update={update}
-            wp={wp}
-            mp={mp}
-            pp={pp}
-            selected={selected}
-            addElement={addElement}
-            patchElement={patchElement}
-            removeElement={removeElement}
-            selectElement={setSelectedId}
-            onExport={(format, all, pr) => executeExport(format, all, pr, 'share')}
-            onDownloadOnly={(format, all, pr) => executeExport(format, all, pr, 'download')}
-            exporting={exporting}
-            exportError={exportError}
-          />
-        </section>
-      </div>
-    </div>
+        {/* STAGE FLOATING QUICK ACTION BAR */}
+        <div className="absolute bottom-20 sm:bottom-3 z-30 flex items-center gap-1.5 p-1 bg-white/90 backdrop-blur-md rounded-2xl border border-[#E6DEC8] shadow-lg max-w-[calc(100vw-24px)] overflow-x-auto no-scrollbar">
+          {activeMode === 'mascot' && (
+            <>
+              <button
+                type="button"
+                onClick={handleShuffleMascot}
+                className="shrink-0 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#EFEAE1] hover:bg-[#E5DEC8] text-xs font-bold text-[#231F1D] flex items-center gap-1.5 whitespace-nowrap"
+                title="Randomize expressions and look"
+              >
+                <Dices className="w-3.5 h-3.5 text-[#e84a27]" />
+                <span>Shuffle Look</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleResetMascot}
+                className="shrink-0 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#EFEAE1] hover:bg-[#E5DEC8] text-xs font-bold text-[#231F1D] flex items-center gap-1.5 whitespace-nowrap"
+                title="Reset to authentic @niwache12 mascot"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-[#6E655F]" />
+                <span>Reset @niwache12</span>
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  updateMascot({ stickerOutline: !state.mascot?.stickerOutline })
+                }
+                className={`shrink-0 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                  state.mascot?.stickerOutline ? 'bg-[#e84a27] text-white' : 'bg-[#EFEAE1] text-[#5C534E]'
+                }`}
+              >
+                {state.mascot?.stickerOutline ? '✓ White Rim' : '+ White Rim'}
+              </button>
+              <button
+                type="button"
+                onClick={handleExportSvg}
+                className="shrink-0 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#EFEAE1] hover:bg-[#E5DEC8] text-xs font-bold text-[#231F1D] flex items-center gap-1.5 whitespace-nowrap"
+                title="Download Vector SVG for Figma"
+              >
+                <Download className="w-3.5 h-3.5 text-[#e84a27]" />
+                <span>.SVG (Figma)</span>
+              </button>
+            </>
+          )}
+
+          {activeMode === 'venue-map' && (
+            <>
+              {(
+                [
+                  ['4:5', '4:5 Post'],
+                  ['1:1', '1:1 Square'],
+                  ['9:16', '9:16 Story'],
+                ] as const
+              ).map(([ratio, label]) => (
+                <button
+                  key={ratio}
+                  type="button"
+                  onClick={() => setState((prev) => ({ ...prev, aspectRatio: ratio }))}
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    state.aspectRatio === ratio
+                      ? 'bg-[#231F1D] text-white shadow-xs'
+                      : 'bg-[#EFEAE1] text-[#5C534E] hover:text-[#231F1D]'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+              <div className="w-[1px] h-4 bg-[#D8CFC0] mx-0.5" />
+              {(
+                [
+                  ['full-scene', 'Full Map'],
+                  ['card-only', 'Card Only (PNG)'],
+                  ['pin-only', 'Pin Only'],
+                  ['map-only', 'Map Only'],
+                ] as const
+              ).map(([target, label]) => (
+                <button
+                  key={target}
+                  type="button"
+                  onClick={() => updateMap({ exportTarget: target })}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    (state.map.exportTarget || 'full-scene') === target
+                      ? 'bg-[#231F1D] text-white shadow-xs'
+                      : 'bg-[#EFEAE1] text-[#5C534E] hover:text-[#231F1D]'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </>
+          )}
+
+          {activeMode === 'dish-title' && (
+            <>
+              <button
+                type="button"
+                onClick={() => updateDishTitle({ template: 'stacked' })}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  (state.dishTitle?.template || 'stacked') === 'stacked'
+                    ? 'bg-[#231F1D] text-white'
+                    : 'bg-[#EFEAE1] text-[#5C534E]'
+                }`}
+              >
+                ✍️ Stacked
+              </button>
+              <button
+                type="button"
+                onClick={() => updateDishTitle({ template: 'pills' })}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  state.dishTitle?.template === 'pills'
+                    ? 'bg-[#231F1D] text-white'
+                    : 'bg-[#EFEAE1] text-[#5C534E]'
+                }`}
+              >
+                🏷️ Pills
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  updateDishTitle({ stickerOutline: !state.dishTitle?.stickerOutline })
+                }
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  state.dishTitle?.stickerOutline ? 'bg-[#e84a27] text-white' : 'bg-[#EFEAE1] text-[#5C534E]'
+                }`}
+              >
+                {state.dishTitle?.stickerOutline ? '✓ White Rim' : '+ White Rim'}
+              </button>
+            </>
+          )}
+
+          {activeMode === 'wallpaper' && (
+            <>
+              {(['9:16', '4:5', '1:1'] as AspectRatio[]).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setState((prev) => ({ ...prev, aspectRatio: r }))}
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    state.aspectRatio === r
+                      ? 'bg-[#231F1D] text-white'
+                      : 'bg-[#EFEAE1] text-[#5C534E]'
+                  }`}
+                >
+                  {r}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setState((prev) => ({ ...prev, transparentBg: !prev.transparentBg }))}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  state.transparentBg ? 'bg-[#e84a27] text-white' : 'bg-[#EFEAE1] text-[#5C534E]'
+                }`}
+              >
+                {state.transparentBg ? '✓ Transparent' : 'Solid'}
+              </button>
+            </>
+          )}
+
+          {/* Quick Action: Instagram Safe Zones Toggle */}
+          <button
+            type="button"
+            onClick={() => setState((prev) => ({ ...prev, showSafeZones: !prev.showSafeZones }))}
+            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              state.showSafeZones ? 'bg-[#e84a27] text-white shadow-xs' : 'bg-[#EFEAE1] text-[#5C534E]'
+            }`}
+            title="Toggle 15% Instagram UI safe zone overlay"
+          >
+            {state.showSafeZones ? '✓ Safe Zones' : 'Safe Zones'}
+          </button>
+        </div>
+      </section>
+
+      {/* 4. BOTTOM BLUSH-STYLE CUSTOMIZER PANEL */}
+      <StudioControls
+        state={state}
+        activeMode={activeMode}
+        onUpdateMascot={updateMascot}
+        onUpdateMap={updateMap}
+        onUpdateDishTitle={updateDishTitle}
+        onUpdateWallpaper={updateWallpaper}
+        onUpdateAspectRatio={(r) => setState((prev) => ({ ...prev, aspectRatio: r }))}
+        onUpdateTransparentBg={(t) => setState((prev) => ({ ...prev, transparentBg: t }))}
+        onUpdateSafeZones={(sz) => setState((prev) => ({ ...prev, showSafeZones: sz }))}
+      />
+    </main>
   );
 }

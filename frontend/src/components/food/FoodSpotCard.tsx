@@ -11,6 +11,7 @@ import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
 import { DietaryBadge } from "@/components/ui/DietaryBadge";
 import { getPopupStatus } from "@/lib/popupUtils";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
+import { formatOsloLocation } from "@/lib/location";
 
 interface FoodSpotCardProps {
   venue: Venue;
@@ -29,6 +30,7 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
   const foodPosts = useCityPulseStore((state) => state.foodPosts);
   const popupStatus = getPopupStatus(venue);
   const liveOpenStatus = getVenueLiveOpenStatus(venue);
+  const locationInfo = formatOsloLocation(venue.address, venue.city);
 
   const isViewerAdmin = Boolean(
     currentUser?.role === "admin" ||
@@ -98,7 +100,17 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
     })
   );
 
-  const topReview = reviewQuotes.length > 0 ? reviewQuotes[0] : null;
+  // Smart 5-star food review prioritization
+  const topReview = React.useMemo(() => {
+    if (reviewQuotes.length === 0) return null;
+    const foodKeywords = /taste|flavor|crispy|best|must try|delicious|authentic|fresh|vibes|sauce|craft|crust/i;
+    const sorted = [...reviewQuotes].sort((a, b) => {
+      const aFood = foodKeywords.test(a.text) ? 2 : 0;
+      const bFood = foodKeywords.test(b.text) ? 2 : 0;
+      return b.rating + bFood - (a.rating + aFood);
+    });
+    return sorted[0];
+  }, [reviewQuotes]);
   const hasGoogleRating = typeof venue.google_rating === "number" && venue.google_rating > 0;
   const googleCount = venue.google_reviews_count ?? 0;
 
@@ -185,7 +197,7 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
         {hasGoogleRating && (
           <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/75 backdrop-blur-md text-white text-[11px] font-bold shadow-xs">
             <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-            <span className="font-comico">{venue.google_rating!.toFixed(1)}</span>
+            <span className="font-sans font-bold tracking-tight text-white">{venue.google_rating!.toFixed(1)}</span>
             {googleCount > 0 && (
               <span className="font-normal text-white/70 text-[9px]">({googleCount})</span>
             )}
@@ -220,18 +232,15 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
                 </span>
               )}
               <span
-                className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-1 border ${
-                  liveOpenStatus.isOpen
+                className={`text-[9.5px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border ${
+                  liveOpenStatus.color === "green"
                     ? "bg-emerald-50 text-emerald-800 border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-300"
-                    : "bg-red-50 text-red-700 border-red-200/80 dark:bg-red-950/40 dark:text-red-300"
+                    : liveOpenStatus.color === "orange"
+                    ? "bg-amber-50 text-amber-800 border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300"
+                    : "bg-zinc-100 text-zinc-600 border-zinc-200/80 dark:bg-zinc-800 dark:text-zinc-300"
                 }`}
               >
-                <span
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    liveOpenStatus.isOpen ? "bg-emerald-500" : "bg-red-500"
-                  }`}
-                />
-                <span>{liveOpenStatus.statusText}</span>
+                <span>{liveOpenStatus.badgeText}</span>
               </span>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
@@ -247,7 +256,7 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
                 </button>
               )}
               {venue.price_level && (
-                <span className="text-[11px] font-comico font-bold text-zinc-700 dark:text-zinc-300 bg-black/5 dark:bg-white/10 px-2 py-0.5 rounded-full">
+                <span className="text-[11px] font-sans font-bold tracking-tight text-zinc-700 dark:text-zinc-300 bg-black/5 dark:bg-white/10 px-2 py-0.5 rounded-full">
                   {venue.price_level}
                 </span>
               )}
@@ -262,9 +271,9 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
           {/* Location & Distance / Truck Schedule */}
           <p className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-1 mt-1 truncate">
             <MapPin className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-            <span className="truncate">{venue.address}, {venue.city}</span>
+            <span className="truncate">{locationInfo.fullClean}</span>
             {venue.distance_meters && (
-              <span className="shrink-0 font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.2 rounded-full text-[10px] ml-1">
+              <span className="shrink-0 font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-full text-[10px] ml-1 font-mono">
                 {formatDistance(venue.distance_meters)}
               </span>
             )}

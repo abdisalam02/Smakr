@@ -9,6 +9,8 @@ import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { setPostLike, setPostSave } from "@/lib/supabase/data";
 import { MascotCharacter } from "@/components/avatar/MascotCharacter";
 import { getPopupStatus } from "@/lib/popupUtils";
+import { formatOsloLocation } from "@/lib/location";
+import { getDistanceInMeters, formatDistance } from "@/lib/math";
 
 interface FoodPostCardProps {
   post: FoodPost;
@@ -34,6 +36,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
   const toggleSavePost = useCityPulseStore((state) => state.toggleSavePost);
   const flyToSpot = useCityPulseStore((state) => state.flyToSpot);
   const currentUser = useCityPulseStore((state) => state.currentUser);
+  const userLocation = useCityPulseStore((state) => state.userLocation);
   const setQuickEditPost = useCityPulseStore((state) => state.setQuickEditPost);
   const linkedVenue = useCityPulseStore(
     (state) => state.venues.find((v) => v.id === post.spot_id) ?? null
@@ -44,6 +47,22 @@ export const FoodPostCard = React.memo(function FoodPostCard({
 
   const [showHeart, setShowHeart] = useState(false);
 
+  const locationInfo = formatOsloLocation(
+    post.spot_address || linkedVenue?.address,
+    post.spot_neighborhood || linkedVenue?.city
+  );
+
+  const walkingDistance = userLocation
+    ? formatDistance(
+        getDistanceInMeters(
+          userLocation.lat,
+          userLocation.lon,
+          post.spot_coords[1],
+          post.spot_coords[0]
+        )
+      )
+    : null;
+
   const googleRating =
     typeof linkedVenue?.google_rating === "number" && linkedVenue.google_rating > 0
       ? linkedVenue.google_rating
@@ -53,6 +72,20 @@ export const FoodPostCard = React.memo(function FoodPostCard({
     post.diner_quotes && post.diner_quotes.length > 0
       ? post.diner_quotes
       : linkedVenue?.curated_reviews ?? [];
+
+  // Smart 5-star review picker: taste note first, then top food-keyword 5-star quote
+  const bestQuote = React.useMemo(() => {
+    if (post.review_text) return { text: post.review_text, rating: 5, author: null };
+    if (!dinerQuotes || dinerQuotes.length === 0) return null;
+    const foodKeywords = /taste|flavor|crispy|best|must try|delicious|authentic|fresh|vibes|sauce|craft|crust/i;
+    const sorted = [...dinerQuotes].sort((a, b) => {
+      const aFood = foodKeywords.test(a.text) ? 2 : 0;
+      const bFood = foodKeywords.test(b.text) ? 2 : 0;
+      return b.rating + bFood - (a.rating + aFood);
+    });
+    const top = sorted[0];
+    return { text: top.text, rating: top.rating, author: top.author_name };
+  }, [post.review_text, dinerQuotes]);
 
   const displayRating =
     googleRating != null
@@ -184,11 +217,11 @@ export const FoodPostCard = React.memo(function FoodPostCard({
           {/* Top-Left: Price Sticker / Price Tier / Pop-up / Truck Badge */}
           <div className="flex flex-wrap items-center gap-1.5 max-w-[70%]">
             {typeof post.price_nok === "number" && post.price_nok > 0 ? (
-              <span className="font-comico bg-[#e84a27] text-white px-3 py-1 rounded-full text-xs font-bold shadow-md rotate-[-1deg] tracking-tight">
+              <span className="font-sans font-bold tracking-tight bg-[#e84a27] text-white px-3 py-1 rounded-full text-xs shadow-md rotate-[-1deg]">
                 {post.price_nok} NOK
               </span>
             ) : (post.price_tier || linkedVenue?.price_level) ? (
-              <span className="font-comico bg-black/60 backdrop-blur-md text-zinc-200 border border-white/15 px-2.5 py-1 rounded-full text-xs font-bold shadow-md tracking-tight">
+              <span className="font-sans font-bold tracking-tight bg-black/60 backdrop-blur-md text-zinc-200 border border-white/15 px-2.5 py-1 rounded-full text-xs shadow-md">
                 {post.price_tier || linkedVenue?.price_level}
               </span>
             ) : null}
@@ -234,7 +267,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
 
             <span className="bg-black/60 backdrop-blur-md text-amber-400 font-bold px-2.5 py-1 rounded-full text-xs border border-white/10 flex items-center gap-1 shadow-xs">
               <span className="text-amber-400 text-xs">★</span>
-              <span className="font-comico text-white text-xs tracking-wide">{displayRating}</span>
+              <span className="font-sans font-bold text-white text-xs tracking-tight">{displayRating}</span>
             </span>
 
             <button
@@ -266,28 +299,20 @@ export const FoodPostCard = React.memo(function FoodPostCard({
 
         {/* Overlaid Editorial Content (Bottom Half of Photo) */}
         <div className="absolute bottom-0 inset-x-0 p-3.5 sm:p-4 z-10 flex flex-col justify-end pointer-events-auto">
-          {/* Dish Title */}
-          <h3 className="font-bold text-lg sm:text-xl leading-snug drop-shadow-sm text-white line-clamp-1">
+          {/* Dish Title (Capitalized) */}
+          <h3 className="font-bold text-lg sm:text-xl leading-snug drop-shadow-sm text-white line-clamp-1 capitalize">
             {post.dish_name}
           </h3>
 
-          {/* Venue & Location */}
+          {/* Venue & Location (Clean neighborhood & walking distance) */}
           <div className="text-xs font-medium text-zinc-300 drop-shadow-sm mt-0.5 flex items-center gap-1.5 flex-wrap">
             <MapPin className="w-3 h-3 text-[#e84a27] shrink-0" />
             <span className="font-semibold text-white">{post.spot_name}</span>
-            {post.spot_neighborhood && (
-              <>
-                <span className="text-zinc-400">·</span>
-                <span>{post.spot_neighborhood}</span>
-              </>
-            )}
-            {googleRating != null && (
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-[10px] font-bold">
-                <span className="text-amber-400">★</span>
-                <span className="font-mono text-white">{googleRating.toFixed(1)}</span>
-                {googleCount > 0 && (
-                  <span className="text-white/60 font-normal">({googleCount})</span>
-                )}
+            <span className="text-zinc-400">·</span>
+            <span>{locationInfo.neighborhood}</span>
+            {walkingDistance && (
+              <span className="text-emerald-400 font-semibold font-mono text-[11px]">
+                · {walkingDistance}
               </span>
             )}
             {linkedVenue?.spot_type === "food_truck" && linkedVenue.location_schedule && (
@@ -298,30 +323,26 @@ export const FoodPostCard = React.memo(function FoodPostCard({
             )}
           </div>
 
-          {/* Single Compact Review Quote (never blocks the food photo) */}
-          {post.review_text ? (
+          {/* Single Compact Review Quote (smart 5-star prioritized) */}
+          {bestQuote && (
             <div className="bg-black/40 backdrop-blur-md border border-white/15 rounded-xl px-2.5 py-1.5 my-2 max-w-[95%]">
               <p className="text-[11px] text-zinc-100 italic leading-snug line-clamp-2">
-                &ldquo;{post.review_text}&rdquo;
+                &ldquo;{bestQuote.text}&rdquo;
               </p>
+              {bestQuote.author && (
+                <p className="text-[9px] mt-0.5 flex items-center gap-1 text-zinc-300">
+                  <span className="text-amber-400 font-mono">{stars(bestQuote.rating)}</span>
+                  <span className="truncate">· {bestQuote.author}</span>
+                </p>
+              )}
             </div>
-          ) : dinerQuotes.length > 0 ? (
-            <div className="bg-black/40 backdrop-blur-md border border-white/15 rounded-xl px-2.5 py-1.5 my-2 max-w-[95%]">
-              <p className="text-[11px] text-zinc-100 italic leading-snug line-clamp-2">
-                &ldquo;{dinerQuotes[0].text}&rdquo;
-              </p>
-              <p className="text-[9px] mt-0.5 flex items-center gap-1 text-zinc-300">
-                <span className="text-amber-400 font-mono">{stars(dinerQuotes[0].rating)}</span>
-                <span className="truncate">· {dinerQuotes[0].author_name}</span>
-              </p>
-            </div>
-          ) : null}
+          )}
 
           {/* Author & Action Footer */}
           <div className="flex items-center justify-between gap-2 pt-1 mt-0.5">
             {/* Left: Author Avatar + @handle */}
             <div className="flex items-center gap-2 min-w-0">
-              <span className="w-7 h-7 shrink-0 flex items-center justify-center">
+              <span className="w-7 h-7 rounded-full bg-[#FAF7F2] border border-white/25 overflow-hidden shrink-0 flex items-center justify-center">
                 {isNiwacheAdmin ? (
                   <MascotCharacter config={mascotConfig} size={28} />
                 ) : post.author?.avatar_url ? (
@@ -329,10 +350,10 @@ export const FoodPostCard = React.memo(function FoodPostCard({
                   <img
                     src={post.author.avatar_url}
                     alt={post.author.handle || "author"}
-                    className="w-7 h-7 rounded-full object-cover"
+                    className="w-full h-full rounded-full object-cover"
                   />
                 ) : (
-                  <span className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-[11px] font-bold text-white">
+                  <span className="w-full h-full rounded-full bg-white/20 flex items-center justify-center text-[11px] font-bold text-zinc-900">
                     {(post.author?.name || "U")[0]}
                   </span>
                 )}

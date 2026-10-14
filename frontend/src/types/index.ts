@@ -276,6 +276,7 @@ export interface FilterState {
   open_now: boolean | null;
   price_tier?: string | null;
   staff_picks_only?: boolean | null;
+  saved_only?: boolean | null;
 }
 
 export interface LiveRadarEvent {

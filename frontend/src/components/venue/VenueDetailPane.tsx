@@ -28,6 +28,7 @@ import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
 import { DishDetailPopup } from "@/components/food/DishDetailPopup";
 import { getPopupStatus } from "@/lib/popupUtils";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
+import { formatOsloLocation } from "@/lib/location";
 import { ExpandableReviewText } from "./ExpandableReviewText";
 
 const NEIGHBORHOOD_LABELS: Record<Neighborhood, string> = {
@@ -152,7 +153,7 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
 
   const handleShare = async () => {
     const url =
-      typeof window !== "undefined" ? window.location.href : "";
+      typeof window !== "undefined" ? `${window.location.origin}/?spot=${venue.id}` : "";
     const shareData = {
       title: `${venue.name} · Smakr Oslo`,
       text: `Check out ${venue.name} on Smakr`,
@@ -265,26 +266,19 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
             <span className="flex items-center gap-1 text-xs text-zinc-500">
               <MapPin className="w-3.5 h-3.5 text-[#e84a27] shrink-0" />
               <span className="truncate">
-                {venue.address}, {venue.city}
+                {formatOsloLocation(venue.address, venue.city || neighborhoodLabel).fullClean}
               </span>
-            </span>
-            <span className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--surface-raised)] text-zinc-600 border border-[var(--surface-border)]">
-              <MapPin className="w-3 h-3 text-[#e84a27]" />
-              {neighborhoodLabel}
             </span>
             <span
               className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                isOpenNow
+                liveOpenStatus.color === "green"
                   ? "text-emerald-700 bg-emerald-50 border-emerald-200/70"
-                  : "text-red-700 bg-red-50 border-red-200/70"
+                  : liveOpenStatus.color === "orange"
+                  ? "text-amber-800 bg-amber-50 border-amber-200/70"
+                  : "text-zinc-700 bg-zinc-100 border-zinc-200/70"
               }`}
             >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  isOpenNow ? "bg-emerald-500" : "bg-red-500"
-                }`}
-              />
-              {liveOpenStatus.statusText}
+              <span>{liveOpenStatus.badgeText}</span>
             </span>
             {googleRating != null && (
               <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200/70">

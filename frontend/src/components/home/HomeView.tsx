@@ -111,10 +111,33 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   const spotTypeFilter = useCityPulseStore((state) => state.filters.spot_type);
   const priceTierFilter = useCityPulseStore((state) => state.filters.price_tier);
   const staffPicksOnly = useCityPulseStore((state) => state.filters.staff_picks_only);
+  const savedOnly = useCityPulseStore((state) => state.filters.saved_only);
+  const savedPostIds = useCityPulseStore((state) => state.savedPostIds);
+  const selectVenueById = useCityPulseStore((state) => state.selectVenueById);
+  const flyToSpot = useCityPulseStore((state) => state.flyToSpot);
   const currentUser = useCityPulseStore((state) => state.currentUser);
   const setFeedCategory = useCityPulseStore((state) => state.setFeedCategory);
   const setIsCreateBiteModalOpen = useCityPulseStore((state) => state.setIsCreateBiteModalOpen);
   const isVenueDetailModalOpen = useCityPulseStore((state) => state.isVenueDetailModalOpen);
+
+  // Deep linking: ?spot= query parameter auto-selects & flies on mount
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const spotParam = params.get("spot");
+    if (!spotParam) return;
+
+    const foundVenue = venues.find((v) => v.id === spotParam);
+    if (foundVenue) {
+      selectVenueById(foundVenue.id);
+      flyToSpot([foundVenue.longitude, foundVenue.latitude], foundVenue.id);
+      return;
+    }
+    const foundPost = foodPosts.find((p) => p.spot_id === spotParam || p.id === spotParam);
+    if (foundPost) {
+      flyToSpot(foundPost.spot_coords, foundPost.spot_id);
+    }
+  }, [venues, foodPosts, selectVenueById, flyToSpot]);
 
   // Mobile Slide-up Bottom Sheet State (peek = 142px, half = 58vh, full = 92vh)
   const mobileSheet = useCityPulseStore((state) => state.mobileSheetState);
@@ -164,6 +187,11 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
         }
       }
 
+      // Saved hit-list filter
+      if (savedOnly && !savedPostIds.has(post.id) && !savedPostIds.has(post.spot_id)) {
+        return false;
+      }
+
       // Staff Picks only
       if (staffPicksOnly && !post.is_official_pick) return false;
 
@@ -197,6 +225,8 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
     spotTypeFilter,
     priceTierFilter,
     staffPicksOnly,
+    savedOnly,
+    savedPostIds,
     currentUser,
   ]);
 
@@ -215,6 +245,9 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
 
         // Price Tier filter
         if (priceTierFilter && venue.price_level !== priceTierFilter) return false;
+
+        // Saved hit-list filter
+        if (savedOnly && !savedPostIds.has(venue.id)) return false;
 
         // Staff Picks only
         if (staffPicksOnly && !venue.is_official_pick) return false;
@@ -268,6 +301,8 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
     spotTypeFilter,
     priceTierFilter,
     staffPicksOnly,
+    savedOnly,
+    savedPostIds,
   ]);
 
   const activeCategoryDef = FOOD_CATEGORIES.find((c) => c.id === currentCategory) || FOOD_CATEGORIES[0];
@@ -541,7 +576,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                 <MascotWeeklyDrop feedCount={filteredPosts.length} />
                 <FeedFilterBar />
               </div>
-              <div data-feed-scroll className="flex-1 overflow-y-auto p-5 space-y-4 no-scrollbar pb-24">
+              <div data-feed-scroll className="flex-1 overflow-y-auto p-5 space-y-4 no-scrollbar pb-28">
             {feedMode === "food" ? (
               foodPosts.length === 0 && isHydratingData ? (
                 <div

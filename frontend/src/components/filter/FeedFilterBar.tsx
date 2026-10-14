@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { DietaryTag, FoodCategory, SpotType } from "@/types";
-import { ChevronDown, ChevronUp, SlidersHorizontal, RotateCcw } from "lucide-react";
+import { ChevronDown, ChevronUp, SlidersHorizontal, RotateCcw, Bookmark } from "lucide-react";
 import {
   AllFoodIcon,
   BakeryIcon,
@@ -17,6 +17,7 @@ import {
   DrinksIcon,
   MatchaIcon,
   PastaIcon,
+  DumplingIcon,
 } from "@/components/food/FoodIcons";
 
 const CATEGORY_ICON_MAP: Record<
@@ -35,9 +36,9 @@ const CATEGORY_ICON_MAP: Record<
   drinks: DrinksIcon,
   matcha: MatchaIcon,
   pasta: PastaIcon,
-  dumplings: TacoIcon,
+  dumplings: DumplingIcon,
   tacos: TacoIcon,
-  bao: TacoIcon,
+  bao: DumplingIcon,
 };
 
 type Pill =
@@ -100,6 +101,10 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
   const staffPicksOnly = useCityPulseStore((state) => state.filters.staff_picks_only);
   const toggleStaffPicksOnly = useCityPulseStore((state) => state.toggleStaffPicksOnly);
 
+  const savedOnly = useCityPulseStore((state) => state.filters.saved_only);
+  const toggleSavedOnly = useCityPulseStore((state) => state.toggleSavedOnly);
+  const savedPostIds = useCityPulseStore((state) => state.savedPostIds);
+
   const openNow = useCityPulseStore((state) => state.filters.open_now);
   const setFilters = useCityPulseStore((state) => state.setFilters);
   const resetFilters = useCityPulseStore((state) => state.resetFilters);
@@ -109,6 +114,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
     (spotTypeFilter && spotTypeFilter !== "all" ? 1 : 0) +
     (priceTierFilter ? 1 : 0) +
     (staffPicksOnly ? 1 : 0) +
+    (savedOnly ? 1 : 0) +
     (openNow ? 1 : 0) +
     selectedDietary.length;
 
@@ -157,22 +163,43 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
 
         {/* Horizontal Category & Dietary Pills */}
         <div className="flex items-center gap-1.5 min-w-max">
+          {/* Functional Saved (N) Hit-List Filter Pill */}
+          <button
+            type="button"
+            onClick={toggleSavedOnly}
+            aria-pressed={Boolean(savedOnly)}
+            className={`snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-all select-none active:scale-[0.97] ${
+              savedOnly
+                ? "text-white border-transparent font-semibold shadow-xs bg-[#e84a27]"
+                : "bg-white/80 dark:bg-white/5 text-zinc-600 dark:text-zinc-300 border-zinc-200/70 dark:border-white/10 hover:bg-white dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-white font-medium"
+            }`}
+          >
+            <Bookmark className={`w-3.5 h-3.5 ${savedOnly ? "fill-white text-white" : "text-amber-500 fill-amber-500/20"}`} />
+            <span className="tracking-tight whitespace-nowrap">
+              Saved{savedPostIds.size > 0 ? ` (${savedPostIds.size})` : ""}
+            </span>
+          </button>
+
           {PILLS.map((pill) => {
             const isActive =
-              pill.kind === "category"
+              !savedOnly &&
+              (pill.kind === "category"
                 ? currentCategory === pill.id
-                : selectedDietary.includes(pill.id);
+                : selectedDietary.includes(pill.id));
 
             const Icon = pill.kind === "category" ? CATEGORY_ICON_MAP[pill.id] : null;
 
             return (
               <button
                 key={`${pill.kind}-${pill.id}`}
-                onClick={() =>
-                  pill.kind === "category"
-                    ? setFeedCategory(pill.id)
-                    : toggleDietary(pill.id)
-                }
+                onClick={() => {
+                  if (savedOnly) toggleSavedOnly();
+                  if (pill.kind === "category") {
+                    setFeedCategory(pill.id);
+                  } else {
+                    toggleDietary(pill.id);
+                  }
+                }}
                 aria-pressed={isActive}
                 className={`snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-all select-none active:scale-[0.97] ${
                   isActive

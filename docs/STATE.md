@@ -101,3 +101,60 @@
 - Long review text truncated to 2-3 lines with "Read more" toggle in feed and venue drawers.
 - Google Places reviews auto-attached on dish creation; admin review picker and Drop of the Week editing wired in feed.
 - Map camera flight locks programmatic zoom to eliminate double-tap bug when opening venue cards.
+- Studio UI refactored to Lightroom/Samsung photo editor layout: 80% canvas stage, top bar with 15-step undo/redo, lock toggle, and 2K export.
+- Replaced touch sliders with thumb-safe stepped scale, counter, and framing pan/zoom controls.
+- Contextual micro-panel slides up on dock activation with Done button and outside tap collapse.
+- Upload workflow prioritizes custom/AI photos with framing controls without clobbering spot metadata.
+- Studio upgraded to VSCO/Lightroom monochrome Lucide darkroom aesthetic; slide switcher relocated to floating stage pill.
+- Live Google Places autocomplete wired directly into Studio spot tab with instant coordinate/photo sync and Supabase mount hydration.
+- Exposed MapLibre camera controls (zoom, tilt, pin offset, food glyphs), clamped photo bounds, and all mascot bubble styles.
+- Studio restyled to Warm Nordic palette (Porcelain, Stone, Burnt Paprika) with iOS segmented tracks.
+- Slide 3 empty state replaced with warm interactive upload card triggering native photo picker on tap.
+- Mascot dragging unlocked freely with 5-corner snap presets (TL/TR/Center/BL/BR) and 3% precision nudge pad.
+- Feed and Radar updated with postal neighborhood resolver, smart opening hours, walking distances, and saved hit-list.
+- Studio controls audited for high-contrast Nordic ink typography, replacing all faint text and dark buttons.
+- SmakrMascotRig deployed with 14 Open Peeps faces, 5 body poses, 8 props, 4 FX, and die-cut vinyl outline.
+- Mascot wardrobe presets wired with localStorage hydration, 6 built-ins, and 4-tab sub-navigation.
+- Added blank/transparent canvas mode with checkerboard frame and 1-tap transparent mascot sticker PNG export.
+- Studio refactored into Blush.design Modular Asset & Sticker Foundry with 4 focused builders (Mascot, Venue & Map, Dish Titles, Wallpaper).
+- StudioExport upgraded with 1-tap clipboard PNG copy, native mobile share sheet, and direct 2K transparent PNG downloads.
+- SmakrMascotRig rebuilt with authentic Open Peeps library (24 faces, 16 heads, 8 accessories), 4-column visual SVG slot grids, and 5 framing modes.
+- MapShot updated with 4 isolated export targets: transparent venue card sticker, transparent radar pin, clean map, and full scene.
+- Added Dish Title & Badge Generator with stacked two-line marker/sans typography, signature color pairs, and transparent price/drop pills.
+- Installed react-peeps and upgraded SmakrMascotRig to composite authentic Open Peeps waist-up bodily poses with DiceBear head and collar alignment.
+- Added 29 waist-up bodily poses (Coffee, Pointing Up, Shrug, Explaining, Hoodie, Fur Parka, Crossed Arms, etc.) with live SVG thumbnail grid.
+- Implemented automatic SVG colorization injecting clothingColor and skinColor into raw Open Peeps paths with white die-cut sticker rim.
+- Rebuilt SmakrMascotRig with native unified react-peeps rig eliminating the horizontal neck cut line.
+- Implemented layer-aware colorization: face, neck, arms, and hands are skinColor; torso is clothingColor; linework is #181615.
+- Set classic bust as default mascot pose with 6 canonical presets (bust, shrug, coffee, explaining, pointing-up, hands-on-hips).
+- Group-isolated SVG recoloring protects ink linework, eye whites, and teeth from shirt/skin fill collisions.
+- MapShot defaults to social bio discovery badge (🔗 Save & get radar in bio) and suppresses fast-food/poi clutter layers.
+- StudioCanvas implements Instagram 15% top/bottom safe zone overlay and mouth-level speech bubble anchoring.
+- Studio controls audited to high-contrast Nordic ink tokens (#231F1D, #FAF7F2, #e84a27) across all builders.
+- Mascot dark-shirt poses recolored by subpath silhouette: bare skin is skinColor, garment torso is clothingColor, and linework is #181615.
+- Removed knife pose and bounded whatever clip box, restoring full wrist and hand outlines across all Open Peeps poses.
+- Mode 2 (Venue & Map) defaults to 4:5 aspect ratio with quick stage switcher pills (4:5 Post, 1:1 Square, 9:16 Story).
+- Added stepped size controls for Venue Card (0.65-1.45x), Map Pin (0.65-1.6x), and Card Gap vertical nudge (-200 to +200px).
+- Deployed subpath-segmented color engine across all Open Peeps waist-up poses, isolating bare skin from torso silhouettes.
+- Wired live skin and clothing colors into all 28 body thumbnail previews in StudioControls.
+- Role-specific color palettes deployed (8 natural skin tones, 10 clothing swatches, 7 hair shades) with native hex wheel.
+- Added 1-click vector SVG export for Figma directly from studio header and floating stage bar.
+- Auto-guard maps black garment fills to Charcoal Denim (#27272A) to preserve #181615 ink linework.
+- Venue Card, Map Pin, and Card Gap steppers calibrated with tactile size pills and 4:5 default aspect ratio.
+- Migrated Mascot Studio to Blush Pro Open Peeps SVGs: 9 waist-up poses harvested from official vectors.
+- Semantic SVG colorizer matches skin tone across head, ears, throat, wrists, and hands with zero neck seam.
+- Deployed 6 Blush customizer tabs: Presets (9), Body & Pose (9), Face, Glasses & Hair, Colors, and Speech Bubble.
+- Added 2-tier speech bubble with orange eyebrow tag, round wire glasses (glasses-2), and multi-directional vinyl rim.
+- Guardrail 1 multi-layer color engine deployed: intact ink linework, distinct outer jacket and inner tee coloring.
+- Guardrail 2 locked authentic Blush Afro head across all customizer options without head/neck seam.
+- Guardrail 3 face engine expanded to 13 curated expressions with teeth whites and 4-column visual thumbnail grid.
+- Eyewear & accessories support round wire glasses (glasses-2) and clean bare face toggle.
+- Fixed compound path winding cancellations across Blush poses (jacket-2, shrug, striped-pocket-tee, pointing-up, coffee).
+- Skin tone isolated on exposed wrists, hands, and arms with zero black silhouette corruption.
+- Cup prop in coffee pose isolated as crisp white (#FFFFFF) avoiding garment recolor collision.
+- StudioUi color picker upgraded to 1-tap horizontal swatch strip and in-flow expandable custom hex wheel.
+- Strict positive whitelist deployed in colorizeBodyMarkup protecting transparent stroke linework.
+- Guard A+B+C architecture (26px inward-clipped boundary stroke) eliminates all garment color bleed into arm outlines.
+- Speech bubble supports full directional movability (horizontal closeness, height elevation, placement side, 4-way nudge pad).
+- Mobile bottom sheet calibrated with live avatar preview on top, eliminating backdrop obscuration during customization.
+- Venue & map studio upgraded with responsive sticker auto-scaling and interactive MapLibre gesture/pan/zoom synchronization.

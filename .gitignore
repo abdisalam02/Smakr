@@ -47,3 +47,12 @@ Thumbs.db
 
 # Recordings / debugging media
 *.mp4
+
+# Scratch and test files
+scratch/
+frontend/scratch*
+frontend/public/test_*.html
+frontend/public/verification_results.html
+frontend/Open-peeps-b/
+frontend/open-peeps-b/
+frontend/src/lib/authentic_smile_big*.txt

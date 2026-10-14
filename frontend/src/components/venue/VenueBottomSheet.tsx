@@ -15,6 +15,7 @@ import {
   Globe,
   Phone,
   Clock,
+  Share2,
 } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { motion, AnimatePresence } from "motion/react";
@@ -24,6 +25,7 @@ import { FoodPost, ReviewItem } from "@/types";
 import { DishDetailPopup } from "@/components/food/DishDetailPopup";
 import { getPopupStatus } from "@/lib/popupUtils";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
+import { formatOsloLocation } from "@/lib/location";
 import { ExpandableReviewText } from "./ExpandableReviewText";
 
 /**
@@ -49,12 +51,31 @@ export function VenueBottomSheet() {
   const setBottomSheetOpen = useCityPulseStore((state) => state.setBottomSheetOpen);
   const openCreateDish = useCityPulseStore((state) => state.openCreateDish);
   const mobileSheetState = useCityPulseStore((state) => state.mobileSheetState);
+  const showToast = useCityPulseStore((state) => state.showToast);
 
   const isDesktop = useIsDesktop();
 
   // Expanded detailed slidable card state on mobile
   const isVenueDetailModalOpen = useCityPulseStore((state) => state.isVenueDetailModalOpen);
   const setIsVenueDetailModalOpen = useCityPulseStore((state) => state.setIsVenueDetailModalOpen);
+
+  const handleShare = async () => {
+    if (!selectedVenue) return;
+    const url = `${window.location.origin}/?spot=${selectedVenue.id}`;
+    const shareData = {
+      title: `${selectedVenue.name} · Smakr Oslo`,
+      text: `Check out ${selectedVenue.name} on Smakr`,
+      url,
+    };
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share(shareData);
+      } else if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+        showToast("Venue link copied to clipboard 🔗");
+      }
+    } catch {}
+  };
 
   // Direct GPU-accelerated touch sheet refs and trackers (matching HomeView feed modal)
   const sheetRef = React.useRef<HTMLDivElement>(null);
@@ -334,29 +355,30 @@ export function VenueBottomSheet() {
                     <p className="text-xs text-zinc-500 mt-1 flex items-center gap-1.5 flex-wrap">
                       <MapPin className="w-3.5 h-3.5 text-[#e84a27] shrink-0" />
                       <span className="font-medium text-zinc-700">
-                        {selectedVenue.address.includes("Oslo")
-                          ? selectedVenue.address
-                          : `${selectedVenue.address}, ${selectedVenue.city}`}
+                        {formatOsloLocation(selectedVenue.address, selectedVenue.city || selectedVenue.neighborhood).fullClean}
                       </span>
-                      {selectedVenue.neighborhood && (
-                        <>
-                          <span className="text-zinc-300">•</span>
-                          <span className="capitalize text-zinc-500 font-medium">
-                            {selectedVenue.neighborhood}
-                          </span>
-                        </>
-                      )}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleClose}
-                    className="p-2 rounded-full bg-zinc-200/80 hover:bg-zinc-300 active:bg-zinc-400 text-zinc-700 transition-colors shrink-0 mt-0.5 cursor-pointer"
-                    title="Close details"
-                    aria-label="Close details"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+                    <button
+                      type="button"
+                      onClick={handleShare}
+                      className="p-2 rounded-full bg-zinc-200/80 hover:bg-zinc-300 active:bg-zinc-400 text-zinc-700 transition-colors cursor-pointer"
+                      title="Share venue link"
+                      aria-label="Share venue link"
+                    >
+                      <Share2 className="w-4 h-4 text-zinc-700" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleClose}
+                      className="p-2 rounded-full bg-zinc-200/80 hover:bg-zinc-300 active:bg-zinc-400 text-zinc-700 transition-colors cursor-pointer"
+                      title="Close details"
+                      aria-label="Close details"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
 

@@ -205,9 +205,40 @@ export function PastaIcon({ className = "w-4 h-4" }: IconProps) {
   );
 }
 
+// 13. Dumplings, Dim Sum & Gyoza (Pleated crescent dumpling)
+export function DumplingIcon({ className = "w-4 h-4" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      {/* Dumpling crescent body */}
+      <path
+        d="M3.5 16C3.5 10.5 7.2 6.5 12 6.5C16.8 6.5 20.5 10.5 20.5 16C17.5 18 6.5 18 3.5 16Z"
+        fill="#fef3c7"
+        stroke="#d97706"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      {/* Pleated folds / crimps at top */}
+      <path
+        d="M6.5 12C7.5 8 8.5 7 9 7M10.5 11C11.5 7.5 12 6.5 12.5 6.5M14.5 11C15 7.5 15.5 7 16.5 7.5M17.5 12C18 9 18.5 8.5 19 9"
+        stroke="#b45309"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+      {/* Bottom pan-fried golden crust glow */}
+      <path
+        d="M5 16.5C8 17.8 16 17.8 19 16.5"
+        stroke="#f59e0b"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 // Helper dictionary of raw SVG strings for MapLibre map pins
 export const FOOD_PIN_SVG_MAP: Record<string, string> = {
   all: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><circle cx="12" cy="12" r="10" fill="#ffedd5" stroke="#e84a27" stroke-width="1.5"/><path d="M12 6L13.5 10.5L18 12L13.5 13.5L12 18L10.5 13.5L6 12L10.5 10.5L12 6Z" fill="#e84a27"/></svg>`,
+  dumplings: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M3.5 16C3.5 10.5 7.2 6.5 12 6.5C16.8 6.5 20.5 10.5 20.5 16C17.5 18 6.5 18 3.5 16Z" fill="#fef3c7" stroke="#d97706" stroke-width="1.4"/><path d="M6.5 12C7.5 8 8.5 7 9 7M10.5 11C11.5 7.5 12 6.5 12.5 6.5M14.5 11C15 7.5 15.5 7 16.5 7.5" stroke="#b45309" stroke-width="1.3"/></svg>`,
   bakery: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M4 14C3 10.5 5.5 6.5 12 6.5C18.5 6.5 21 10.5 20 14C19.5 16 17 17.5 15 16C13.5 15 13 13.5 12 13.5C11 13.5 10.5 15 9 16C7 17.5 4.5 16 4 14Z" fill="#fbbf24" stroke="#b45309" stroke-width="1.4"/><path d="M8 8.5C9 10 10.5 11 12 11C13.5 11 15 10 16 8.5" stroke="#d97706" stroke-width="1.3"/></svg>`,
   coffee: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M5 8H17V15C17 17.8 14.8 20 12 20C9.2 20 7 17.8 7 15V8H5Z" fill="#78350f" stroke="#451a03" stroke-width="1.4"/><path d="M5 8H17V11H5V8Z" fill="#ffedd5"/><path d="M17 9H19.5C20.6 9 21.5 9.9 21.5 11C21.5 12.1 20.6 13 19.5 13H17" stroke="#451a03" stroke-width="1.4"/></svg>`,
   matcha: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M4 10C4 16 7.5 19.5 12 19.5C16.5 19.5 20 16 20 10H4Z" fill="#1c1917" stroke="#0c0a09" stroke-width="1.4"/><ellipse cx="12" cy="10" rx="8" ry="2.2" fill="#10b981"/><ellipse cx="11.5" cy="9.8" rx="5.5" ry="1.4" fill="#34d399"/><circle cx="10" cy="9.8" r="0.8" fill="#a7f3d0"/><path d="M15 4L13 8.5" stroke="#d97706" stroke-width="1.3"/></svg>`,
