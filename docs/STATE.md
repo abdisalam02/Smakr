@@ -158,3 +158,36 @@
 - Speech bubble supports full directional movability (horizontal closeness, height elevation, placement side, 4-way nudge pad).
 - Mobile bottom sheet calibrated with live avatar preview on top, eliminating backdrop obscuration during customization.
 - Venue & map studio upgraded with responsive sticker auto-scaling and interactive MapLibre gesture/pan/zoom synchronization.
+- Studio venue picker dynamically fetches all live locations from Supabase database with sync badge and live reload.
+- Mode 2 slot displays all database venues, search filtering across names/addresses/categories, and active card indicator.
+- Integrated Google Places search fallback in studio spot picker when queried location is not yet present in database.
+- Universal Modular Blush harvester built: 13 bodies (bust/sitting/standing), 9 heads/hats, 34 expressions, 3 masks, 7 eyewear, and 6 beards.
+- Dynamic padded viewBoxes (+60px margins) prevent dropshadow clipping across standing, sitting, and bust character heights.
+- Multi-layer color engine maps Top, Pants/Bottom, Shoes, Hat, and Props using strict positive ID whitelist with 0px linework bleed.
+- StudioControls upgraded with body category filters (All/Bust/Sitting/Standing), 34-expression grid, head/mask picker, and dynamic swatches.
+- Aligned 33 Open Peeps & Blush expressions behind eyewear with white teeth, blush cheeks, and pink tongues.
+- Dynamic screen clamping and stage height sizing deployed, ensuring full-height standing and sitting poses never clip.
+- Multi-layer pose segmentation splits sitting and standing garments into independent Top, Bottom/Pants, and Shoes layers.
+- Live swatch picker verified end-to-end via headless Chrome with instant stage recoloring.
+- Rebuilt sitting & standing Blush poses using closed-subpath `evenodd` stencil topology with zero skin/garment/shoe color bleed.
+- Restored native Blush `Accessories/Glasses 2` (`Round Glasses`) and removed shifted `react-peeps` eyewear and `Awe` double-glasses frames.
+- Curated 16 verified expressions with exact inner subpath fills for `#FFFFFF` teeth, `#E84A27` tongues, and `#38BDF8` tears.
+- Documented complete SVG anatomy & multi-layer color engine runbook in `docs/MASCOT_SVG_FIX_GUIDE.md`.
+- Fixed `Sweater` (`blush-sweater.svg`) `evenodd` winding by preserving all 17 structural collar/cuff/forearm cutout holes in `Ink` while isolating the 28 confetti squiggles.
+- Rebuilt `Pointing Up` (`blush-pointing-up.svg`) with exact `Ink[12, 15, 16]` closed hand holes and un-merged `Ink[0]` bottom squiggle and left sleeve seam (zero wrist bleed or stroke bloat).
+- Rebuilt `Jacket 2` (`blush-jacket-2.svg`) with native `Ink[0, 1, 15, 20, 29]` hand/cardigan linework, smoothed edge dot-bumps, and exact command-extracted inner T-shirt contour.
+- Dish cards display concise `✦ Taste Note` verdicts (`FoodPostCard.tsx`), spot cards prefer curated dish photos (`FoodSpotCard.tsx`, `MapRadarView.tsx`), and count badges `< 25` are hidden.
+- Added `/api/admin/ai-curate` (`gemini-2.5-flash-lite` REST route) and wired `[ ✨ Auto-Write Note & Price ]` into `/admin` (`EditPostModal.tsx`) and in-feed quick edit (`QuickEditCardDrawer.tsx`).
+- Unified duotone category SVGs (`#181615` + `#E84A27`) with pleated `DumplingIcon` (`FoodIcons.tsx`) and wrapped live MapLibre pins in `38×38px` `#FAF7F2` circular pucks.
+- Replaced `[ 👍 0 ]` on dish cards with `[ 🔥 Worth It ]`, `[ 🤤 Craving ]` reaction pills, `[ 💬 Spise her? ]` native/clipboard share, and explicit `kr` price badges.
+- Decluttered `FoodPostCard.tsx` footer to balanced 3-action row: tactile `[ 🔥 4 ]` reaction, circular `[ 📤 ]` share, and tactile `[ Map ↗ ]` flight button.
+- Upgraded `MapRadarView.tsx` pucks to tactile 3D keycaps: pure white halo, 3.5px solid bottom lip, `#E84A27` action dot, hover scale, and inverted white linework on selection.
+- Refined `MapRadarView.tsx` pins to 38×38px frosted porcelain pucks (`1.5px` border, zero emoji filter inversion, `#E84A27` selected halo) and redrew `MatchaIcon` with a green `#4E8752` chawan bowl + foam swirl.
+- Added 4 categories (`fried_chicken`, `kebab`, `vietnamese`, `indian`), expanded `FOOD_ICONS_CATALOG` to 95+ searchable foodie emojis, and unified Category & Map Pin Icon in `QuickEditCardDrawer.tsx`.
+- Fixed mobile `FoodSpotCard.tsx` to a 1:1 `w-28 h-28` square thumbnail and reorganized `MascotWeeklyDrop.tsx` expanded actions into a 2-column grid with header Edit/Close icons.
+- Upgraded `/studio` Venue & Map mode with 100% transparent Canva sticker export (`card-only`), Neighborhood Badge, Featured Dish + Price Pill, custom CTA text, and Dish Photo thumbnail picker.
+- Prioritized `dishName + venueName` before `category` in `/api/admin/ai-curate` (`route.ts`) and `FoodPostCard.tsx` (with `.env.local` runtime key loader and `v4` cache key) so dishes like `Korean Fried Chicken` never collide with dumpling notes.
+- Optically centered map pin emojis (`display: grid; place-items: center`) inside warm ivory translucent glass pucks (`rgba(255, 252, 247, 0.74)`) without internal dark drop-shadows (`MapRadarView.tsx`).
+- Preserved saved `smakr_mascot` across sign-out (`AuthProvider.tsx`, `types/mascot.ts`) and gated `AutumnLeavesBurst.tsx` with a session + 4-hour `localStorage` cooldown.
+- Upgraded expanded `MascotWeeklyDrop.tsx` with a half-body bust (`SmakrMascotRig`), speech card, and dark espresso Featured Dish spotlight row; added `/studio` shortcut to `Header.tsx` dropdown.
+- Updated `MapRadarView.tsx` so clicking `✦ Smakr Pick` stays on the map view with a dedicated `✦ Smakr Pick` spotlight popup card, and upgraded the user GPS marker to a zoom/viewport-responsive medallion with a live `● YOU` badge.

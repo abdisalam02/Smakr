@@ -72,9 +72,27 @@ function applyPinState(root: HTMLElement, isSelected: boolean) {
   root.dataset.selected = isSelected ? "1" : "0";
   root.style.zIndex = isSelected ? "35" : "15";
   const visual = root.querySelector<HTMLElement>(".pin-visual");
-  if (visual) visual.style.transform = isSelected ? "scale(1.3)" : "scale(1.0)";
-  const glyph = root.querySelector<HTMLElement>(".pin-glyph");
-  if (glyph) glyph.style.filter = isSelected ? PIN_SHADOW_SELECTED : PIN_SHADOW_DEFAULT;
+  if (visual) visual.style.transform = isSelected ? "scale(1.16)" : "scale(1.0)";
+  const puck = root.querySelector<HTMLElement>(".smakr-map-puck");
+  const iconContainer = root.querySelector<HTMLElement>(".smakr-puck-icon");
+  const arrow = root.querySelector<HTMLElement>(".smakr-puck-arrow");
+  if (puck) {
+    if (isSelected) {
+      puck.style.background = "rgba(255, 250, 244, 0.88)";
+      puck.style.border = "2px solid #E84A27";
+      puck.style.boxShadow = "0 0 0 4px rgba(232, 74, 39, 0.22), 0 6px 16px rgba(232, 74, 39, 0.30)";
+    } else {
+      puck.style.background = "rgba(255, 252, 247, 0.74)";
+      puck.style.border = "1.5px solid rgba(255, 255, 255, 0.92)";
+      puck.style.boxShadow = "0 3px 10px rgba(24, 22, 21, 0.14)";
+    }
+  }
+  if (iconContainer) {
+    iconContainer.style.filter = "none";
+  }
+  if (arrow) {
+    arrow.style.borderTopColor = isSelected ? "#E84A27" : "rgba(24, 22, 21, 0.55)";
+  }
 }
 
 function buildUserAvatarPuckElement(
@@ -84,51 +102,43 @@ function buildUserAvatarPuckElement(
   useMascot = false
 ): HTMLDivElement {
   // MapLibre MUST exclusively own the root's `style.transform` (translate3d).
-  // All zoom scaling is applied strictly to the inner `.puck-scale` child.
+  // All zoom/viewport scaling is applied strictly to the inner `.puck-scale` child.
   const root = document.createElement("div");
-  root.className = "select-none pointer-events-none";
+  root.className = "select-none pointer-events-none z-40";
 
   const container = document.createElement("div");
   container.className =
-    "puck-scale relative flex flex-col items-center select-none pointer-events-none";
+    "puck-scale relative flex flex-col items-center select-none pointer-events-none transition-transform duration-150 ease-out";
   container.style.transformOrigin = "bottom center";
   container.style.willChange = "transform";
 
-  // Small "You're here" caption above the puck.
-  const badge = document.createElement("div");
-  badge.className =
-    "puck-badge bg-white/95 text-zinc-800 font-bold text-[9px] leading-none px-2 py-0.5 rounded-full shadow-sm border border-black/10 whitespace-nowrap mb-0.5 transition-opacity duration-200";
-  badge.textContent = "You're here";
-
-  // Character body wrapper with radar ripple under the feet
+  // High-visibility GPS Medallion wrapper with pulsing radar halo
   const bodyWrapper = document.createElement("div");
-  bodyWrapper.className = "relative flex flex-col items-center justify-center";
+  bodyWrapper.className = "relative flex items-center justify-center";
 
-  // Radar ripple: soft pulsing circle under the avatar
+  // Radar ripple: expanding warm orange halo ring around the medallion
   const ripple = document.createElement("div");
   ripple.className =
-    "absolute -bottom-1 w-8 h-2.5 rounded-full bg-[#e84a27] animate-ping opacity-35 pointer-events-none";
-  ripple.style.animationDuration = "2.4s";
+    "absolute -inset-1.5 rounded-full bg-[#e84a27]/25 border border-[#e84a27]/60 animate-ping pointer-events-none";
+  ripple.style.animationDuration = "2.2s";
 
-  // Soft shadow oval under avatar feet
-  const shadow = document.createElement("div");
-  shadow.className =
-    "absolute -bottom-0.5 w-7 h-2 rounded-full bg-black/25 blur-[1px] pointer-events-none";
-
-  // Character avatar container showing head + torso (strictly bounded)
+  // Crisp circular medallion so avatar pops against any map street/building color (no black)
   const charContainer = document.createElement("div");
   charContainer.className =
-    "relative flex items-center justify-center filter drop-shadow-[0_3px_6px_rgba(0,0,0,0.22)]";
-  charContainer.style.width = "36px";
-  charContainer.style.height = "42px";
-  charContainer.style.maxWidth = "36px";
-  charContainer.style.maxHeight = "42px";
-  charContainer.style.overflow = "hidden";
+    "relative w-12 h-12 rounded-full bg-[#FAF7F2] border-2 border-[#E84A27] overflow-hidden flex items-center justify-center";
+  charContainer.style.boxShadow =
+    "0 0 0 2.5px #FFFFFF, 0 8px 20px rgba(232, 74, 39, 0.25)";
 
-  const renderSvgInto = (svgStr: string) => {
-    charContainer.innerHTML = svgStr;
+  const renderSvgInto = (svgStr: string, isMascotEngine = false) => {
+    // Strip any internal ground shadow (<g data-layer="ambience">) so no grey oval appears
+    const cleaned = svgStr.replace(/<g data-layer="ambience">[\s\S]*?<\/g>/g, "");
+    charContainer.innerHTML = cleaned;
     const svgEl = charContainer.querySelector("svg");
     if (svgEl) {
+      if (isMascotEngine) {
+        svgEl.setAttribute("viewBox", "28 8 220 220");
+        svgEl.setAttribute("preserveAspectRatio", "xMidYMid meet");
+      }
       svgEl.style.width = "100%";
       svgEl.style.height = "100%";
       svgEl.style.display = "block";
@@ -137,49 +147,48 @@ function buildUserAvatarPuckElement(
   };
 
   if (useMascot) {
-    // Admins / official accounts use the Smakr mascot — matching the header avatar.
-    renderSvgInto(buildMascotSVGString(mascotConfig ?? undefined, false, 36, 42));
+    renderSvgInto(buildMascotSVGString(mascotConfig ?? undefined, false, 48, 48), true);
   } else if (avatarUrl) {
     const img = document.createElement("img");
     img.src = avatarUrl;
     img.alt = "You";
-    img.className = "w-full h-full object-contain block pointer-events-none";
+    img.className = "w-full h-full object-cover block pointer-events-none";
     charContainer.appendChild(img);
   } else if (avatarConfig) {
-    // Signed-in user with an Open Peeps avatar.
-    renderSvgInto(buildOpenPeepsSvg(avatarConfig));
+    renderSvgInto(buildOpenPeepsSvg(avatarConfig), false);
   } else {
-    // Non-logged-in / guest: randomly generated Open Peeps avatar
-    renderSvgInto(buildOpenPeepsSvg(getOrCreateGuestOpenPeepsConfig()));
+    renderSvgInto(buildOpenPeepsSvg(getOrCreateGuestOpenPeepsConfig()), false);
   }
 
+  // Always-visible "● YOU" live GPS badge in warm ivory + Burnt Paprika (no black)
+  const badge = document.createElement("div");
+  badge.className =
+    "puck-badge -mt-2 relative z-10 bg-[#FAF7F2] text-[#E84A27] font-extrabold text-[8.5px] tracking-wider uppercase leading-none px-2 py-0.5 rounded-full shadow-md border border-[#E84A27]/35 whitespace-nowrap flex items-center gap-1";
+  badge.innerHTML = `<span style="width:5px;height:5px;border-radius:9999px;background:#10b981;box-shadow:0 0 6px #10b981;display:inline-block;"></span><span>YOU</span>`;
+
   bodyWrapper.appendChild(ripple);
-  bodyWrapper.appendChild(shadow);
   bodyWrapper.appendChild(charContainer);
 
-  container.appendChild(badge);
   container.appendChild(bodyWrapper);
+  container.appendChild(badge);
   root.appendChild(container);
   return root;
 }
 
 /**
- * Calibrated progressive zoom scale:
- * - Street level (15.5+): 1.00 base ratio (36x42px), crisp and detailed.
- * - Neighborhood (14.5): ~0.88
- * - District (13.5): ~0.78
- * - City overview (<= 12.0): 0.68 (clamped) — neat and compact without obscuring city blocks.
+ * Calibrated zoom + viewport-responsive scale:
+ * - Scales smoothly with map zoom (0.84 at city overview -> 1.04 at neighborhood -> 1.20 at street level)
+ * - Adapts to map container width so the avatar remains proportional on mobile split-view and desktop.
  */
-function applyPuckZoomScale(rootEl: HTMLElement, zoom: number) {
+function applyPuckZoomScale(rootEl: HTMLElement, zoom: number, containerWidth?: number) {
   const scaleEl = rootEl.querySelector<HTMLElement>(".puck-scale") ?? rootEl;
-  const scale = Math.max(0.68, Math.min(1.0, 0.68 + Math.max(0, zoom - 12.0) * 0.08));
-  scaleEl.style.transform = `scale(${scale.toFixed(3)})`;
-
-  const badge = rootEl.querySelector<HTMLElement>(".puck-badge");
-  if (badge) {
-    badge.style.opacity = zoom < 13.8 ? "0" : "1";
-    badge.style.pointerEvents = "none";
-  }
+  const zoomScale = Math.max(0.84, Math.min(1.22, 0.84 + Math.max(0, zoom - 11.5) * 0.085));
+  const width =
+    containerWidth ??
+    (typeof window !== "undefined" ? window.innerWidth : 400);
+  const viewportFactor = width < 420 ? 0.95 : width > 960 ? 1.06 : 1.0;
+  const finalScale = zoomScale * viewportFactor;
+  scaleEl.style.transform = `scale(${finalScale.toFixed(3)})`;
 }
 
 function createAquarellePinElement(
@@ -192,8 +201,8 @@ function createAquarellePinElement(
   root.style.position = "absolute";
   root.style.top = "0";
   root.style.left = "0";
-  root.style.width = "38px";
-  root.style.height = "38px";
+  root.style.width = "40px";
+  root.style.height = "48px";
   root.style.margin = "0";
   root.style.padding = "0";
   root.style.cursor = "pointer";
@@ -211,38 +220,81 @@ function createAquarellePinElement(
     ? "🎪"
     : "";
   const pinGlyph = curatedIcon
-    ? `<span style="font-size:26px;line-height:1;">${curatedIcon}</span>`
-    : iconSvg.replace('width="20" height="20"', 'width="32" height="32"');
+    ? `<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;font-size:20px;line-height:1;text-align:center;font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif;transform:translateY(0.5px);">${curatedIcon}</span>`
+    : iconSvg.replace('width="20" height="20"', 'width="22" height="22"');
 
   const inner = document.createElement("div");
   inner.className = "pin-visual";
   inner.style.width = "100%";
   inner.style.height = "100%";
   inner.style.display = "flex";
-  inner.style.alignItems = "center";
+  inner.style.alignItems = "flex-start";
   inner.style.justifyContent = "center";
   inner.style.position = "relative";
-  inner.style.transition = "transform 0.15s cubic-bezier(0.16, 1, 0.3, 1)";
+  inner.style.transformOrigin = "bottom center";
+  inner.style.transition = "transform 0.18s cubic-bezier(0.16, 1, 0.3, 1)";
 
   const haloHtml = popupStatus.isPulsingMarker
-    ? `<div style="position:absolute;inset:-6px;border-radius:9999px;border:2px solid #f59e0b;background:rgba(245,158,11,0.2);animation:ping 1.6s cubic-bezier(0,0,0.2,1) infinite;pointer-events:none;"></div>`
+    ? `<div style="position:absolute;top:-5px;left:-5px;width:44px;height:44px;border-radius:9999px;border:2px solid #f59e0b;background:rgba(245,158,11,0.2);animation:ping 1.6s cubic-bezier(0,0,0.2,1) infinite;pointer-events:none;"></div>`
     : "";
 
   inner.innerHTML = `
-    <!-- Clean Standalone Food Icon with Soft Map Shadow -->
+    <!-- Warm Translucent Glass Map Puck (34x34px, centered glyph, no muddy grey shadow) -->
     ${haloHtml}
-    <div class="pin-glyph" style="
+    <div class="smakr-map-puck" style="
       width: 34px;
       height: 34px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      filter: ${PIN_SHADOW_DEFAULT};
-      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), filter 0.2s ease;
+      border-radius: 9999px;
+      background: rgba(255, 252, 247, 0.74);
+      backdrop-filter: blur(8px) saturate(140%);
+      -webkit-backdrop-filter: blur(8px) saturate(140%);
+      border: 1.5px solid rgba(255, 255, 255, 0.92);
+      box-shadow: 0 3px 10px rgba(24, 22, 21, 0.14);
+      display: grid;
+      place-items: center;
+      padding: 0;
+      position: relative;
+      transition: transform 150ms cubic-bezier(0.22, 1, 0.36, 1), background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      cursor: pointer;
     ">
-      ${pinGlyph}
+      <div class="smakr-puck-icon" style="width:22px;height:22px;display:grid;place-items:center;line-height:1;margin:0;padding:0;">
+        ${pinGlyph}
+      </div>
+      <!-- Subtle pointer triangle -->
+      <div class="smakr-puck-arrow" style="
+        position: absolute;
+        bottom: -4.5px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 4px solid transparent;
+        border-right: 4px solid transparent;
+        border-top: 4.5px solid rgba(24, 22, 21, 0.55);
+        transition: border-top-color 0.2s ease;
+      "></div>
     </div>
   `;
+
+  const puckEl = inner.querySelector<HTMLElement>(".smakr-map-puck");
+  if (puckEl) {
+    puckEl.addEventListener("mouseenter", () => {
+      if (root.dataset.selected !== "1") {
+        puckEl.style.transform = "scale(1.10)";
+      }
+    });
+    puckEl.addEventListener("mouseleave", () => {
+      if (root.dataset.selected !== "1") {
+        puckEl.style.transform = "scale(1.0)";
+      }
+    });
+    puckEl.addEventListener("mousedown", () => {
+      puckEl.style.transform = "scale(0.95)";
+    });
+    puckEl.addEventListener("mouseup", () => {
+      puckEl.style.transform = root.dataset.selected === "1" ? "scale(1.0)" : "scale(1.10)";
+    });
+  }
 
   root.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -501,10 +553,73 @@ export function MapRadarView() {
     return badge;
   }, []);
 
-  const openWeeklyVenue = useCallback(() => {
+  const openWeeklyVenue = useCallback(async () => {
     const state = useCityPulseStore.getState();
-    state.selectVenueById(state.weeklyPick.venue_id);
-  }, []);
+    const pick = state.weeklyPick;
+    const [lng, lat] = pick.coords;
+    const existingVenue = state.venues.find((v) => v.id === pick.venue_id);
+
+    // Stay on the map view (never force-open the full-screen restaurant detail sheet)
+    state.setIsVenueDetailModalOpen(false);
+    if (state.mobileSheetState !== "peek") {
+      state.setMobileSheetState("peek");
+    }
+
+    if (existingVenue) {
+      try {
+        const detail = await fetchVenueDetail(existingVenue.id);
+        setSelectedVenue(detail);
+      } catch {
+        setSelectedVenue({
+          ...existingVenue,
+          recent_checkins: [],
+          recent_speed_tests: [],
+        });
+      }
+    } else {
+      setSelectedVenue({
+        id: pick.venue_id,
+        name: pick.dish_name,
+        address: "Oslo, Norway",
+        neighborhood: "sentrum",
+        latitude: lat,
+        longitude: lng,
+        city: "Oslo",
+        place_type: "cafe",
+        food_category: "coffee",
+        cover_image_url: pick.dish_image,
+        vibe: {
+          seat_score: 8,
+          seat_label: "Available",
+          noise_score: 4,
+          noise_label: "Lively",
+          outlets_percentage: 50,
+          outlets_label: "Available",
+          overall_status: "optimal",
+          overall_score: 8,
+          active_checkins_count: 1,
+          last_checkin_at: null,
+          is_live: true,
+          decay_factor: 1,
+          avg_download_mbps: null,
+          avg_ping_ms: null,
+        },
+        has_wifi: true,
+        has_outlets: true,
+        silent_zone: false,
+        outdoor_seating: false,
+        dog_friendly: false,
+        open_late: false,
+        baseline_seats: 10,
+        baseline_noise: 5,
+        baseline_outlets: true,
+        recent_checkins: [],
+        recent_speed_tests: [],
+      });
+    }
+
+    flyToTarget(lng, lat, 15.6, "weekly-pick");
+  }, [setSelectedVenue, flyToTarget]);
 
   // Anchor the customizable Smakr mascot exclusively to the Weekly Pick.
   // (No user GPS tracking is attached to the mascot.)
@@ -518,9 +633,6 @@ export function MapRadarView() {
     const [lng, lat] = pick.coords;
     if (typeof lng !== "number" || typeof lat !== "number") return;
 
-    const width = 38;
-    const height = Math.round((width * MASCOT_VIEWBOX_HEIGHT) / MASCOT_VIEWBOX_WIDTH);
-
     function buildWeeklyElement(): HTMLDivElement {
       const root = document.createElement("div");
       root.className =
@@ -528,7 +640,7 @@ export function MapRadarView() {
       root.appendChild(buildWeeklyBadge());
       const circle = document.createElement("div");
       circle.className =
-        "relative w-10 h-10 rounded-full border-2 border-white shadow-lg bg-stone-100 overflow-hidden ring-2 ring-[#e84a27] flex items-center justify-center";
+        "relative w-11 h-11 rounded-full border-2 border-[#E84A27] shadow-[0_0_0_2px_#FFFFFF,0_6px_16px_rgba(232,74,39,0.35)] bg-[#FAF7F2] overflow-hidden flex items-center justify-center transition-transform duration-150 group-hover:scale-110";
       if (pick.mascot_avatar_url) {
         const img = document.createElement("img");
         img.src = pick.mascot_avatar_url;
@@ -536,12 +648,14 @@ export function MapRadarView() {
         img.className = "w-full h-full object-cover object-top block pointer-events-none";
         circle.appendChild(img);
       } else {
-        const svgStr = buildMascotSVGString(config, false, 40, 40);
+        const svgStr = buildMascotSVGString(config, false, 44, 44).replace(
+          /<g data-layer="ambience">[\s\S]*?<\/g>/g,
+          ""
+        );
         circle.innerHTML = svgStr;
         const svg = circle.querySelector("svg");
         if (svg) {
-          // Crop to the head so the avatar sits centred in the circular marker.
-          svg.setAttribute("viewBox", "38 15 200 200");
+          svg.setAttribute("viewBox", "32 10 212 212");
           svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
           svg.style.width = "100%";
           svg.style.height = "100%";
@@ -556,7 +670,7 @@ export function MapRadarView() {
       const el = buildWeeklyElement();
       el.addEventListener("click", (e) => {
         e.stopPropagation();
-        openWeeklyVenue();
+        void openWeeklyVenue();
       });
 
       const marker = new maplibregl.Marker({
@@ -575,7 +689,7 @@ export function MapRadarView() {
       el.appendChild(buildWeeklyBadge());
       const circle = document.createElement("div");
       circle.className =
-        "relative w-10 h-10 rounded-full border-2 border-white shadow-lg bg-stone-100 overflow-hidden ring-2 ring-[#e84a27] flex items-center justify-center";
+        "relative w-11 h-11 rounded-full border-2 border-[#E84A27] shadow-[0_0_0_2px_#FFFFFF,0_6px_16px_rgba(232,74,39,0.35)] bg-[#FAF7F2] overflow-hidden flex items-center justify-center transition-transform duration-150 group-hover:scale-110";
       if (pick.mascot_avatar_url) {
         const img = document.createElement("img");
         img.src = pick.mascot_avatar_url;
@@ -583,12 +697,14 @@ export function MapRadarView() {
         img.className = "w-full h-full object-cover object-top block pointer-events-none";
         circle.appendChild(img);
       } else {
-        const svgStr = buildMascotSVGString(config, false, 40, 40);
+        const svgStr = buildMascotSVGString(config, false, 44, 44).replace(
+          /<g data-layer="ambience">[\s\S]*?<\/g>/g,
+          ""
+        );
         circle.innerHTML = svgStr;
         const svg = circle.querySelector("svg");
         if (svg) {
-          // Crop to the head so the avatar sits centred in the circular marker.
-          svg.setAttribute("viewBox", "38 15 200 200");
+          svg.setAttribute("viewBox", "32 10 212 212");
           svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
           svg.style.width = "100%";
           svg.style.height = "100%";
@@ -700,7 +816,7 @@ export function MapRadarView() {
       }
       if (userLocationMarkerRef.current) {
         const el = userLocationMarkerRef.current.getElement();
-        if (el) applyPuckZoomScale(el, z);
+        if (el) applyPuckZoomScale(el, z, mapContainer.current?.clientWidth);
       }
     });
 
@@ -729,7 +845,19 @@ export function MapRadarView() {
       }
     });
 
-    const handleResize = () => safeResize();
+    const handleResize = () => {
+      safeResize();
+      if (userLocationMarkerRef.current && mapInstance.current) {
+        const el = userLocationMarkerRef.current.getElement();
+        if (el) {
+          applyPuckZoomScale(
+            el,
+            mapInstance.current.getZoom(),
+            mapContainer.current?.clientWidth
+          );
+        }
+      }
+    };
 
     const resizeObserver = new ResizeObserver(handleResize);
     if (mapContainer.current) resizeObserver.observe(mapContainer.current);
@@ -958,10 +1086,228 @@ export function MapRadarView() {
       ? `${selectedVenue.neighborhood}, Oslo`
       : "Oslo";
 
-    const imageUrl = selectedVenue.cover_image_url || "/images/placeholder-venue.jpg";
+    const curatedDishPhoto = useCityPulseStore
+      .getState()
+      .foodPosts.find((p) => p.spot_id === selectedVenue.id && p.image_url && !p.is_archived)?.image_url;
+    const imageUrl =
+      curatedDishPhoto || selectedVenue.cover_image_url || "/images/placeholder-venue.jpg";
     const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${selectedVenue.latitude},${selectedVenue.longitude}`;
 
-    popupNode.innerHTML = `
+    const isWeeklyPickVenue = selectedVenue.id === weeklyPick.venue_id;
+    const weekNumber =
+      (weeklyPick.week_label || "41").replace(/[^0-9]/g, "") || "41";
+
+    if (isWeeklyPickVenue) {
+      const pickDishImage = weeklyPick.dish_image || imageUrl;
+      popupNode.innerHTML = `
+        <div style="
+          background: #FAF7F2;
+          border: 1.5px solid #F0CFC2;
+          border-radius: 20px;
+          box-shadow: 0 14px 34px rgba(232, 74, 39, 0.16), 0 4px 12px rgba(0, 0, 0, 0.08);
+          overflow: hidden;
+          width: 312px;
+          max-width: 90vw;
+          position: relative;
+          font-family: inherit;
+        ">
+          <!-- Warm Editorial Smakr Pick Header Ribbon (No Black) -->
+          <div style="
+            background: #FFF3ED;
+            color: #7C2D12;
+            padding: 7px 11px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #F5D5C8;
+          ">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="
+                background: #E84A27;
+                color: #FFFFFF;
+                font-size: 9px;
+                font-weight: 800;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                padding: 2px 7px;
+                border-radius: 999px;
+              ">✦ Smakr Pick</span>
+              <span style="font-size: 10px; font-weight: 700; color: #9A3412;">
+                Drop #${weekNumber}
+              </span>
+            </div>
+            <button id="smakr-popup-close-btn" style="
+              width: 20px;
+              height: 20px;
+              border-radius: 50%;
+              background: rgba(232, 74, 39, 0.10);
+              border: none;
+              color: #9A3412;
+              font-size: 11px;
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            ">✕</button>
+          </div>
+
+          <div style="padding: 10px 11px;">
+            <!-- Featured Dish + Spot Row -->
+            <div style="display: flex; gap: 11px; align-items: center;">
+              <div style="
+                position: relative;
+                width: 76px;
+                height: 76px;
+                border-radius: 14px;
+                overflow: hidden;
+                flex-shrink: 0;
+                background: #F5EFE3;
+                border: 1px solid #E6DDD0;
+              ">
+                <img src="${pickDishImage}" alt="${weeklyPick.dish_name}" style="width: 100%; height: 100%; object-fit: cover;" />
+                <span style="
+                  position: absolute;
+                  bottom: 4px;
+                  right: 4px;
+                  background: #E84A27;
+                  color: #FFFFFF;
+                  font-size: 9.5px;
+                  font-weight: 800;
+                  padding: 1.5px 5.5px;
+                  border-radius: 6px;
+                  box-shadow: 0 2px 6px rgba(232, 74, 39, 0.35);
+                ">${weeklyPick.price_nok} kr</span>
+              </div>
+
+              <div style="flex: 1; min-width: 0;">
+                <div style="
+                  font-size: 9.5px;
+                  font-weight: 800;
+                  text-transform: uppercase;
+                  letter-spacing: 0.05em;
+                  color: #E84A27;
+                ">Featured Dish</div>
+                <div style="
+                  font-family: var(--font-comico, sans-serif);
+                  font-size: 15px;
+                  color: #292524;
+                  font-weight: bold;
+                  white-space: nowrap;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                ">
+                  ${weeklyPick.dish_name}
+                </div>
+
+                <div style="
+                  font-size: 11.5px;
+                  font-weight: 700;
+                  color: #57534E;
+                  margin-top: 1px;
+                  white-space: nowrap;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                ">
+                  📍 ${selectedVenue.name}
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 4px; margin-top: 3px; flex-wrap: wrap;">
+                  <span style="
+                    background: #FEF3C7;
+                    color: #92400E;
+                    border: 1px solid #FDE68A;
+                    font-size: 9.5px;
+                    font-weight: bold;
+                    padding: 1px 6px;
+                    border-radius: 999px;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 2px;
+                  ">
+                    <span style="color: #D97706;">★</span> ${ratingVal}
+                  </span>
+                  <span style="
+                    background: ${openStatus.isOpen ? '#ecfdf5' : '#fef2f2'};
+                    color: ${openStatus.isOpen ? '#047857' : '#b91c1c'};
+                    border: 1px solid ${openStatus.isOpen ? '#a7f3d0' : '#fecaca'};
+                    font-size: 9px;
+                    font-weight: 700;
+                    padding: 1px 6px;
+                    border-radius: 999px;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 3px;
+                  ">
+                    <span style="width: 5px; height: 5px; border-radius: 50%; background: ${openStatus.isOpen ? '#10b981' : '#ef4444'};"></span>
+                    ${openStatus.statusText}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Mascot Drop Note Quote Box -->
+            <div style="
+              margin-top: 8px;
+              padding: 7px 9px;
+              border-radius: 10px;
+              background: #FFF6F2;
+              border: 1px solid #F5D5C8;
+              border-left: 3px solid #E84A27;
+              font-size: 11.5px;
+              font-style: italic;
+              font-weight: 600;
+              color: #44403C;
+              line-height: 1.35;
+            ">
+              &ldquo;${weeklyPick.speech_bubble}&rdquo;
+            </div>
+
+            <!-- Action Row -->
+            <div style="display: flex; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(0,0,0,0.06);">
+              <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" style="
+                flex: 1;
+                padding: 5px 8px;
+                border-radius: 9px;
+                background: #ffffff;
+                border: 1px solid rgba(0,0,0,0.12);
+                color: #181615;
+                font-size: 10.5px;
+                font-weight: 700;
+                text-align: center;
+                text-decoration: none;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 3px;
+              ">
+                <span>Directions</span> ↗
+              </a>
+
+              <button id="smakr-popup-menu-btn" style="
+                flex: 1.25;
+                padding: 5px 8px;
+                border-radius: 9px;
+                background: #E84A27;
+                border: none;
+                color: #ffffff;
+                font-family: var(--font-comico, sans-serif);
+                font-size: 10.5px;
+                font-weight: bold;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 3px;
+                box-shadow: 0 2px 6px rgba(232,74,39,0.28);
+              ">
+                <span>Spot &amp; Menu</span> →
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      popupNode.innerHTML = `
       <div style="
         background: #fbf9f5;
         border: 1.5px solid rgba(0, 0, 0, 0.08);
@@ -1104,6 +1450,7 @@ export function MapRadarView() {
         </div>
       </div>
     `;
+    }
 
     popupNode.querySelector("#smakr-popup-close-btn")?.addEventListener("click", (e) => {
       e.stopPropagation();

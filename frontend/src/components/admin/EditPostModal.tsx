@@ -450,15 +450,55 @@ export function EditPostModal({ post, onClose }: EditPostModalProps) {
           )}
         </div>
 
-        <Field label="Review / Editorial Text">
+        <div>
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+              Smakr Taste Note / Verdict
+            </span>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  showToast("Writing insider taste note…");
+                  const res = await fetch("/api/admin/ai-curate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      mode: "generate-dish-note",
+                      dishName,
+                      venueName: selectedVenue?.name || post.spot_name,
+                      category,
+                      rawGoogleReviews: [
+                        ...quotes.map((q) => q.text),
+                        ...googleReviews.map((q) => q.text),
+                        ...(selectedVenue?.curated_reviews || []).map((q) => q.text),
+                      ],
+                    }),
+                  });
+                  const data = await res.json();
+                  if (data.tasteNote) setReview(data.tasteNote);
+                  if (data.suggestedPriceNok && (price === "" || price == null)) {
+                    setPrice(data.suggestedPriceNok);
+                  }
+                  showToast("✨ Taste note & price estimate ready");
+                } catch {
+                  showToast("Could not auto-write note right now.");
+                }
+              }}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#e84a27]/10 hover:bg-[#e84a27]/20 text-[#e84a27] text-[11px] font-bold transition-colors cursor-pointer"
+            >
+              <Sparkles className="w-3 h-3" />
+              ✨ Auto-Write Note &amp; Price
+            </button>
+          </div>
           <textarea
             value={review}
             onChange={(e) => setReview(e.target.value)}
             rows={3}
-            placeholder="Why is this dish essential? Describe the flavors, crust, broth..."
+            placeholder="1–2 punchy insider lines about the dish texture, flavor, and why it's worth ordering..."
             className={`${inputCls} resize-none`}
           />
-        </Field>
+        </div>
 
         <div>
           <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">

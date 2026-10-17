@@ -10,224 +10,210 @@ interface IconProps {
 export function AllFoodIcon({ className = "w-4 h-4" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className}>
-      <circle cx="12" cy="12" r="10" fill="#ffedd5" stroke="#e84a27" strokeWidth="1.5" />
-      <path d="M12 6L13.5 10.5L18 12L13.5 13.5L12 18L10.5 13.5L6 12L10.5 10.5L12 6Z" fill="#e84a27" />
+      <circle cx="12" cy="12" r="9.5" fill="#FAF7F2" stroke="#181615" strokeWidth="1.6" />
+      <path d="M12 5.5L13.8 10.2L18.5 12L13.8 13.8L12 18.5L10.2 13.8L5.5 12L10.2 10.2L12 5.5Z" fill="#E84A27" stroke="#181615" strokeWidth="1.1" strokeLinejoin="round" />
     </svg>
   );
 }
 
-// 2. Bakery & Pastries (Golden Artisan Croissant / Bun)
+// 2. Bakery & Pastries (Flaky Layered Croissant)
 export function BakeryIcon({ className = "w-4 h-4" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className}>
       <path
-        d="M4 14C3 10.5 5.5 6.5 12 6.5C18.5 6.5 21 10.5 20 14C19.5 16 17 17.5 15 16C13.5 15 13 13.5 12 13.5C11 13.5 10.5 15 9 16C7 17.5 4.5 16 4 14Z"
-        fill="#fbbf24"
-        stroke="#b45309"
-        strokeWidth="1.4"
+        d="M3.5 14.5C2.5 10 6 6.5 12 6.5C18 6.5 21.5 10 20.5 14.5C19.8 17 17.2 18 15.2 16.2C13.8 15 13 13.8 12 13.8C11 13.8 10.2 15 8.8 16.2C6.8 18 4.2 17 3.5 14.5Z"
+        fill="#FAF7F2"
+        stroke="#181615"
+        strokeWidth="1.6"
         strokeLinejoin="round"
       />
-      <path d="M8 8.5C9 10 10.5 11 12 11C13.5 11 15 10 16 8.5" stroke="#d97706" strokeWidth="1.3" strokeLinecap="round" />
-      <path d="M9.5 13.5C10.5 14.2 11.2 14.5 12 14.5C12.8 14.5 13.5 14.2 14.5 13.5" stroke="#d97706" strokeWidth="1.2" strokeLinecap="round" />
+      <path d="M8 7.5C9.2 10 10.5 11.2 12 11.2C13.5 11.2 14.8 10 16 7.5" fill="#E84A27" fillOpacity="0.22" stroke="#E84A27" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M6.5 10.5L8.5 14M17.5 10.5L15.5 14" stroke="#181615" strokeWidth="1.4" strokeLinecap="round" />
     </svg>
   );
 }
 
-// 3. Vietnamese & Specialty Coffee (Phin brew / Iced Coconut Coffee)
+// 3. Coffee & Drinks (Specialty Cup with Steam)
 export function CoffeeIcon({ className = "w-4 h-4" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className}>
-      {/* Cup */}
-      <path d="M5 8H17V15C17 17.8 14.8 20 12 20C9.2 20 7 17.8 7 15V8H5Z" fill="#78350f" stroke="#451a03" strokeWidth="1.4" />
-      {/* Coconut foam / cream layer */}
-      <path d="M5 8H17V11H5V8Z" fill="#ffedd5" />
-      {/* Handle */}
-      <path d="M17 9H19.5C20.6 9 21.5 9.9 21.5 11C21.5 12.1 20.6 13 19.5 13H17" stroke="#451a03" strokeWidth="1.4" strokeLinecap="round" />
-      {/* Steam lines */}
-      <path d="M8 3.5C8 4.5 9 5 9 6" stroke="#e84a27" strokeWidth="1.2" strokeLinecap="round" />
-      <path d="M12 2.5C12 3.5 13 4 13 5.5" stroke="#e84a27" strokeWidth="1.2" strokeLinecap="round" />
-      {/* Saucer */}
-      <path d="M4 21H18" stroke="#451a03" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M5 8.5H16.5V14.5C16.5 17.5 14.2 19.8 10.8 19.8C7.4 19.8 5 17.5 5 14.5V8.5Z" fill="#FAF7F2" stroke="#181615" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M5 8.5H16.5V11.5H5V8.5Z" fill="#E84A27" />
+      <path d="M16.5 9.5H18.8C20 9.5 21 10.5 21 11.8C21 13.1 20 14 18.8 14H16.5" stroke="#181615" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M8.5 3.5C8.5 4.8 9.5 5.2 9.5 6.5M12.8 3C12.8 4.3 13.8 4.8 13.8 6.2" stroke="#E84A27" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   );
 }
 
-// 4. Ramen (Steaming Bowl with Chopsticks & Tamago)
+// 4. Ramen (Steaming Noodle Bowl & Chopsticks)
 export function RamenIcon({ className = "w-4 h-4" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className}>
-      {/* Bowl */}
-      <path d="M3 11C3 16.5 7 20 12 20C17 20 21 16.5 21 11H3Z" fill="#ef4444" stroke="#991b1b" strokeWidth="1.4" />
-      {/* Broth surface */}
-      <ellipse cx="12" cy="11" rx="9" ry="2.2" fill="#fbbf24" />
-      {/* Halved Ajitsuke Egg */}
-      <ellipse cx="9" cy="11" rx="2.5" ry="1.6" fill="#ffffff" />
-      <circle cx="9" cy="11" r="1.1" fill="#f97316" />
-      {/* Nori sheet */}
-      <rect x="14" y="8" width="3" height="4.5" rx="0.5" fill="#18181b" />
-      {/* Chopsticks */}
-      <path d="M2 4L18 9M2 2L18 8.5" stroke="#78350f" strokeWidth="1.3" strokeLinecap="round" />
+      <path d="M3 11.5C3 16.8 6.8 20 12 20C17.2 20 21 16.8 21 11.5H3Z" fill="#FAF7F2" stroke="#181615" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M4.5 14.5H19.5" stroke="#E84A27" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="9" cy="10.5" r="1.8" fill="#E84A27" stroke="#181615" strokeWidth="1.2" />
+      <path d="M3 5L19 8.5M3 3L19 7" stroke="#181615" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   );
 }
 
-// 5. Smash Burger (Toasted Bun, Cheese Drip, Crispy Patty)
+// 5. Smash Burger (Stacked Bun, Cheese & Crispy Patty)
 export function BurgerIcon({ className = "w-4 h-4" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className}>
-      {/* Top Bun */}
-      <path d="M4 11C4 7 7.5 4.5 12 4.5C16.5 4.5 20 7 20 11H4Z" fill="#f59e0b" stroke="#b45309" strokeWidth="1.4" />
-      {/* Sesame seeds */}
-      <circle cx="9" cy="7.5" r="0.6" fill="#ffffff" />
-      <circle cx="12" cy="6.5" r="0.6" fill="#ffffff" />
-      <circle cx="15" cy="7.5" r="0.6" fill="#ffffff" />
-      {/* Lettuce */}
-      <path d="M3.5 12.5C5 11.5 7 13.5 9 12.5C11 11.5 13 13.5 15 12.5C17 11.5 19 13.5 20.5 12.5" stroke="#22c55e" strokeWidth="1.6" strokeLinecap="round" />
-      {/* Melted Cheese */}
-      <path d="M4 14L8 14L10 16L12 14L20 14" fill="#fbbf24" stroke="#f59e0b" strokeWidth="1.4" />
-      {/* Patty */}
-      <rect x="4" y="14.5" width="16" height="2.5" rx="1.2" fill="#78350f" />
-      {/* Bottom Bun */}
-      <path d="M5 17.5H19C19 19.5 16.5 20.5 12 20.5C7.5 20.5 5 19.5 5 17.5Z" fill="#f59e0b" stroke="#b45309" strokeWidth="1.4" />
+      <path d="M4 10.5C4 6.8 7.5 4.5 12 4.5C16.5 4.5 20 6.8 20 10.5H4Z" fill="#FAF7F2" stroke="#181615" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M3.5 13H20.5" stroke="#E84A27" strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M7 13L9.5 15.5L12 13" fill="#E84A27" />
+      <rect x="4" y="14.5" width="16" height="2.4" rx="1.2" fill="#181615" />
+      <path d="M5 17.5H19C19 19.5 16.5 20.5 12 20.5C7.5 20.5 5 19.5 5 17.5Z" fill="#FAF7F2" stroke="#181615" strokeWidth="1.6" strokeLinejoin="round" />
     </svg>
   );
 }
 
-// 6. Artisanal Pizza (Neapolitan Slice with Pepperoni & Mozzarella)
+// 6. Artisanal Pizza (Neapolitan Slice with Pepperoni)
 export function PizzaIcon({ className = "w-4 h-4" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className}>
-      {/* Crust / Slice */}
-      <path d="M12 2.5L3 19C7 21.5 17 21.5 21 19L12 2.5Z" fill="#fef08a" stroke="#b45309" strokeWidth="1.4" strokeLinejoin="round" />
-      {/* Crust rim */}
-      <path d="M3 19C7 21.5 17 21.5 21 19" stroke="#b45309" strokeWidth="2.5" strokeLinecap="round" />
-      {/* Pepperoni Slices */}
-      <circle cx="12" cy="11" r="1.8" fill="#ef4444" stroke="#991b1b" strokeWidth="0.8" />
-      <circle cx="9" cy="15.5" r="1.6" fill="#ef4444" stroke="#991b1b" strokeWidth="0.8" />
-      <circle cx="15" cy="15.5" r="1.6" fill="#ef4444" stroke="#991b1b" strokeWidth="0.8" />
-      {/* Basil flake */}
-      <path d="M12 14C12.5 13.5 13.5 13.5 13.5 14C13.5 14.5 12.5 14.5 12 14Z" fill="#16a34a" />
+      <path d="M12 3L3.5 19C7.5 21.5 16.5 21.5 20.5 19L12 3Z" fill="#FAF7F2" stroke="#181615" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M4 18C8 20.2 16 20.2 20 18" stroke="#181615" strokeWidth="2.2" strokeLinecap="round" />
+      <circle cx="12" cy="11" r="1.8" fill="#E84A27" />
+      <circle cx="9.2" cy="15.2" r="1.5" fill="#E84A27" />
+      <circle cx="14.8" cy="15.2" r="1.5" fill="#E84A27" />
     </svg>
   );
 }
 
-// 7. Street Food & Tacos (Crisp Shell with Fresh Fillings)
+// 7. Tacos (Folded Tortilla Shell with Fillings)
 export function TacoIcon({ className = "w-4 h-4" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className}>
-      {/* Taco Folded Shell */}
-      <path d="M3 16C3 8.5 7.5 4.5 12 4.5C16.5 4.5 21 8.5 21 16H3Z" fill="#fcd34d" stroke="#d97706" strokeWidth="1.4" />
-      {/* Lettuce / Cilantro Layer */}
-      <path d="M5 14C7 12 9 13.5 11 12C13 13.5 15 12 17 13.5C18.5 12.5 19.5 13 20 14" stroke="#16a34a" strokeWidth="1.8" strokeLinecap="round" />
-      {/* Diced meat & tomatoes */}
-      <circle cx="8" cy="10" r="1.2" fill="#ef4444" />
-      <circle cx="12" cy="8.5" r="1.2" fill="#78350f" />
-      <circle cx="15.5" cy="9.5" r="1.2" fill="#ef4444" />
-      {/* Bottom fold line */}
-      <path d="M3 16C7 18 17 18 21 16" stroke="#b45309" strokeWidth="1.4" />
+      <path d="M3 16.5C3 9 7.2 5 12 5C16.8 5 21 9 21 16.5C16.5 18.2 7.5 18.2 3 16.5Z" fill="#FAF7F2" stroke="#181615" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M5.5 13.5C7.5 11.5 9.5 13 11.5 11.5C13.5 13 15.5 11.5 18.5 13.5" stroke="#E84A27" strokeWidth="1.8" strokeLinecap="round" />
+      <circle cx="9" cy="9.5" r="1.3" fill="#E84A27" />
+      <circle cx="14.5" cy="9.5" r="1.3" fill="#181615" />
     </svg>
   );
 }
 
-// 8. Sushi & Seafood (Fresh Salmon Nigiri & Roe)
+// 8. Street Food (Skewer / Bao Street Cart)
+export function StreetFoodIcon({ className = "w-4 h-4" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M4 20L20 4" stroke="#181615" strokeWidth="1.6" strokeLinecap="round" />
+      <circle cx="15.5" cy="8.5" r="3" fill="#E84A27" stroke="#181615" strokeWidth="1.5" />
+      <rect x="9.5" y="10.5" width="5" height="4" rx="1.5" transform="rotate(-45 9.5 10.5)" fill="#FAF7F2" stroke="#181615" strokeWidth="1.5" />
+      <circle cx="8" cy="16" r="2.6" fill="#E84A27" stroke="#181615" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+// 9. Sushi & Seafood (Nigiri)
 export function SushiIcon({ className = "w-4 h-4" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className}>
-      {/* Rice Base */}
-      <rect x="5" y="11" width="14" height="6.5" rx="3.2" fill="#ffffff" stroke="#d1d5db" strokeWidth="1.2" />
-      {/* Salmon Slice */}
-      <path d="M4 11C4 8.5 7 7.5 12 7.5C17 7.5 20 8.5 20 11C20 12.5 17 13.5 12 13.5C7 13.5 4 12.5 4 11Z" fill="#fb7185" stroke="#e11d48" strokeWidth="1.2" />
-      {/* Salmon fat marbling stripes */}
-      <path d="M8 8.5L9.5 12.5M12 8L13.5 13M16 8.5L17.5 12.5" stroke="#ffffff" strokeWidth="0.9" strokeLinecap="round" strokeOpacity="0.85" />
-      {/* Nori Belt */}
-      <rect x="10.5" y="7.5" width="3" height="10" rx="0.5" fill="#18181b" />
+      <rect x="5" y="11.5" width="14" height="6" rx="3" fill="#FAF7F2" stroke="#181615" strokeWidth="1.5" />
+      <path d="M4 11C4 8.2 7 7.2 12 7.2C17 7.2 20 8.2 20 11C20 12.5 17 13.2 12 13.2C7 13.2 4 12.5 4 11Z" fill="#E84A27" stroke="#181615" strokeWidth="1.5" />
+      <rect x="10.5" y="7" width="3" height="10.5" rx="0.5" fill="#181615" />
     </svg>
   );
 }
 
-// 9. Sweets & Gelato (Artisan Swirled Soft-Serve Cone)
+// 10. Sweets & Gelato
 export function DessertIcon({ className = "w-4 h-4" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className}>
-      {/* Waffle Cone */}
-      <path d="M12 21.5L6.5 11.5H17.5L12 21.5Z" fill="#f59e0b" stroke="#b45309" strokeWidth="1.3" />
-      <path d="M9 13.5L14.5 18.5M15 13.5L9.5 18.5" stroke="#d97706" strokeWidth="0.8" />
-      {/* Swirl Base */}
-      <path d="M6 11.5C6 9.5 8.5 9.5 12 9.5C15.5 9.5 18 9.5 18 11.5H6Z" fill="#f472b6" />
-      {/* Swirl Top */}
-      <circle cx="12" cy="7.5" r="3.8" fill="#f472b6" stroke="#db2777" strokeWidth="1.2" />
-      <path d="M12 4C13 2.5 14 3.5 13.5 4.5" stroke="#db2777" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M12 21L7 12H17L12 21Z" fill="#FAF7F2" stroke="#181615" strokeWidth="1.5" strokeLinejoin="round" />
+      <circle cx="12" cy="8.5" r="4" fill="#E84A27" stroke="#181615" strokeWidth="1.5" />
     </svg>
   );
 }
 
-// 10. Craft Cocktails & Natural Wine
+// 11. Craft Cocktails & Natural Wine
 export function DrinksIcon({ className = "w-4 h-4" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className}>
-      {/* Coupe Glass Bowl */}
-      <path d="M4 6C4 11 8 13.5 12 13.5C16 13.5 20 11 20 6H4Z" fill="#bae6fd" stroke="#0284c7" strokeWidth="1.4" />
-      {/* Cocktail liquid */}
-      <path d="M5.5 8C6.5 11 8.5 12.2 12 12.2C15.5 12.2 17.5 11 18.5 8H5.5Z" fill="#f43f5e" />
-      {/* Stem & Base */}
-      <path d="M12 13.5V20.5M8 20.5H16" stroke="#0284c7" strokeWidth="1.4" strokeLinecap="round" />
-      {/* Citrus wheel / garnish */}
-      <circle cx="16.5" cy="5.5" r="2.2" fill="#facc15" stroke="#ca8a04" strokeWidth="1" />
+      <path d="M4.5 6C4.5 11 8 13.5 12 13.5C16 13.5 19.5 11 19.5 6H4.5Z" fill="#FAF7F2" stroke="#181615" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M6.2 8.5C7.2 11 9.2 12 12 12C14.8 12 16.8 11 17.8 8.5H6.2Z" fill="#E84A27" />
+      <path d="M12 13.5V20M8.5 20H15.5" stroke="#181615" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   );
 }
 
-// 11. Matcha & Ceremonial Tea (Chawan bowl with whisked emerald froth)
+// 12. Matcha & Ceremonial Tea (Green Chawan Bowl & Frothy Swirl)
 export function MatchaIcon({ className = "w-4 h-4" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className}>
-      <path d="M4 10C4 16 7.5 19.5 12 19.5C16.5 19.5 20 16 20 10H4Z" fill="#1c1917" stroke="#0c0a09" strokeWidth="1.4" />
-      <ellipse cx="12" cy="10" rx="8" ry="2.2" fill="#10b981" />
-      <ellipse cx="11.5" cy="9.8" rx="5.5" ry="1.4" fill="#34d399" />
-      <circle cx="10" cy="9.8" r="0.8" fill="#a7f3d0" />
-      <circle cx="13" cy="9.8" r="0.6" fill="#a7f3d0" />
-      <path d="M15 4L13 8.5" stroke="#d97706" strokeWidth="1.3" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-// 12. Handmade Pasta & Italian (Golden twirled spaghetti in pomodoro)
-export function PastaIcon({ className = "w-4 h-4" }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className}>
-      <path d="M3 12C3 17 7 20 12 20C17 20 21 17 21 12H3Z" fill="#f8fafc" stroke="#cbd5e1" strokeWidth="1.4" />
-      <ellipse cx="12" cy="11.5" rx="8" ry="2.5" fill="#fef08a" />
-      <path d="M6 11.5C8 9.5 11 13 13 10C15 12.5 17 10 18 11.5" stroke="#f59e0b" strokeWidth="1.8" strokeLinecap="round" />
-      <circle cx="12" cy="10.5" r="2.2" fill="#ef4444" />
-      <path d="M13 9C14 7.5 15.5 8 15 9.5Z" fill="#16a34a" />
-      <path d="M11 2V7M12.5 2V7M14 2V7M12.5 7V10" stroke="#64748b" strokeWidth="1.2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-// 13. Dumplings, Dim Sum & Gyoza (Pleated crescent dumpling)
-export function DumplingIcon({ className = "w-4 h-4" }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className}>
-      {/* Dumpling crescent body */}
+      {/* Ceremonial Chawan ceramic bowl */}
       <path
-        d="M3.5 16C3.5 10.5 7.2 6.5 12 6.5C16.8 6.5 20.5 10.5 20.5 16C17.5 18 6.5 18 3.5 16Z"
-        fill="#fef3c7"
-        stroke="#d97706"
-        strokeWidth="1.4"
+        d="M3.5 10.5C3.5 16.2 7.2 19.8 12 19.8C16.8 19.8 20.5 16.2 20.5 10.5H3.5Z"
+        fill="#FAF7F2"
+        stroke="#181615"
+        strokeWidth="1.6"
         strokeLinejoin="round"
       />
-      {/* Pleated folds / crimps at top */}
+      {/* Vibrant ceremonial matcha green liquid top */}
+      <ellipse
+        cx="12"
+        cy="10.5"
+        rx="8.5"
+        ry="3"
+        fill="#4E8752"
+        stroke="#181615"
+        strokeWidth="1.5"
+      />
+      {/* Delicate white micro-foam swirl inside the green matcha */}
       <path
-        d="M6.5 12C7.5 8 8.5 7 9 7M10.5 11C11.5 7.5 12 6.5 12.5 6.5M14.5 11C15 7.5 15.5 7 16.5 7.5M17.5 12C18 9 18.5 8.5 19 9"
-        stroke="#b45309"
+        d="M8.5 10.5C9.8 9.6 11.5 11.4 13.5 10.2C14.5 9.7 15.2 10.3 15.8 10.7"
+        stroke="#FAF7F2"
         strokeWidth="1.3"
         strokeLinecap="round"
       />
-      {/* Bottom pan-fried golden crust glow */}
+      {/* Matcha tea leaf / chasen whisk accent on top right */}
       <path
-        d="M5 16.5C8 17.8 16 17.8 19 16.5"
-        stroke="#f59e0b"
+        d="M15.5 4.2C17.8 4.2 18.8 6 17.2 7.8C15.6 7.8 14.5 6.2 15.5 4.2Z"
+        fill="#4E8752"
+        stroke="#181615"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// 13. Handmade Pasta
+export function PastaIcon({ className = "w-4 h-4" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M3 12.5C3 17.2 7 20 12 20C17 20 21 17.2 21 12.5H3Z" fill="#FAF7F2" stroke="#181615" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M6.5 11.5C8.5 9 11 12.5 13 9.5C15 12 17.5 9.5 18.5 11.5" stroke="#E84A27" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="12" cy="10.5" r="2" fill="#E84A27" stroke="#181615" strokeWidth="1.2" />
+    </svg>
+  );
+}
+
+// 14. Dumplings, Dim Sum & Gyoza (Pleated Upright Scalloped Gyoza Pouch)
+export function DumplingIcon({ className = "w-4 h-4" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      {/* Scalloped pleated top rim + plump gyoza belly */}
+      <path
+        d="M3 15.5C3 11.5 5 8.5 7 7.2C7.8 5.8 9.2 5.8 10 7C10.8 5.5 13.2 5.5 14 7C14.8 5.8 16.2 5.8 17 7.2C19 8.5 21 11.5 21 15.5C21 17.8 17.2 19 12 19C6.8 19 3 17.8 3 15.5Z"
+        fill="#FAF7F2"
+        stroke="#181615"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      {/* Distinct pleated dumpling folds radiating from the top crimp */}
+      <path
+        d="M7.2 7.5L8.8 12.5M10.2 7L11 12.8M13.8 7L13 12.8M16.8 7.5L15.2 12.5"
+        stroke="#E84A27"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      {/* Pan-seared golden-crisp base */}
+      <path
+        d="M5.5 16.2C8.5 17.6 15.5 17.6 18.5 16.2"
+        stroke="#E84A27"
         strokeWidth="1.8"
         strokeLinecap="round"
       />
@@ -235,19 +221,105 @@ export function DumplingIcon({ className = "w-4 h-4" }: IconProps) {
   );
 }
 
-// Helper dictionary of raw SVG strings for MapLibre map pins
+// 15. Fried Chicken & Korean
+export function FriedChickenIcon({ className = "w-4 h-4" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path
+        d="M8.5 6C5.5 6 3.5 8.5 4 11.5C4.5 14.5 7.5 16 10.5 15.5L15.5 19.5C16.5 20.3 18 19.5 17.5 18.2L15 13.5C16.5 10.8 14.8 6 8.5 6Z"
+        fill="#E84A27"
+        stroke="#181615"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <circle cx="18.2" cy="18.8" r="2" fill="#FAF7F2" stroke="#181615" strokeWidth="1.4" />
+      <circle cx="16.2" cy="20.2" r="1.8" fill="#FAF7F2" stroke="#181615" strokeWidth="1.4" />
+    </svg>
+  );
+}
+
+// 16. Kebab, Shawarma & Falafel Wrap
+export function KebabIcon({ className = "w-4 h-4" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path
+        d="M6 9.5C6 6.5 8.7 4.5 12 4.5C15.3 4.5 18 6.5 18 9.5L15.5 19.5H8.5L6 9.5Z"
+        fill="#FAF7F2"
+        stroke="#181615"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M7.5 9.5C9.5 8 14.5 8 16.5 9.5"
+        stroke="#E84A27"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
+      <circle cx="10.2" cy="7.5" r="1.4" fill="#4E8752" />
+      <circle cx="13.8" cy="7.5" r="1.4" fill="#E84A27" />
+    </svg>
+  );
+}
+
+// 17. Pho & Vietnamese Herb Bowl
+export function PhoIcon({ className = "w-4 h-4" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path
+        d="M3.5 11.5C3.5 16.8 7.2 20 12 20C16.8 20 20.5 16.8 20.5 11.5H3.5Z"
+        fill="#FAF7F2"
+        stroke="#181615"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path d="M6.5 11.5C8.5 9.2 11 11.5 13.5 9.2C15.2 10.8 17 9.5 18 11.5" stroke="#E84A27" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M9.5 6C9.5 7.5 10.5 8.5 10.5 9.5M14.5 5.5C14.5 7 15.5 8 15.5 9.2" stroke="#4E8752" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// 18. Indian & Curry
+export function CurryIcon({ className = "w-4 h-4" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path
+        d="M3 13C3 17.5 7 20 12 20C17 20 21 17.5 21 13H3Z"
+        fill="#FAF7F2"
+        stroke="#181615"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M5 13C5 10 8 8.5 11.5 8.5C15 8.5 19 10 19 13H5Z"
+        fill="#E84A27"
+        stroke="#181615"
+        strokeWidth="1.5"
+      />
+      <circle cx="9.5" cy="11" r="1.2" fill="#FAF7F2" />
+      <circle cx="14" cy="11.2" r="1.2" fill="#FAF7F2" />
+    </svg>
+  );
+}
+
+// Helper dictionary of raw SVG strings for MapLibre map pins (Smakr Duotone #181615 + #E84A27 + Matcha #4E8752)
 export const FOOD_PIN_SVG_MAP: Record<string, string> = {
-  all: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><circle cx="12" cy="12" r="10" fill="#ffedd5" stroke="#e84a27" stroke-width="1.5"/><path d="M12 6L13.5 10.5L18 12L13.5 13.5L12 18L10.5 13.5L6 12L10.5 10.5L12 6Z" fill="#e84a27"/></svg>`,
-  dumplings: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M3.5 16C3.5 10.5 7.2 6.5 12 6.5C16.8 6.5 20.5 10.5 20.5 16C17.5 18 6.5 18 3.5 16Z" fill="#fef3c7" stroke="#d97706" stroke-width="1.4"/><path d="M6.5 12C7.5 8 8.5 7 9 7M10.5 11C11.5 7.5 12 6.5 12.5 6.5M14.5 11C15 7.5 15.5 7 16.5 7.5" stroke="#b45309" stroke-width="1.3"/></svg>`,
-  bakery: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M4 14C3 10.5 5.5 6.5 12 6.5C18.5 6.5 21 10.5 20 14C19.5 16 17 17.5 15 16C13.5 15 13 13.5 12 13.5C11 13.5 10.5 15 9 16C7 17.5 4.5 16 4 14Z" fill="#fbbf24" stroke="#b45309" stroke-width="1.4"/><path d="M8 8.5C9 10 10.5 11 12 11C13.5 11 15 10 16 8.5" stroke="#d97706" stroke-width="1.3"/></svg>`,
-  coffee: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M5 8H17V15C17 17.8 14.8 20 12 20C9.2 20 7 17.8 7 15V8H5Z" fill="#78350f" stroke="#451a03" stroke-width="1.4"/><path d="M5 8H17V11H5V8Z" fill="#ffedd5"/><path d="M17 9H19.5C20.6 9 21.5 9.9 21.5 11C21.5 12.1 20.6 13 19.5 13H17" stroke="#451a03" stroke-width="1.4"/></svg>`,
-  matcha: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M4 10C4 16 7.5 19.5 12 19.5C16.5 19.5 20 16 20 10H4Z" fill="#1c1917" stroke="#0c0a09" stroke-width="1.4"/><ellipse cx="12" cy="10" rx="8" ry="2.2" fill="#10b981"/><ellipse cx="11.5" cy="9.8" rx="5.5" ry="1.4" fill="#34d399"/><circle cx="10" cy="9.8" r="0.8" fill="#a7f3d0"/><path d="M15 4L13 8.5" stroke="#d97706" stroke-width="1.3"/></svg>`,
-  pasta: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M3 12C3 17 7 20 12 20C17 20 21 17 21 12H3Z" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.4"/><ellipse cx="12" cy="11.5" rx="8" ry="2.5" fill="#fef08a"/><path d="M6 11.5C8 9.5 11 13 13 10C15 12.5 17 10 18 11.5" stroke="#f59e0b" stroke-width="1.8"/><circle cx="12" cy="10.5" r="2" fill="#ef4444"/><path d="M13 9C14 7.5 15.5 8 15 9.5Z" fill="#16a34a"/></svg>`,
-  ramen: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M3 11C3 16.5 7 20 12 20C17 20 21 16.5 21 11H3Z" fill="#ef4444" stroke="#991b1b" stroke-width="1.4"/><ellipse cx="12" cy="11" rx="9" ry="2.2" fill="#fbbf24"/><circle cx="9" cy="11" r="1.5" fill="#f97316"/><rect x="14" y="8" width="3" height="4.5" rx="0.5" fill="#18181b"/><path d="M2 4L18 9" stroke="#78350f" stroke-width="1.3"/></svg>`,
-  burger: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M4 11C4 7 7.5 4.5 12 4.5C16.5 4.5 20 7 20 11H4Z" fill="#f59e0b" stroke="#b45309" stroke-width="1.4"/><circle cx="12" cy="7" r="0.8" fill="#fff"/><path d="M3.5 12.5C7 11.5 11 13.5 15 12.5C18 11.5 20.5 12.5 20.5 12.5" stroke="#22c55e" stroke-width="1.6"/><path d="M4 14L8 14L10 16L12 14L20 14" fill="#fbbf24"/><rect x="4" y="14.5" width="16" height="2.5" rx="1.2" fill="#78350f"/><path d="M5 17.5H19C19 19.5 16.5 20.5 12 20.5C7.5 20.5 5 19.5 5 17.5Z" fill="#f59e0b" stroke="#b45309" stroke-width="1.4"/></svg>`,
-  pizza: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M12 2.5L3 19C7 21.5 17 21.5 21 19L12 2.5Z" fill="#fef08a" stroke="#b45309" stroke-width="1.4"/><path d="M3 19C7 21.5 17 21.5 21 19" stroke="#b45309" stroke-width="2.5"/><circle cx="12" cy="11" r="1.8" fill="#ef4444"/><circle cx="9" cy="15.5" r="1.5" fill="#ef4444"/><circle cx="15" cy="15.5" r="1.5" fill="#ef4444"/></svg>`,
-  street_food: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M3 16C3 8.5 7.5 4.5 12 4.5C16.5 4.5 21 8.5 21 16H3Z" fill="#fcd34d" stroke="#d97706" stroke-width="1.4"/><path d="M5 14C8 12 12 13 16 12C18 12.5 20 14 20 14" stroke="#16a34a" stroke-width="1.8"/><circle cx="9" cy="9.5" r="1.2" fill="#ef4444"/><circle cx="14" cy="9" r="1.2" fill="#78350f"/></svg>`,
-  sushi: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><rect x="5" y="11" width="14" height="6.5" rx="3.2" fill="#ffffff" stroke="#d1d5db" stroke-width="1.2"/><path d="M4 11C4 8.5 7 7.5 12 7.5C17 7.5 20 8.5 20 11C20 12.5 17 13.5 12 13.5C7 13.5 4 12.5 4 11Z" fill="#fb7185" stroke="#e11d48" stroke-width="1.2"/><path d="M8 8.5L9.5 12.5M12 8L13.5 13" stroke="#ffffff" stroke-width="0.9"/><rect x="10.5" y="7.5" width="3" height="10" rx="0.5" fill="#18181b"/></svg>`,
-  dessert: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M12 21.5L6.5 11.5H17.5L12 21.5Z" fill="#f59e0b" stroke="#b45309" stroke-width="1.3"/><circle cx="12" cy="8" r="4" fill="#f472b6" stroke="#db2777" stroke-width="1.2"/></svg>`,
-  drinks: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none"><path d="M4 6C4 11 8 13.5 12 13.5C16 13.5 20 11 20 6H4Z" fill="#bae6fd" stroke="#0284c7" stroke-width="1.4"/><path d="M5.5 8C7 11 9 12.2 12 12.2C15 12.2 17 11 18.5 8H5.5Z" fill="#f43f5e"/><path d="M12 13.5V20.5M8 20.5H16" stroke="#0284c7" stroke-width="1.4"/><circle cx="16.5" cy="5.5" r="2.2" fill="#facc15"/></svg>`,
+  all: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><circle cx="12" cy="12" r="9.5" fill="#FAF7F2" stroke="#181615" stroke-width="1.6"/><path d="M12 5.5L13.8 10.2L18.5 12L13.8 13.8L12 18.5L10.2 13.8L5.5 12L10.2 10.2L12 5.5Z" fill="#E84A27" stroke="#181615" stroke-width="1.1"/></svg>`,
+  dumplings: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path d="M3 15.5C3 11.5 5 8.5 7 7.2C7.8 5.8 9.2 5.8 10 7C10.8 5.5 13.2 5.5 14 7C14.8 5.8 16.2 5.8 17 7.2C19 8.5 21 11.5 21 15.5C21 17.8 17.2 19 12 19C6.8 19 3 17.8 3 15.5Z" fill="#FAF7F2" stroke="#181615" stroke-width="1.6" stroke-linejoin="round"/><path d="M7.2 7.5L8.8 12.5M10.2 7L11 12.8M13.8 7L13 12.8M16.8 7.5L15.2 12.5" stroke="#E84A27" stroke-width="1.5" stroke-linecap="round"/><path d="M5.5 16.2C8.5 17.6 15.5 17.6 18.5 16.2" stroke="#E84A27" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+  bao: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path d="M3 15.5C3 11.5 5 8.5 7 7.2C7.8 5.8 9.2 5.8 10 7C10.8 5.5 13.2 5.5 14 7C14.8 5.8 16.2 5.8 17 7.2C19 8.5 21 11.5 21 15.5C21 17.8 17.2 19 12 19C6.8 19 3 17.8 3 15.5Z" fill="#FAF7F2" stroke="#181615" stroke-width="1.6" stroke-linejoin="round"/><path d="M7.2 7.5L8.8 12.5M10.2 7L11 12.8M13.8 7L13 12.8M16.8 7.5L15.2 12.5" stroke="#E84A27" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+  bakery: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path d="M3.5 14.5C2.5 10 6 6.5 12 6.5C18 6.5 21.5 10 20.5 14.5C19.8 17 17.2 18 15.2 16.2C13.8 15 13 13.8 12 13.8C11 13.8 10.2 15 8.8 16.2C6.8 18 4.2 17 3.5 14.5Z" fill="#FAF7F2" stroke="#181615" stroke-width="1.6"/><path d="M8 7.5C9.2 10 10.5 11.2 12 11.2C13.5 11.2 14.8 10 16 7.5" stroke="#E84A27" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+  coffee: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path d="M5 8.5H16.5V14.5C16.5 17.5 14.2 19.8 10.8 19.8C7.4 19.8 5 17.5 5 14.5V8.5Z" fill="#FAF7F2" stroke="#181615" stroke-width="1.6"/><path d="M5 8.5H16.5V11.5H5V8.5Z" fill="#E84A27"/><path d="M16.5 9.5H18.8C20 9.5 21 10.5 21 11.8C21 13.1 20 14 18.8 14H16.5" stroke="#181615" stroke-width="1.6"/></svg>`,
+  matcha: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path d="M3.5 10.5C3.5 16.2 7.2 19.8 12 19.8C16.8 19.8 20.5 16.2 20.5 10.5H3.5Z" fill="#FAF7F2" stroke="#181615" stroke-width="1.6" stroke-linejoin="round"/><ellipse cx="12" cy="10.5" rx="8.5" ry="3" fill="#4E8752" stroke="#181615" stroke-width="1.5"/><path d="M8.5 10.5C9.8 9.6 11.5 11.4 13.5 10.2C14.5 9.7 15.2 10.3 15.8 10.7" stroke="#FAF7F2" stroke-width="1.3" stroke-linecap="round"/><path d="M15.5 4.2C17.8 4.2 18.8 6 17.2 7.8C15.6 7.8 14.5 6.2 15.5 4.2Z" fill="#4E8752" stroke="#181615" stroke-width="1.3" stroke-linejoin="round"/></svg>`,
+  pasta: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path d="M3 12.5C3 17.2 7 20 12 20C17 20 21 17.2 21 12.5H3Z" fill="#FAF7F2" stroke="#181615" stroke-width="1.6"/><path d="M6.5 11.5C8.5 9 11 12.5 13 9.5C15 12 17.5 9.5 18.5 11.5" stroke="#E84A27" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="10.5" r="2" fill="#E84A27" stroke="#181615" stroke-width="1.2"/></svg>`,
+  ramen: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path d="M3 11.5C3 16.8 6.8 20 12 20C17.2 20 21 16.8 21 11.5H3Z" fill="#FAF7F2" stroke="#181615" stroke-width="1.6"/><path d="M4.5 14.5H19.5" stroke="#E84A27" stroke-width="2" stroke-linecap="round"/><circle cx="9" cy="10.5" r="1.8" fill="#E84A27" stroke="#181615" stroke-width="1.2"/><path d="M3 5L19 8.5" stroke="#181615" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+  burger: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path d="M4 10.5C4 6.8 7.5 4.5 12 4.5C16.5 4.5 20 6.8 20 10.5H4Z" fill="#FAF7F2" stroke="#181615" stroke-width="1.6"/><path d="M3.5 13H20.5" stroke="#E84A27" stroke-width="2.2" stroke-linecap="round"/><rect x="4" y="14.5" width="16" height="2.4" rx="1.2" fill="#181615"/><path d="M5 17.5H19C19 19.5 16.5 20.5 12 20.5C7.5 20.5 5 19.5 5 17.5Z" fill="#FAF7F2" stroke="#181615" stroke-width="1.6"/></svg>`,
+  pizza: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path d="M12 3L3.5 19C7.5 21.5 16.5 21.5 20.5 19L12 3Z" fill="#FAF7F2" stroke="#181615" stroke-width="1.6"/><path d="M4 18C8 20.2 16 20.2 20 18" stroke="#181615" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="11" r="1.8" fill="#E84A27"/><circle cx="9.2" cy="15.2" r="1.5" fill="#E84A27"/><circle cx="14.8" cy="15.2" r="1.5" fill="#E84A27"/></svg>`,
+  tacos: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path d="M3 16.5C3 9 7.2 5 12 5C16.8 5 21 9 21 16.5C16.5 18.2 7.5 18.2 3 16.5Z" fill="#FAF7F2" stroke="#181615" stroke-width="1.6"/><path d="M5.5 13.5C7.5 11.5 9.5 13 11.5 11.5C13.5 13 15.5 11.5 18.5 13.5" stroke="#E84A27" stroke-width="1.8" stroke-linecap="round"/><circle cx="9" cy="9.5" r="1.3" fill="#E84A27"/><circle cx="14.5" cy="9.5" r="1.3" fill="#181615"/></svg>`,
+  street_food: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path d="M4 20L20 4" stroke="#181615" stroke-width="1.6" stroke-linecap="round"/><circle cx="15.5" cy="8.5" r="3" fill="#E84A27" stroke="#181615" stroke-width="1.5"/><rect x="9.5" y="10.5" width="5" height="4" rx="1.5" transform="rotate(-45 9.5 10.5)" fill="#FAF7F2" stroke="#181615" stroke-width="1.5"/><circle cx="8" cy="16" r="2.6" fill="#E84A27" stroke="#181615" stroke-width="1.5"/></svg>`,
+  sushi: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><rect x="5" y="11.5" width="14" height="6" rx="3" fill="#FAF7F2" stroke="#181615" stroke-width="1.5"/><path d="M4 11C4 8.2 7 7.2 12 7.2C17 7.2 20 8.2 20 11C20 12.5 17 13.2 12 13.2C7 13.2 4 12.5 4 11Z" fill="#E84A27" stroke="#181615" stroke-width="1.5"/><rect x="10.5" y="7" width="3" height="10.5" rx="0.5" fill="#181615"/></svg>`,
+  dessert: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path d="M12 21L7 12H17L12 21Z" fill="#FAF7F2" stroke="#181615" stroke-width="1.5"/><circle cx="12" cy="8.5" r="4" fill="#E84A27" stroke="#181615" stroke-width="1.5"/></svg>`,
+  drinks: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path d="M4.5 6C4.5 11 8 13.5 12 13.5C16 13.5 19.5 11 19.5 6H4.5Z" fill="#FAF7F2" stroke="#181615" stroke-width="1.6"/><path d="M6.2 8.5C7.2 11 9.2 12 12 12C14.8 12 16.8 11 17.8 8.5H6.2Z" fill="#E84A27"/><path d="M12 13.5V20M8.5 20H15.5" stroke="#181615" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+  fried_chicken: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path d="M8.5 6C5.5 6 3.5 8.5 4 11.5C4.5 14.5 7.5 16 10.5 15.5L15.5 19.5C16.5 20.3 18 19.5 17.5 18.2L15 13.5C16.5 10.8 14.8 6 8.5 6Z" fill="#E84A27" stroke="#181615" stroke-width="1.6" stroke-linejoin="round"/><circle cx="18.2" cy="18.8" r="2" fill="#FAF7F2" stroke="#181615" stroke-width="1.4"/><circle cx="16.2" cy="20.2" r="1.8" fill="#FAF7F2" stroke="#181615" stroke-width="1.4"/></svg>`,
+  kebab: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path d="M6 9.5C6 6.5 8.7 4.5 12 4.5C15.3 4.5 18 6.5 18 9.5L15.5 19.5H8.5L6 9.5Z" fill="#FAF7F2" stroke="#181615" stroke-width="1.6" stroke-linejoin="round"/><path d="M7.5 9.5C9.5 8 14.5 8 16.5 9.5" stroke="#E84A27" stroke-width="2.2" stroke-linecap="round"/><circle cx="10.2" cy="7.5" r="1.4" fill="#4E8752"/><circle cx="13.8" cy="7.5" r="1.4" fill="#E84A27"/></svg>`,
+  vietnamese: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path d="M3.5 11.5C3.5 16.8 7.2 20 12 20C16.8 20 20.5 16.8 20.5 11.5H3.5Z" fill="#FAF7F2" stroke="#181615" stroke-width="1.6" stroke-linejoin="round"/><path d="M6.5 11.5C8.5 9.2 11 11.5 13.5 9.2C15.2 10.8 17 9.5 18 11.5" stroke="#E84A27" stroke-width="1.8" stroke-linecap="round"/><path d="M9.5 6C9.5 7.5 10.5 8.5 10.5 9.5M14.5 5.5C14.5 7 15.5 8 15.5 9.2" stroke="#4E8752" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+  indian: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none"><path d="M3 13C3 17.5 7 20 12 20C17 20 21 17.5 21 13H3Z" fill="#FAF7F2" stroke="#181615" stroke-width="1.6" stroke-linejoin="round"/><path d="M5 13C5 10 8 8.5 11.5 8.5C15 8.5 19 10 19 13H5Z" fill="#E84A27" stroke="#181615" stroke-width="1.5"/><circle cx="9.5" cy="11" r="1.2" fill="#FAF7F2"/><circle cx="14" cy="11.2" r="1.2" fill="#FAF7F2"/></svg>`,
 };

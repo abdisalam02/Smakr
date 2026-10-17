@@ -84,6 +84,60 @@ export function resolveFoodCategoryAndIcon(
     return { category: "burger", icon: "🍔", label: "Burgers" };
   }
 
+  // 6b. Fried Chicken & Korean
+  if (
+    combined.includes("fried chicken") ||
+    combined.includes("korean") ||
+    combined.includes("wings") ||
+    combined.includes("yangnyeom") ||
+    combined.includes("bibimbap") ||
+    combined.includes("tteokbokki") ||
+    googleTypes.includes("korean_restaurant")
+  ) {
+    return { category: "fried_chicken", icon: "🍗", label: "Fried Chicken & Korean" };
+  }
+
+  // 6c. Kebab, Shawarma & Falafel
+  if (
+    combined.includes("kebab") ||
+    combined.includes("shawarma") ||
+    combined.includes("falafel") ||
+    combined.includes("gyros") ||
+    combined.includes("döner") ||
+    combined.includes("doner") ||
+    googleTypes.includes("middle_eastern_restaurant")
+  ) {
+    return { category: "kebab", icon: "🥙", label: "Kebab & Shawarma" };
+  }
+
+  // 6d. Pho & Vietnamese
+  if (
+    combined.includes("pho") ||
+    combined.includes("phở") ||
+    combined.includes("bánh mì") ||
+    combined.includes("banh mi") ||
+    combined.includes("vietnamese") ||
+    combined.includes("summer roll") ||
+    googleTypes.includes("vietnamese_restaurant")
+  ) {
+    return { category: "vietnamese", icon: "🍲", label: "Pho & Vietnamese" };
+  }
+
+  // 6e. Indian & Curry
+  if (
+    combined.includes("curry") ||
+    combined.includes("masala") ||
+    combined.includes("tikka") ||
+    combined.includes("tandoori") ||
+    combined.includes("biryani") ||
+    combined.includes("naan") ||
+    combined.includes("samosa") ||
+    combined.includes("indian") ||
+    googleTypes.includes("indian_restaurant")
+  ) {
+    return { category: "indian", icon: "🍛", label: "Indian & Curry" };
+  }
+
   // 7. Pasta & Italian
   if (
     combined.includes("pasta") ||

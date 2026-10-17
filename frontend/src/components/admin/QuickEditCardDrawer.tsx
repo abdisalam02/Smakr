@@ -306,18 +306,44 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
               </p>
             </div>
 
-            {/* Food Category Selector */}
-            <div>
-              <label className="text-[11px] text-zinc-400 mb-1.5 block">Category</label>
-              <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto no-scrollbar">
+            {/* Unified Category & Map Pin Icon Selector */}
+            <div className="pt-1 border-t border-white/10">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div>
+                  <label className="text-[11px] font-semibold text-zinc-300 block">
+                    Category &amp; Map Pin Icon
+                  </label>
+                  <span className="text-[10px] text-zinc-500">
+                    Selecting a category syncs the pin icon, or customize from 95+ foodie emojis
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsIconPickerOpen(true)}
+                  className="shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#e84a27]/15 hover:bg-[#e84a27]/25 border border-[#e84a27]/35 text-xs font-bold text-[#FAF7F2] transition-all active:scale-95 cursor-pointer"
+                  title="Open 95+ Foodie Emoji Picker"
+                >
+                  <span className="text-base leading-none">
+                    {spotIcon ||
+                      linkedVenue?.icon ||
+                      FOOD_CATEGORIES.find((c) => c.id === category)?.emoji ||
+                      "📍"}
+                  </span>
+                  <span className="text-[#FF8A6C]">🎨 Customize Pin Emoji</span>
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto no-scrollbar">
                 {FOOD_CATEGORIES.filter((c) => c.id !== "all").map((cat) => (
                   <button
                     key={cat.id}
                     type="button"
-                    onClick={() => setCategory(cat.id)}
-                    className={`px-2.5 py-1 text-xs rounded-full border transition-all flex items-center gap-1 ${
+                    onClick={() => {
+                      setCategory(cat.id);
+                      setSpotIcon(cat.emoji);
+                    }}
+                    className={`px-2.5 py-1 text-xs rounded-full border transition-all flex items-center gap-1 cursor-pointer ${
                       category === cat.id
-                        ? "bg-white text-zinc-950 font-bold border-white"
+                        ? "bg-white text-zinc-950 font-bold border-white shadow-xs"
                         : "bg-white/5 text-zinc-400 border-white/10 hover:text-white hover:bg-white/10"
                     }`}
                   >
@@ -417,25 +443,6 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
               </div>
             )}
 
-            {/* Sticky Icon Picker Trigger */}
-            <div className="pt-2 border-t border-white/10 flex items-center justify-between">
-              <div>
-                <span className="text-xs font-semibold text-zinc-300 block">
-                  Custom Spot Icon
-                </span>
-                <span className="text-[10px] text-zinc-500">
-                  Sticks permanently to this venue
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsIconPickerOpen(true)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10 text-xs font-semibold text-white transition-all active:scale-95"
-              >
-                <span className="text-base">{spotIcon || linkedVenue?.icon || "📍"}</span>
-                <span>Change Icon...</span>
-              </button>
-            </div>
           </div>
 
           {/* Editorial Review & Rating */}
@@ -445,7 +452,45 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
             </h3>
 
             <div>
-              <label className="text-[11px] text-zinc-400 mb-1 block">Review Soundbite</label>
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <label className="text-[11px] text-zinc-400 block">
+                  Smakr Taste Note / Verdict
+                </label>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      showToast("Writing insider taste note…");
+                      const res = await fetch("/api/admin/ai-curate", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          mode: "generate-dish-note",
+                          dishName,
+                          venueName: linkedVenue?.name || post.spot_name,
+                          category,
+                          rawGoogleReviews: [
+                            ...(post.diner_quotes || []).map((q) => q.text),
+                            ...(linkedVenue?.curated_reviews || []).map((q) => q.text),
+                          ],
+                        }),
+                      });
+                      const data = await res.json();
+                      if (data.tasteNote) setReviewText(data.tasteNote);
+                      if (data.suggestedPriceNok && !priceNok.trim()) {
+                        setPriceNok(String(data.suggestedPriceNok));
+                      }
+                      showToast("✨ Taste note & price estimate ready");
+                    } catch {
+                      showToast("Could not auto-write note right now.");
+                    }
+                  }}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#e84a27]/15 hover:bg-[#e84a27]/25 border border-[#e84a27]/30 text-[#e84a27] text-[10px] font-bold transition-colors cursor-pointer"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  ✨ Auto-Write Note &amp; Price
+                </button>
+              </div>
               <textarea
                 rows={2}
                 value={reviewText}

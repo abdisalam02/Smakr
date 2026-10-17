@@ -220,12 +220,20 @@ export function AuthProvider({
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT" || !session) {
-        // No session → never leave a stale (cached) user on screen.
+        // No session → clear currentUser, but preserve any saved mascot in localStorage
+        // so logging out never unexpectedly swaps the mascot character.
         hydratedUserId = null;
         setCurrentUser(null);
         setIsAuthResolved(true);
         setProfileResolved(true);
-        hydrateMascotConfig(DEFAULT_MASCOT_CONFIG);
+        try {
+          const savedMascot = typeof window !== "undefined" ? localStorage.getItem("smakr_mascot") : null;
+          if (!savedMascot) {
+            hydrateMascotConfig(DEFAULT_MASCOT_CONFIG);
+          }
+        } catch {
+          hydrateMascotConfig(DEFAULT_MASCOT_CONFIG);
+        }
         return;
       }
 

@@ -18,6 +18,11 @@ import {
   MatchaIcon,
   PastaIcon,
   DumplingIcon,
+  StreetFoodIcon,
+  FriedChickenIcon,
+  KebabIcon,
+  PhoIcon,
+  CurryIcon,
 } from "@/components/food/FoodIcons";
 
 const CATEGORY_ICON_MAP: Record<
@@ -30,7 +35,7 @@ const CATEGORY_ICON_MAP: Record<
   ramen: RamenIcon,
   burger: BurgerIcon,
   pizza: PizzaIcon,
-  street_food: TacoIcon,
+  street_food: StreetFoodIcon,
   sushi: SushiIcon,
   dessert: DessertIcon,
   drinks: DrinksIcon,
@@ -39,6 +44,10 @@ const CATEGORY_ICON_MAP: Record<
   dumplings: DumplingIcon,
   tacos: TacoIcon,
   bao: DumplingIcon,
+  fried_chicken: FriedChickenIcon,
+  kebab: KebabIcon,
+  vietnamese: PhoIcon,
+  indian: CurryIcon,
 };
 
 type Pill =
@@ -55,6 +64,10 @@ const PILLS: Pill[] = [
   { kind: "category", id: "tacos", label: "Tacos" },
   { kind: "category", id: "pasta", label: "Pasta" },
   { kind: "category", id: "burger", label: "Burgers" },
+  { kind: "category", id: "fried_chicken", label: "Fried Chicken" },
+  { kind: "category", id: "kebab", label: "Kebab" },
+  { kind: "category", id: "vietnamese", label: "Vietnamese" },
+  { kind: "category", id: "indian", label: "Indian" },
   { kind: "dietary", id: "vegan", label: "Vegan", emoji: "🌱" },
   { kind: "dietary", id: "halal", label: "Halal", emoji: "" },
   { kind: "category", id: "pizza", label: "Pizza" },
@@ -71,6 +84,10 @@ const CUISINES: { id: FoodCategory; label: string; emoji: string }[] = [
   { id: "tacos", label: "Tacos", emoji: "🌮" },
   { id: "pizza", label: "Pizza", emoji: "🍕" },
   { id: "burger", label: "Burgers", emoji: "🍔" },
+  { id: "fried_chicken", label: "Fried Chicken", emoji: "🍗" },
+  { id: "kebab", label: "Kebab", emoji: "🥙" },
+  { id: "vietnamese", label: "Vietnamese", emoji: "🍲" },
+  { id: "indian", label: "Indian", emoji: "🍛" },
   { id: "bakery", label: "Bakery", emoji: "🥐" },
   { id: "coffee", label: "Coffee", emoji: "☕" },
   { id: "matcha", label: "Matcha", emoji: "🍵" },

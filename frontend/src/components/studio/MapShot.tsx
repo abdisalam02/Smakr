@@ -52,7 +52,7 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
   const mapRef = useRef<maplibregl.Map | null>(null);
   const styleRef = useRef(s.style);
 
-  const exportTarget = s.exportTarget || 'full-scene';
+  const exportTarget = s.exportTarget || 'card-only';
   const needsMap = exportTarget === 'full-scene' || exportTarget === 'map-only';
 
   // Initialize MapLibre GL only if map rendering is requested
@@ -215,16 +215,43 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
             {s.name || 'Venue Name'}
           </h2>
 
-          {s.showRating && s.rating != null && (
-            <div className="mt-3.5 inline-flex items-center gap-2 rounded-xl bg-black px-4 py-1.5 font-comico text-3xl text-white">
-              <span className="text-amber-400">★</span>
-              <span>{s.rating.toFixed(1)}</span>
+          <div className="mt-3.5 flex flex-wrap items-center gap-2.5">
+            {s.showRating && s.rating != null && (
+              <div className="inline-flex items-center gap-2 rounded-xl bg-black px-4 py-1.5 font-comico text-3xl text-white">
+                <span className="text-amber-400">★</span>
+                <span>{s.rating.toFixed(1)}</span>
+              </div>
+            )}
+
+            {s.neighborhood && (
+              <div
+                className="inline-flex items-center gap-1.5 rounded-xl px-4 py-1.5 font-sans text-2xl font-bold"
+                style={{
+                  background: s.cardTheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(24,22,21,0.07)',
+                  color: t.ink,
+                }}
+              >
+                <span>📍</span>
+                <span>{s.neighborhood}</span>
+              </div>
+            )}
+          </div>
+
+          {s.featuredDish && (
+            <div
+              className="mt-3 inline-flex items-center gap-2 rounded-xl px-4 py-1.5 text-2xl font-bold"
+              style={{
+                background: s.cardTheme === 'paprika' ? 'rgba(255,255,255,0.18)' : 'rgba(232, 74, 39, 0.12)',
+                color: s.cardTheme === 'paprika' ? '#ffffff' : '#e84a27',
+              }}
+            >
+              <span>{s.featuredDish}</span>
             </div>
           )}
 
           {s.showAddress && s.address && (
             <p
-              className="mt-3.5 text-2xl font-semibold leading-snug"
+              className="mt-3 text-2xl font-semibold leading-snug"
               style={{ color: t.sub }}
             >
               📍 {s.address}
@@ -263,7 +290,7 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
                 color: s.cardTheme === 'paprika' ? '#e84a27' : '#ffffff',
               }}
             >
-              <span>🔗 Save &amp; get radar in bio · ✦ @smakr.no ✦</span>
+              <span>{s.ctaText || '🔗 See all Oslo picks & prices · @smakr.no'}</span>
             </div>
           )}
         </div>
@@ -271,12 +298,12 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
     </section>
   );
 
-  // TARGET: Card Only (Transparent Venue Card Sticker)
+  // TARGET: Card Only (Transparent Venue Card + Floating Pin Sticker for Canva)
   if (exportTarget === 'card-only') {
     return (
       <div
         ref={forwardedRef}
-        style={{ width: w, minHeight: h }}
+        style={{ width: w, minHeight: h, background: 'transparent' }}
         className="relative flex flex-col items-center justify-center p-6 bg-transparent select-none"
       >
         {/* Floating food glyph badge attached over the card */}

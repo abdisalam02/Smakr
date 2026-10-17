@@ -20,7 +20,11 @@ export type FoodCategory =
   | "drinks"
   | "dumplings"
   | "tacos"
-  | "bao";
+  | "bao"
+  | "fried_chicken"
+  | "kebab"
+  | "vietnamese"
+  | "indian";
 
 export type DietaryTag = "vegan" | "vegetarian" | "halal" | "gluten_free";
 

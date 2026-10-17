@@ -25,9 +25,13 @@ export interface MascotDnaConfig {
   face: string;
   accessories: string;
   facialHair: string;
+  mask?: string;
   skinColor: string;
   clothingColor: string;
   innerClothingColor?: string;
+  shoeColor?: string;
+  hatColor?: string;
+  propColor?: string;
   headContrastColor: string;
   stickerOutline: boolean;
   bodyPose?: string;
@@ -38,9 +42,13 @@ export const DEFAULT_MASCOT_CONFIG: MascotDnaConfig = {
   face: 'smile-big',
   accessories: 'glasses-2',
   facialHair: 'none',
+  mask: 'none',
   skinColor: 'd08b5b',
   clothingColor: 'e84a27',
   innerClothingColor: '27272a',
+  shoeColor: 'ffffff',
+  hatColor: 'e84a27',
+  propColor: 'ffffff',
   headContrastColor: '181615',
   stickerOutline: true,
   bodyPose: 'jacket-2',
@@ -402,6 +410,9 @@ export interface MapShotState {
   showCardInfo?: boolean;
   mapLabel: string;
   detailsLabel: string;
+  neighborhood?: string;
+  featuredDish?: string;
+  ctaText?: string;
   exportTarget?: MapExportTarget;
 }
 
@@ -547,6 +558,15 @@ export const HAIR_COLOR_SWATCHES: SimpleColorSwatch[] = [
   { label: 'Nordic Auburn', hex: '#C93305' },
   { label: 'Honey Blonde', hex: '#D6B370' },
   { label: 'Platinum Silver', hex: '#E8E1E1' },
+];
+
+export const SHOE_SWATCHES: SimpleColorSwatch[] = [
+  { label: 'Late Night Black (Default)', hex: '#181615' },
+  { label: 'Crisp White', hex: '#FAF7F2' },
+  { label: 'Timber Tan', hex: '#D97706' },
+  { label: 'Nordic Navy', hex: '#1E293B' },
+  { label: 'Burnt Paprika', hex: '#e84a27' },
+  { label: 'Sage Olive', hex: '#4D7C0F' },
 ];
 
 export interface MascotExpressionOption {

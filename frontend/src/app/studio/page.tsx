@@ -15,6 +15,8 @@ import {
 import { StudioCanvas } from '@/components/studio/StudioCanvas';
 import { StudioControls } from '@/components/studio/StudioControls';
 import { useCityPulseStore } from '@/store/useCityPulseStore';
+import { fetchVenues } from '@/lib/supabase/data';
+import { resolveFoodCategoryAndIcon } from '@/lib/categoryResolver';
 import {
   copyElementPngToClipboard,
   downloadElementPng,
@@ -99,6 +101,9 @@ const INITIAL_STUDIO_STATE: StudioState = {
     showCardInfo: true,
     mapLabel: 'Map ↗',
     detailsLabel: 'Details →',
+    neighborhood: 'Frogner',
+    featuredDish: '🥐 Cardamom Knot · 58 kr',
+    ctaText: '🔗 See all Oslo picks & prices · @smakr.no',
     exportTarget: 'card-only',
   },
   photo: {
@@ -145,6 +150,14 @@ export default function StudioPage() {
       ) {
         setAuthed(true);
       }
+      const modeParam = sp.get('mode') as FoundryMode | null;
+      if (modeParam) {
+        setState((prev) => ({
+          ...prev,
+          mode: modeParam,
+          aspectRatio: modeParam === 'venue-map' ? '4:5' : prev.aspectRatio,
+        }));
+      }
     }
   }, []);
   const [state, setState] = useState<StudioState>(() => {
@@ -178,6 +191,70 @@ export default function StudioPage() {
   const [exporting, setExporting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
+  // Sync all database venues so Studio can load all live Oslo locations
+  const venues = useCityPulseStore((s) => s.venues);
+  const setVenues = useCityPulseStore((s) => s.setVenues);
+  const [isLoadingVenues, setIsLoadingVenues] = useState(false);
+
+  const reloadVenues = useCallback(async () => {
+    setIsLoadingVenues(true);
+    try {
+      const data = await fetchVenues();
+      if (data && data.length > 0) {
+        setVenues(data);
+      }
+    } catch (err) {
+      console.warn('[Studio] Failed to load venues from DB:', err);
+    } finally {
+      setIsLoadingVenues(false);
+    }
+  }, [setVenues]);
+
+  useEffect(() => {
+    reloadVenues();
+  }, [reloadVenues]);
+
+  // Deep-link auto-selection: ?venueId=... or ?venue=...
+  useEffect(() => {
+    if (venues.length > 0 && typeof window !== 'undefined') {
+      const sp = new URLSearchParams(window.location.search);
+      const rawParam = sp.get('venueId') || sp.get('venue');
+      if (rawParam) {
+        const decoded = decodeURIComponent(rawParam).trim().toLowerCase();
+        const found = venues.find(
+          (v) =>
+            v.id === rawParam ||
+            v.name.toLowerCase().includes(decoded) ||
+            decoded.includes(v.name.toLowerCase())
+        );
+        if (found) {
+          const icon = found.icon || resolveFoodCategoryAndIcon('', found.name).icon || '🥐';
+          const linkedDish = useCityPulseStore
+            .getState()
+            .foodPosts.find((p) => p.spot_id === found.id && p.image_url && !p.is_archived);
+          setState((prev) => ({
+            ...prev,
+            map: {
+              ...prev.map,
+              venueId: found.id,
+              name: found.name,
+              address: found.address || `${found.name}, Oslo`,
+              icon,
+              rating: found.google_rating ? Number(found.google_rating.toFixed(1)) : 4.8,
+              photo: linkedDish?.image_url || found.cover_image_url || prev.map.photo,
+              neighborhood: found.neighborhood ? found.neighborhood.charAt(0).toUpperCase() + found.neighborhood.slice(1) : 'Oslo',
+              featuredDish: linkedDish
+                ? `${icon} ${linkedDish.dish_name}${linkedDish.price_nok ? ` · ${linkedDish.price_nok} kr` : ''}`
+                : prev.map.featuredDish,
+              lat: found.latitude,
+              lng: found.longitude,
+            },
+          }));
+        }
+      }
+    }
+  }, [venues]);
+
   const stageRef = useRef<HTMLDivElement>(null);
   const assetRef = useRef<HTMLDivElement>(null);
   const [previewScale, setPreviewScale] = useState(0.5);
@@ -203,10 +280,12 @@ export default function StudioPage() {
       setPreviewScale(Math.min(1, Math.max(0.18, s)));
 
       // 2. Mascot Sticker Canvas
+      const isStanding = BLUSH_BODIES[state.mascot?.bodyPose || '']?.category === 'standing';
+      const isSitting = BLUSH_BODIES[state.mascot?.bodyPose || '']?.category === 'sitting';
       const hasBubble =
         state.mascot?.frameMode === 'bust-plus-bubble' && Boolean(state.mascot?.bubbleText);
-      const intrinsicW = hasBubble ? 740 : 420;
-      const intrinsicH = 500;
+      const intrinsicW = hasBubble ? (isStanding ? 700 : 740) : (isStanding ? 440 : 420);
+      const intrinsicH = isStanding ? 580 : isSitting ? 520 : 500;
       const ms = Math.min(availW / intrinsicW, availH / intrinsicH);
       setMascotScale(Math.min(1.15, Math.max(0.35, ms)));
 
@@ -232,6 +311,7 @@ export default function StudioPage() {
     state.map.exportTarget,
     state.mascot?.frameMode,
     state.mascot?.bubbleText,
+    state.mascot?.bodyPose,
   ]);
 
   // Patch state helpers
@@ -566,10 +646,12 @@ export default function StudioPage() {
           </div>
         ) : activeMode === 'mascot' ? (
           (() => {
+            const isStanding = BLUSH_BODIES[state.mascot?.bodyPose || '']?.category === 'standing';
+            const isSitting = BLUSH_BODIES[state.mascot?.bodyPose || '']?.category === 'sitting';
             const hasBubble =
               state.mascot?.frameMode === 'bust-plus-bubble' && Boolean(state.mascot?.bubbleText);
-            const intrinsicW = hasBubble ? 740 : 420;
-            const intrinsicH = 500;
+            const intrinsicW = hasBubble ? (isStanding ? 700 : 740) : (isStanding ? 440 : 420);
+            const intrinsicH = isStanding ? 580 : isSitting ? 520 : 500;
             return (
               <div
                 style={{
@@ -705,19 +787,19 @@ export default function StudioPage() {
               <div className="w-[1px] h-4 bg-[#D8CFC0] mx-0.5" />
               {(
                 [
-                  ['full-scene', 'Full Map'],
-                  ['card-only', 'Card Only (PNG)'],
-                  ['pin-only', 'Pin Only'],
-                  ['map-only', 'Map Only'],
+                  ['card-only', '🪪 Transparent Card + Pin (For Canva)'],
+                  ['full-scene', '🗺️ Full Map Slide'],
+                  ['pin-only', '📍 Pin Only'],
+                  ['map-only', '🧭 Map Only'],
                 ] as const
               ).map(([target, label]) => (
                 <button
                   key={target}
                   type="button"
                   onClick={() => updateMap({ exportTarget: target })}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    (state.map.exportTarget || 'full-scene') === target
-                      ? 'bg-[#231F1D] text-white shadow-xs'
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                    (state.map.exportTarget || 'card-only') === target
+                      ? 'bg-[#e84a27] text-white shadow-xs'
                       : 'bg-[#EFEAE1] text-[#5C534E] hover:text-[#231F1D]'
                   }`}
                 >
@@ -811,6 +893,9 @@ export default function StudioPage() {
       <StudioControls
         state={state}
         activeMode={activeMode}
+        venues={venues}
+        isLoadingVenues={isLoadingVenues}
+        onRefreshVenues={reloadVenues}
         onUpdateMascot={updateMascot}
         onUpdateMap={updateMap}
         onUpdateDishTitle={updateDishTitle}

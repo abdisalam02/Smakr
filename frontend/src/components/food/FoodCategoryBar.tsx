@@ -18,6 +18,10 @@ import {
   MatchaIcon,
   PastaIcon,
   DumplingIcon,
+  FriedChickenIcon,
+  KebabIcon,
+  PhoIcon,
+  CurryIcon,
 } from "./FoodIcons";
 
 interface FoodCategoryBarProps {
@@ -40,6 +44,10 @@ const CATEGORY_ICON_MAP: Record<FoodCategory, React.ComponentType<{ className?: 
   dumplings: DumplingIcon,
   tacos: TacoIcon,
   bao: DumplingIcon,
+  fried_chicken: FriedChickenIcon,
+  kebab: KebabIcon,
+  vietnamese: PhoIcon,
+  indian: CurryIcon,
 };
 
 export function FoodCategoryBar({ compact = false }: FoodCategoryBarProps) {

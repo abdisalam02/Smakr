@@ -22,10 +22,31 @@ import { useEffect, useState } from 'react';
  * All leaves spawn from above the screen only after load and fall all the way past the bottom (118vh).
  */
 
+const LEAVES_SESSION_KEY = 'smakr_leaves_shown_session';
+const LEAVES_LAST_TS_KEY = 'smakr_leaves_last_shown_at';
+const LEAVES_COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours
+
 export function AutumnLeavesBurst() {
-  const [isActive, setIsActive] = useState(true);
+  const [isActive, setIsActive] = useState(false);
 
   useEffect(() => {
+    try {
+      const shownInSession = sessionStorage.getItem(LEAVES_SESSION_KEY);
+      const lastShownRaw = localStorage.getItem(LEAVES_LAST_TS_KEY);
+      const lastShownAt = lastShownRaw ? Number(lastShownRaw) : 0;
+      const now = Date.now();
+
+      if (shownInSession === '1' || (lastShownAt > 0 && now - lastShownAt < LEAVES_COOLDOWN_MS)) {
+        return;
+      }
+
+      sessionStorage.setItem(LEAVES_SESSION_KEY, '1');
+      localStorage.setItem(LEAVES_LAST_TS_KEY, String(now));
+      setIsActive(true);
+    } catch {
+      return;
+    }
+
     // Unmount after all 4 waves (6 leaves total) complete their descent past the bottom
     const timer = setTimeout(() => {
       setIsActive(false);

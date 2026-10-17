@@ -131,13 +131,13 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
   return (
     <div
       onClick={handleClick}
-      className={`group relative flex flex-col sm:flex-row gap-3.5 p-3 rounded-3xl bg-[#fbf9f5] dark:bg-[#181615] border-2 border-black/[0.08] dark:border-white/[0.08] shadow-[0_4px_16px_rgba(0,0,0,0.06)] hover:border-black/15 transition-all duration-200 cursor-pointer active:scale-[0.99] select-none overflow-hidden ${
+      className={`group relative flex flex-row items-stretch rounded-3xl bg-[#fbf9f5] dark:bg-[#181615] ring-1 ring-black/[0.04] dark:ring-white/[0.06] shadow-[0_6px_22px_rgba(24,22,21,0.06)] hover:shadow-[0_10px_28px_rgba(24,22,21,0.10)] transition-all duration-200 cursor-pointer active:scale-[0.99] select-none overflow-hidden min-h-[148px] ${
         popupStatus.isDimmedCard ? "opacity-50 grayscale-[20%]" : ""
       }`}
     >
       {/* Repeating SMAKR Monogram Watermark Pattern */}
       <svg
-        className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.035] dark:opacity-[0.06] select-none text-zinc-950 dark:text-white"
+        className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.03] dark:opacity-[0.05] select-none text-zinc-950 dark:text-white"
         aria-hidden="true"
       >
         <defs>
@@ -175,38 +175,46 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
         <rect width="100%" height="100%" fill={`url(#smakr-spot-pattern-${venue.id})`} />
       </svg>
 
-      {/* Cover Image */}
-      <div className="relative w-full sm:w-28 h-32 sm:h-28 rounded-2xl overflow-hidden shrink-0 bg-zinc-100 ring-1 ring-black/5">
-        {venue.cover_image_url ? (
-          <Image
-            src={venue.cover_image_url}
-            alt={venue.name}
-            fill
-            priority={priority}
-            loading={priority ? undefined : "lazy"}
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
-            sizes="(max-width: 640px) 100vw, 120px"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-2xl">
-            {venue.icon || categoryDef?.emoji || "🍽️"}
-          </div>
-        )}
+      {/* Cover Image — Full-bleed left column (~40% width) preferring curated appetizing dish photo */}
+      {(() => {
+        const curatedDishPhoto = foodPosts.find(
+          (p) => p.spot_id === venue.id && p.image_url && !p.is_archived
+        )?.image_url;
+        const spotCoverUrl = curatedDishPhoto || venue.cover_image_url;
+        return (
+          <div className="relative w-[40%] min-w-[132px] max-w-[168px] sm:w-44 self-stretch min-h-[148px] overflow-hidden shrink-0 bg-zinc-100">
+            {spotCoverUrl ? (
+              <Image
+                src={spotCoverUrl}
+                alt={venue.name}
+                fill
+                priority={priority}
+                loading={priority ? undefined : "lazy"}
+                className="object-cover group-hover:scale-105 transition-transform duration-300"
+                sizes="(max-width: 640px) 40vw, 176px"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-3xl">
+                {venue.icon || categoryDef?.emoji || "🍽️"}
+              </div>
+            )}
 
-        {/* Google Rating Badge */}
-        {hasGoogleRating && (
-          <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/75 backdrop-blur-md text-white text-[11px] font-bold shadow-xs">
-            <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-            <span className="font-sans font-bold tracking-tight text-white">{venue.google_rating!.toFixed(1)}</span>
-            {googleCount > 0 && (
-              <span className="font-normal text-white/70 text-[9px]">({googleCount})</span>
+            {/* Google Rating Badge */}
+            {hasGoogleRating && (
+              <div className="absolute top-2.5 left-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/75 backdrop-blur-md text-white text-[11px] font-bold shadow-xs">
+                <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                <span className="font-sans font-bold tracking-tight text-white">{venue.google_rating!.toFixed(1)}</span>
+                {googleCount > 0 && (
+                  <span className="font-normal text-white/70 text-[9px]">({googleCount})</span>
+                )}
+              </div>
             )}
           </div>
-        )}
-      </div>
+        );
+      })()}
 
       {/* Spot Details */}
-      <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+      <div className="flex-1 min-w-0 flex flex-col justify-between p-3.5 sm:p-4">
         <div>
           {/* Category & Price */}
           <div className="flex items-center justify-between gap-2 mb-1">

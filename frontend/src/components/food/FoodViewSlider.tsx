@@ -72,9 +72,11 @@ export function FoodViewSlider({
           {isFeedActive && (
             <span className="flex items-center gap-1.5 whitespace-nowrap">
               <span className="tracking-tight">Feed</span>
-              <span className="text-[10px] tabular-nums font-normal opacity-85">
-                {dishesCount}
-              </span>
+              {dishesCount >= 25 && (
+                <span className="text-[10px] tabular-nums font-normal opacity-85">
+                  {dishesCount}
+                </span>
+              )}
             </span>
           )}
         </span>
@@ -110,9 +112,11 @@ export function FoodViewSlider({
           {isRadarActive && (
             <span className="flex items-center gap-1.5 whitespace-nowrap">
               <span className="tracking-tight">Radar</span>
-              <span className="text-[10px] tabular-nums font-normal opacity-85">
-                {spotsCount}
-              </span>
+              {spotsCount >= 25 && (
+                <span className="text-[10px] tabular-nums font-normal opacity-85">
+                  {spotsCount}
+                </span>
+              )}
             </span>
           )}
         </span>

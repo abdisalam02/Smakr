@@ -5,6 +5,7 @@ import Image from "next/image";
 import { MapPin, ArrowUpRight, X, ChevronDown, Pencil } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { MascotCharacter } from "@/components/avatar/MascotCharacter";
+import { SmakrMascotRig } from "@/components/studio/SmakrMascotRig";
 import { EditWeeklyDropModal } from "@/components/admin/EditWeeklyDropModal";
 
 /**
@@ -91,8 +92,14 @@ export function MascotWeeklyDrop({
     return () => cleanups.forEach((fn) => fn());
   }, []);
 
-  const handleSpot = () => flyToSpot(weeklyPick.coords, weeklyPick.venue_id);
-  const handleMenu = () => selectVenueById(weeklyPick.venue_id);
+  const handleSpot = () => {
+    setIsExpanded(false);
+    flyToSpot(weeklyPick.coords, weeklyPick.venue_id);
+  };
+  const handleMenu = () => {
+    setIsExpanded(false);
+    selectVenueById(weeklyPick.venue_id);
+  };
 
   const handleToggle = () => {
     if (!isExpanded && onOpen) {
@@ -121,9 +128,11 @@ export function MascotWeeklyDrop({
             <h2 className="font-comico text-sm sm:text-base tracking-wider text-[#e84a27] uppercase">
               FEED
             </h2>
-            <span className="text-[10px] font-mono font-medium text-zinc-500 bg-stone-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full">
-              {feedCount}
-            </span>
+            {typeof feedCount === "number" && feedCount >= 25 && (
+              <span className="text-[10px] font-mono font-medium text-zinc-500 bg-stone-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full">
+                {feedCount}
+              </span>
+            )}
           </div>
 
           <button
@@ -239,20 +248,23 @@ export function MascotWeeklyDrop({
       {/* ── Expanded spotlight card underneath ── */}
       <div
         className={`grid transition-all duration-300 ease-out ${
-          isExpanded ? "grid-rows-[1fr] opacity-100 mt-2" : "grid-rows-[0fr] opacity-0"
+          isExpanded ? "grid-rows-[1fr] opacity-100 mt-2.5" : "grid-rows-[0fr] opacity-0"
         }`}
       >
         <div className="overflow-hidden">
           <div
-            className="rounded-2xl border p-3 space-y-2.5 shadow-xs"
+            className="rounded-3xl border p-3.5 space-y-3 shadow-[0_10px_28px_rgba(24,22,21,0.08)]"
             style={{
-              background: "var(--surface, #FFFFFF)",
-              borderColor: "var(--surface-border, #E7E0D4)",
+              background: "var(--surface, #FAF7F2)",
+              borderColor: "var(--surface-border, #E5DEC9)",
             }}
           >
-            {/* Mascot on left presenting the speech bubble on right */}
-            <div className="flex items-start gap-3">
-              <div className="shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-[#f5efe3] dark:bg-stone-800 border border-[#e7e0d4] dark:border-white/10 p-1 flex items-center justify-center shadow-xs overflow-hidden">
+            {/* Top Stage: Half-Body Bust Mascot on Left + Editorial Speech Bubble on Right */}
+            <div className="flex items-stretch gap-3">
+              <div className="relative shrink-0 w-[104px] sm:w-[114px] min-h-[112px] rounded-2xl bg-[#F5EFE3] border border-[#E6DDD0] pt-2 px-1 flex items-end justify-center overflow-hidden">
+                <span className="absolute top-1.5 left-2 text-[8px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-white/90 text-[#E84A27] border border-[#E84A27]/20 z-10">
+                  ✦ Week {weekNumber}
+                </span>
                 {weeklyPick.mascot_avatar_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -261,102 +273,125 @@ export function MascotWeeklyDrop({
                     className="w-full h-full object-cover object-top block rounded-xl"
                   />
                 ) : (
-                  <MascotCharacter
-                    config={mascotConfig}
-                    size={76}
-                    animated={isExpanded}
-                  />
+                  <div className="w-[96px] h-[104px] flex items-end justify-center translate-y-1">
+                    <SmakrMascotRig
+                      frameMode="bust-only"
+                      bodyPose={mascotConfig.prop === "coffee-cup" ? "coffee" : "pointing-up"}
+                      head={mascotConfig.peepsHead || "afro"}
+                      face={mascotConfig.peepsFace || "smileBig"}
+                      accessories={
+                        mascotConfig.peepsAccessories === "none"
+                          ? "none"
+                          : mascotConfig.peepsAccessories === "sunglasses"
+                          ? "sunglasses-1"
+                          : "glasses-2"
+                      }
+                      facialHair={mascotConfig.peepsFacialHair || "none"}
+                      skinColor={mascotConfig.skinColor || "d08b5b"}
+                      clothingColor={mascotConfig.topColor || "e84a27"}
+                      innerClothingColor={mascotConfig.bottomColor || "1f2937"}
+                      hatColor={mascotConfig.hatColor || "e84a27"}
+                      headContrastColor={mascotConfig.hairColor || "241c16"}
+                      stickerOutline={true}
+                      size={92}
+                    />
+                  </div>
                 )}
               </div>
 
-              {/* Speech bubble with tail pointing to the mascot */}
+              {/* Speech bubble with tail pointing to the half-body bust */}
               <div
-                className="relative flex-1 rounded-2xl border px-3.5 py-3 shadow-xs min-h-[80px] flex flex-col justify-center"
-                style={{
-                  background: "var(--surface-raised, #F5EFE3)",
-                  borderColor: "var(--surface-border, #E7E0D4)",
-                }}
+                className="relative flex-1 rounded-2xl border px-3.5 py-3 shadow-xs flex flex-col justify-between bg-white border-[#E6DDD0]"
               >
-                {/* Speech bubble arrow/tail pointing left towards the mascot */}
+                {/* Speech bubble arrow/tail pointing left towards the mascot bust */}
                 <span
                   aria-hidden
-                  className="absolute top-6 -left-1.5 w-3 h-3 rotate-45 border-l border-b"
-                  style={{
-                    background: "var(--surface-raised, #F5EFE3)",
-                    borderColor: "var(--surface-border, #E7E0D4)",
-                  }}
+                  className="absolute top-8 -left-1.5 w-3 h-3 rotate-45 border-l border-b bg-white border-[#E6DDD0]"
                 />
-                <div className="flex items-center gap-1.5 mb-1 text-[9px] font-bold uppercase tracking-wider text-[#e84a27]">
-                  <span>✦ Mascot Drop Note</span>
+                <div className="flex items-center justify-between gap-1.5">
+                  <span className="inline-flex items-center gap-1 text-[9.5px] font-extrabold uppercase tracking-wider text-[#e84a27]">
+                    ✦ Smakr Critic Verdict
+                  </span>
+                  <div className="flex items-center gap-1 relative z-20">
+                    {isViewerAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => setIsEditModalOpen(true)}
+                        className="h-6 px-2 rounded-lg bg-[#FAF7F2] border border-[#E6DDD0] text-[10px] font-bold text-[#e84a27] hover:bg-amber-50 transition-all flex items-center gap-1"
+                        title="Edit Weekly Drop"
+                      >
+                        <Pencil className="w-2.5 h-2.5" />
+                        <span>Edit</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setIsExpanded(false)}
+                      aria-label="Collapse weekly drop"
+                      className="w-6 h-6 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-black/[0.04] transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
-                <p className="text-[13px] font-medium italic leading-snug text-zinc-900 dark:text-zinc-100 relative z-10">
+                <p className="text-[13.5px] sm:text-[14px] font-bold leading-snug text-stone-800 my-auto py-1 relative z-10">
                   &ldquo;{weeklyPick.speech_bubble}&rdquo;
                 </p>
+                <div className="flex items-center gap-1.5 text-[10px] font-semibold text-stone-500">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#e84a27]" />
+                  <span>Handpicked weekly drop in Oslo</span>
+                </div>
               </div>
             </div>
 
-            {/* Restructured featured dish section */}
-            <div className="flex items-center gap-3 p-2 rounded-2xl bg-black/[0.02] dark:bg-white/[0.04] border border-black/5 dark:border-white/5">
-              <div className="relative w-16 h-16 sm:w-18 sm:h-18 rounded-xl overflow-hidden border border-black/10 shrink-0 bg-zinc-100 shadow-xs">
+            {/* Warm Editorial Featured Dish Spotlight Banner (No Black) */}
+            <div className="flex items-center gap-3 p-2.5 rounded-2xl bg-[#FFF6F2] border border-[#F3D7CA] shadow-xs">
+              <div className="relative w-[68px] h-[68px] sm:w-[74px] sm:h-[74px] rounded-xl overflow-hidden border border-[#E84A27]/15 shrink-0 bg-[#F5EFE3]">
                 <Image
                   src={weeklyPick.dish_image}
                   alt={weeklyPick.dish_name}
                   fill
                   unoptimized
                   className="object-cover"
-                  sizes="72px"
+                  sizes="76px"
                 />
               </div>
               <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">
-                    {weeklyPick.dish_name}
-                  </p>
-                  <span className="shrink-0 text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-xs">
-                    {weeklyPick.price_nok} NOK
+                  <span className="text-[9px] font-extrabold uppercase tracking-widest text-[#E84A27]">
+                    ✦ Featured Dish
+                  </span>
+                  <span className="shrink-0 text-[11px] font-mono font-extrabold px-2.5 py-0.5 rounded-full bg-[#E84A27] text-white shadow-xs">
+                    {weeklyPick.price_nok} kr
                   </span>
                 </div>
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate flex items-center gap-1">
-                  <MapPin className="w-3 h-3 text-[#e84a27] shrink-0" />
-                  <span className="font-medium text-zinc-700 dark:text-zinc-300">{venueName}</span>
+                <p className="text-sm sm:text-[15px] font-comico font-bold text-stone-900 truncate">
+                  {weeklyPick.dish_name}
+                </p>
+                <p className="text-[11px] text-stone-600 truncate flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-[#E84A27] shrink-0" />
+                  <span className="font-semibold">{venueName}</span>
                 </p>
               </div>
             </div>
 
-            {/* Actions + close */}
-            <div className="flex items-center gap-2">
+            {/* Responsive 2-Button Grid Action Bar */}
+            <div className="grid grid-cols-2 gap-2.5">
               <button
+                type="button"
                 onClick={handleSpot}
-                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[#e84a27] hover:bg-[#d23e1d] text-white text-xs font-bold shadow-sm shadow-[#e84a27]/25 transition-all active:scale-[0.98]"
+                className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-[#E84A27] hover:bg-[#d23e1d] text-white text-xs font-bold shadow-sm shadow-[#e84a27]/20 transition-all active:scale-[0.98] cursor-pointer"
               >
-                <span aria-hidden>📍</span>
+                <MapPin className="w-3.5 h-3.5 shrink-0" />
                 <span>Spot on Map</span>
               </button>
               <button
+                type="button"
                 onClick={handleMenu}
-                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold text-zinc-700 hover:text-zinc-950 hover:bg-black/[0.03] transition-all active:scale-[0.98]"
-                style={{ borderColor: "var(--surface-border, #E7E0D4)" }}
+                className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-white text-stone-800 border border-[#E6DDD0] hover:bg-[#F5EFE3] text-xs font-bold transition-all active:scale-[0.98] cursor-pointer"
               >
-                <span>View Menu &amp; Vibes</span>
-                <ArrowUpRight className="w-3.5 h-3.5" />
-              </button>
-              {isViewerAdmin && (
-                <button
-                  type="button"
-                  onClick={() => setIsEditModalOpen(true)}
-                  className="px-3 py-2 rounded-xl bg-white dark:bg-zinc-800 border border-black/10 dark:border-white/10 text-xs font-bold text-[#e84a27] shadow-xs hover:bg-amber-50 dark:hover:bg-zinc-700 transition-all active:scale-[0.98] flex items-center gap-1 shrink-0"
-                  title="Edit Weekly Drop"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                  <span>Edit Drop</span>
-                </button>
-              )}
-              <button
-                onClick={() => setIsExpanded(false)}
-                aria-label="Collapse weekly drop"
-                className="shrink-0 w-8 h-8 flex items-center justify-center rounded-xl text-zinc-400 hover:text-zinc-700 hover:bg-black/[0.04] transition-colors"
-              >
-                <X className="w-3.5 h-3.5" />
+                <span>Spot &amp; Menu</span>
+                <ArrowUpRight className="w-3.5 h-3.5 shrink-0 text-[#e84a27]" />
               </button>
             </div>
           </div>

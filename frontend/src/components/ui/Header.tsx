@@ -188,6 +188,16 @@ export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
                     </Link>
                   )}
 
+                  <Link
+                    href="/studio"
+                    role="menuitem"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-zinc-700 hover:bg-amber-50 hover:text-amber-900 transition-colors"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-[#e84a27]" />
+                    <span>Social &amp; Mascot Studio</span>
+                  </Link>
+
                   {!isNiwacheOrAdmin && (
                     <button
                       onClick={() => {
@@ -213,18 +223,6 @@ export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
                     <span className="text-[13px] leading-none">💬</span>
                     <span>Send Beta Feedback</span>
                   </button>
-
-                  {isNiwacheOrAdmin && (
-                    <Link
-                      href="/mascot-studio"
-                      role="menuitem"
-                      onClick={() => setMenuOpen(false)}
-                      className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950 transition-colors"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-[#e84a27]" />
-                      <span>Mascot Studio</span>
-                    </Link>
-                  )}
 
                   <button
                     onClick={handleSignOut}

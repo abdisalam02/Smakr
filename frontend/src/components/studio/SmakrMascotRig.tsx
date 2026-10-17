@@ -13,22 +13,37 @@ import {
   BLUSH_BODIES,
   BLUSH_HEADS,
   BLUSH_FACES,
+  BLUSH_MASKS,
   BLUSH_ACCESSORIES,
   BLUSH_BEARDS,
   BLUSH_PRESETS,
+  type BlushBody,
   type BlushComponent,
 } from '@/lib/blushMascotCatalog';
 
-export { BLUSH_BODIES, BLUSH_HEADS, BLUSH_FACES, BLUSH_ACCESSORIES, BLUSH_BEARDS, BLUSH_PRESETS };
+export {
+  BLUSH_BODIES,
+  BLUSH_HEADS,
+  BLUSH_FACES,
+  BLUSH_MASKS,
+  BLUSH_ACCESSORIES,
+  BLUSH_BEARDS,
+  BLUSH_PRESETS,
+  type BlushBody,
+};
 
 export interface SmakrMascotRigProps {
   head?: string;
   face?: string;
   accessories?: string;
   facialHair?: string;
+  mask?: string;
   skinColor?: string;
   clothingColor?: string;
   innerClothingColor?: string;
+  shoeColor?: string;
+  hatColor?: string;
+  propColor?: string;
   headContrastColor?: string;
   stickerOutline?: boolean;
   frameMode?: MascotFrameMode;
@@ -65,6 +80,10 @@ export function normalizeBlushBodyId(pose: string | undefined): string {
   if (clean === 'pointingup') return 'pointing-up';
   if (clean === 'whatever') return 'shrug';
   if (clean === 'stripedpocketee' || clean === 'pocket-shirt') return 'striped-pocket-tee';
+  if (clean === 'sitting' || clean === 'one-leg-up' || clean === 'sitting-one-leg-up') return 'sitting-one-leg-up-2';
+  if (clean === 'sitting-mid' || clean === 'relaxed') return 'sitting-mid-1';
+  if (clean === 'standing' || clean === 'walking') return 'standing-walking-3';
+  if (clean === 'doctor' || clean === 'nurse' || clean === 'standing-doctor') return 'standing-doctor-nurse-3';
   if (clean in BLUSH_BODIES) return clean;
   // Default fallback
   return 'jacket-2';
@@ -74,15 +93,15 @@ export function normalizeBlushBodyId(pose: string | undefined): string {
 export function normalizeBlushFaceId(face: string | undefined): string {
   if (!face) return 'smile-big';
   const clean = face.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  if (clean === 'smilebig' || clean === 'smile-big') return 'smile-big';
-  if (clean === 'eatinghappy' || clean === 'eating-happy') return 'eating-happy';
-  if (clean.startsWith('lovinggrin') || clean === 'loving-grin') return 'loving-grin';
-  if (clean === 'smilelol' || clean === 'smileteethgap' || clean === 'smile-lol') return 'smile-lol';
-  if (clean === 'eyesclosed' || clean === 'eyes-closed' || clean === 'calm' || clean === 'tired') return 'eyes-closed';
-  if (clean === 'solemn' || clean === 'blank') return 'driven';
-  if (clean === 'fear' || clean === 'angrywithfang' || clean === 'concerned') return 'hectic';
-  if (clean === 'contempt') return 'suspicious';
   if (clean in BLUSH_FACES) return clean;
+  if (clean === 'smilebig') return 'smile-big';
+  if (clean === 'eatinghappy') return 'eating-happy';
+  if (clean.startsWith('lovinggrin') || clean === 'loving-grin') return 'loving-grin';
+  if (clean === 'smilelol' || clean === 'smile-lol') return 'smile-lol';
+  if (clean === 'smileteeth' || clean === 'smileteethgap') return 'smile-teeth-gap';
+  if (clean === 'eyesclosed') return 'eyes-closed';
+  if (clean === 'oldaged') return 'old';
+  if (clean === 'veryangry') return 'very-angry';
   return 'smile-big';
 }
 
@@ -91,7 +110,9 @@ function colorizeBodyMarkup(
   markup: string,
   skinColor: string,
   clothingColor: string,
-  innerClothingColor: string = '#27272A'
+  innerClothingColor: string = '#27272A',
+  shoeColor: string = '#FFFFFF',
+  hatColor: string = '#e84a27'
 ): string {
   const safeClothing =
     clothingColor.toLowerCase() === '#181615' || clothingColor.toLowerCase() === '#000000'
@@ -105,7 +126,7 @@ function colorizeBodyMarkup(
 
   const hasTwoLayers = markup.includes('id="Jacket"') && markup.includes('id="Top"');
 
-  return markup.replace(/<(path|rect)\s+([^>]+)>/g, (match, tag, attrs) => {
+  return markup.replace(/<(path|rect|polygon)\s+([^>]+)>/g, (match, tag, attrs) => {
     // 1. Absolute Guard for Stroke-Only / Outline / Ink Paths
     if (attrs.includes('fill="none"') || attrs.includes('id="OutlineStroke"')) {
       return match;
@@ -121,6 +142,9 @@ function colorizeBodyMarkup(
     if (id === 'Ink') {
       return `<${tag} ${attrs.replace(/fill="[^"]*"/, 'fill="#181615"')}>`;
     }
+    if (id === 'Seams') {
+      return `<${tag} ${attrs.replace(/fill="[^"]*"/, 'fill="#FAF7F2"')}>`;
+    }
     if (id === 'Cup' || id === 'Mug') {
       return `<${tag} ${attrs.replace(/fill="[^"]*"/, 'fill="#FFFFFF"')}>`;
     }
@@ -130,7 +154,7 @@ function colorizeBodyMarkup(
     if (id === 'Squiggles') {
       return `<${tag} ${attrs.replace(/fill="[^"]*"/, `fill="${safeInnerClothing || '#FAF7F2'}"`)}>`;
     }
-    if (id === 'Jacket') {
+    if (id === 'Jacket' || id === 'Clothes') {
       return `<${tag} ${attrs.replace(/fill="[^"]*"/, `fill="${safeClothing}"`)}>`;
     }
     if (id === 'Top') {
@@ -139,23 +163,40 @@ function colorizeBodyMarkup(
       }
       return `<${tag} ${attrs.replace(/fill="[^"]*"/, `fill="${safeClothing}"`)}>`;
     }
+    if (id === 'Bottom' || id === 'Pants') {
+      return `<${tag} ${attrs.replace(/fill="[^"]*"/, `fill="${safeInnerClothing}"`)}>`;
+    }
+    if (id === 'Shoes' || id === 'Footwear' || id === 'Sneakers') {
+      return `<${tag} ${attrs.replace(/fill="[^"]*"/, `fill="${shoeColor}"`)}>`;
+    }
+    if (id === 'Hat') {
+      return `<${tag} ${attrs.replace(/fill="[^"]*"/, `fill="${hatColor}"`)}>`;
+    }
 
     // Any other element without one of the whitelisted IDs: leave untouched!
     return match;
   });
 }
 
-/** Colorize Blush Head SVG markup (Skin for face contour, Ink for hair/head outline) */
-function colorizeHeadMarkup(markup: string, skinColor: string, hairColor: string): string {
-  return markup.replace(/<path\s+([^>]+)>/g, (match, attrs) => {
+/** Colorize Blush Head SVG markup (Skin for face contour, Ink for hair/head outline, Hat for cap) */
+function colorizeHeadMarkup(
+  markup: string,
+  skinColor: string,
+  hairColor: string,
+  hatColor: string = '#e84a27'
+): string {
+  return markup.replace(/<(path|rect)\s+([^>]+)>/g, (match, tag, attrs) => {
     const idMatch = attrs.match(/id="([^"]+)"/);
     const id = idMatch ? idMatch[1] : '';
 
     if (id === 'Skin') {
-      return `<path ${attrs.replace(/fill="[^"]*"/, `fill="${skinColor}"`)}>`;
+      return `<${tag} ${attrs.replace(/fill="[^"]*"/, `fill="${skinColor}"`)}>`;
     }
     if (id === 'Ink') {
-      return `<path ${attrs.replace(/fill="[^"]*"/, `fill="${hairColor}"`)}>`;
+      return `<${tag} ${attrs.replace(/fill="[^"]*"/, `fill="${hairColor}"`)}>`;
+    }
+    if (id === 'Hat' || id === 'HatBrim') {
+      return `<${tag} ${attrs.replace(/fill="[^"]*"/, `fill="${hatColor}"`)}>`;
     }
     return match;
   });
@@ -166,9 +207,12 @@ export function SmakrMascotRig({
   face = DEFAULT_MASCOT_CONFIG.face,
   accessories = DEFAULT_MASCOT_CONFIG.accessories,
   facialHair = DEFAULT_MASCOT_CONFIG.facialHair,
+  mask = DEFAULT_MASCOT_CONFIG.mask || 'none',
   skinColor = DEFAULT_MASCOT_CONFIG.skinColor,
   clothingColor = DEFAULT_MASCOT_CONFIG.clothingColor,
   innerClothingColor = DEFAULT_MASCOT_CONFIG.innerClothingColor || '27272a',
+  shoeColor = DEFAULT_MASCOT_CONFIG.shoeColor || 'ffffff',
+  hatColor = DEFAULT_MASCOT_CONFIG.hatColor || 'e84a27',
   headContrastColor = DEFAULT_MASCOT_CONFIG.headContrastColor,
   stickerOutline = true,
   frameMode = 'bust-plus-bubble',
@@ -198,6 +242,12 @@ export function SmakrMascotRig({
   const resolvedInnerShirt = (innerClothingColor || DEFAULT_MASCOT_CONFIG.innerClothingColor || '#27272A').startsWith('#')
     ? innerClothingColor || DEFAULT_MASCOT_CONFIG.innerClothingColor || '#27272A'
     : `#${innerClothingColor || DEFAULT_MASCOT_CONFIG.innerClothingColor || '27272a'}`;
+  const resolvedShoe = (shoeColor || DEFAULT_MASCOT_CONFIG.shoeColor || '#FFFFFF').startsWith('#')
+    ? shoeColor || DEFAULT_MASCOT_CONFIG.shoeColor || '#FFFFFF'
+    : `#${shoeColor || DEFAULT_MASCOT_CONFIG.shoeColor || 'FFFFFF'}`;
+  const resolvedHat = (hatColor || DEFAULT_MASCOT_CONFIG.hatColor || '#e84a27').startsWith('#')
+    ? hatColor || DEFAULT_MASCOT_CONFIG.hatColor || '#e84a27'
+    : `#${hatColor || DEFAULT_MASCOT_CONFIG.hatColor || 'e84a27'}`;
   const resolvedHeadContrast = headContrastColor.startsWith('#')
     ? headContrastColor
     : `#${headContrastColor}`;
@@ -206,15 +256,18 @@ export function SmakrMascotRig({
   const resolvedBodyId = normalizeBlushBodyId(bodyPose);
   const resolvedFaceId = normalizeBlushFaceId(expression || face);
   const resolvedHeadId = (head || 'afro').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const resolvedMaskId = (mask || 'none').toLowerCase().replace(/[^a-z0-9]+/g, '-');
   const resolvedAccId = eyewear === 'none'
     ? 'none'
     : (accessories || eyewear || 'glasses-2').toLowerCase().replace(/[^a-z0-9]+/g, '-');
   const resolvedBeardId = (facialHair || 'none').toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
   // Lookup components from Blush dictionary with resilient fallbacks
-  const bodyComp: BlushComponent = BLUSH_BODIES[resolvedBodyId] || BLUSH_BODIES['jacket-2'];
+  const bodyComp: BlushBody = BLUSH_BODIES[resolvedBodyId] || BLUSH_BODIES['jacket-2'];
   const headComp: BlushComponent = BLUSH_HEADS[resolvedHeadId] || BLUSH_HEADS['afro'];
   const faceComp: BlushComponent = BLUSH_FACES[resolvedFaceId] || BLUSH_FACES['smile-big'];
+  const maskComp: BlushComponent | undefined =
+    resolvedMaskId !== 'none' ? BLUSH_MASKS[resolvedMaskId] : undefined;
   const accComp: BlushComponent | undefined =
     resolvedAccId !== 'none'
       ? BLUSH_ACCESSORIES[resolvedAccId] || BLUSH_ACCESSORIES['glasses-2']
@@ -226,17 +279,21 @@ export function SmakrMascotRig({
 
   // Memoize colored SVG markup
   const coloredBody = useMemo(() => {
-    return colorizeBodyMarkup(bodyComp.markup, resolvedSkin, resolvedShirt, resolvedInnerShirt);
-  }, [bodyComp, resolvedSkin, resolvedShirt, resolvedInnerShirt]);
+    return colorizeBodyMarkup(bodyComp.markup, resolvedSkin, resolvedShirt, resolvedInnerShirt, resolvedShoe, resolvedHat);
+  }, [bodyComp, resolvedSkin, resolvedShirt, resolvedInnerShirt, resolvedShoe, resolvedHat]);
 
   const coloredHead = useMemo(() => {
-    return colorizeHeadMarkup(headComp.markup, resolvedSkin, resolvedHeadContrast);
-  }, [headComp, resolvedSkin, resolvedHeadContrast]);
+    return colorizeHeadMarkup(headComp.markup, resolvedSkin, resolvedHeadContrast, resolvedHat);
+  }, [headComp, resolvedSkin, resolvedHeadContrast, resolvedHat]);
 
   const coloredFace = useMemo(() => {
-    // Face markup preserves teeth #FFF and ink #000
     return faceComp.markup;
   }, [faceComp]);
+
+  const coloredMask = useMemo(() => {
+    if (!maskComp) return null;
+    return maskComp.markup;
+  }, [maskComp]);
 
   const coloredAcc = useMemo(() => {
     if (!accComp) return null;
@@ -341,39 +398,43 @@ export function SmakrMascotRig({
       );
     }
 
+    const [headX, headY] = bodyComp.headAnchor || [372, 180];
+    const bodyCategoryTag =
+      bodyComp.category === 'sitting'
+        ? 'Sitting'
+        : bodyComp.category === 'standing'
+        ? 'Standing'
+        : 'Body';
+
     return (
       <svg
-        viewBox="130 130 1050 1250"
+        viewBox={bodyComp.viewBox || '130 130 1050 1250'}
         xmlns="http://www.w3.org/2000/svg"
         overflow="visible"
         className="w-full h-full object-contain overflow-visible"
         style={{ transform: flip ? 'scaleX(-1)' : undefined }}
       >
-        <g id="Master/Character/Bust" stroke="none" strokeWidth={1} fill="none" fillRule="evenodd">
-          {/* 1. Body */}
-          <g id="Body" transform="translate(147.000000, 639.000000) scale(1 1)">
+        <g id={`Master/Character/${bodyComp.category}`} stroke="none" strokeWidth={1} fill="none" fillRule="evenodd">
+          {/* 1. Body Slot */}
+          <g id={bodyCategoryTag} transform={bodyComp.bodyTransform}>
             <g
-              id={`Body/${bodyComp.name}`}
+              id={`${bodyCategoryTag}/${bodyComp.name}`}
               dangerouslySetInnerHTML={{ __html: coloredBody }}
             />
           </g>
 
-          {/* 2. Head */}
-          <g id="Head" transform="translate(372.000000, 180.000000) scale(0.9978902953586498 1)">
+          {/* 2. Head Slot */}
+          <g id="Head" transform={`translate(${headX}.000000, ${headY}.000000) scale(0.9978902953586498 1)`}>
             <g
               id={`Head/${headComp.name}`}
               dangerouslySetInnerHTML={{ __html: coloredHead }}
             />
           </g>
 
-          {/* 3. Face */}
+          {/* 3. Face Slot */}
           <g
             id="Face"
-            transform={
-              resolvedFaceId === 'smile-big'
-                ? 'translate(531.000000, 366.000000) scale(1 1)'
-                : 'translate(582.000000, 420.000000) scale(1 1)'
-            }
+            transform={`translate(${headX + 159}.000000, ${headY + 186}.000000) scale(1 1)`}
           >
             <g
               id={`Face/${faceComp.name}`}
@@ -381,9 +442,19 @@ export function SmakrMascotRig({
             />
           </g>
 
-          {/* 4. Beard */}
-          {coloredBeard && beardComp && (
-            <g id="Beard" transform="translate(494.999934, 517.999659) scale(1 1)">
+          {/* 4. Mask Slot */}
+          {coloredMask && maskComp && maskComp.id !== 'none' && (
+            <g id="Mask" transform={`translate(${headX + 28}.000000, ${headY + 300}.000000) scale(1 1)`}>
+              <g
+                id={`Mask/${maskComp.name}`}
+                dangerouslySetInnerHTML={{ __html: coloredMask }}
+              />
+            </g>
+          )}
+
+          {/* 5. Beard Slot */}
+          {coloredBeard && beardComp && beardComp.id !== 'none' && (
+            <g id="Beard" transform={`translate(${headX + 123}.000000, ${headY + 338}.000000) scale(1 1)`}>
               <g
                 id={`Beard/${beardComp.name}`}
                 dangerouslySetInnerHTML={{ __html: coloredBeard }}
@@ -391,9 +462,9 @@ export function SmakrMascotRig({
             </g>
           )}
 
-          {/* 5. Accessories */}
-          {coloredAcc && accComp && (
-            <g id="Accessories" transform="translate(419.000000, 421.000000) scale(1 1)">
+          {/* 6. Accessories / Glasses Slot */}
+          {coloredAcc && accComp && accComp.id !== 'none' && (
+            <g id="Accessories" transform={`translate(${headX + 47}.000000, ${headY + 241}.000000) scale(1 1)`}>
               <g
                 id={`Accessories/${accComp.name}`}
                 dangerouslySetInnerHTML={{ __html: coloredAcc }}
@@ -405,8 +476,28 @@ export function SmakrMascotRig({
     );
   };
 
-  const characterW = size;
-  const characterH = Math.round(size * 1.19);
+  const [vbX, vbY, vbW, vbH] = (bodyComp.viewBox || '130 130 1050 1250')
+    .split(' ')
+    .map(Number);
+
+  const isStanding = bodyComp.category === 'standing';
+  const isSitting = bodyComp.category === 'sitting';
+  let characterW: number;
+  let characterH: number;
+
+  if (isStanding) {
+    // Standing pose: scale height so full body fits gracefully inside stage (max ~510px)
+    const targetH = Math.min(size * 1.32, 510);
+    characterH = targetH;
+    characterW = Math.round(targetH * (vbW / (vbH || 1)));
+  } else if (isSitting) {
+    const targetH = Math.min(size * 1.22, 470);
+    characterH = targetH;
+    characterW = Math.round(targetH * (vbW / (vbH || 1)));
+  } else {
+    characterW = size;
+    characterH = Math.round(size * (vbH / (vbW || 1)));
+  }
 
   // MODE: Bubble Only
   if (frameMode === 'bubble-only') {

@@ -326,13 +326,39 @@ export function VenueImporter() {
 
       let dishNote = "";
       if (wantsDish && currentUser?.id) {
+        let finalDishReview = dishReview.trim();
+        let finalDishPrice = Number(dishPrice) || 0;
+        if (!finalDishReview) {
+          try {
+            const aiRes = await fetch("/api/admin/ai-curate", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                mode: "generate-dish-note",
+                dishName: dishName.trim(),
+                venueName: savedVenue.name,
+                category,
+                rawGoogleReviews: curatedReviews.map((r) => r.text),
+              }),
+            });
+            const aiData = await aiRes.json();
+            if (aiData?.tasteNote || aiData?.note) {
+              finalDishReview = (aiData.tasteNote || aiData.note).trim();
+            }
+            if (!finalDishPrice && aiData?.suggestedPriceNok) {
+              finalDishPrice = Number(aiData.suggestedPriceNok);
+            }
+          } catch {
+            // fallback handled gracefully
+          }
+        }
         const dishResult = await insertFoodPost({
           venueId: savedVenue.id,
           authorId: currentUser.id,
           dishName: dishName.trim(),
           dishImage: dishPhoto ?? coverImage,
-          reviewText: dishReview,
-          priceNok: Number(dishPrice) || 0,
+          reviewText: finalDishReview,
+          priceNok: finalDishPrice,
           rating: 9,
           dietaryTags: dietary,
           isOfficialPick: true,

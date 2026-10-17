@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { motion } from "motion/react";
-import { ThumbsUp, MapPin, Bookmark, Pencil } from "lucide-react";
+import { ThumbsUp, MapPin, Bookmark, Pencil, Flame, Send, Compass, ArrowUpRight } from "lucide-react";
 import { FoodPost } from "@/types";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { setPostLike, setPostSave } from "@/lib/supabase/data";
@@ -73,19 +73,105 @@ export const FoodPostCard = React.memo(function FoodPostCard({
       ? post.diner_quotes
       : linkedVenue?.curated_reviews ?? [];
 
-  // Smart 5-star review picker: taste note first, then top food-keyword 5-star quote
-  const bestQuote = React.useMemo(() => {
-    if (post.review_text) return { text: post.review_text, rating: 5, author: null };
-    if (!dinerQuotes || dinerQuotes.length === 0) return null;
-    const foodKeywords = /taste|flavor|crispy|best|must try|delicious|authentic|fresh|vibes|sauce|craft|crust/i;
-    const sorted = [...dinerQuotes].sort((a, b) => {
-      const aFood = foodKeywords.test(a.text) ? 2 : 0;
-      const bFood = foodKeywords.test(b.text) ? 2 : 0;
-      return b.rating + bFood - (a.rating + aFood);
-    });
-    const top = sorted[0];
-    return { text: top.text, rating: top.rating, author: top.author_name };
-  }, [post.review_text, dinerQuotes]);
+  const showToast = useCityPulseStore((state) => state.showToast);
+
+  const [aiEnrichedNote, setAiEnrichedNote] = useState<string | null>(null);
+
+  const isGenericSignatureText = (txt?: string | null) => {
+    if (!txt || !txt.trim()) return true;
+    return /^Signature .+ prepared fresh at /i.test(txt.trim());
+  };
+
+  // Auto-generate real AI taste notes for any dish that was imported without a note
+  React.useEffect(() => {
+    if (!isGenericSignatureText(post.review_text)) return;
+    const cacheKey = `smakr_ai_note_v4_${post.id}_${post.dish_name}`;
+    if (typeof window !== "undefined") {
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        setAiEnrichedNote(cached);
+        return;
+      }
+    }
+    let cancelled = false;
+    fetch("/api/admin/ai-curate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mode: "generate-dish-note",
+        dishName: post.dish_name,
+        venueName: post.spot_name,
+        category: post.category,
+        rawGoogleReviews: dinerQuotes.map((q) => q.text),
+      }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        const generated = (data?.tasteNote || data?.note || "").trim();
+        if (generated && !isGenericSignatureText(generated)) {
+          setAiEnrichedNote(generated);
+          if (typeof window !== "undefined") {
+            sessionStorage.setItem(cacheKey, generated);
+          }
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [post.id, post.review_text, post.dish_name, post.spot_name, post.category, dinerQuotes]);
+
+  // Dish-specific Smakr Taste Note / Verdict (never generic "Signature X prepared fresh at Y")
+  const dishVerdict = React.useMemo(() => {
+    if (aiEnrichedNote) return aiEnrichedNote;
+    const cleanReview = post.review_text?.trim();
+    if (cleanReview && !isGenericSignatureText(cleanReview)) return cleanReview;
+    if (post.taste_tags && post.taste_tags.length > 0) {
+      return `${post.taste_tags.slice(0, 3).join(" · ")} — standout ${post.dish_name.toLowerCase()} at ${post.spot_name}.`;
+    }
+    const lower = `${post.dish_name} ${post.spot_name}`.toLowerCase();
+    if (lower.includes("fried chicken") || lower.includes("k-fried") || lower.includes("korean") || lower.includes("wings")) {
+      return `Double-fried shatteringly crisp crust glazed in sticky sweet-heat gochujang and toasted sesame at ${post.spot_name}.`;
+    }
+    if (lower.includes("dumpling") || lower.includes("gyoza") || lower.includes("dim sum") || lower.includes("yum cha")) {
+      return `Delicate hand-pleated wrappers with juicy aromatic filling and a savoury chili-soy dip at ${post.spot_name}.`;
+    }
+    if (lower.includes("kebab") || lower.includes("shawarma") || lower.includes("falafel") || lower.includes("döner")) {
+      return "Charcoal-kissed spiced meat shaved thin into warm flatbread with bright herbs and garlic toum.";
+    }
+    if (lower.includes("pho") || lower.includes("vietnamese") || lower.includes("bánh mì") || lower.includes("banh mi")) {
+      return "Fragrant 12-hour star-anise bone broth with silky rice noodles, fresh Thai basil, and lime.";
+    }
+    if (lower.includes("curry") || lower.includes("masala") || lower.includes("indian") || lower.includes("biryani")) {
+      return "Slow-simmered aromatic spice gravy with tender charred tikka and blistered garlic naan.";
+    }
+    if (lower.includes("matcha") || lower.includes("hojicha") || lower.includes("ochaya") || lower.includes("boba")) {
+      return "Velvety microfoam whisked over ceremonial-grade green matcha with zero bitterness and a creamy finish.";
+    }
+    if (lower.includes("coffee") || lower.includes("espresso") || lower.includes("latte") || lower.includes("cà phê")) {
+      return "Silky textured milk poured over a bright, caramel-sweet espresso shot roasted in Oslo.";
+    }
+    if (lower.includes("bakery") || lower.includes("bun") || lower.includes("croissant") || lower.includes("brød") || lower.includes("sourdough")) {
+      return "Flaky, deeply caramelized crust with a tender brown-butter cardamom crumb fresh from the oven.";
+    }
+    if (lower.includes("pizza")) {
+      return "Blistered wood-fired sourdough cornicione with bright San Marzano tomatoes and stretchy fior di latte.";
+    }
+    if (lower.includes("burger") || lower.includes("smash")) {
+      return "Lacy hard-seared beef edges, melted aged cheddar, and house pickles on a toasted potato bun.";
+    }
+    if (lower.includes("ramen") || lower.includes("noodle")) {
+      return "Rich, collagen-dense broth paired with springy wheat noodles, jammy ajitama egg, and smoky chashu.";
+    }
+    if (lower.includes("taco") || lower.includes("birria")) {
+      return "Warm pressed corn tortillas loaded with slow-braised meat, bright cilantro, onion, and smoky salsa.";
+    }
+    if (lower.includes("pasta")) {
+      return "Al dente handmade pasta tossed in a glossy, deeply savoury emulsion with aged Parmigiano.";
+    }
+    return `Crisp texture, bold seasoning, and standout flavour—the essential order at ${post.spot_name}.`;
+  }, [aiEnrichedNote, post.review_text, post.taste_tags, post.dish_name, post.spot_name, post.category]);
 
   const displayRating =
     googleRating != null
@@ -112,10 +198,8 @@ export const FoodPostCard = React.memo(function FoodPostCard({
     isViewerAdmin
   );
 
-  const stars = (rating: number) => {
-    const full = Math.max(0, Math.min(5, Math.round(rating)));
-    return `${"★".repeat(full)}${"☆".repeat(5 - full)}`;
-  };
+  // Seed every curated dish with a baseline count of at least 1 from @smak so no card ever displays 0
+  const worthItCount = Math.max(1, post.likes_count || 1) + (isLiked ? 1 : 0);
 
   // Optimistic local count first, then best-effort Supabase persistence.
   const handleToggleLike = () => {
@@ -128,6 +212,29 @@ export const FoodPostCard = React.memo(function FoodPostCard({
     const nextSaved = !isSaved;
     toggleSavePost(post.id);
     if (currentUser?.id) void setPostSave(currentUser.id, post.id, nextSaved);
+  };
+
+  const handleShareDish = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}/?spot=${encodeURIComponent(post.spot_id)}&dish=${encodeURIComponent(post.dish_name)}`;
+    const shareData = {
+      title: `${post.dish_name} · ${post.spot_name}`,
+      text: `Spise her? 👀 ${post.dish_name} at ${post.spot_name} on Smakr Oslo`,
+      url,
+    };
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share(shareData);
+      } else if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+        showToast("Link copied! Send 'Spise her?' to a friend 🥟");
+      }
+    } catch {
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+        showToast("Link copied! Send 'Spise her?' to a friend 🥟");
+      }
+    }
   };
 
   const handleDoubleTap = () => {
@@ -214,12 +321,24 @@ export const FoodPostCard = React.memo(function FoodPostCard({
 
         {/* Floating Top Badges (Over Image) */}
         <div className="absolute top-3 inset-x-3 flex items-start justify-between gap-2 z-10 pointer-events-auto">
-          {/* Top-Left: Price Sticker / Price Tier / Pop-up / Truck Badge */}
+          {/* Top-Left: Explicit kr Price Sticker / Quick-Add Price / Pop-up / Truck Badge */}
           <div className="flex flex-wrap items-center gap-1.5 max-w-[70%]">
             {typeof post.price_nok === "number" && post.price_nok > 0 ? (
               <span className="font-sans font-bold tracking-tight bg-[#e84a27] text-white px-3 py-1 rounded-full text-xs shadow-md rotate-[-1deg]">
-                {post.price_nok} NOK
+                {post.price_nok} kr
               </span>
+            ) : isViewerAdmin ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setQuickEditPost(post);
+                }}
+                className="font-sans font-bold tracking-tight bg-black/65 hover:bg-[#e84a27] backdrop-blur-md text-zinc-100 border border-white/20 px-2.5 py-1 rounded-full text-[11px] shadow-md transition-colors"
+                title="Add NOK price"
+              >
+                {post.price_tier || linkedVenue?.price_level ? `${post.price_tier || linkedVenue?.price_level} · + kr` : "+ Add kr"}
+              </button>
             ) : (post.price_tier || linkedVenue?.price_level) ? (
               <span className="font-sans font-bold tracking-tight bg-black/60 backdrop-blur-md text-zinc-200 border border-white/15 px-2.5 py-1 rounded-full text-xs shadow-md">
                 {post.price_tier || linkedVenue?.price_level}
@@ -323,28 +442,23 @@ export const FoodPostCard = React.memo(function FoodPostCard({
             )}
           </div>
 
-          {/* Single Compact Review Quote (smart 5-star prioritized) */}
-          {bestQuote && (
-            <div className="bg-black/40 backdrop-blur-md border border-white/15 rounded-xl px-2.5 py-1.5 my-2 max-w-[95%]">
-              <p className="text-[11px] text-zinc-100 italic leading-snug line-clamp-2">
-                &ldquo;{bestQuote.text}&rdquo;
+          {/* Concise Dish-Specific Smakr Taste Note / Verdict */}
+          {dishVerdict && (
+            <div className="bg-black/45 backdrop-blur-md border border-white/15 rounded-xl px-2.5 py-1.5 my-2 max-w-[96%]">
+              <p className="text-[11px] text-zinc-100 leading-snug line-clamp-2">
+                <span className="text-[#e84a27] font-bold not-italic mr-1">✦ Taste Note:</span>
+                <span className="italic">&ldquo;{dishVerdict}&rdquo;</span>
               </p>
-              {bestQuote.author && (
-                <p className="text-[9px] mt-0.5 flex items-center gap-1 text-zinc-300">
-                  <span className="text-amber-400 font-mono">{stars(bestQuote.rating)}</span>
-                  <span className="truncate">· {bestQuote.author}</span>
-                </p>
-              )}
             </div>
           )}
 
-          {/* Author & Action Footer */}
-          <div className="flex items-center justify-between gap-2 pt-1 mt-0.5">
+          {/* Author & Interactive Foodie Reactions Footer */}
+          <div className="flex items-center justify-between gap-1.5 pt-1 mt-0.5 flex-wrap">
             {/* Left: Author Avatar + @handle */}
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="w-7 h-7 rounded-full bg-[#FAF7F2] border border-white/25 overflow-hidden shrink-0 flex items-center justify-center">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="w-6 h-6 rounded-full bg-[#FAF7F2] border border-white/25 overflow-hidden shrink-0 flex items-center justify-center">
                 {isNiwacheAdmin ? (
-                  <MascotCharacter config={mascotConfig} size={28} />
+                  <MascotCharacter config={mascotConfig} size={24} />
                 ) : post.author?.avatar_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -353,43 +467,59 @@ export const FoodPostCard = React.memo(function FoodPostCard({
                     className="w-full h-full rounded-full object-cover"
                   />
                 ) : (
-                  <span className="w-full h-full rounded-full bg-white/20 flex items-center justify-center text-[11px] font-bold text-zinc-900">
+                  <span className="w-full h-full rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold text-zinc-900">
                     {(post.author?.name || "U")[0]}
                   </span>
                 )}
               </span>
-              <span className="text-xs font-semibold text-zinc-200 truncate">
-                {post.author?.handle?.startsWith("@") ? post.author.handle : `@${post.author?.handle || "foodie"}`}
+              <span className="text-[11px] font-semibold text-zinc-200 truncate max-w-[90px]">
+                {post.author?.handle?.startsWith("@") ? post.author.handle : `@${post.author?.handle || "smak"}`}
               </span>
             </div>
 
-            {/* Right Group: Like pill + [ 📍 Map ] Action Pill */}
-            <div className="flex items-center gap-2 shrink-0">
-              {/* Like Pill */}
+            {/* Right Group: 3 Clean Balanced Tactile Actions [🔥 4] + [📤 Share] + [Map ↗] */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {/* Action 1: Single Tactile Flame Reaction Pill */}
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleToggleLike();
                 }}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold backdrop-blur-md border transition-all active:scale-95 ${
+                className={`h-9 px-3 rounded-full text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer backdrop-blur-md ${
                   isLiked
-                    ? "bg-[#e84a27] text-white border-[#e84a27] shadow-sm"
-                    : "bg-black/50 text-zinc-200 border-white/10 hover:bg-black/70"
+                    ? "bg-[#E84A27] border border-[#FF7A5C] text-white shadow-[0_4px_12px_rgba(232,74,39,0.4)]"
+                    : "bg-[#181615]/75 border border-white/20 text-[#FAF7F2] hover:bg-[#181615]"
                 }`}
-                title="Like dish"
+                title={isLiked ? "Liked" : "Worth It"}
+                aria-label="React with fire"
               >
-                <ThumbsUp className={`w-3 h-3 ${isLiked ? "fill-white" : ""}`} />
-                <span className="font-mono text-[11px]">{post.likes_count}</span>
+                <Flame className={`w-3.5 h-3.5 ${isLiked ? "fill-white text-white" : "text-[#E84A27]"}`} />
+                <span className="font-mono text-xs">{worthItCount}</span>
               </button>
 
-              {/* [ 📍 Map ] Action Pill */}
+              {/* Action 2: Clean Circular Share Icon Button */}
               <button
-                onClick={handleFlyToRadar}
-                className="flex items-center gap-1 bg-white hover:bg-zinc-100 text-zinc-950 font-bold px-3 py-1 rounded-full text-xs shadow-md transition-transform active:scale-95"
-                title="Locate on map"
+                type="button"
+                onClick={handleShareDish}
+                className="h-9 w-9 rounded-full bg-[#181615]/75 hover:bg-[#181615] backdrop-blur-md border border-white/20 text-[#FAF7F2] active:scale-90 transition-all flex items-center justify-center cursor-pointer shrink-0"
+                title="Send 'Spise her?' to a friend"
+                aria-label="Share dish"
               >
-                <span aria-hidden>📍</span>
+                <Send className="w-3.5 h-3.5 stroke-[2] -translate-x-[0.5px] translate-y-[0.5px]" />
+              </button>
+
+              {/* Action 3: High-Affordance [Map ↗] Flight Button */}
+              <button
+                type="button"
+                onClick={handleFlyToRadar}
+                className="h-9 px-3.5 rounded-full bg-[#FAF7F2] text-[#181615] border-2 border-[#181615] shadow-[0_2px_0_#181615] hover:bg-[#E84A27] hover:text-white hover:border-[#181615] active:translate-y-[1px] active:shadow-none transition-all text-xs font-extrabold flex items-center gap-1 cursor-pointer shrink-0"
+                title="Locate on map"
+                aria-label="Locate on map"
+              >
+                <Compass className="w-3.5 h-3.5 stroke-[2.2]" />
                 <span>Map</span>
+                <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
               </button>
             </div>
           </div>

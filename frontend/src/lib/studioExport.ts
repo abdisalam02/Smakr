@@ -17,6 +17,12 @@ export async function exportElementAsPngBlob(
     pixelRatio: options?.pixelRatio ?? 3,
     cacheBust: true,
     backgroundColor: options?.backgroundColor,
+    style: options?.backgroundColor
+      ? undefined
+      : {
+          background: 'transparent',
+          backgroundColor: 'transparent',
+        },
     filter: (n) => !(n instanceof HTMLElement && n.dataset.exportIgnore !== undefined),
   });
 

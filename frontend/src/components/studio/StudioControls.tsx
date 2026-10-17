@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   Smile,
   MapPin,
@@ -15,11 +15,15 @@ import {
   Ratio,
   Compass,
   ChevronDown,
+  Database,
+  X,
+  Loader2,
 } from 'lucide-react';
 import {
   BLUSH_BODIES,
   BLUSH_HEADS,
   BLUSH_FACES,
+  BLUSH_MASKS,
   BLUSH_ACCESSORIES,
   BLUSH_BEARDS,
   BLUSH_PRESETS,
@@ -27,12 +31,16 @@ import {
 import { Color } from './StudioUi';
 import { SmakrMascotRig } from './SmakrMascotRig';
 import { MapShot } from './MapShot';
+import { useCityPulseStore } from '@/store/useCityPulseStore';
+import { resolveFoodCategoryAndIcon } from '@/lib/categoryResolver';
+import type { Venue } from '@/types';
 import {
   DEFAULT_MASCOT_CONFIG,
   PALETTES,
   SKIN_TONE_SWATCHES,
   CLOTHING_SWATCHES,
   HAIR_COLOR_SWATCHES,
+  SHOE_SWATCHES,
   type FoundryMode,
   type StudioState,
   type MascotState,
@@ -57,6 +65,9 @@ interface Props {
   onUpdateAspectRatio: (ratio: '9:16' | '4:5' | '1:1') => void;
   onUpdateTransparentBg: (transparent: boolean) => void;
   onUpdateSafeZones?: (show: boolean) => void;
+  venues?: Venue[];
+  isLoadingVenues?: boolean;
+  onRefreshVenues?: () => void;
 }
 
 const CURATED_SPOTS = [
@@ -142,6 +153,9 @@ const SIGNATURE_TITLE_PRESETS = [
 export function StudioControls({
   state,
   activeMode,
+  venues,
+  isLoadingVenues,
+  onRefreshVenues,
   onUpdateMascot,
   onUpdateMap,
   onUpdateDishTitle,
@@ -167,7 +181,113 @@ export function StudioControls({
   });
   const [titleSlot, setTitleSlot] = useState<'stacked' | 'pills'>('stacked');
   const [wallSlot, setWallSlot] = useState<'ratio' | 'pattern' | 'palette'>('ratio');
-  const [spotSearch, setSpotSearch] = useState('');
+  const [spotSearch, setSpotSearch] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const q =
+        new URLSearchParams(window.location.search).get('q') ||
+        new URLSearchParams(window.location.search).get('search');
+      if (q) return decodeURIComponent(q).replace(/\\+$/, '');
+    }
+    return '';
+  });
+
+  // Fallback & Google Places search
+  const [googleResults, setGoogleResults] = useState<any[]>([]);
+  const [searchingGoogle, setSearchingGoogle] = useState(false);
+
+  const searchGooglePlaces = useCallback(async (query: string) => {
+    if (!query.trim()) return;
+    setSearchingGoogle(true);
+    try {
+      const res = await fetch(`/api/places/search?q=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      const list = data.results ?? (data.place ? [data.place] : []);
+      setGoogleResults(list);
+    } catch {
+      setGoogleResults([]);
+    } finally {
+      setSearchingGoogle(false);
+    }
+  }, []);
+
+  const storeVenues = useCityPulseStore((s) => s.venues);
+  const foodPosts = useCityPulseStore((s) => s.foodPosts);
+  const effectiveVenues = (venues && venues.length > 0) ? venues : storeVenues;
+
+  const allSpots = useMemo(() => {
+    const NEIGHBORHOOD_LABELS: Record<string, string> = {
+      grunerlokka: 'Grünerløkka',
+      torggata: 'Torggata',
+      toyen: 'Tøyen',
+      gronland: 'Grønland',
+      sentrum: 'Sentrum',
+      frogner: 'Frogner',
+      kampen: 'Kampen',
+    };
+    if (effectiveVenues && effectiveVenues.length > 0) {
+      return effectiveVenues.map((v) => {
+        const icon = v.icon || resolveFoodCategoryAndIcon('', v.name).icon || '🥐';
+        const linkedDish = foodPosts.find(
+          (p) => p.spot_id === v.id && p.image_url && !p.is_archived
+        );
+        const dishPhoto = linkedDish?.image_url || null;
+        const venuePhoto = v.cover_image_url || null;
+        const photo =
+          dishPhoto ||
+          venuePhoto ||
+          'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=400&q=80';
+        const rating =
+          typeof v.google_rating === 'number' && v.google_rating > 0
+            ? Number(v.google_rating.toFixed(1))
+            : 4.8;
+        const neighborhood = v.neighborhood
+          ? NEIGHBORHOOD_LABELS[v.neighborhood] || v.neighborhood
+          : 'Oslo';
+        const featuredDish = linkedDish
+          ? `${icon} ${linkedDish.dish_name}${linkedDish.price_nok ? ` · ${linkedDish.price_nok} kr` : ''}`
+          : v.signature_dishes?.[0]
+          ? `${icon} ${v.signature_dishes[0]}`
+          : '';
+        return {
+          id: v.id,
+          name: v.name,
+          address: v.address || `${v.name}, Oslo`,
+          icon,
+          rating,
+          photo,
+          dishPhoto,
+          venuePhoto,
+          neighborhood,
+          featuredDish,
+          lat: v.latitude,
+          lng: v.longitude,
+          category: v.food_category,
+          source: 'db' as const,
+        };
+      });
+    }
+    return CURATED_SPOTS.map((s, idx) => ({
+      ...s,
+      id: `curated-${idx}`,
+      dishPhoto: s.photo,
+      venuePhoto: s.photo,
+      neighborhood: 'Oslo',
+      featuredDish: '',
+      category: 'all',
+      source: 'curated' as const,
+    }));
+  }, [effectiveVenues, foodPosts]);
+
+  const filteredSpots = useMemo(() => {
+    const q = spotSearch.trim().toLowerCase();
+    if (!q) return allSpots;
+    return allSpots.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        s.address.toLowerCase().includes(q) ||
+        (s.category && s.category.toLowerCase().includes(q))
+    );
+  }, [allSpots, spotSearch]);
 
   const mascot = state.mascot || {
     ...DEFAULT_MASCOT_CONFIG,
@@ -195,12 +315,6 @@ export function StudioControls({
     statusText: '🟢 Open now',
   };
 
-  const filteredSpots = CURATED_SPOTS.filter(
-    (s) =>
-      s.name.toLowerCase().includes(spotSearch.toLowerCase()) ||
-      s.address.toLowerCase().includes(spotSearch.toLowerCase())
-  );
-
   const [mobileExpanded, setMobileExpanded] = useState(() => {
     if (typeof window !== 'undefined') {
       return new URLSearchParams(window.location.search).get('drawer') === '1';
@@ -208,12 +322,14 @@ export function StudioControls({
     return false;
   });
 
+  const [bodyCategoryFilter, setBodyCategoryFilter] = useState<'all' | 'bust' | 'sitting' | 'standing'>('all');
+
   const mascotSlots = useMemo(
     () => [
       { id: 'presets', label: `★ Presets (${BLUSH_PRESETS.length})`, title: 'Official Presets', icon: '★' },
       { id: 'body', label: `👕 Body & Pose (${Object.keys(BLUSH_BODIES).length})`, title: 'Outfits & Poses', icon: '👕' },
       { id: 'face', label: `😊 Face (${Object.keys(BLUSH_FACES).length})`, title: 'Expressions', icon: '😊' },
-      { id: 'glasses-hair', label: '👓 Glasses & Hair', title: 'Glasses & Hair', icon: '👓' },
+      { id: 'glasses-hair', label: '🎩 Head, Mask & Glasses', title: 'Head, Mask & Glasses', icon: '🎩' },
       { id: 'colors', label: '🎨 Colors', title: 'Color Palette', icon: '🎨' },
       { id: 'bubble', label: '💬 Speech Bubble', title: 'Speech Bubble', icon: '💬' },
     ],
@@ -222,11 +338,11 @@ export function StudioControls({
 
   const mapSlots = useMemo(
     () => [
-      { id: 'spot', label: '🔍 Pick Oslo Spot', title: 'Pick Oslo Spot', icon: '🔍' },
+      { id: 'spot', label: `🔍 Pick Oslo Spot (${allSpots.length})`, title: 'Pick Oslo Spot', icon: '🔍' },
       { id: 'target', label: '🎯 Export Target', title: 'Export Target', icon: '🎯' },
       { id: 'style', label: '🗺️ Style & Camera', title: 'Style & Camera', icon: '🗺️' },
     ],
-    []
+    [allSpots.length]
   );
 
   const titleSlots = useMemo(
@@ -369,49 +485,76 @@ export function StudioControls({
             {/* 2. BODY & POSE SLOT */}
             {mascotSlot === 'body' && (
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <span className="block text-xs font-bold text-[#5C534E] uppercase tracking-wider">
-                    Waist-Up Body Poses & Outfits ({Object.keys(BLUSH_BODIES).length})
+                    Body Poses & Outfits ({Object.keys(BLUSH_BODIES).length})
                   </span>
-                  <span className="text-[11px] text-[#8C827A]">
-                    Jacket, Hoodie, Sweater, Macbook, Coffee, Pointing, Shrug
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2.5">
-                  {Object.values(BLUSH_BODIES).map((b) => {
-                    const isSelected = mascot.bodyPose === b.id;
-                    return (
+                  {/* Category Filter Pills */}
+                  <div className="flex items-center gap-1 p-1 bg-[#FAF7F2] rounded-xl border border-[#E6DEC8] overflow-x-auto no-scrollbar">
+                    {[
+                      { id: 'all', label: 'All Poses' },
+                      { id: 'bust', label: 'Bust' },
+                      { id: 'sitting', label: 'Sitting' },
+                      { id: 'standing', label: 'Standing' },
+                    ].map((cat) => (
                       <button
-                        key={b.id}
+                        key={cat.id}
                         type="button"
-                        onClick={() => onUpdateMascot({ bodyPose: b.id })}
-                        className={`flex flex-col items-center justify-center p-2 rounded-2xl border transition-all text-center ${
-                          isSelected
-                            ? 'bg-white border-[#e84a27] ring-2 ring-[#e84a27]/30 shadow-xs'
-                            : 'bg-white border-[#E6DEC8] hover:border-[#D8CFC0]'
+                        onClick={() => setBodyCategoryFilter(cat.id as any)}
+                        className={`px-2.5 py-0.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap ${
+                          bodyCategoryFilter === cat.id
+                            ? 'bg-[#e84a27] text-white shadow-xs'
+                            : 'text-[#6E655F] hover:text-[#231F1D]'
                         }`}
                       >
-                        <div className="w-16 h-16 overflow-hidden flex items-center justify-center pointer-events-none">
-                          <SmakrMascotRig
-                            bodyPose={b.id}
-                            head={mascot.head}
-                            face={mascot.face}
-                            accessories={mascot.accessories}
-                            skinColor={mascot.skinColor}
-                            clothingColor={mascot.clothingColor}
-                            innerClothingColor={mascot.innerClothingColor}
-                            headContrastColor={mascot.headContrastColor}
-                            frameMode="bust-only"
-                            stickerOutline={false}
-                            size={80}
-                          />
-                        </div>
-                        <span className="mt-1 text-xs font-bold text-[#231F1D] truncate max-w-full">
-                          {b.name}
-                        </span>
+                        {cat.label}
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2.5">
+                  {Object.values(BLUSH_BODIES)
+                    .filter((b) => bodyCategoryFilter === 'all' || b.category === bodyCategoryFilter)
+                    .map((b) => {
+                      const isSelected = mascot.bodyPose === b.id;
+                      return (
+                        <button
+                          key={b.id}
+                          type="button"
+                          onClick={() => onUpdateMascot({ bodyPose: b.id })}
+                          className={`flex flex-col items-center justify-center p-2 rounded-2xl border transition-all text-center ${
+                            isSelected
+                              ? 'bg-white border-[#e84a27] ring-2 ring-[#e84a27]/30 shadow-xs'
+                              : 'bg-white border-[#E6DEC8] hover:border-[#D8CFC0]'
+                          }`}
+                        >
+                          <div className="w-16 h-16 overflow-hidden flex items-center justify-center pointer-events-none">
+                            <SmakrMascotRig
+                              bodyPose={b.id}
+                              head={mascot.head}
+                              face={mascot.face}
+                              accessories={mascot.accessories}
+                              mask={mascot.mask}
+                              skinColor={mascot.skinColor}
+                              clothingColor={mascot.clothingColor}
+                              innerClothingColor={mascot.innerClothingColor}
+                              shoeColor={mascot.shoeColor}
+                              headContrastColor={mascot.headContrastColor}
+                              frameMode="bust-only"
+                              stickerOutline={false}
+                              size={80}
+                            />
+                          </div>
+                          <span className="mt-1 text-[11px] font-bold text-[#231F1D] truncate max-w-full">
+                            {b.label}
+                          </span>
+                          <span className="text-[9px] uppercase font-bold text-[#8C827A]">
+                            {b.category}
+                          </span>
+                        </button>
+                      );
+                    })}
                 </div>
               </div>
             )}
@@ -424,10 +567,10 @@ export function StudioControls({
                     Face Expressions ({Object.keys(BLUSH_FACES).length})
                   </span>
                   <span className="text-[11px] text-[#8C827A]">
-                    13 curated expressions
+                    Blush Pro & Open Peeps
                   </span>
                 </div>
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
                   {Object.values(BLUSH_FACES).map((f) => {
                     const isSelected = mascot.face === f.id;
                     return (
@@ -435,28 +578,29 @@ export function StudioControls({
                         key={f.id}
                         type="button"
                         onClick={() => onUpdateMascot({ face: f.id })}
-                        className={`flex flex-col items-center justify-center p-3 rounded-2xl border transition-all text-center ${
+                        className={`flex flex-col items-center justify-center p-2 rounded-2xl border transition-all text-center ${
                           isSelected
                             ? 'bg-white border-[#e84a27] ring-2 ring-[#e84a27]/30 shadow-xs'
                             : 'bg-white border-[#E6DEC8] hover:border-[#D8CFC0]'
                         }`}
                       >
-                        <div className="w-14 h-14 overflow-hidden flex items-center justify-center pointer-events-none">
+                        <div className="w-12 h-12 overflow-hidden flex items-center justify-center pointer-events-none">
                           <SmakrMascotRig
                             bodyPose={mascot.bodyPose}
                             head={mascot.head}
                             face={f.id}
                             accessories="none"
+                            mask="none"
                             skinColor={mascot.skinColor}
                             clothingColor={mascot.clothingColor}
                             innerClothingColor={mascot.innerClothingColor}
                             headContrastColor={mascot.headContrastColor}
                             frameMode="bust-only"
                             stickerOutline={false}
-                            size={70}
+                            size={60}
                           />
                         </div>
-                        <span className="mt-1 text-xs font-bold text-[#231F1D]">
+                        <span className="mt-1 text-[11px] font-bold text-[#231F1D] truncate max-w-full">
                           {f.name}
                         </span>
                       </button>
@@ -466,58 +610,107 @@ export function StudioControls({
               </div>
             )}
 
-            {/* 4. GLASSES & HAIR SLOT */}
+            {/* 4. GLASSES, MASK & HAIR SLOT */}
             {mascotSlot === 'glasses-hair' && (
               <div className="space-y-4">
+                {/* Eyewear & Accessories */}
                 <div>
                   <span className="block text-xs font-bold text-[#5C534E] uppercase tracking-wider mb-2">
-                    Eyewear & Accessories
+                    Eyewear & Accessories ({Object.keys(BLUSH_ACCESSORIES).length})
                   </span>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {[
-                      { id: 'glasses-2', label: '👓 Round Wire Glasses', desc: 'Blush Pro round frames' },
-                      { id: 'none', label: '🚫 No Glasses', desc: 'Bare face without eyewear' },
-                    ].map((acc) => {
+                    {Object.values(BLUSH_ACCESSORIES).map((acc) => {
                       const isSelected = mascot.accessories === acc.id || (!mascot.accessories && acc.id === 'glasses-2');
                       return (
                         <button
                           key={acc.id}
                           type="button"
                           onClick={() => onUpdateMascot({ accessories: acc.id })}
-                          className={`p-3 rounded-2xl border text-left transition-all ${
+                          className={`p-2.5 rounded-2xl border text-left transition-all ${
                             isSelected
                               ? 'bg-white border-[#e84a27] ring-2 ring-[#e84a27]/30 shadow-xs'
                               : 'bg-white border-[#E6DEC8] hover:border-[#D8CFC0]'
                           }`}
                         >
-                          <span className="block font-bold text-xs text-[#231F1D]">{acc.label}</span>
-                          <span className="block text-[10px] text-[#6E655F] mt-0.5">{acc.desc}</span>
+                          <span className="block font-bold text-xs text-[#231F1D]">{acc.name}</span>
                         </button>
                       );
                     })}
                   </div>
                 </div>
 
+                {/* Face Masks */}
                 <div>
                   <span className="block text-xs font-bold text-[#5C534E] uppercase tracking-wider mb-2">
-                    Hair Style
+                    Face Mask & Face Paint
                   </span>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {Object.values(BLUSH_HEADS).map((h) => {
-                      const isSelected = mascot.head === h.id;
+                  <div className="grid grid-cols-3 gap-2">
+                    {Object.values(BLUSH_MASKS).map((m) => {
+                      const isSelected = (mascot.mask || 'none') === m.id;
                       return (
                         <button
-                          key={h.id}
+                          key={m.id}
                           type="button"
-                          onClick={() => onUpdateMascot({ head: h.id })}
-                          className={`p-3 rounded-2xl border text-left transition-all ${
+                          onClick={() => onUpdateMascot({ mask: m.id })}
+                          className={`p-2.5 rounded-2xl border text-left transition-all ${
                             isSelected
                               ? 'bg-white border-[#e84a27] ring-2 ring-[#e84a27]/30 shadow-xs'
                               : 'bg-white border-[#E6DEC8] hover:border-[#D8CFC0]'
                           }`}
                         >
-                          <span className="block font-bold text-xs text-[#231F1D]">💇 {h.name}</span>
-                          <span className="block text-[10px] text-[#6E655F] mt-0.5">Signature Smakr Afro</span>
+                          <span className="block font-bold text-xs text-[#231F1D]">{m.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Hair Style & Headwear */}
+                <div>
+                  <span className="block text-xs font-bold text-[#5C534E] uppercase tracking-wider mb-2">
+                    Hair Style & Headwear ({Object.keys(BLUSH_HEADS).length})
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {Object.values(BLUSH_HEADS).map((h) => {
+                      const isSelected = mascot.head === h.id || (!mascot.head && h.id === 'afro');
+                      return (
+                        <button
+                          key={h.id}
+                          type="button"
+                          onClick={() => onUpdateMascot({ head: h.id })}
+                          className={`p-2.5 rounded-2xl border text-left transition-all ${
+                            isSelected
+                              ? 'bg-white border-[#e84a27] ring-2 ring-[#e84a27]/30 shadow-xs'
+                              : 'bg-white border-[#E6DEC8] hover:border-[#D8CFC0]'
+                          }`}
+                        >
+                          <span className="block font-bold text-xs text-[#231F1D]">{h.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Facial Hair / Beard */}
+                <div>
+                  <span className="block text-xs font-bold text-[#5C534E] uppercase tracking-wider mb-2">
+                    Facial Hair & Beards
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {Object.values(BLUSH_BEARDS).map((b) => {
+                      const isSelected = (mascot.facialHair || 'none') === b.id;
+                      return (
+                        <button
+                          key={b.id}
+                          type="button"
+                          onClick={() => onUpdateMascot({ facialHair: b.id })}
+                          className={`p-2.5 rounded-2xl border text-left transition-all ${
+                            isSelected
+                              ? 'bg-white border-[#e84a27] ring-2 ring-[#e84a27]/30 shadow-xs'
+                              : 'bg-white border-[#E6DEC8] hover:border-[#D8CFC0]'
+                          }`}
+                        >
+                          <span className="block font-bold text-xs text-[#231F1D]">{b.name}</span>
                         </button>
                       );
                     })}
@@ -527,34 +720,60 @@ export function StudioControls({
             )}
 
             {/* 5. COLORS SLOT */}
-            {mascotSlot === 'colors' && (
-              <div className="space-y-4">
-                <Color
-                  name="Skin Tone (Face, Throat, Forearms & Hands)"
-                  value={`#${(mascot.skinColor || 'D08B5B').replace('#', '')}`}
-                  onChange={(hex) => onUpdateMascot({ skinColor: hex })}
-                  swatches={SKIN_TONE_SWATCHES}
-                />
-                <Color
-                  name="Shirt / Jacket / Garment Color"
-                  value={`#${(mascot.clothingColor || 'e84a27').replace('#', '')}`}
-                  onChange={(hex) => onUpdateMascot({ clothingColor: hex })}
-                  swatches={CLOTHING_SWATCHES}
-                />
-                <Color
-                  name="Inner Tee / Accent Color (Layered: Jacket 1, Pointing Up & Jacket 2)"
-                  value={`#${(mascot.innerClothingColor || '27272A').replace('#', '')}`}
-                  onChange={(hex) => onUpdateMascot({ innerClothingColor: hex })}
-                  swatches={CLOTHING_SWATCHES}
-                />
-                <Color
-                  name="Hair & Linework Tone"
-                  value={`#${(mascot.headContrastColor || '181615').replace('#', '')}`}
-                  onChange={(hex) => onUpdateMascot({ headContrastColor: hex })}
-                  swatches={HAIR_COLOR_SWATCHES}
-                />
-              </div>
-            )}
+            {mascotSlot === 'colors' && (() => {
+              const activeBody = BLUSH_BODIES[mascot.bodyPose || 'jacket-2'] || BLUSH_BODIES['jacket-2'];
+              const slots = activeBody.detectedColorSlots || ['skin', 'top'];
+              const showBottom = slots.includes('bottom') || slots.includes('top');
+              const showShoes = slots.includes('shoes');
+              const showHat = mascot.head && mascot.head !== 'afro';
+
+              return (
+                <div className="space-y-4">
+                  <Color
+                    name="Skin Tone (Face, Throat, Forearms & Hands)"
+                    value={`#${(mascot.skinColor || 'D08B5B').replace('#', '')}`}
+                    onChange={(hex) => onUpdateMascot({ skinColor: hex })}
+                    swatches={SKIN_TONE_SWATCHES}
+                  />
+                  <Color
+                    name="Shirt / Jacket / Primary Garment"
+                    value={`#${(mascot.clothingColor || 'e84a27').replace('#', '')}`}
+                    onChange={(hex) => onUpdateMascot({ clothingColor: hex })}
+                    swatches={CLOTHING_SWATCHES}
+                  />
+                  {showBottom && (
+                    <Color
+                      name="Bottom / Pants / Inner Accent Color"
+                      value={`#${(mascot.innerClothingColor || '27272A').replace('#', '')}`}
+                      onChange={(hex) => onUpdateMascot({ innerClothingColor: hex })}
+                      swatches={CLOTHING_SWATCHES}
+                    />
+                  )}
+                  {showShoes && (
+                    <Color
+                      name="Shoes & Footwear Tone"
+                      value={`#${(mascot.shoeColor || 'FFFFFF').replace('#', '')}`}
+                      onChange={(hex) => onUpdateMascot({ shoeColor: hex })}
+                      swatches={SHOE_SWATCHES}
+                    />
+                  )}
+                  <Color
+                    name="Hair & Ink Linework Tone"
+                    value={`#${(mascot.headContrastColor || '181615').replace('#', '')}`}
+                    onChange={(hex) => onUpdateMascot({ headContrastColor: hex })}
+                    swatches={HAIR_COLOR_SWATCHES}
+                  />
+                  {showHat && (
+                    <Color
+                      name="Hat / Headwear Fabric Accent"
+                      value={`#${(mascot.hatColor || 'e84a27').replace('#', '')}`}
+                      onChange={(hex) => onUpdateMascot({ hatColor: hex })}
+                      swatches={CLOTHING_SWATCHES}
+                    />
+                  )}
+                </div>
+              );
+            })()}
 
             {/* 6. SPEECH BUBBLE & FRAMING SLOT */}
             {mascotSlot === 'bubble' && (
@@ -977,47 +1196,223 @@ export function StudioControls({
           <div className="max-w-2xl mx-auto space-y-4">
             {mapSlot === 'spot' && (
               <div className="space-y-3">
+                {/* Header status bar */}
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-1.5">
+                    <Database className="w-3.5 h-3.5 text-[#e84a27]" />
+                    <span className="text-[11px] font-bold text-[#231F1D]">
+                      {effectiveVenues.length > 0
+                        ? `${effectiveVenues.length} Oslo venues synced from database`
+                        : 'Using curated default spots'}
+                    </span>
+                  </div>
+                  {onRefreshVenues && (
+                    <button
+                      type="button"
+                      onClick={onRefreshVenues}
+                      disabled={isLoadingVenues}
+                      className="px-2.5 py-1 rounded-lg bg-[#FAF7F2] hover:bg-[#EFEAE1] border border-[#E6DEC8] text-[10px] font-bold text-[#5C534E] flex items-center gap-1.5 transition-all active:scale-95 disabled:opacity-50"
+                      title="Reload venues from Supabase"
+                    >
+                      <RotateCcw className={`w-3 h-3 ${isLoadingVenues ? 'animate-spin text-[#e84a27]' : ''}`} />
+                      <span>{isLoadingVenues ? 'Syncing...' : 'Sync DB'}</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Search bar */}
                 <div className="relative">
                   <Search className="w-4 h-4 text-[#8C827A] absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     value={spotSearch}
-                    onChange={(e) => setSpotSearch(e.target.value)}
-                    placeholder="Search Oslo venue or dish..."
-                    className="w-full h-10 pl-9 pr-3 rounded-xl border border-[#D8CFC0] bg-white text-xs font-semibold text-[#231F1D] focus:border-[#e84a27]"
+                    onChange={(e) => {
+                      setSpotSearch(e.target.value);
+                      if (googleResults.length > 0) setGoogleResults([]);
+                    }}
+                    placeholder="Search Oslo venue, address, or cuisine..."
+                    className="w-full h-10 pl-9 pr-8 rounded-xl border border-[#D8CFC0] bg-white text-xs font-semibold text-[#231F1D] focus:border-[#e84a27] focus:ring-1 focus:ring-[#e84a27]/20 transition-all placeholder:text-[#8C827A]"
                   />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {filteredSpots.map((spot) => (
+                  {spotSearch && (
                     <button
-                      key={spot.name}
                       type="button"
-                      onClick={() =>
-                        onUpdateMap({
-                          name: spot.name,
-                          address: spot.address,
-                          icon: spot.icon,
-                          rating: spot.rating,
-                          photo: spot.photo,
-                          lat: spot.lat,
-                          lng: spot.lng,
-                        })
-                      }
-                      className="p-3 rounded-xl bg-white border border-[#E6DEC8] hover:border-[#e84a27] text-left flex items-center gap-3 transition-all active:scale-98"
+                      onClick={() => {
+                        setSpotSearch('');
+                        setGoogleResults([]);
+                      }}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8C827A] hover:text-[#231F1D] p-1"
+                      aria-label="Clear search"
                     >
-                      <span className="text-2xl">{spot.icon}</span>
-                      <div className="min-w-0 flex-1">
-                        <span className="block font-bold text-xs text-[#231F1D] truncate">
-                          {spot.name}
-                        </span>
-                        <span className="block text-[10px] text-[#6E655F] truncate">
-                          {spot.address}
-                        </span>
-                      </div>
-                      <span className="text-[11px] font-bold text-[#e84a27]">★ {spot.rating}</span>
+                      <X className="w-3.5 h-3.5" />
                     </button>
-                  ))}
+                  )}
                 </div>
+
+                {/* Grid of database spots */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[280px] sm:max-h-[220px] overflow-y-auto pr-0.5">
+                  {filteredSpots.map((spot) => {
+                    const isSelected =
+                      (state.map.venueId && state.map.venueId === spot.id) ||
+                      state.map.name.toLowerCase() === spot.name.toLowerCase();
+
+                    return (
+                      <button
+                        key={spot.id || spot.name}
+                        type="button"
+                        onClick={() =>
+                          onUpdateMap({
+                            venueId: spot.id || null,
+                            name: spot.name,
+                            address: spot.address,
+                            icon: spot.icon,
+                            rating: spot.rating,
+                            photo: spot.photo,
+                            neighborhood: spot.neighborhood,
+                            featuredDish: spot.featuredDish,
+                            lat: spot.lat,
+                            lng: spot.lng,
+                          })
+                        }
+                        className={`p-2.5 rounded-xl border text-left flex items-center gap-3 transition-all active:scale-98 relative group ${
+                          isSelected
+                            ? 'bg-[#FAF7F2] border-[#e84a27] ring-2 ring-[#e84a27]/20 shadow-xs'
+                            : 'bg-white border-[#E6DEC8] hover:border-[#D8CFC0] hover:bg-[#FAF7F2]/50'
+                        }`}
+                      >
+                        {/* Food Icon / Emoji */}
+                        <span className="w-10 h-10 rounded-lg bg-[#FAF7F2] border border-[#E6DEC8] flex items-center justify-center text-xl shrink-0 group-hover:scale-105 transition-transform">
+                          {spot.icon}
+                        </span>
+
+                        {/* Venue details */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-xs text-[#231F1D] truncate">
+                              {spot.name}
+                            </span>
+                            {isSelected && (
+                              <span className="text-[9px] font-bold bg-[#e84a27] text-white px-1.5 py-0.2 rounded-full uppercase shrink-0">
+                                Active
+                              </span>
+                            )}
+                          </div>
+                          <span className="block text-[10px] text-[#6E655F] truncate">
+                            {spot.address}
+                          </span>
+                        </div>
+
+                        {/* Rating & Photo pill */}
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <span className="text-[11px] font-bold text-[#e84a27] bg-[#FAF7F2] px-1.5 py-0.5 rounded-md border border-[#E6DEC8]/60">
+                            ★ {spot.rating}
+                          </span>
+                          {spot.photo && (
+                            <div className="w-6 h-6 rounded-md overflow-hidden border border-[#E6DEC8] bg-[#FAF7F2]">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={spot.photo}
+                                alt={spot.name}
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Empty state & Google Places search fallback */}
+                {filteredSpots.length === 0 && (
+                  <div className="p-4 rounded-xl bg-white border border-[#E6DEC8] text-center space-y-2">
+                    <p className="text-xs text-[#6E655F]">
+                      No database venues matching &quot;{spotSearch}&quot;
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => searchGooglePlaces(spotSearch)}
+                      disabled={searchingGoogle}
+                      className="px-3.5 py-1.5 rounded-lg bg-[#231F1D] hover:bg-black text-white text-xs font-bold flex items-center gap-1.5 mx-auto transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      {searchingGoogle ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-[#e84a27]" />
+                          <span>Searching Oslo Places...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Search className="w-3.5 h-3.5 text-[#e84a27]" />
+                          <span>Search Google Places for &quot;{spotSearch}&quot;</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {/* Google Places Results */}
+                {googleResults.length > 0 && (
+                  <div className="space-y-2 pt-1 border-t border-[#E6DEC8]">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C827A]">
+                        Google Places Results ({googleResults.length})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setGoogleResults([])}
+                        className="text-[10px] text-[#8C827A] hover:text-[#231F1D] underline"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[180px] overflow-y-auto">
+                      {googleResults.map((place: any, i: number) => {
+                        const icon = resolveFoodCategoryAndIcon('', place.name || '').icon || '📍';
+                        const photo = place.photos?.[0]
+                          ? (place.photos[0].startsWith('http')
+                              ? place.photos[0]
+                              : `/api/places/photos?ref=${encodeURIComponent(place.photos[0])}&w=400`)
+                          : 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=400&q=80';
+                        const rating = place.rating ? Number(place.rating.toFixed(1)) : 4.8;
+
+                        return (
+                          <button
+                            key={place.id || place.name || i}
+                            type="button"
+                            onClick={() =>
+                              onUpdateMap({
+                                venueId: null,
+                                name: place.name,
+                                address: place.address || `${place.name}, Oslo`,
+                                icon,
+                                rating,
+                                photo,
+                                lat: place.latitude || 59.9139,
+                                lng: place.longitude || 10.7522,
+                              })
+                            }
+                            className="p-2.5 rounded-xl bg-white border border-[#E6DEC8] hover:border-[#e84a27] text-left flex items-center gap-3 transition-all active:scale-98"
+                          >
+                            <span className="w-8 h-8 rounded-lg bg-[#FAF7F2] border border-[#E6DEC8] flex items-center justify-center text-lg shrink-0">
+                              {icon}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <span className="block font-bold text-xs text-[#231F1D] truncate">
+                                {place.name}
+                              </span>
+                              <span className="block text-[10px] text-[#6E655F] truncate">
+                                {place.address || 'Oslo, Norway'}
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-bold text-[#e84a27] shrink-0">
+                              ★ {rating}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1026,23 +1421,23 @@ export function StudioControls({
                 {[
                   {
                     id: 'card-only',
-                    title: 'Transparent Venue Card',
-                    desc: 'Isolated card sticker without map pixels',
+                    title: '🪪 Transparent Card + Pin (For Canva)',
+                    desc: '100% transparent PNG sticker — zero map background',
                   },
                   {
                     id: 'full-scene',
-                    title: 'Full Map + Card',
-                    desc: 'MapLibre GL map with pinned card',
+                    title: '🗺️ Full Map Slide',
+                    desc: 'MapLibre GL map background with pinned venue card',
                   },
                   {
                     id: 'pin-only',
-                    title: 'Transparent Map Pin',
-                    desc: 'Isolated high-res radar food glyph pin',
+                    title: '📍 Transparent Map Pin',
+                    desc: 'Isolated high-res radar food glyph pin on alpha',
                   },
                   {
                     id: 'map-only',
-                    title: 'Clean Map Only',
-                    desc: 'Map with pin, venue card omitted',
+                    title: '🧭 Clean Map Only',
+                    desc: 'Map background with pin, venue card omitted',
                   },
                 ].map((t) => (
                   <button
@@ -1070,6 +1465,160 @@ export function StudioControls({
 
             {mapSlot === 'style' && (
               <div className="space-y-4">
+                {/* 1-Tap Export Mode Switcher inside Style & Layout too */}
+                <div className="grid grid-cols-2 gap-2 p-1.5 bg-[#FAF7F2] rounded-2xl border border-[#E6DEC8]">
+                  <button
+                    type="button"
+                    onClick={() => onUpdateMap({ exportTarget: 'card-only' })}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold transition-all ${
+                      (state.map.exportTarget || 'card-only') === 'card-only'
+                        ? 'bg-[#e84a27] text-white shadow-xs'
+                        : 'text-[#5C534E] hover:text-[#231F1D]'
+                    }`}
+                  >
+                    🪪 Transparent Card + Pin (Canva)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onUpdateMap({ exportTarget: 'full-scene' })}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold transition-all ${
+                      state.map.exportTarget === 'full-scene'
+                        ? 'bg-[#231F1D] text-white shadow-xs'
+                        : 'text-[#5C534E] hover:text-[#231F1D]'
+                    }`}
+                  >
+                    🗺️ Full Map Slide
+                  </button>
+                </div>
+
+                {/* Card Thumbnail Photo Picker + Dish Photo Switcher */}
+                <div className="p-3 bg-white rounded-2xl border border-[#E6DEC8] space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[#231F1D] uppercase tracking-wider">
+                      Card Thumbnail Photo
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onUpdateMap({ showPhoto: !state.map.showPhoto })}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold ${
+                        state.map.showPhoto
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-[#EFEAE1] text-[#5C534E]'
+                      }`}
+                    >
+                      {state.map.showPhoto ? '✓ Photo Shown' : 'Hidden'}
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {state.map.photo && (
+                      <div className="w-14 h-14 rounded-xl overflow-hidden border border-[#E6DEC8] shrink-0 bg-[#FAF7F2]">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={state.map.photo}
+                          alt="Card thumbnail"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF7F2] hover:bg-[#EFEAE1] border border-[#D8CFC0] text-xs font-bold text-[#231F1D] cursor-pointer transition-all">
+                        <span>📷 Upload Custom Photo</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (!f) return;
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                              if (typeof reader.result === 'string') {
+                                onUpdateMap({ photo: reader.result, showPhoto: true });
+                              }
+                            };
+                            reader.readAsDataURL(f);
+                          }}
+                        />
+                      </label>
+                      {(() => {
+                        const activeSpot = allSpots.find(
+                          (sp) =>
+                            (state.map.venueId && sp.id === state.map.venueId) ||
+                            sp.name.toLowerCase() === state.map.name.toLowerCase()
+                        );
+                        if (!activeSpot) return null;
+                        return (
+                          <div className="flex flex-wrap gap-1.5">
+                            {activeSpot.dishPhoto && (
+                              <button
+                                type="button"
+                                onClick={() => onUpdateMap({ photo: activeSpot.dishPhoto, showPhoto: true })}
+                                className="px-2 py-1 rounded-lg bg-[#e84a27]/10 text-[#e84a27] text-[10px] font-bold hover:bg-[#e84a27]/20"
+                              >
+                                🍽️ Use Curated Dish Photo
+                              </button>
+                            )}
+                            {activeSpot.venuePhoto && activeSpot.venuePhoto !== activeSpot.dishPhoto && (
+                              <button
+                                type="button"
+                                onClick={() => onUpdateMap({ photo: activeSpot.venuePhoto, showPhoto: true })}
+                                className="px-2 py-1 rounded-lg bg-[#EFEAE1] text-[#5C534E] text-[10px] font-bold hover:text-[#231F1D]"
+                              >
+                                🏠 Use Storefront Photo
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Neighborhood Badge, Featured Dish Pill & Bottom CTA Text */}
+                <div className="p-3 bg-white rounded-2xl border border-[#E6DEC8] space-y-2.5">
+                  <span className="block text-xs font-bold text-[#231F1D] uppercase tracking-wider">
+                    Card Details &amp; Canva Copy
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#6E655F] mb-1">
+                        Neighborhood Badge (next to ★ rating)
+                      </label>
+                      <input
+                        type="text"
+                        value={state.map.neighborhood ?? ''}
+                        onChange={(e) => onUpdateMap({ neighborhood: e.target.value })}
+                        placeholder="e.g. Grünerløkka"
+                        className="w-full h-9 px-3 rounded-xl border border-[#D8CFC0] bg-[#FAF7F2] text-xs font-semibold text-[#231F1D]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#6E655F] mb-1">
+                        Featured Dish + Price Pill (optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={state.map.featuredDish ?? ''}
+                        onChange={(e) => onUpdateMap({ featuredDish: e.target.value })}
+                        placeholder="e.g. 🍵 Biscoff Matcha · 79 kr"
+                        className="w-full h-9 px-3 rounded-xl border border-[#D8CFC0] bg-[#FAF7F2] text-xs font-semibold text-[#231F1D]"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-[#6E655F] mb-1">
+                      Bottom CTA Pill Text
+                    </label>
+                    <input
+                      type="text"
+                      value={state.map.ctaText ?? '🔗 See all Oslo picks & prices · @smakr.no'}
+                      onChange={(e) => onUpdateMap({ ctaText: e.target.value })}
+                      placeholder="🔗 See all Oslo picks & prices · @smakr.no"
+                      className="w-full h-9 px-3 rounded-xl border border-[#D8CFC0] bg-[#FAF7F2] text-xs font-semibold text-[#231F1D]"
+                    />
+                  </div>
+                </div>
+
                 {/* Aspect Ratio Switcher */}
                 <div>
                   <span className="block text-xs font-bold text-[#5C534E] uppercase tracking-wider mb-2">
