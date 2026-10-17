@@ -167,60 +167,65 @@ function fallbackIgCaption(payload: GenerateIgCaptionPayload): {
   );
 
   const defaultNote = fallbackDishNote(dishName, venueName, category).note;
-  const rawTasteNote = (payload.tasteNote || defaultNote).trim();
+  const rawTasteNote =
+    payload.tasteNote &&
+    !payload.tasteNote.toLowerCase().includes("balanced seasoning") &&
+    !payload.tasteNote.toLowerCase().includes("worth crossing town for")
+      ? payload.tasteNote.trim()
+      : defaultNote;
 
-  let hook = `${dishName} (${priceNok}) in ${resolvedNeighborhood}—worth crossing Oslo for.`;
+  let hook = `${dishName} (${priceNok}) in ${resolvedNeighborhood} - worth crossing Oslo for`;
   let verdict = `${rawTasteNote} At ${priceNok}, this is one of the sharpest orders at ${venueName} right now.`;
-  let cta = `Send this to someone you want to eat here with ("Spise her? 👀") and tap the link in bio (@smakr.no) to see ${venueName} + all nearby picks on the live Oslo Food Radar map.`;
-  let storyTeaser = `New ${priceNok} ${dishName} drop in ${resolvedNeighborhood} 🔥👉`;
+  let cta = `Send this to someone you want to get a ${dishName} with. Type "beta test" to get the link and be an early tester of Smakr and to see ${venueName} + all nearby picks on the live Oslo Food Radar map.`;
+  let storyTeaser = `New ${priceNok} ${dishName} drop in ${resolvedNeighborhood} — type "beta test" for early access 👉`;
 
   if (language === "no") {
     if (angle === "hype-drop") {
-      hook = `${dishName} (${priceNok}) på ${ resolvedNeighborhood } som alle snakker om akkurat nå 🔥`;
-      verdict = `${rawTasteNote} For ${priceNok} hos ${venueName} leverer denne på første bit.`;
-      storyTeaser = `Ny ${priceNok} ${dishName}-favoritt på ${resolvedNeighborhood} 🔥👉`;
+      hook = `${dishName} (${priceNok}) i ${resolvedNeighborhood} som alle snakker om akkurat nå`;
+      verdict = `${rawTasteNote} Til ${priceNok} hos ${venueName} leverer denne fra første slurk eller bit.`;
+      storyTeaser = `Ny ${priceNok} ${dishName}-favoritt i ${resolvedNeighborhood} 👉`;
     } else if (angle === "hidden-gem") {
-      hook = `Gå ikke forbi ${venueName} på ${resolvedNeighborhood} uten å bestille ${dishName} (${priceNok}) 🤫`;
-      verdict = `${rawTasteNote} En ekte lokal favoritt midt på ${resolvedNeighborhood} til ${priceNok}.`;
-      storyTeaser = `Skjult perle på ${resolvedNeighborhood}: ${dishName} (${priceNok}) 🤫👉`;
+      hook = `Ikke gå forbi ${venueName} i ${resolvedNeighborhood} uten å bestille ${dishName} (${priceNok})`;
+      verdict = `${rawTasteNote} En ekte lokal favoritt i ${resolvedNeighborhood} til ${priceNok}.`;
+      storyTeaser = `Skjult perle i ${resolvedNeighborhood}: ${dishName} (${priceNok}) 👉`;
     } else if (angle === "budget-steal") {
-      hook = `${priceNok} for ${dishName} på ${resolvedNeighborhood}—beste kjøpet i Oslo akkurat nå? 💸`;
-      verdict = `${rawTasteNote} Sjelden du får så mye smak for ${priceNok} hos ${venueName}.`;
-      storyTeaser = `Oslo-kupp: ${dishName} til ${priceNok} på ${resolvedNeighborhood} 💸👉`;
+      hook = `${priceNok} for ${dishName} i ${resolvedNeighborhood} - beste kjøpet i Oslo akkurat nå?`;
+      verdict = `${rawTasteNote} Sjelden du får så mye kvalitet for ${priceNok} hos ${venueName}.`;
+      storyTeaser = `Oslo-kupp: ${dishName} til ${priceNok} i ${resolvedNeighborhood} 👉`;
     } else {
-      hook = `Er dette Oslos beste ${dishName.toLowerCase()}? (${priceNok} på ${resolvedNeighborhood}) 💬`;
-      verdict = `${rawTasteNote} Vi gir den ${rating}/5 hos ${venueName}—hva er din dom?`;
-      storyTeaser = `Oslos beste ${dishName}? (${priceNok} hos ${venueName}) 👀👉`;
+      hook = `Er dette Oslos beste ${dishName.toLowerCase()}? (${priceNok} i ${resolvedNeighborhood})`;
+      verdict = `${rawTasteNote} Vi gir den ${rating}/5 hos ${venueName} - hva er din dom?`;
+      storyTeaser = `Oslos beste ${dishName}? (${priceNok} hos ${venueName}) 👉`;
     }
-    cta = `Send denne til noen du vil spise her med ("Spise her? 👀") og sjekk linken i bio (@smakr.no) for å se ${venueName} og alle prisene på Oslo Food Radar-kartet.`;
+    cta = `Send denne til noen du vil teste ${dishName} med. Skriv "beta test" i kommentarfeltet for å få linken og bli tidlig betatester av Smakr, og se ${venueName} + alle steder i nærheten på Oslo Food Radar-kartet.`;
   } else if (language === "bilingual") {
     if (angle === "hype-drop") {
-      hook = `${dishName} (${priceNok}) in ${resolvedNeighborhood}—ny Oslo-favoritt du må teste 🔥`;
+      hook = `${dishName} (${priceNok}) in ${resolvedNeighborhood} - ny Oslo-favoritt du må teste`;
     } else if (angle === "hidden-gem") {
-      hook = `Low-key ${resolvedNeighborhood} gem: ${dishName} (${priceNok}) at ${venueName} 🤫`;
+      hook = `Low-key ${resolvedNeighborhood} gem: ${dishName} (${priceNok}) at ${venueName}`;
     } else if (angle === "budget-steal") {
-      hook = `${priceNok} in ${resolvedNeighborhood}: ${dishName} at ${venueName} er et ekte kupp 💸`;
+      hook = `${priceNok} in ${resolvedNeighborhood}: ${dishName} at ${venueName} er et ekte kupp`;
     } else {
-      hook = `Best ${dishName.toLowerCase()} in Oslo? (${priceNok} at ${venueName})—enig eller uenig? 💬`;
+      hook = `Best ${dishName.toLowerCase()} in Oslo? (${priceNok} at ${venueName}) - enig eller uenig?`;
     }
-    verdict = `${rawTasteNote} Clocking in at ${priceNok}, ${venueName} nails the balance every single time.`;
-    cta = `Send this to your foodie crew ("Spise her? 👀") and tap the link in bio (@smakr.no) to find ${venueName} on the live Oslo Food Radar map.`;
-    storyTeaser = `${dishName} (${priceNok}) at ${venueName} in ${resolvedNeighborhood} — Spise her? 👀👉`;
+    verdict = `${rawTasteNote} At ${priceNok}, this is one of the sharpest orders at ${venueName} right now.`;
+    cta = `Send this to someone you want to get a ${dishName} with ("Spise her? 👀"). Type "beta test" to get the link and be an early tester of Smakr and to see ${venueName} + all nearby picks on the live Oslo Food Radar map.`;
+    storyTeaser = `${dishName} (${priceNok}) at ${venueName} in ${resolvedNeighborhood} — type "beta test" 👉`;
   } else {
     // English
     if (angle === "hype-drop") {
-      hook = `${dishName} (${priceNok}) in ${resolvedNeighborhood}—worth crossing Oslo for 🔥`;
+      hook = `${dishName} (${priceNok}) in ${resolvedNeighborhood} - worth crossing Oslo for`;
     } else if (angle === "hidden-gem") {
-      hook = `Don't walk past ${venueName} in ${resolvedNeighborhood} without ordering the ${dishName} 🤫`;
+      hook = `Don't walk past ${venueName} in ${resolvedNeighborhood} without ordering the ${dishName}`;
     } else if (angle === "budget-steal") {
-      hook = `${priceNok} for ${dishName} in ${resolvedNeighborhood} might be Oslo's best value bite 💸`;
+      hook = `${priceNok} for ${dishName} in ${resolvedNeighborhood} might be Oslo's best value order`;
     } else {
-      hook = `Is this the best ${dishName.toLowerCase()} in Oslo right now? (${priceNok} in ${resolvedNeighborhood}) 💬`;
+      hook = `Is this the best ${dishName.toLowerCase()} in Oslo right now? (${priceNok} in ${resolvedNeighborhood})`;
     }
   }
 
   if (hook.length > 108) {
-    hook = `${dishName} (${priceNok}) at ${venueName} in ${resolvedNeighborhood} 🔥`.slice(0, 108);
+    hook = `${dishName} (${priceNok}) at ${venueName} in ${resolvedNeighborhood}`.slice(0, 108);
   }
 
   const hoursLine = payload.openingHoursSummary
@@ -239,6 +244,7 @@ function fallbackIgCaption(payload: GenerateIgCaptionPayload): {
 
   return { caption, storyTeaser, altText };
 }
+
 
 function fallbackDishNote(
   dishName: string,
@@ -527,16 +533,19 @@ export async function POST(req: NextRequest) {
         dishName
       );
       const tasteNote =
-        (body.tasteNote || "").trim() ||
-        fallbackDishNote(dishName, venueName, category).note;
+        body.tasteNote &&
+        !body.tasteNote.toLowerCase().includes("balanced seasoning") &&
+        !body.tasteNote.toLowerCase().includes("worth crossing town for")
+          ? body.tasteNote.trim()
+          : fallbackDishNote(dishName, venueName, category).note;
 
       const angleInstructions: Record<string, string> = {
         "hype-drop":
           "Write a high-energy, mouth-watering new drop announcement that makes Oslo foodies immediately save the post and tag a friend.",
         "hidden-gem":
-          "Write an insider local secret angle—like tipping off a friend about an underrated Oslo spot most people walk right past.",
+          "Write an insider local secret angle - like tipping off a friend about an underrated Oslo spot most people walk right past.",
         "budget-steal":
-          "Lead with the exact NOK price and frame it as one of the sharpest value-for-money bites in Oslo right now.",
+          "Lead with the exact NOK price and frame it as one of the sharpest value-for-money orders in Oslo right now.",
         "debate-question":
           "Lead with a bold, comment-sparking question (e.g., asking if this is Oslo's best version of this dish) to drive comment section debate.",
       };
@@ -549,10 +558,10 @@ export async function POST(req: NextRequest) {
       };
 
       const prompt = [
-        `You are the lead social growth editor for Smakr Oslo (@smakr.no), Oslo'sdish-level food discovery radar.`,
+        `You are the lead social growth editor for Smakr Oslo (@smakr.no), Oslo's dish-level food discovery radar (currently in early beta testing).`,
         `Write a high-converting Instagram post caption, story teaser, and SEO alt-text for:`,
-        `- Dish: "${dishName}"`,
-        `- Price: "${priceNok}"`,
+        `- Dish / Drink: "${dishName}"`,
+        `- Exact Price (MUST use this exact price everywhere): "${priceNok}"`,
         `- Venue: "${venueName}"`,
         `- Neighborhood: "${resolvedNeighborhood}"`,
         `- Address: "${address}"`,
@@ -565,29 +574,32 @@ export async function POST(req: NextRequest) {
         `ANGLE: ${angleInstructions[angle] || angleInstructions["hype-drop"]}`,
         `LANGUAGE: ${languageInstructions[language] || languageInstructions.en}`,
         ``,
-        `STRICT VOICE RULES:`,
+        `STRICT VOICE & CONSISTENCY RULES:`,
         `- Sound like a sharp, authentic Oslo local foodie.`,
+        `- NEVER say "Balanced seasoning and cooked to order" (especially for drinks, matcha, coffee, or pastries!). Describe only authentic flavor/texture for "${dishName}".`,
         `- NEVER use robotic AI clichés: banned words include "delightful", "culinary journey", "nestled in the heart of", "elevate", "seamless", "bespoke", "symphony of flavors", "hidden oasis", "look no further".`,
+        `- PRICE CONSISTENCY: Every single mention of the price in the Hook, Verdict, and Cheat Sheet MUST be "${priceNok}" — never mix two different prices.`,
         `- Keep ` + "`caption`" + ` formatted into these exact 5 blocks separated by double newlines (\\n\\n):`,
-        `  1. Scroll-Stopper Hook (Line 1): MUST be under 110 characters so it never truncates before "...more". Must mention the dish, neighborhood, or price hook.`,
-        `  2. The Insider Verdict: 1-2 punchy sentences describing the exact flavor/texture and price (${priceNok}).`,
+        `  1. Scroll-Stopper Hook (Line 1): MUST be under 110 characters so it never truncates before "...more". Example: "${dishName} (${priceNok}) in ${resolvedNeighborhood} - worth crossing Oslo for"`,
+        `  2. The Insider Verdict: 1-2 punchy sentences on why it stands out at ${priceNok} (e.g. "${tasteNote} At ${priceNok}, this is one of the sharpest orders at ${venueName} right now.").`,
         `  3. The "Save This" Cheat Sheet (exact 4 lines):`,
         `     📍 Spot: ${venueName}`,
         `     🗺️ Area: ${address} (${resolvedNeighborhood})`,
         `     💰 Price: ${priceNok}`,
         `     ⭐ Rating: ${rating}/5`,
-        `  4. The Bio-Link & Social CTA: Tell viewers to send this to a friend ("Spise her? 👀") and tap the link in bio (@smakr.no) to see this spot and all nearby picks on the live Oslo Food Radar map.`,
-        `  5. SEO Hashtag Block: 8-10 hyper-relevant Oslo + neighborhood + dish hashtags. Include these tailored tags: ${hashtags.join(" ")}`,
+        `  4. The Beta-Tester Growth CTA: Tell viewers to send this to someone they want to get a ${dishName} with, and to type "beta test" in the comments to get the link and be an early tester of Smakr and to see ${venueName} + all nearby picks on the live Oslo Food Radar map.`,
+        `  5. SEO Hashtag Block: 8-10 hyper-relevant Oslo + neighborhood + dish hashtags, EVERY tag starting with "#": ${hashtags.join(" ")}`,
         ``,
         `Return strict JSON matching this schema:`,
         `{`,
         `  "caption": string,`,
-        `  "storyTeaser": string, // 1-line hook for sharing to IG Stories, e.g. "New ${priceNok} ${dishName} drop in ${resolvedNeighborhood} 🍵👉"`,
+        `  "storyTeaser": string, // 1-line hook for sharing to IG Stories, e.g. "New ${priceNok} ${dishName} drop in ${resolvedNeighborhood} — type 'beta test' for access 👉"`,
         `  "altText": string // Clean SEO alt-text, e.g. "${dishName} (${priceNok}) at ${venueName} in ${resolvedNeighborhood}, Oslo — Smakr Oslo Food Guide"`,
         `}`,
       ]
         .filter(Boolean)
         .join("\n");
+
 
       const rawText = await callGeminiGenerateContent(
         apiKey,
