@@ -672,13 +672,40 @@ function recolorHeadHair(svg: string, hair: string): string {
   return svg.slice(0, range.from) + patched + svg.slice(range.to);
 }
 
-/** Self-contained DiceBear Open Peeps `<svg>` string. */
+function injectBustTorso(svg: string, shirtHex: string, skinHex: string): string {
+  const closeIdx = svg.lastIndexOf("</svg>");
+  if (closeIdx < 0) return svg;
+  const bustMarkup = `
+    <g data-layer="open-peeps-bust" transform="translate(0 0)">
+      <path d="M168 725 C176 620 232 574 300 568 L404 568 C472 574 528 620 536 725 Z" fill="#${shirtHex}" stroke="#181615" stroke-width="12" stroke-linejoin="round"/>
+      <path d="M294 566 C318 604 386 604 410 566" fill="#${skinHex}" stroke="#181615" stroke-width="10" stroke-linecap="round"/>
+      <path d="M254 624 L254 720 M450 624 L450 720" stroke="#181615" stroke-width="8" stroke-linecap="round" opacity="0.55"/>
+    </g>
+  `;
+  const firstGroupIdx = svg.indexOf("<g ");
+  if (firstGroupIdx > 0) {
+    return (
+      svg.slice(0, firstGroupIdx).replace('viewBox="0 0 704 704"', 'viewBox="80 36 544 688"') +
+      bustMarkup +
+      svg.slice(firstGroupIdx)
+    );
+  }
+  return svg;
+}
+
+/** Self-contained DiceBear Open Peeps Bust `<svg>` string (head + face + glasses + shirt). */
 export function buildOpenPeepsSvg(config: OpenPeepsConfig): string {
-  const svg = createAvatar(openPeeps, openPeepsStyleOptions(config)).toString();
+  const rawSvg = createAvatar(openPeeps, openPeepsStyleOptions(config)).toString();
   const head = resolveActiveHead(config);
-  // Contrast-aware heads already use the hair colour; hats/bald have no hair.
-  if (NON_HAIR_HEADS.has(head) || headHonorsContrast(head)) return svg;
-  return recolorHeadHair(svg, normHex(config.headColor, "2c1b18"));
+  const hairPatched =
+    NON_HAIR_HEADS.has(head) || headHonorsContrast(head)
+      ? rawSvg
+      : recolorHeadHair(rawSvg, normHex(config.headColor, "2c1b18"));
+  return injectBustTorso(
+    hairPatched,
+    normHex(config.clothingColor, "e84a27"),
+    normHex(config.skinColor, "ffdbb4")
+  );
 }
 
 /** `data:` URI suitable for an `<img src>` / persisted `avatar_url`. */

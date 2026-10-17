@@ -174,7 +174,7 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
   return (
     <div className="flex flex-col h-full w-full bg-[var(--background)]">
       {/* ================= STICKY HEADER ================= */}
-      <div className="shrink-0 bg-[var(--surface)] border-b border-[var(--surface-border)]">
+      <div className="shrink-0 z-10 bg-[var(--surface)] border-b border-[var(--surface-border)] shadow-2xs">
         <div className="flex items-center justify-between gap-2 px-4 py-2.5">
           <button
             onClick={onBack}
@@ -446,124 +446,90 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
             <span>Log a Dish Here</span>
           </button>
 
-          <div className="space-y-3">
-            {recommendedMeals.length === 0 && (
-              <p className="text-xs text-zinc-400 text-center py-8">
-                No dishes logged here yet — be the first foodie to add one.
-              </p>
-            )}
+          {recommendedMeals.length === 0 ? (
+            <p className="text-xs text-zinc-400 text-center py-8">
+              No dishes logged here yet — be the first foodie to add one.
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              {recommendedMeals.map((dish) => {
+                const isSaved = savedPostIds.has(dish.id);
+                const isLiked = likedPostIds.has(dish.id);
+                const noteText =
+                  dish.review_text ||
+                  dish.diner_quotes?.[0]?.text ||
+                  "";
 
-            {recommendedMeals.map((dish) => {
-              const activeReaction = reactions[dish.id];
-              const isSaved = savedPostIds.has(dish.id);
-              const isLiked = likedPostIds.has(dish.id);
-
-              return (
-                <div
-                  key={dish.id}
-                  onClick={() => setSelectedDish(dish)}
-                  className="p-3 rounded-2xl bg-[var(--surface)] border border-[var(--surface-border)] shadow-xs flex gap-3 cursor-pointer hover:border-[#e84a27]/30 transition-all hover:shadow-sm"
-                >
-                  <div className="relative w-24 h-24 rounded-xl overflow-hidden bg-zinc-200 shrink-0 border border-[var(--surface-border)]">
-                    <Image
-                      src={dish.image_url}
-                      alt={dish.dish_name}
-                      fill
-                      className="object-cover"
-                      sizes="96px"
-                      unoptimized
-                    />
-                    <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded-md bg-black/75 backdrop-blur-xs text-white text-[10px] font-mono font-bold">
-                      {dish.price_nok} NOK
-                    </span>
-                  </div>
-
-                  <div className="flex-1 min-w-0 flex flex-col">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="text-xs font-extrabold text-[var(--foreground)] leading-snug">
-                        {dish.dish_name}
-                      </h3>
-                      <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-800 font-bold text-[10px] shrink-0 border border-amber-200/60">
-                        <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
-                        <span className="font-mono">{dish.rating}</span>
-                      </div>
+                return (
+                  <div
+                    key={dish.id}
+                    onClick={() => setSelectedDish(dish)}
+                    className="group p-2.5 rounded-2xl bg-[var(--surface)] border border-[var(--surface-border)] shadow-xs flex flex-col cursor-pointer hover:border-[#e84a27]/40 transition-all hover:shadow-sm"
+                  >
+                    <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden bg-zinc-200 shrink-0 border border-[var(--surface-border)]">
+                      <Image
+                        src={
+                          dish.image_url?.startsWith("/api/places/photos") &&
+                          !dish.image_url.includes("w=")
+                            ? `${dish.image_url}&w=360`
+                            : dish.image_url
+                        }
+                        alt={dish.dish_name}
+                        fill
+                        loading="lazy"
+                        decoding="async"
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        sizes="(max-width: 640px) 45vw, 220px"
+                        unoptimized
+                      />
+                      {typeof dish.price_nok === "number" && dish.price_nok > 0 && (
+                        <span className="absolute bottom-1.5 right-1.5 px-2 py-0.5 rounded-full bg-[#E84A27] text-white text-[10px] font-sans font-extrabold shadow-xs">
+                          {dish.price_nok} kr
+                        </span>
+                      )}
                     </div>
 
-                    {dish.review_text && (
-                      <p className="text-[11px] text-zinc-500 mt-1 line-clamp-2 italic leading-relaxed">
-                        &ldquo;{dish.review_text}&rdquo;
-                      </p>
-                    )}
+                    <div className="flex-1 min-w-0 flex flex-col pt-2">
+                      <h3 className="text-sm font-bold text-[var(--foreground)] truncate leading-snug">
+                        {dish.dish_name}
+                      </h3>
 
-                    {dish.taste_tags && dish.taste_tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1.5">
-                        {dish.taste_tags.slice(0, 3).map((tag) => (
-                          <span
-                            key={tag}
-                            className="px-1.5 py-0.5 rounded bg-[var(--surface-raised)] text-zinc-600 text-[9px] font-medium"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                      {noteText && (
+                        <p className="text-xs text-zinc-500 mt-0.5 line-clamp-1 italic">
+                          <span className="text-[#E84A27] font-bold not-italic mr-1">✦</span>
+                          &ldquo;{noteText}&rdquo;
+                        </p>
+                      )}
 
-                    <div className="mt-auto pt-2 flex items-center gap-1.5">
-                      <ReactionButton
-                        active={activeReaction === "craving"}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleReaction(dish.id, "craving");
-                        }}
-                        activeClass="bg-[#e84a27] text-white border-[#e84a27]"
-                        icon={Flame}
-                        label="Craving"
-                      />
-                      <ReactionButton
-                        active={activeReaction === "must_try"}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleReaction(dish.id, "must_try");
-                        }}
-                        activeClass="bg-amber-500 text-white border-amber-500"
-                        icon={Star}
-                        label="Must Try"
-                      />
-                      <ReactionButton
-                        active={activeReaction === "ate_here"}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleReaction(dish.id, "ate_here");
-                        }}
-                        activeClass="bg-emerald-600 text-white border-emerald-600"
-                        icon={CheckCircle2}
-                        label="Tried"
-                      />
-
-                      <div className="ml-auto flex items-center gap-1">
+                      <div className="mt-auto pt-2 flex items-center justify-between gap-1.5">
                         <button
+                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleLikePost(dish.id);
                           }}
-                          className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-semibold transition-all active:scale-95 ${
+                          className={`flex items-center gap-1 px-2.5 py-1 rounded-full border text-[11px] font-bold transition-all active:scale-95 ${
                             isLiked
                               ? "bg-[#e84a27] text-white border-[#e84a27]"
-                              : "bg-[var(--surface-raised)] text-zinc-600 border-[var(--surface-border)] hover:bg-zinc-100"
+                              : "bg-[var(--surface-raised)] text-zinc-700 border-[var(--surface-border)] hover:bg-zinc-100"
                           }`}
-                          title="Recommend this dish"
+                          title="Worth it"
                         >
-                          <Heart
-                            className={`w-3 h-3 ${isLiked ? "fill-current" : ""}`}
+                          <Flame
+                            className={`w-3 h-3 ${
+                              isLiked ? "fill-white text-white" : "text-[#E84A27]"
+                            }`}
                           />
-                          <span className="font-mono">{dish.likes_count}</span>
+                          <span className="font-mono">{Math.max(1, dish.likes_count || 1)}</span>
                         </button>
+
                         <button
+                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleSavePost(dish.id);
                           }}
-                          className={`p-1.5 rounded-lg border transition-all ${
+                          className={`p-1.5 rounded-full border transition-all active:scale-95 ${
                             isSaved
                               ? "bg-zinc-900 text-white border-zinc-900"
                               : "bg-[var(--surface-raised)] text-zinc-500 border-[var(--surface-border)] hover:bg-zinc-100"
@@ -577,10 +543,10 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </section>
 
         {/* Directions */}

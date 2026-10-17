@@ -15,7 +15,7 @@ import { useCityPulseStore } from "@/store/useCityPulseStore";
 import type { UserProfile } from "@/types";
 import SmakrLogo from "@/components/ui/SmakrLogo";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { MascotCharacter } from "@/components/avatar/MascotCharacter";
+import { OfficialSmakrMascot } from "@/lib/officialSmakrMascot";
 
 export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
   const router = useRouter();
@@ -28,7 +28,6 @@ export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
   // Once auth has resolved on the client, storeUser is authoritative (null means logged out).
   const currentUser = storeResolved ? storeUser : (storeUser ?? initialUser ?? null);
   const isAuthResolved = storeResolved || initialUser !== undefined;
-  const mascotConfig = useCityPulseStore((state) => state.mascotConfig);
   const setIsAuthModalOpen = useCityPulseStore((state) => state.setIsAuthModalOpen);
   const openAvatarStudio = useCityPulseStore((state) => state.openAvatarStudio);
   const openBetaFeedback = useCityPulseStore((state) => state.openBetaFeedback);
@@ -114,7 +113,7 @@ export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
               >
                 <span className="w-7 h-7 rounded-full bg-zinc-100 flex items-center justify-center overflow-hidden ring-1 ring-black/5 shrink-0">
                   {isNiwacheOrAdmin ? (
-                    <MascotCharacter config={mascotConfig} size={28} />
+                    <OfficialSmakrMascot size={28} />
                   ) : currentUser.avatar_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img

@@ -93,7 +93,7 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-screen flex flex-col antialiased selection:bg-[var(--accent)] selection:text-white transition-colors duration-300">
+      <body className="min-h-dvh flex flex-col antialiased selection:bg-[var(--accent)] selection:text-white transition-colors duration-300">
         <AutumnLeavesBurst />
         <AuthProvider initialUser={initialUser}>
           <Header initialUser={initialUser} />

@@ -50,9 +50,11 @@ Thumbs.db
 
 # Scratch and test files
 scratch/
+scratch*
 frontend/scratch*
-frontend/public/test_*.html
+frontend/public/test*.html
 frontend/public/verification_results.html
+frontend/scripts/debugInspect.*
 frontend/Open-peeps-b/
 frontend/open-peeps-b/
 frontend/src/lib/authentic_smile_big*.txt

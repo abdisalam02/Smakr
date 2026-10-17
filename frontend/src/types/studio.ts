@@ -217,35 +217,117 @@ export interface MascotState extends MascotDnaConfig {
 
 export type DishTitleTemplate = 'stacked' | 'pills';
 export type PillStickerType = 'price' | 'drop' | 'rating' | 'status';
+export type DishFontFamily = 'comico' | 'sans' | 'serif' | 'mono';
+export type IgCaptionAngle = 'hype-drop' | 'hidden-gem' | 'budget-steal' | 'debate-question';
+export type IgCaptionLanguage = 'en' | 'no' | 'bilingual';
+export type UiKitExportTarget =
+  | 'full-cover'
+  | 'glass-verdict-card'
+  | 'paprika-price-pill'
+  | 'brand-logo-pill'
+  | 'location-rating-pill'
+  | 'comico-title-only';
+
+export const STUDIO_STICKER_SWATCHES: { label: string; hex: string }[] = [
+  { label: 'Burnt Paprika', hex: '#E84A27' },
+  { label: 'Espresso Ink', hex: '#181615' },
+  { label: 'Warm Porcelain', hex: '#FAF7F2' },
+  { label: 'Pure White', hex: '#FFFFFF' },
+  { label: 'Warm Cinnamon', hex: '#8B3A0E' },
+  { label: 'Matcha Green', hex: '#53A626' },
+  { label: 'Deep Forest', hex: '#2D5A27' },
+  { label: 'Golden Amber', hex: '#F59E0B' },
+  { label: 'Berry Wine', hex: '#9F1239' },
+  { label: 'Classic Cobalt', hex: '#1E40AF' },
+  { label: 'Warm Stone', hex: '#E6DEC8' },
+  { label: 'Charcoal', hex: '#27272A' },
+];
 
 export interface DishTitleState {
   template: DishTitleTemplate;
+  uiKitExportTarget?: UiKitExportTarget;
+  dishTitle?: string;
   line1Text: string;
   line1Color: string;
+  line1Font?: DishFontFamily;
   showUnderline: boolean;
   line2Text: string;
   line2Color: string;
+  line2Font?: DishFontFamily;
+  titleScale?: number;
+  uppercaseLine2?: boolean;
   stickerOutline: boolean;
   pillType: PillStickerType;
   priceText: string;
+  priceBgColor?: string;
+  priceTextColor?: string;
+  priceTilt?: number;
   dropText: string;
   ratingText: string;
   statusText: string;
+  venueText?: string;
+  neighborhoodText?: string;
+  locationIcon?: string;
+  locationBgColor?: string;
+  locationTextColor?: string;
+  tasteNote?: string;
+  cardBgColor?: string;
+  cardTextColor?: string;
+  cardAccentColor?: string;
+  logoLeftText?: string;
+  logoRightText?: string;
+  logoBgColor?: string;
+  logoTextColor?: string;
+  logoAccentColor?: string;
+  backgroundPhoto?: string | null;
+  logoTheme?: 'porcelain' | 'dark' | 'text-only';
+  locationTheme?: 'porcelain' | 'dark';
+  showPriceOnCard?: boolean;
+  showMascotOnCover?: boolean;
 }
 
 export const DEFAULT_DISH_TITLE_STATE: DishTitleState = {
   template: 'stacked',
+  uiKitExportTarget: 'comico-title-only',
+  dishTitle: 'Biscoff Matcha',
   line1Text: 'Biscoff',
   line1Color: '#8B3A0E',
+  line1Font: 'comico',
   showUnderline: true,
   line2Text: 'Matcha',
   line2Color: '#53A626',
+  line2Font: 'sans',
+  titleScale: 1,
+  uppercaseLine2: true,
   stickerOutline: true,
   pillType: 'price',
-  priceText: '135 NOK',
-  dropText: '✦ Drop 41 · Em Oi!',
-  ratingText: '★ 4.9',
+  priceText: '79 kr',
+  priceBgColor: '#E84A27',
+  priceTextColor: '#FFFFFF',
+  priceTilt: -2,
+  dropText: '✦ Smakr Pick · Em Oi!',
+  ratingText: '4.9',
   statusText: '🟢 Open now',
+  venueText: 'Godt Brød',
+  neighborhoodText: 'Grünerløkka',
+  locationIcon: '📍',
+  locationBgColor: '#181615',
+  locationTextColor: '#FFFFFF',
+  tasteNote: 'Creamy ceremonial matcha layered over spiced biscoff cream.',
+  cardBgColor: '#181615',
+  cardTextColor: '#FFFFFF',
+  cardAccentColor: '#E84A27',
+  logoLeftText: 'SMAKR',
+  logoRightText: 'OSLO',
+  logoBgColor: '#FAF7F2',
+  logoTextColor: '#181615',
+  logoAccentColor: '#E84A27',
+  backgroundPhoto:
+    'https://images.unsplash.com/photo-1536256263959-770b48d82b0a?auto=format&fit=crop&w=1080&q=85',
+  logoTheme: 'porcelain',
+  locationTheme: 'dark',
+  showPriceOnCard: true,
+  showMascotOnCover: true,
 };
 
 export type MascotBodyPose =

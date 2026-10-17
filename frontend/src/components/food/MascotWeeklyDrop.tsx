@@ -5,6 +5,7 @@ import Image from "next/image";
 import { MapPin, ArrowUpRight, X, ChevronDown, Pencil } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { MascotCharacter } from "@/components/avatar/MascotCharacter";
+import { OFFICIAL_SMAKR_MASCOT_CONFIG } from "@/lib/officialSmakrMascot";
 import { SmakrMascotRig } from "@/components/studio/SmakrMascotRig";
 import { EditWeeklyDropModal } from "@/components/admin/EditWeeklyDropModal";
 
@@ -160,7 +161,7 @@ export function MascotWeeklyDrop({
                 />
               ) : (
                 <MascotCharacter
-                  config={mascotConfig}
+                  config={OFFICIAL_SMAKR_MASCOT_CONFIG}
                   size={isScrolledDown ? 20 : 28}
                   animated={isExpanded}
                 />
@@ -168,9 +169,10 @@ export function MascotWeeklyDrop({
             </div>
 
             {/* Capsule Text & Chevron */}
-            <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate max-w-[140px] sm:max-w-[180px]">
-              <span className="text-[#e84a27] font-bold mr-1">✦ Drop {weekNumber}</span>
-              {shortVenue}
+            <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate max-w-[165px] sm:max-w-[210px]">
+              <span className="text-[#e84a27] font-bold">✦ Smakr Pick</span>
+              <span className="text-zinc-400 font-normal mx-1">·</span>
+              <span>{shortVenue}</span>
             </span>
 
             <ChevronDown
@@ -211,7 +213,7 @@ export function MascotWeeklyDrop({
                 />
               ) : (
                 <MascotCharacter
-                  config={mascotConfig}
+                  config={OFFICIAL_SMAKR_MASCOT_CONFIG}
                   size={isScrolledDown ? 20 : 28}
                   animated={isExpanded}
                 />
@@ -223,7 +225,7 @@ export function MascotWeeklyDrop({
                 isScrolledDown ? "text-[9px] px-1.5 py-0.5" : "text-[10px] px-2 py-0.5"
               }`}
             >
-              ✦ Drop {weekNumber}
+              ✦ Smakr Pick
             </span>
 
             <span
@@ -263,7 +265,7 @@ export function MascotWeeklyDrop({
             <div className="flex items-stretch gap-3">
               <div className="relative shrink-0 w-[104px] sm:w-[114px] min-h-[112px] rounded-2xl bg-[#F5EFE3] border border-[#E6DDD0] pt-2 px-1 flex items-end justify-center overflow-hidden">
                 <span className="absolute top-1.5 left-2 text-[8px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-white/90 text-[#E84A27] border border-[#E84A27]/20 z-10">
-                  ✦ Week {weekNumber}
+                  ✦ Smakr Pick
                 </span>
                 {weeklyPick.mascot_avatar_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -276,22 +278,16 @@ export function MascotWeeklyDrop({
                   <div className="w-[96px] h-[104px] flex items-end justify-center translate-y-1">
                     <SmakrMascotRig
                       frameMode="bust-only"
-                      bodyPose={mascotConfig.prop === "coffee-cup" ? "coffee" : "pointing-up"}
-                      head={mascotConfig.peepsHead || "afro"}
-                      face={mascotConfig.peepsFace || "smileBig"}
-                      accessories={
-                        mascotConfig.peepsAccessories === "none"
-                          ? "none"
-                          : mascotConfig.peepsAccessories === "sunglasses"
-                          ? "sunglasses-1"
-                          : "glasses-2"
-                      }
-                      facialHair={mascotConfig.peepsFacialHair || "none"}
-                      skinColor={mascotConfig.skinColor || "d08b5b"}
-                      clothingColor={mascotConfig.topColor || "e84a27"}
-                      innerClothingColor={mascotConfig.bottomColor || "1f2937"}
-                      hatColor={mascotConfig.hatColor || "e84a27"}
-                      headContrastColor={mascotConfig.hairColor || "241c16"}
+                      bodyPose="pointing-up"
+                      head={OFFICIAL_SMAKR_MASCOT_CONFIG.peepsHead}
+                      face={OFFICIAL_SMAKR_MASCOT_CONFIG.peepsFace}
+                      accessories="glasses-2"
+                      facialHair="none"
+                      skinColor={OFFICIAL_SMAKR_MASCOT_CONFIG.skinColor}
+                      clothingColor={OFFICIAL_SMAKR_MASCOT_CONFIG.topColor}
+                      innerClothingColor={OFFICIAL_SMAKR_MASCOT_CONFIG.bottomColor}
+                      hatColor={OFFICIAL_SMAKR_MASCOT_CONFIG.hatColor}
+                      headContrastColor={OFFICIAL_SMAKR_MASCOT_CONFIG.hairColor}
                       stickerOutline={true}
                       size={92}
                     />

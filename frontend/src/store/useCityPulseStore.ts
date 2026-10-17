@@ -490,7 +490,6 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
     if (typeof window !== "undefined") {
       try {
         localStorage.removeItem("smakr_app_cache_v1");
-        localStorage.removeItem(MASCOT_STORAGE_KEY);
       } catch {}
     }
     set({

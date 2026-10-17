@@ -7,7 +7,7 @@ import { ThumbsUp, MapPin, Bookmark, Pencil, Flame, Send, Compass, ArrowUpRight 
 import { FoodPost } from "@/types";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { setPostLike, setPostSave } from "@/lib/supabase/data";
-import { MascotCharacter } from "@/components/avatar/MascotCharacter";
+import { OfficialSmakrMascot } from "@/lib/officialSmakrMascot";
 import { getPopupStatus } from "@/lib/popupUtils";
 import { formatOsloLocation } from "@/lib/location";
 import { getDistanceInMeters, formatDistance } from "@/lib/math";
@@ -306,12 +306,17 @@ export const FoodPostCard = React.memo(function FoodPostCard({
       {/* Full-Bleed Photography Hero Container */}
       <div className="relative w-full aspect-[4/3] min-h-[320px] overflow-hidden bg-zinc-900">
         <Image
-          src={post.image_url}
+          src={
+            post.image_url?.startsWith("/api/places/photos") && !post.image_url.includes("w=")
+              ? `${post.image_url}&w=640`
+              : post.image_url
+          }
           alt={post.dish_name}
           fill
           unoptimized
           priority={priority}
           loading={priority ? undefined : "lazy"}
+          decoding="async"
           className="object-cover w-full opacity-90 transition-transform duration-700 ease-out group-hover:scale-105"
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 600px"
         />
@@ -442,11 +447,11 @@ export const FoodPostCard = React.memo(function FoodPostCard({
             )}
           </div>
 
-          {/* Concise Dish-Specific Smakr Taste Note / Verdict */}
+          {/* Concise Dish-Specific Smakr Verdict (✦ Quote Only — no "Taste Note:" label) */}
           {dishVerdict && (
             <div className="bg-black/45 backdrop-blur-md border border-white/15 rounded-xl px-2.5 py-1.5 my-2 max-w-[96%]">
               <p className="text-[11px] text-zinc-100 leading-snug line-clamp-2">
-                <span className="text-[#e84a27] font-bold not-italic mr-1">✦ Taste Note:</span>
+                <span className="text-[#E84A27] font-bold not-italic mr-1">✦</span>
                 <span className="italic">&ldquo;{dishVerdict}&rdquo;</span>
               </p>
             </div>
@@ -458,7 +463,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
             <div className="flex items-center gap-1.5 min-w-0">
               <span className="w-6 h-6 rounded-full bg-[#FAF7F2] border border-white/25 overflow-hidden shrink-0 flex items-center justify-center">
                 {isNiwacheAdmin ? (
-                  <MascotCharacter config={mascotConfig} size={24} />
+                  <OfficialSmakrMascot size={24} />
                 ) : post.author?.avatar_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img

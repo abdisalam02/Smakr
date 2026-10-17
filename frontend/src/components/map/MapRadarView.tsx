@@ -27,6 +27,7 @@ import {
   MASCOT_VIEWBOX_WIDTH,
   MASCOT_VIEWBOX_HEIGHT,
 } from "@/components/avatar/MascotCharacter";
+import { OFFICIAL_SMAKR_MASCOT_CONFIG } from "@/lib/officialSmakrMascot";
 import { FOOD_PIN_SVG_MAP } from "@/components/food/FoodIcons";
 import { formatDistance } from "@/lib/math";
 import { getPopupStatus } from "@/lib/popupUtils";
@@ -112,65 +113,74 @@ function buildUserAvatarPuckElement(
   container.style.transformOrigin = "bottom center";
   container.style.willChange = "transform";
 
-  // High-visibility GPS Medallion wrapper with pulsing radar halo
-  const bodyWrapper = document.createElement("div");
-  bodyWrapper.className = "relative flex items-center justify-center";
-
-  // Radar ripple: expanding warm orange halo ring around the medallion
-  const ripple = document.createElement("div");
-  ripple.className =
-    "absolute -inset-1.5 rounded-full bg-[#e84a27]/25 border border-[#e84a27]/60 animate-ping pointer-events-none";
-  ripple.style.animationDuration = "2.2s";
-
-  // Crisp circular medallion so avatar pops against any map street/building color (no black)
+  // Free-standing Open Peeps Bust Sticker (NO circular ring — clearly distinct from ✦ Smakr Pick!)
   const charContainer = document.createElement("div");
   charContainer.className =
-    "relative w-12 h-12 rounded-full bg-[#FAF7F2] border-2 border-[#E84A27] overflow-hidden flex items-center justify-center";
-  charContainer.style.boxShadow =
-    "0 0 0 2.5px #FFFFFF, 0 8px 20px rgba(232, 74, 39, 0.25)";
+    "relative w-14 h-16 flex items-end justify-center overflow-visible";
+  // Crisp white die-cut vinyl sticker outline + soft elevation shadow
+  charContainer.style.filter =
+    "drop-shadow(2px 0 0 #FFFFFF) drop-shadow(-2px 0 0 #FFFFFF) drop-shadow(0 2px 0 #FFFFFF) drop-shadow(0 -2px 0 #FFFFFF) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.22))";
 
   const renderSvgInto = (svgStr: string, isMascotEngine = false) => {
-    // Strip any internal ground shadow (<g data-layer="ambience">) so no grey oval appears
     const cleaned = svgStr.replace(/<g data-layer="ambience">[\s\S]*?<\/g>/g, "");
     charContainer.innerHTML = cleaned;
     const svgEl = charContainer.querySelector("svg");
     if (svgEl) {
       if (isMascotEngine) {
-        svgEl.setAttribute("viewBox", "28 8 220 220");
-        svgEl.setAttribute("preserveAspectRatio", "xMidYMid meet");
+        svgEl.setAttribute("viewBox", "16 4 236 252");
+        svgEl.setAttribute("preserveAspectRatio", "xMidYMax meet");
+      } else {
+        svgEl.setAttribute("preserveAspectRatio", "xMidYMax meet");
       }
       svgEl.style.width = "100%";
       svgEl.style.height = "100%";
       svgEl.style.display = "block";
-      svgEl.style.overflow = "hidden";
+      svgEl.style.overflow = "visible";
     }
   };
 
   if (useMascot) {
-    renderSvgInto(buildMascotSVGString(mascotConfig ?? undefined, false, 48, 48), true);
-  } else if (avatarUrl) {
+    renderSvgInto(
+      buildMascotSVGString(mascotConfig ?? OFFICIAL_SMAKR_MASCOT_CONFIG, false, 56, 64),
+      true
+    );
+  } else if (avatarConfig) {
+    renderSvgInto(buildOpenPeepsSvg(avatarConfig), false);
+  } else if (avatarUrl && avatarUrl.startsWith("data:image/svg+xml")) {
     const img = document.createElement("img");
     img.src = avatarUrl;
     img.alt = "You";
-    img.className = "w-full h-full object-cover block pointer-events-none";
+    img.className = "w-full h-full object-contain object-bottom block pointer-events-none";
     charContainer.appendChild(img);
-  } else if (avatarConfig) {
-    renderSvgInto(buildOpenPeepsSvg(avatarConfig), false);
   } else {
     renderSvgInto(buildOpenPeepsSvg(getOrCreateGuestOpenPeepsConfig()), false);
   }
 
-  // Always-visible "● YOU" live GPS badge in warm ivory + Burnt Paprika (no black)
+  // Compact frosted "● YOU" pill anchored at the bottom waist of the bust
   const badge = document.createElement("div");
   badge.className =
-    "puck-badge -mt-2 relative z-10 bg-[#FAF7F2] text-[#E84A27] font-extrabold text-[8.5px] tracking-wider uppercase leading-none px-2 py-0.5 rounded-full shadow-md border border-[#E84A27]/35 whitespace-nowrap flex items-center gap-1";
-  badge.innerHTML = `<span style="width:5px;height:5px;border-radius:9999px;background:#10b981;box-shadow:0 0 6px #10b981;display:inline-block;"></span><span>YOU</span>`;
+    "puck-badge -mt-2 relative z-20 bg-[#FAF7F2]/92 backdrop-blur-md text-[#181615] font-extrabold text-[8.5px] tracking-wider uppercase leading-none px-2 py-0.5 rounded-full shadow-md border border-emerald-500/45 whitespace-nowrap flex items-center gap-1";
+  badge.innerHTML = `<span style="width:5.5px;height:5.5px;border-radius:9999px;background:#10B981;box-shadow:0 0 6px #10B981;display:inline-block;"></span><span>YOU</span>`;
 
-  bodyWrapper.appendChild(ripple);
-  bodyWrapper.appendChild(charContainer);
+  // Glowing emerald GPS radar pulse dot directly beneath the bust
+  const gpsDotWrapper = document.createElement("div");
+  gpsDotWrapper.className = "relative flex items-center justify-center mt-0.5";
 
-  container.appendChild(bodyWrapper);
+  const ripple = document.createElement("div");
+  ripple.className =
+    "absolute w-5 h-5 rounded-full bg-[#10B981]/35 border border-[#10B981]/60 animate-ping pointer-events-none";
+  ripple.style.animationDuration = "2s";
+
+  const gpsDot = document.createElement("div");
+  gpsDot.className =
+    "relative z-10 w-2.5 h-2.5 rounded-full bg-[#10B981] border-2 border-white shadow-[0_0_10px_#10B981]";
+
+  gpsDotWrapper.appendChild(ripple);
+  gpsDotWrapper.appendChild(gpsDot);
+
+  container.appendChild(charContainer);
   container.appendChild(badge);
+  container.appendChild(gpsDotWrapper);
   root.appendChild(container);
   return root;
 }
@@ -350,14 +360,14 @@ export function MapRadarView() {
       const containerH =
         map.getContainer()?.clientHeight ||
         (typeof window !== "undefined" ? window.innerHeight : 650);
-      // Venue pins need bottom clearance for the descending inspection card.
-      // Avatar locate centering uses compact clearance so the puck sits at screen center.
+      // Venue pins and weekly-pick need bottom clearance for the popup card above the bottom sheet.
       const isVenuePin =
         reason === "venue-pin" ||
+        reason === "weekly-pick" ||
         (reason === "mapCenter-effect" && Boolean(useCityPulseStore.getState().selectedVenue));
       const bottomPad = isMobile
         ? isVenuePin
-          ? Math.min(380, Math.max(280, Math.round(containerH * 0.45)))
+          ? Math.min(380, Math.max(260, Math.round(containerH * 0.45)))
           : Math.min(160, Math.max(80, Math.round(containerH * 0.20)))
         : 0;
 
@@ -621,15 +631,15 @@ export function MapRadarView() {
     flyToTarget(lng, lat, 15.6, "weekly-pick");
   }, [setSelectedVenue, flyToTarget]);
 
-  // Anchor the customizable Smakr mascot exclusively to the Weekly Pick.
-  // (No user GPS tracking is attached to the mascot.)
+  // Anchor the official Smakr mascot exclusively to the Weekly Pick.
+  // Locked to OFFICIAL_SMAKR_MASCOT_CONFIG so logging out never changes the brand pin.
   const renderWeeklyMarker = useCallback(() => {
     const map = mapInstance.current;
     if (!map || !isMapReadyRef.current) return;
 
     const state = useCityPulseStore.getState();
     const pick = state.weeklyPick;
-    const config = state.mascotConfig;
+    const config = OFFICIAL_SMAKR_MASCOT_CONFIG;
     const [lng, lat] = pick.coords;
     if (typeof lng !== "number" || typeof lat !== "number") return;
 
@@ -1094,56 +1104,51 @@ export function MapRadarView() {
     const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${selectedVenue.latitude},${selectedVenue.longitude}`;
 
     const isWeeklyPickVenue = selectedVenue.id === weeklyPick.venue_id;
-    const weekNumber =
-      (weeklyPick.week_label || "41").replace(/[^0-9]/g, "") || "41";
 
     if (isWeeklyPickVenue) {
       const pickDishImage = weeklyPick.dish_image || imageUrl;
       popupNode.innerHTML = `
         <div style="
-          background: #FAF7F2;
-          border: 1.5px solid #F0CFC2;
-          border-radius: 20px;
-          box-shadow: 0 14px 34px rgba(232, 74, 39, 0.16), 0 4px 12px rgba(0, 0, 0, 0.08);
+          background: rgba(250, 247, 242, 0.82);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.65);
+          border-radius: 18px;
+          box-shadow: 0 12px 32px rgba(24, 22, 21, 0.14);
           overflow: hidden;
-          width: 312px;
-          max-width: 90vw;
+          width: 268px;
+          max-width: 86vw;
           position: relative;
           font-family: inherit;
         ">
-          <!-- Warm Editorial Smakr Pick Header Ribbon (No Black) -->
+          <!-- Compact Frosted Smakr Pick Header (Only ✦ SMAKR PICK pill — no Drop #41) -->
           <div style="
-            background: #FFF3ED;
+            background: rgba(255, 243, 237, 0.65);
             color: #7C2D12;
-            padding: 7px 11px;
+            padding: 6px 10px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-bottom: 1px solid #F5D5C8;
+            border-bottom: 1px solid rgba(232, 74, 39, 0.14);
           ">
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <span style="
-                background: #E84A27;
-                color: #FFFFFF;
-                font-size: 9px;
-                font-weight: 800;
-                letter-spacing: 0.06em;
-                text-transform: uppercase;
-                padding: 2px 7px;
-                border-radius: 999px;
-              ">✦ Smakr Pick</span>
-              <span style="font-size: 10px; font-weight: 700; color: #9A3412;">
-                Drop #${weekNumber}
-              </span>
-            </div>
+            <span style="
+              background: #E84A27;
+              color: #FFFFFF;
+              font-size: 8.5px;
+              font-weight: 800;
+              letter-spacing: 0.06em;
+              text-transform: uppercase;
+              padding: 2px 7px;
+              border-radius: 999px;
+            ">✦ SMAKR PICK</span>
             <button id="smakr-popup-close-btn" style="
-              width: 20px;
-              height: 20px;
+              width: 18px;
+              height: 18px;
               border-radius: 50%;
-              background: rgba(232, 74, 39, 0.10);
+              background: rgba(24, 22, 21, 0.08);
               border: none;
-              color: #9A3412;
-              font-size: 11px;
+              color: #57534E;
+              font-size: 10px;
               cursor: pointer;
               display: flex;
               align-items: center;
@@ -1151,46 +1156,39 @@ export function MapRadarView() {
             ">✕</button>
           </div>
 
-          <div style="padding: 10px 11px;">
-            <!-- Featured Dish + Spot Row -->
-            <div style="display: flex; gap: 11px; align-items: center;">
+          <div style="padding: 10px;">
+            <!-- Compact 64x64 Dish + Spot Row (No 'Featured Dish' overline) -->
+            <div style="display: flex; gap: 9px; align-items: center;">
               <div style="
                 position: relative;
-                width: 76px;
-                height: 76px;
-                border-radius: 14px;
+                width: 64px;
+                height: 64px;
+                border-radius: 12px;
                 overflow: hidden;
                 flex-shrink: 0;
                 background: #F5EFE3;
-                border: 1px solid #E6DDD0;
+                border: 1px solid rgba(24, 22, 21, 0.08);
               ">
                 <img src="${pickDishImage}" alt="${weeklyPick.dish_name}" style="width: 100%; height: 100%; object-fit: cover;" />
                 <span style="
                   position: absolute;
-                  bottom: 4px;
-                  right: 4px;
+                  bottom: 3px;
+                  right: 3px;
                   background: #E84A27;
                   color: #FFFFFF;
-                  font-size: 9.5px;
+                  font-size: 9px;
                   font-weight: 800;
-                  padding: 1.5px 5.5px;
-                  border-radius: 6px;
-                  box-shadow: 0 2px 6px rgba(232, 74, 39, 0.35);
+                  padding: 1px 5px;
+                  border-radius: 5px;
+                  box-shadow: 0 2px 5px rgba(232, 74, 39, 0.32);
                 ">${weeklyPick.price_nok} kr</span>
               </div>
 
               <div style="flex: 1; min-width: 0;">
                 <div style="
-                  font-size: 9.5px;
-                  font-weight: 800;
-                  text-transform: uppercase;
-                  letter-spacing: 0.05em;
-                  color: #E84A27;
-                ">Featured Dish</div>
-                <div style="
                   font-family: var(--font-comico, sans-serif);
-                  font-size: 15px;
-                  color: #292524;
+                  font-size: 13.5px;
+                  color: #181615;
                   font-weight: bold;
                   white-space: nowrap;
                   overflow: hidden;
@@ -1200,7 +1198,7 @@ export function MapRadarView() {
                 </div>
 
                 <div style="
-                  font-size: 11.5px;
+                  font-size: 11px;
                   font-weight: 700;
                   color: #57534E;
                   margin-top: 1px;
@@ -1213,12 +1211,12 @@ export function MapRadarView() {
 
                 <div style="display: flex; align-items: center; gap: 4px; margin-top: 3px; flex-wrap: wrap;">
                   <span style="
-                    background: #FEF3C7;
+                    background: rgba(254, 243, 199, 0.85);
                     color: #92400E;
                     border: 1px solid #FDE68A;
-                    font-size: 9.5px;
+                    font-size: 9px;
                     font-weight: bold;
-                    padding: 1px 6px;
+                    padding: 1px 5.5px;
                     border-radius: 999px;
                     display: inline-flex;
                     align-items: center;
@@ -1227,51 +1225,52 @@ export function MapRadarView() {
                     <span style="color: #D97706;">★</span> ${ratingVal}
                   </span>
                   <span style="
-                    background: ${openStatus.isOpen ? '#ecfdf5' : '#fef2f2'};
+                    background: ${openStatus.isOpen ? 'rgba(236, 253, 245, 0.85)' : 'rgba(254, 242, 242, 0.85)'};
                     color: ${openStatus.isOpen ? '#047857' : '#b91c1c'};
                     border: 1px solid ${openStatus.isOpen ? '#a7f3d0' : '#fecaca'};
-                    font-size: 9px;
+                    font-size: 8.5px;
                     font-weight: 700;
-                    padding: 1px 6px;
+                    padding: 1px 5.5px;
                     border-radius: 999px;
                     display: inline-flex;
                     align-items: center;
                     gap: 3px;
                   ">
-                    <span style="width: 5px; height: 5px; border-radius: 50%; background: ${openStatus.isOpen ? '#10b981' : '#ef4444'};"></span>
+                    <span style="width: 4.5px; height: 4.5px; border-radius: 50%; background: ${openStatus.isOpen ? '#10b981' : '#ef4444'};"></span>
                     ${openStatus.statusText}
                   </span>
                 </div>
               </div>
             </div>
 
-            <!-- Mascot Drop Note Quote Box -->
+            <!-- Compact Mascot Quote Box -->
             <div style="
-              margin-top: 8px;
-              padding: 7px 9px;
-              border-radius: 10px;
-              background: #FFF6F2;
-              border: 1px solid #F5D5C8;
-              border-left: 3px solid #E84A27;
-              font-size: 11.5px;
+              margin-top: 7px;
+              padding: 5.5px 8px;
+              border-radius: 9px;
+              background: rgba(255, 255, 255, 0.65);
+              border: 1px solid rgba(232, 74, 39, 0.18);
+              border-left: 2.5px solid #E84A27;
+              font-size: 10.5px;
               font-style: italic;
               font-weight: 600;
-              color: #44403C;
-              line-height: 1.35;
+              color: #292524;
+              line-height: 1.3;
             ">
-              &ldquo;${weeklyPick.speech_bubble}&rdquo;
+              <span style="color: #E84A27; font-style: normal; font-weight: 800; margin-right: 3px;">✦</span>&ldquo;${weeklyPick.speech_bubble}&rdquo;
             </div>
 
-            <!-- Action Row -->
-            <div style="display: flex; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(0,0,0,0.06);">
+            <!-- Compact 30px Action Row -->
+            <div style="display: flex; gap: 6px; margin-top: 7px; padding-top: 7px; border-top: 1px solid rgba(24, 22, 21, 0.06);">
               <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" style="
                 flex: 1;
-                padding: 5px 8px;
-                border-radius: 9px;
-                background: #ffffff;
-                border: 1px solid rgba(0,0,0,0.12);
+                height: 30px;
+                padding: 0 8px;
+                border-radius: 8px;
+                background: rgba(255, 255, 255, 0.85);
+                border: 1px solid rgba(24, 22, 21, 0.12);
                 color: #181615;
-                font-size: 10.5px;
+                font-size: 10px;
                 font-weight: 700;
                 text-align: center;
                 text-decoration: none;
@@ -1285,20 +1284,21 @@ export function MapRadarView() {
 
               <button id="smakr-popup-menu-btn" style="
                 flex: 1.25;
-                padding: 5px 8px;
-                border-radius: 9px;
+                height: 30px;
+                padding: 0 8px;
+                border-radius: 8px;
                 background: #E84A27;
                 border: none;
                 color: #ffffff;
                 font-family: var(--font-comico, sans-serif);
-                font-size: 10.5px;
+                font-size: 10px;
                 font-weight: bold;
                 cursor: pointer;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 gap: 3px;
-                box-shadow: 0 2px 6px rgba(232,74,39,0.28);
+                box-shadow: 0 2px 6px rgba(232,74,39,0.26);
               ">
                 <span>Spot &amp; Menu</span> →
               </button>
@@ -1309,13 +1309,15 @@ export function MapRadarView() {
     } else {
       popupNode.innerHTML = `
       <div style="
-        background: #fbf9f5;
-        border: 1.5px solid rgba(0, 0, 0, 0.08);
+        background: rgba(250, 247, 242, 0.82);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.65);
         border-radius: 18px;
-        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
-        padding: 10px 11px;
-        width: 295px;
-        max-width: 88vw;
+        box-shadow: 0 12px 32px rgba(24, 22, 21, 0.14);
+        padding: 10px;
+        width: 280px;
+        max-width: 86vw;
         position: relative;
         font-family: inherit;
       ">
@@ -1326,10 +1328,10 @@ export function MapRadarView() {
           width: 20px;
           height: 20px;
           border-radius: 50%;
-          background: rgba(0,0,0,0.06);
+          background: rgba(24, 22, 21, 0.07);
           border: none;
-          color: #71717a;
-          font-size: 12px;
+          color: #57534E;
+          font-size: 11px;
           cursor: pointer;
           display: flex;
           align-items: center;
@@ -1337,15 +1339,15 @@ export function MapRadarView() {
           z-index: 10;
         ">✕</button>
 
-        <div style="display: flex; gap: 11px; align-items: center;">
+        <div style="display: flex; gap: 10px; align-items: center;">
           <div style="
-            width: 74px;
-            height: 74px;
-            border-radius: 14px;
+            width: 68px;
+            height: 68px;
+            border-radius: 13px;
             overflow: hidden;
             flex-shrink: 0;
             background: #e4d9c8;
-            border: 1px solid rgba(0,0,0,0.08);
+            border: 1px solid rgba(24, 22, 21, 0.08);
           ">
             <img src="${imageUrl}" alt="${selectedVenue.name}" style="width: 100%; height: 100%; object-fit: cover;" />
           </div>
@@ -1353,7 +1355,7 @@ export function MapRadarView() {
           <div style="flex: 1; min-width: 0;">
             <div style="
               font-family: var(--font-comico, sans-serif);
-              font-size: 15px;
+              font-size: 14.5px;
               color: #181615;
               font-weight: bold;
               white-space: nowrap;
@@ -1368,7 +1370,7 @@ export function MapRadarView() {
               <span style="
                 background: #181615;
                 color: #ffffff;
-                font-size: 10px;
+                font-size: 9.5px;
                 font-weight: bold;
                 padding: 1px 5px;
                 border-radius: 5px;
@@ -1379,10 +1381,10 @@ export function MapRadarView() {
                 <span style="color: #f59e0b;">★</span> ${ratingVal}
               </span>
               <span style="
-                background: ${openStatus.isOpen ? '#ecfdf5' : '#fef2f2'};
+                background: ${openStatus.isOpen ? 'rgba(236, 253, 245, 0.85)' : 'rgba(254, 242, 242, 0.85)'};
                 color: ${openStatus.isOpen ? '#047857' : '#b91c1c'};
                 border: 1px solid ${openStatus.isOpen ? '#a7f3d0' : '#fecaca'};
-                font-size: 9.5px;
+                font-size: 9px;
                 font-weight: 700;
                 padding: 1px 6px;
                 border-radius: 999px;
@@ -1393,14 +1395,14 @@ export function MapRadarView() {
                 <span style="width: 5px; height: 5px; border-radius: 50%; background: ${openStatus.isOpen ? '#10b981' : '#ef4444'};"></span>
                 ${openStatus.statusText}
               </span>
-              ${distanceText ? `<span style="font-size: 10px; color: #059669; font-weight: 600;">· ${distanceText}</span>` : ""}
+              ${distanceText ? `<span style="font-size: 9.5px; color: #059669; font-weight: 600;">· ${distanceText}</span>` : ""}
             </div>
 
             <div style="
-              font-size: 11px;
-              color: #71717a;
-              margin-top: 4px;
-              line-height: 1.35;
+              font-size: 10.5px;
+              color: #57534E;
+              margin-top: 3px;
+              line-height: 1.3;
               word-break: break-word;
             ">
               📍 ${addressText}
@@ -1408,15 +1410,16 @@ export function MapRadarView() {
           </div>
         </div>
 
-        <div style="display: flex; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(0,0,0,0.06);">
+        <div style="display: flex; gap: 6px; margin-top: 8px; padding-top: 7px; border-top: 1px solid rgba(24, 22, 21, 0.06);">
           <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" style="
             flex: 1;
-            padding: 4px 8px;
+            height: 30px;
+            padding: 0 8px;
             border-radius: 8px;
-            background: #ffffff;
-            border: 1px solid rgba(0,0,0,0.1);
-            color: #3f3f46;
-            font-size: 10.5px;
+            background: rgba(255, 255, 255, 0.85);
+            border: 1px solid rgba(24, 22, 21, 0.12);
+            color: #181615;
+            font-size: 10px;
             font-weight: 600;
             text-align: center;
             text-decoration: none;
@@ -1430,13 +1433,14 @@ export function MapRadarView() {
 
           <button id="smakr-popup-menu-btn" style="
             flex: 1;
-            padding: 4px 8px;
+            height: 30px;
+            padding: 0 8px;
             border-radius: 8px;
             background: #e84a27;
             border: none;
             color: #ffffff;
             font-family: var(--font-comico, sans-serif);
-            font-size: 10.5px;
+            font-size: 10px;
             font-weight: bold;
             cursor: pointer;
             display: flex;
@@ -1463,12 +1467,10 @@ export function MapRadarView() {
     });
 
     const popup = new maplibregl.Popup({
-      offset: [0, 24],
-      anchor: "top",
+      offset: isWeeklyPickVenue ? [0, -56] : [0, 22],
+      anchor: isWeeklyPickVenue ? "bottom" : "top",
       closeButton: false,
       closeOnClick: false,
-      // Focusing an off-screen popup button makes the browser scroll the
-      // overflow-hidden map container sideways mid-flight.
       focusAfterOpen: false,
       className: "smakr-pin-card-popup",
     })

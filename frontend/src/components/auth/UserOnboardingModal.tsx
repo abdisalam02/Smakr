@@ -265,7 +265,7 @@ export function UserOnboardingModal() {
                     )}
                     <span className="flex items-center gap-2.5">
                       <span
-                        className="w-12 h-12 shrink-0 rounded-full overflow-hidden bg-orange-50 border border-black/5"
+                        className="w-12 h-14 shrink-0 rounded-2xl overflow-hidden bg-orange-50/80 border border-black/10 flex items-end justify-center pt-1"
                         dangerouslySetInnerHTML={{ __html: presetSvgs[i] }}
                       />
                       <span className="min-w-0">
@@ -552,12 +552,12 @@ export function UserOnboardingModal() {
           </p>
         </div>
 
-        {/* Pinned avatar preview + progress — ALWAYS visible */}
+        {/* Pinned Bust Open Peeps preview + progress — ALWAYS visible */}
         <div className="px-5 sm:px-6 pb-3.5">
           <div className="flex items-center gap-3.5 rounded-2xl border border-zinc-100 bg-zinc-50/50 p-3">
-            <div className="relative w-[92px] h-[92px] shrink-0 rounded-full overflow-hidden ring-4 ring-[#e84a27]/70 border-2 border-white bg-orange-50/60 shadow-sm">
+            <div className="relative w-[88px] h-[98px] shrink-0 rounded-2xl overflow-hidden ring-2 ring-[#e84a27]/70 border-2 border-white bg-[#FAF7F2] shadow-sm pt-1 flex items-end justify-center">
               <div
-                className="w-full h-full flex items-center justify-center"
+                className="w-full h-full flex items-end justify-center [&_svg]:w-full [&_svg]:h-full"
                 dangerouslySetInnerHTML={{ __html: previewSvg }}
               />
             </div>

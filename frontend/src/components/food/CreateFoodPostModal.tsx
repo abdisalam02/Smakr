@@ -433,6 +433,7 @@ export function CreateFoodPostModal() {
     setFallbackPhoto(photos.length > 0 ? photoProxy(photos[0]) : null);
     setQuery("");
     setResults([]);
+    void loadListingPhotos(r.place_id, r.name, r.formatted_address);
     setCategoryKey(detectCategoryKey(r.name));
   };
 
@@ -696,27 +697,38 @@ export function CreateFoodPostModal() {
 
   if (!isOpen) return null;
 
-  const fallbackOptions = [
-    ...listingPhotos.map((ref, i) => photoProxy(ref, i)),
-    ...extraPhotos,
-    ...(listingCover && !listingPhotos.length ? [listingCover] : []),
-  ];
-  // Show four at a time; "load more" reveals the rest and pulls extra curated
-  // dish shots, so a listing never feels like it only has a handful of options.
-  const visibleFallbackOptions = showAllPhotos ? fallbackOptions : fallbackOptions.slice(0, 4);
+  const venueDishPhotos = existingVenue
+    ? useCityPulseStore
+        .getState()
+        .foodPosts.filter((p) => p.spot_id === existingVenue.id && p.image_url && !p.is_archived)
+        .map((p) => p.image_url)
+    : [];
+
+  const realGooglePhotoUrls = listingPhotos
+    .filter((ref) => !ref.startsWith("mock"))
+    .map((ref, i) => photoProxy(ref, i));
+
+  const fallbackOptions = Array.from(
+    new Set([
+      ...realGooglePhotoUrls,
+      ...venueDishPhotos,
+      ...(listingCover ? [listingCover] : []),
+      ...(realGooglePhotoUrls.length === 0 && venueDishPhotos.length === 0
+        ? listingPhotos.map((ref, i) => photoProxy(ref, i))
+        : []),
+      ...extraPhotos,
+    ])
+  ).slice(0, 12);
+
+  // Show up to 8 real photos immediately; "Load all Google photos" reveals all 10+
+  const visibleFallbackOptions = showAllPhotos ? fallbackOptions : fallbackOptions.slice(0, 8);
   const hasMorePhotos = fallbackOptions.length > visibleFallbackOptions.length;
 
   const loadMorePhotos = async () => {
-    if (extraPhotos.length === 0) {
-      try {
-        const q = dishName.trim() || selectedName || "Oslo food";
-        const res = await fetch(`/api/places/dish?q=${encodeURIComponent(q)}&count=12`);
-        const json = (await res.json()) as { images?: string[] };
-        setExtraPhotos((json.images ?? []).filter((url) => !fallbackOptions.includes(url)));
-      } catch {
-        // keep whatever listing photos we already have
-      }
-    }
+    const placeId = google?.place_id || existingVenue?.google_place_id;
+    const vName = google?.name || existingVenue?.name || selectedName;
+    const vAddr = google?.formatted_address || existingVenue?.address || "Oslo";
+    await loadListingPhotos(placeId, vName, vAddr);
     setShowAllPhotos(true);
   };
 

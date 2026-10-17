@@ -37,7 +37,208 @@ interface ExtractMenuPricesPayload {
   mimeType?: string;
 }
 
-type AiCurateRequest = GenerateDishNotePayload | ExtractMenuPricesPayload;
+interface GenerateIgCaptionPayload {
+  mode: "generate-ig-caption";
+  dishName?: string;
+  priceNok?: string;
+  venueName?: string;
+  neighborhood?: string;
+  address?: string;
+  rating?: string;
+  tasteNote?: string;
+  category?: string;
+  dietaryTags?: string[];
+  openingHoursSummary?: string;
+  angle?: "hype-drop" | "hidden-gem" | "budget-steal" | "debate-question";
+  language?: "en" | "no" | "bilingual";
+}
+
+type AiCurateRequest =
+  | GenerateDishNotePayload
+  | ExtractMenuPricesPayload
+  | GenerateIgCaptionPayload;
+
+function resolveServerNeighborhoodTags(
+  neighborhood = "",
+  address = "",
+  category = "",
+  dishName = ""
+): { resolvedNeighborhood: string; hashtags: string[] } {
+  const combined = `${neighborhood} ${address}`.toLowerCase();
+  let resolvedNeighborhood = neighborhood.trim() || "Oslo";
+  let areaTags: string[] = ["#oslosentrum", "#midtibyen"];
+
+  if (
+    combined.includes("grünerløkka") ||
+    combined.includes("grunerlokka") ||
+    combined.includes("løkka") ||
+    combined.includes("markveien") ||
+    combined.includes("thorvald meyers")
+  ) {
+    resolvedNeighborhood =
+      !neighborhood || neighborhood.toLowerCase() === "oslo" ? "Grünerløkka" : neighborhood;
+    areaTags = ["#grünerløkka", "#løkka", "#markveien", "#thorvaldmeyersgate"];
+  } else if (
+    combined.includes("torggata") ||
+    combined.includes("sentrum") ||
+    combined.includes("bernt ankers") ||
+    combined.includes("youngstorget")
+  ) {
+    resolvedNeighborhood =
+      !neighborhood || neighborhood.toLowerCase() === "oslo" ? "Sentrum / Torggata" : neighborhood;
+    areaTags = ["#torggata", "#oslosentrum", "#youngstorget", "#midtibyen"];
+  } else if (
+    combined.includes("grønland") ||
+    combined.includes("gronland") ||
+    combined.includes("tøyen") ||
+    combined.includes("toyen") ||
+    combined.includes("gamle oslo")
+  ) {
+    resolvedNeighborhood =
+      !neighborhood || neighborhood.toLowerCase() === "oslo" ? "Grønland / Tøyen" : neighborhood;
+    areaTags = ["#grønlandoslo", "#tøyen", "#gamleoslo", "#oslostreetfood"];
+  } else if (
+    combined.includes("frogner") ||
+    combined.includes("majorstuen") ||
+    combined.includes("bogstadveien") ||
+    combined.includes("vestkanten")
+  ) {
+    resolvedNeighborhood =
+      !neighborhood || neighborhood.toLowerCase() === "oslo" ? "Frogner" : neighborhood;
+    areaTags = ["#frogner", "#majorstuen", "#vestkanten", "#oslobakery"];
+  } else if (
+    combined.includes("bjørvika") ||
+    combined.includes("bjorvika") ||
+    combined.includes("barcode") ||
+    combined.includes("sørenga") ||
+    combined.includes("operagata")
+  ) {
+    resolvedNeighborhood =
+      !neighborhood || neighborhood.toLowerCase() === "oslo" ? "Bjørvika" : neighborhood;
+    areaTags = ["#bjørvika", "#oslobukta", "#barcodeoslo", "#sørenga"];
+  }
+
+  const dishCat = `${category} ${dishName}`.toLowerCase();
+  const foodTags: string[] = [];
+  if (dishCat.includes("matcha") || dishCat.includes("tea")) {
+    foodTags.push("#matchaoslo", "#oslocafe");
+  } else if (dishCat.includes("coffee") || dishCat.includes("latte") || dishCat.includes("espresso")) {
+    foodTags.push("#oslocoffee", "#oslocafe");
+  } else if (dishCat.includes("bakery") || dishCat.includes("bun") || dishCat.includes("bolle") || dishCat.includes("croissant") || dishCat.includes("cardamom")) {
+    foodTags.push("#oslobakeri", "#oslocafe");
+  } else if (dishCat.includes("pizza") || dishCat.includes("slice")) {
+    foodTags.push("#oslopizza", "#osloeats");
+  } else if (dishCat.includes("dumpling") || dishCat.includes("gyoza") || dishCat.includes("bao")) {
+    foodTags.push("#dumplingsoslo", "#oslostreetfood");
+  } else if (dishCat.includes("chicken") || dishCat.includes("korean") || dishCat.includes("k-fried")) {
+    foodTags.push("#koreanfoodoslo", "#oslostreetfood");
+  } else if (dishCat.includes("ramen") || dishCat.includes("noodle") || dishCat.includes("pho")) {
+    foodTags.push("#ramenoslo", "#osloeats");
+  } else if (dishCat.includes("kebab") || dishCat.includes("shawarma") || dishCat.includes("burger") || dishCat.includes("taco")) {
+    foodTags.push("#oslostreetfood", "#osloeats");
+  } else {
+    foodTags.push("#osloeats", "#oslorestaurant");
+  }
+
+  const baseTags = ["#oslofood", "#visitoslo", "#spiseioslo", ...areaTags, ...foodTags, "#smakroslo"];
+  const deduped = Array.from(new Set(baseTags)).slice(0, 10);
+  return { resolvedNeighborhood, hashtags: deduped };
+}
+
+function fallbackIgCaption(payload: GenerateIgCaptionPayload): {
+  caption: string;
+  storyTeaser: string;
+  altText: string;
+} {
+  const dishName = (payload.dishName || "Signature Dish").trim();
+  const priceNok = (payload.priceNok || "145 kr").trim();
+  const venueName = (payload.venueName || "Oslo Spot").trim();
+  const address = (payload.address || `${venueName}, Oslo`).trim();
+  const rating = (payload.rating || "4.8").trim();
+  const category = (payload.category || "Food").trim();
+  const angle = payload.angle || "hype-drop";
+  const language = payload.language || "en";
+
+  const { resolvedNeighborhood, hashtags } = resolveServerNeighborhoodTags(
+    payload.neighborhood,
+    address,
+    category,
+    dishName
+  );
+
+  const defaultNote = fallbackDishNote(dishName, venueName, category).note;
+  const rawTasteNote = (payload.tasteNote || defaultNote).trim();
+
+  let hook = `${dishName} (${priceNok}) in ${resolvedNeighborhood}—worth crossing Oslo for.`;
+  let verdict = `${rawTasteNote} At ${priceNok}, this is one of the sharpest orders at ${venueName} right now.`;
+  let cta = `Send this to someone you want to eat here with ("Spise her? 👀") and tap the link in bio (@smakr.no) to see ${venueName} + all nearby picks on the live Oslo Food Radar map.`;
+  let storyTeaser = `New ${priceNok} ${dishName} drop in ${resolvedNeighborhood} 🔥👉`;
+
+  if (language === "no") {
+    if (angle === "hype-drop") {
+      hook = `${dishName} (${priceNok}) på ${ resolvedNeighborhood } som alle snakker om akkurat nå 🔥`;
+      verdict = `${rawTasteNote} For ${priceNok} hos ${venueName} leverer denne på første bit.`;
+      storyTeaser = `Ny ${priceNok} ${dishName}-favoritt på ${resolvedNeighborhood} 🔥👉`;
+    } else if (angle === "hidden-gem") {
+      hook = `Gå ikke forbi ${venueName} på ${resolvedNeighborhood} uten å bestille ${dishName} (${priceNok}) 🤫`;
+      verdict = `${rawTasteNote} En ekte lokal favoritt midt på ${resolvedNeighborhood} til ${priceNok}.`;
+      storyTeaser = `Skjult perle på ${resolvedNeighborhood}: ${dishName} (${priceNok}) 🤫👉`;
+    } else if (angle === "budget-steal") {
+      hook = `${priceNok} for ${dishName} på ${resolvedNeighborhood}—beste kjøpet i Oslo akkurat nå? 💸`;
+      verdict = `${rawTasteNote} Sjelden du får så mye smak for ${priceNok} hos ${venueName}.`;
+      storyTeaser = `Oslo-kupp: ${dishName} til ${priceNok} på ${resolvedNeighborhood} 💸👉`;
+    } else {
+      hook = `Er dette Oslos beste ${dishName.toLowerCase()}? (${priceNok} på ${resolvedNeighborhood}) 💬`;
+      verdict = `${rawTasteNote} Vi gir den ${rating}/5 hos ${venueName}—hva er din dom?`;
+      storyTeaser = `Oslos beste ${dishName}? (${priceNok} hos ${venueName}) 👀👉`;
+    }
+    cta = `Send denne til noen du vil spise her med ("Spise her? 👀") og sjekk linken i bio (@smakr.no) for å se ${venueName} og alle prisene på Oslo Food Radar-kartet.`;
+  } else if (language === "bilingual") {
+    if (angle === "hype-drop") {
+      hook = `${dishName} (${priceNok}) in ${resolvedNeighborhood}—ny Oslo-favoritt du må teste 🔥`;
+    } else if (angle === "hidden-gem") {
+      hook = `Low-key ${resolvedNeighborhood} gem: ${dishName} (${priceNok}) at ${venueName} 🤫`;
+    } else if (angle === "budget-steal") {
+      hook = `${priceNok} in ${resolvedNeighborhood}: ${dishName} at ${venueName} er et ekte kupp 💸`;
+    } else {
+      hook = `Best ${dishName.toLowerCase()} in Oslo? (${priceNok} at ${venueName})—enig eller uenig? 💬`;
+    }
+    verdict = `${rawTasteNote} Clocking in at ${priceNok}, ${venueName} nails the balance every single time.`;
+    cta = `Send this to your foodie crew ("Spise her? 👀") and tap the link in bio (@smakr.no) to find ${venueName} on the live Oslo Food Radar map.`;
+    storyTeaser = `${dishName} (${priceNok}) at ${venueName} in ${resolvedNeighborhood} — Spise her? 👀👉`;
+  } else {
+    // English
+    if (angle === "hype-drop") {
+      hook = `${dishName} (${priceNok}) in ${resolvedNeighborhood}—worth crossing Oslo for 🔥`;
+    } else if (angle === "hidden-gem") {
+      hook = `Don't walk past ${venueName} in ${resolvedNeighborhood} without ordering the ${dishName} 🤫`;
+    } else if (angle === "budget-steal") {
+      hook = `${priceNok} for ${dishName} in ${resolvedNeighborhood} might be Oslo's best value bite 💸`;
+    } else {
+      hook = `Is this the best ${dishName.toLowerCase()} in Oslo right now? (${priceNok} in ${resolvedNeighborhood}) 💬`;
+    }
+  }
+
+  if (hook.length > 108) {
+    hook = `${dishName} (${priceNok}) at ${venueName} in ${resolvedNeighborhood} 🔥`.slice(0, 108);
+  }
+
+  const hoursLine = payload.openingHoursSummary
+    ? `\n🕒 Hours: ${payload.openingHoursSummary}`
+    : "";
+
+  const cheatSheet = [
+    `📍 Spot: ${venueName}`,
+    `🗺️ Area: ${address} (${resolvedNeighborhood})`,
+    `💰 Price: ${priceNok}`,
+    `⭐ Rating: ${rating}/5${hoursLine}`,
+  ].join("\n");
+
+  const caption = [hook, verdict, cheatSheet, cta, hashtags.join(" ")].join("\n\n");
+  const altText = `${dishName} (${priceNok}) at ${venueName} in ${resolvedNeighborhood}, Oslo — Smakr Oslo Food Guide`;
+
+  return { caption, storyTeaser, altText };
+}
 
 function fallbackDishNote(
   dishName: string,
@@ -301,6 +502,124 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    if (body.mode === "generate-ig-caption") {
+      const fb = fallbackIgCaption(body);
+      if (!apiKey) {
+        return NextResponse.json(fb);
+      }
+
+      const dishName = (body.dishName || "Signature Dish").trim();
+      const priceNok = (body.priceNok || "145 kr").trim();
+      const venueName = (body.venueName || "Oslo Spot").trim();
+      const address = (body.address || `${venueName}, Oslo`).trim();
+      const rating = (body.rating || "4.8").trim();
+      const category = (body.category || "Food").trim();
+      const angle = body.angle || "hype-drop";
+      const language = body.language || "en";
+      const dietary =
+        Array.isArray(body.dietaryTags) && body.dietaryTags.length > 0
+          ? body.dietaryTags.join(", ")
+          : "";
+      const { resolvedNeighborhood, hashtags } = resolveServerNeighborhoodTags(
+        body.neighborhood,
+        address,
+        category,
+        dishName
+      );
+      const tasteNote =
+        (body.tasteNote || "").trim() ||
+        fallbackDishNote(dishName, venueName, category).note;
+
+      const angleInstructions: Record<string, string> = {
+        "hype-drop":
+          "Write a high-energy, mouth-watering new drop announcement that makes Oslo foodies immediately save the post and tag a friend.",
+        "hidden-gem":
+          "Write an insider local secret angle—like tipping off a friend about an underrated Oslo spot most people walk right past.",
+        "budget-steal":
+          "Lead with the exact NOK price and frame it as one of the sharpest value-for-money bites in Oslo right now.",
+        "debate-question":
+          "Lead with a bold, comment-sparking question (e.g., asking if this is Oslo's best version of this dish) to drive comment section debate.",
+      };
+
+      const languageInstructions: Record<string, string> = {
+        en: "Write in sharp, natural English used by Oslo locals and expats.",
+        no: "Write in natural, modern Oslo Norwegian (Bokmål). Keep it punchy and authentic, never stiff or translated-sounding.",
+        bilingual:
+          'Write in an authentic "Oslo Mix" (English body with natural Norwegian foodie phrases like "Spise her? 👀", "ekte kupp", or "ny favoritt").',
+      };
+
+      const prompt = [
+        `You are the lead social growth editor for Smakr Oslo (@smakr.no), Oslo'sdish-level food discovery radar.`,
+        `Write a high-converting Instagram post caption, story teaser, and SEO alt-text for:`,
+        `- Dish: "${dishName}"`,
+        `- Price: "${priceNok}"`,
+        `- Venue: "${venueName}"`,
+        `- Neighborhood: "${resolvedNeighborhood}"`,
+        `- Address: "${address}"`,
+        `- Rating: "${rating}/5"`,
+        `- Flavor/Texture Verdict: "${tasteNote}"`,
+        `- Category: "${category}"`,
+        dietary ? `- Dietary Tags: "${dietary}"` : "",
+        body.openingHoursSummary ? `- Opening Hours: "${body.openingHoursSummary}"` : "",
+        ``,
+        `ANGLE: ${angleInstructions[angle] || angleInstructions["hype-drop"]}`,
+        `LANGUAGE: ${languageInstructions[language] || languageInstructions.en}`,
+        ``,
+        `STRICT VOICE RULES:`,
+        `- Sound like a sharp, authentic Oslo local foodie.`,
+        `- NEVER use robotic AI clichés: banned words include "delightful", "culinary journey", "nestled in the heart of", "elevate", "seamless", "bespoke", "symphony of flavors", "hidden oasis", "look no further".`,
+        `- Keep ` + "`caption`" + ` formatted into these exact 5 blocks separated by double newlines (\\n\\n):`,
+        `  1. Scroll-Stopper Hook (Line 1): MUST be under 110 characters so it never truncates before "...more". Must mention the dish, neighborhood, or price hook.`,
+        `  2. The Insider Verdict: 1-2 punchy sentences describing the exact flavor/texture and price (${priceNok}).`,
+        `  3. The "Save This" Cheat Sheet (exact 4 lines):`,
+        `     📍 Spot: ${venueName}`,
+        `     🗺️ Area: ${address} (${resolvedNeighborhood})`,
+        `     💰 Price: ${priceNok}`,
+        `     ⭐ Rating: ${rating}/5`,
+        `  4. The Bio-Link & Social CTA: Tell viewers to send this to a friend ("Spise her? 👀") and tap the link in bio (@smakr.no) to see this spot and all nearby picks on the live Oslo Food Radar map.`,
+        `  5. SEO Hashtag Block: 8-10 hyper-relevant Oslo + neighborhood + dish hashtags. Include these tailored tags: ${hashtags.join(" ")}`,
+        ``,
+        `Return strict JSON matching this schema:`,
+        `{`,
+        `  "caption": string,`,
+        `  "storyTeaser": string, // 1-line hook for sharing to IG Stories, e.g. "New ${priceNok} ${dishName} drop in ${resolvedNeighborhood} 🍵👉"`,
+        `  "altText": string // Clean SEO alt-text, e.g. "${dishName} (${priceNok}) at ${venueName} in ${resolvedNeighborhood}, Oslo — Smakr Oslo Food Guide"`,
+        `}`,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+      const rawText = await callGeminiGenerateContent(
+        apiKey,
+        [{ role: "user", parts: [{ text: prompt }] }],
+        0.55
+      );
+
+      if (!rawText) {
+        return NextResponse.json(fb);
+      }
+
+      try {
+        const parsed = JSON.parse(rawText);
+        return NextResponse.json({
+          caption:
+            typeof parsed.caption === "string" && parsed.caption.trim()
+              ? parsed.caption.trim()
+              : fb.caption,
+          storyTeaser:
+            typeof parsed.storyTeaser === "string" && parsed.storyTeaser.trim()
+              ? parsed.storyTeaser.trim()
+              : fb.storyTeaser,
+          altText:
+            typeof parsed.altText === "string" && parsed.altText.trim()
+              ? parsed.altText.trim()
+              : fb.altText,
+        });
+      } catch {
+        return NextResponse.json(fb);
+      }
+    }
+
     return NextResponse.json({ error: "Invalid mode" }, { status: 400 });
   } catch {
     const fb = fallbackDishNote("Signature Dish", "Oslo Spot");
@@ -310,3 +629,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+

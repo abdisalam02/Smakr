@@ -38,6 +38,7 @@ import {
   type MascotState,
   type MapShotState,
   type DishTitleState,
+  type UiKitExportTarget,
   type WallpaperState,
   type AspectRatio,
   type BubbleSide,
@@ -455,13 +456,42 @@ export default function StudioPage() {
     }
   };
 
+  // Export 5: 1-Click Quick Extract Individual UI Sticker PNG (Mode 3)
+  const handleQuickExtractUiTarget = useCallback(
+    async (target: UiKitExportTarget) => {
+      if (exporting) return;
+      updateDishTitle({ uiKitExportTarget: target });
+      setExporting(true);
+      setTimeout(async () => {
+        try {
+          if (assetRef.current) {
+            await downloadElementPng(assetRef.current, `smakr-ui-${target}.png`, {
+              backgroundColor: undefined,
+            });
+            setToast(`✓ Extracted ${target}.png (3x Transparent)`);
+          }
+        } catch {
+          setToast('Quick extract failed');
+        } finally {
+          setExporting(false);
+          setTimeout(() => setToast(null), 2500);
+        }
+      }, 120);
+    },
+    [exporting, updateDishTitle]
+  );
+
   const isFullAspectMode =
     activeMode === 'wallpaper' ||
     (activeMode === 'venue-map' &&
       state.map.exportTarget !== 'card-only' &&
-      state.map.exportTarget !== 'pin-only');
+      state.map.exportTarget !== 'pin-only') ||
+    (activeMode === 'dish-title' && state.dishTitle?.uiKitExportTarget === 'full-cover');
 
-  const { w: fullW, h: fullH } = CANVAS_SIZES[state.aspectRatio || '9:16'];
+  const { w: fullW, h: fullH } =
+    activeMode === 'dish-title' && state.dishTitle?.uiKitExportTarget === 'full-cover'
+      ? { w: 1080, h: 1350 }
+      : CANVAS_SIZES[state.aspectRatio || '9:16'];
 
   // Admin access gate check
   const isAllowed =
@@ -676,7 +706,7 @@ export default function StudioPage() {
           })()
         ) : activeMode === 'venue-map' || activeMode === 'dish-title' ? (
           (() => {
-            const cardIntrinsicW = activeMode === 'venue-map' ? 1080 : 860;
+            const cardIntrinsicW = activeMode === 'venue-map' ? 1080 : 880;
             const cardIntrinsicH =
               activeMode === 'venue-map'
                 ? state.map.exportTarget === 'pin-only'
@@ -811,34 +841,35 @@ export default function StudioPage() {
 
           {activeMode === 'dish-title' && (
             <>
-              <button
-                type="button"
-                onClick={() => updateDishTitle({ template: 'stacked' })}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                  (state.dishTitle?.template || 'stacked') === 'stacked'
-                    ? 'bg-[#231F1D] text-white'
-                    : 'bg-[#EFEAE1] text-[#5C534E]'
-                }`}
-              >
-                ✍️ Stacked
-              </button>
-              <button
-                type="button"
-                onClick={() => updateDishTitle({ template: 'pills' })}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                  state.dishTitle?.template === 'pills'
-                    ? 'bg-[#231F1D] text-white'
-                    : 'bg-[#EFEAE1] text-[#5C534E]'
-                }`}
-              >
-                🏷️ Pills
-              </button>
+              {(
+                [
+                  ['comico-title-only', '🔤 Comico Title'],
+                  ['glass-verdict-card', '🪪 Glass Card'],
+                  ['paprika-price-pill', '🔥 Price Pill'],
+                  ['brand-logo-pill', '🏷️ Logo Pill'],
+                  ['location-rating-pill', '📍 Location Pill'],
+                  ['full-cover', '🖼️ Full Cover'],
+                ] as const
+              ).map(([target, label]) => (
+                <button
+                  key={target}
+                  type="button"
+                  onClick={() => updateDishTitle({ uiKitExportTarget: target })}
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                    (state.dishTitle?.uiKitExportTarget || 'comico-title-only') === target
+                      ? 'bg-[#231F1D] text-white'
+                      : 'bg-[#EFEAE1] text-[#5C534E]'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
               <button
                 type="button"
                 onClick={() =>
                   updateDishTitle({ stickerOutline: !state.dishTitle?.stickerOutline })
                 }
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                   state.dishTitle?.stickerOutline ? 'bg-[#e84a27] text-white' : 'bg-[#EFEAE1] text-[#5C534E]'
                 }`}
               >
@@ -903,6 +934,7 @@ export default function StudioPage() {
         onUpdateAspectRatio={(r) => setState((prev) => ({ ...prev, aspectRatio: r }))}
         onUpdateTransparentBg={(t) => setState((prev) => ({ ...prev, transparentBg: t }))}
         onUpdateSafeZones={(sz) => setState((prev) => ({ ...prev, showSafeZones: sz }))}
+        onQuickExtractUiTarget={handleQuickExtractUiTarget}
       />
     </main>
   );
