@@ -20,7 +20,7 @@ import { OfficialSmakrMascot } from "@/lib/officialSmakrMascot";
 export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
   const router = useRouter();
   const pathname = usePathname();
-  if (pathname === "/studio") return null;
+  if (pathname === "/studio" || pathname === "/ad-reel") return null;
   const openCreateDish = useCityPulseStore((state) => state.openCreateDish);
   const storeUser = useCityPulseStore((state) => state.currentUser);
   const storeResolved = useCityPulseStore((state) => state.isAuthResolved);

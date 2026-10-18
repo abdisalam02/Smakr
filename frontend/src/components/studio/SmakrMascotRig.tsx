@@ -378,7 +378,7 @@ export function SmakrMascotRig({
           </span>
         )}
         <span className="block font-bold text-2xl text-[#181615]">
-          {bubbleText || 'For the biscoff lovers'}
+          {bubbleText || 'Oslo Food Radar'}
         </span>
       </div>
     );
@@ -495,8 +495,11 @@ export function SmakrMascotRig({
     characterH = targetH;
     characterW = Math.round(targetH * (vbW / (vbH || 1)));
   } else {
-    characterW = size;
-    characterH = Math.round(size * (vbH / (vbW || 1)));
+    // Bust poses: Lock height to `size` so all busts (pointing-up, jacket-2, shrug, coffee)
+    // share the exact same head size, shoulder baseline, and character scale.
+    const targetH = size;
+    characterH = targetH;
+    characterW = Math.round(targetH * (vbW / (vbH || 1)));
   }
 
   // MODE: Bubble Only
@@ -544,7 +547,7 @@ export function SmakrMascotRig({
     return (
       <div
         data-mascot-rig="true"
-        className={`relative inline-block select-none ${className}`}
+        className={`relative inline-block shrink-0 select-none ${className}`}
         style={{
           width: characterW,
           height: characterH,
