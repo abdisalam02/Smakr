@@ -211,3 +211,4 @@
 - Restored `/ad-reel` cinematic background map blur (eased to subtle 4px) outside phone via SVG mask cutout, keeping viewport 100% sharp.
 - Centered header with `✦ Discover through` inside porcelain pill and all-caps `SMAKR` in comico font outside border matching logo.
 - Elevated mascot column to `bottom-[370px]` inline with phone baseline; scaled avatar up to `size: 510` with `shrink-0` ensuring 1:1 scale across all poses.
+- Scaled up `/ad-reel` 9:16 brand header: enlarged porcelain pill (`text-[36px]`, `px-9 py-4`) and freestanding `SMAKR` logo (`text-[62px]`, 4px die-cut rim) for campaign presence.

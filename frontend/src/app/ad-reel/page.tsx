@@ -1359,22 +1359,46 @@ export default function AdReelStagePage() {
             <div
               className={`absolute z-30 ${
                 aspectMode === "9:16"
-                  ? "top-[100px] left-1/2 -translate-x-1/2"
+                  ? "top-[82px] left-1/2 -translate-x-1/2"
                   : "top-[48px] left-1/2 -translate-x-1/2"
               }`}
             >
-              <div className="inline-flex items-center gap-3.5 whitespace-nowrap select-none">
-                <div className="inline-flex items-center gap-2.5 px-6 py-2.5 rounded-full bg-[#FAF7F2] border border-white/90 shadow-[0_14px_36px_rgba(24,22,21,0.16)]">
-                  <span className="font-comico text-base text-[#e84a27]">✦</span>
-                  <span className="font-comico text-[22px] tracking-wide text-[#181615]">
+              <div
+                className={`inline-flex items-center whitespace-nowrap select-none ${
+                  aspectMode === "9:16" ? "gap-5" : "gap-3.5"
+                }`}
+              >
+                <div
+                  className={`inline-flex items-center rounded-full bg-[#FAF7F2] border border-white/90 shadow-[0_18px_44px_rgba(24,22,21,0.18)] ${
+                    aspectMode === "9:16"
+                      ? "gap-3.5 px-9 py-4"
+                      : "gap-2.5 px-6 py-2.5"
+                  }`}
+                >
+                  <span
+                    className={`font-comico text-[#e84a27] ${
+                      aspectMode === "9:16" ? "text-[28px]" : "text-base"
+                    }`}
+                  >
+                    ✦
+                  </span>
+                  <span
+                    className={`font-comico tracking-wide text-[#181615] ${
+                      aspectMode === "9:16" ? "text-[36px]" : "text-[22px]"
+                    }`}
+                  >
                     Discover through
                   </span>
                 </div>
                 <span
-                  className="font-comico text-[36px] tracking-wide text-[#e84a27]"
+                  className={`font-comico tracking-wide text-[#e84a27] ${
+                    aspectMode === "9:16" ? "text-[62px]" : "text-[36px]"
+                  }`}
                   style={{
                     filter:
-                      "drop-shadow(2.5px 0 0 #FFFFFF) drop-shadow(-2.5px 0 0 #FFFFFF) drop-shadow(0 2.5px 0 #FFFFFF) drop-shadow(0 -2.5px 0 #FFFFFF) drop-shadow(0 6px 14px rgba(232,74,39,0.30))",
+                      aspectMode === "9:16"
+                        ? "drop-shadow(4px 0 0 #FFFFFF) drop-shadow(-4px 0 0 #FFFFFF) drop-shadow(0 4px 0 #FFFFFF) drop-shadow(0 -4px 0 #FFFFFF) drop-shadow(0 10px 22px rgba(232,74,39,0.36))"
+                        : "drop-shadow(2.5px 0 0 #FFFFFF) drop-shadow(-2.5px 0 0 #FFFFFF) drop-shadow(0 2.5px 0 #FFFFFF) drop-shadow(0 -2.5px 0 #FFFFFF) drop-shadow(0 6px 14px rgba(232,74,39,0.30))",
                   }}
                 >
                   SMAKR
