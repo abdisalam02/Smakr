@@ -406,6 +406,11 @@ function easeInOutCubic(t: number) {
   return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
 }
 
+function easeOutCubic(t: number) {
+  const x = clamp(t, 0, 1);
+  return 1 - Math.pow(1 - x, 3);
+}
+
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * clamp(t, 0, 1);
 }
@@ -528,9 +533,22 @@ export default function AdReelStagePage() {
   const weeklyPick = useCityPulseStore((s) => s.weeklyPick);
 
   const [aspectMode, setAspectMode] = useState<AspectMode>("9:16");
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const p = new URLSearchParams(window.location.search);
+      if (p.has("t")) return false;
+    }
+    return true;
+  });
   const [speed, setSpeed] = useState<PlaybackSpeed>(1);
-  const [timelineSec, setTimelineSec] = useState(0);
+  const [timelineSec, setTimelineSec] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const p = new URLSearchParams(window.location.search);
+      const t = p.get("t");
+      if (t !== null && !isNaN(parseFloat(t))) return parseFloat(t);
+    }
+    return 0;
+  });
   const [showSafeZone, setShowSafeZone] = useState(false);
   const [isRecordMode, setIsRecordMode] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
@@ -1042,89 +1060,105 @@ export default function AdReelStagePage() {
 
     // 4. Catchphrase Continuous Pencil/Brush Writing Choreography:
     // Starts halfway through the video (~13.0s) and writes everything straight with no stopping!
-    // 13.0s - 15.2s: pencil writes "for the big backs"
-    // 15.2s - 16.0s: pencil scribbles over "big backs"
-    // 16.0s - 16.5s: pencil draws curved arrow
-    // 16.5s - 17.5s: pencil writes "✦ foodies"
-    // 17.5s - 18.0s: pencil lifts off and fades out
-    // 18.0s - 27.0s: completed hand-drawn sticker remains permanent
-    let mainTextBrushProgress = 0;
+    // 4. Catchphrase Word-by-Word Handwriting & Scribble Choreography:
+    // Starts halfway through the video (t = 13.0s).
+    // - Each word is written out individually with natural human cadence & pen-lift micro-pauses:
+    //   "for" (13.00s - 13.35s) -> pause -> "the" (13.45s - 13.85s) -> pause -> "big" (13.98s - 14.50s) -> pause -> "backs" (14.62s - 15.25s)
+    // - NO pencil appears during the writing of words!
+    // - The pencil appears ONLY to scribble over "big backs" (15.40s - 16.40s) with natural inverted right-handed tilt (+42°).
+    // - "✦ foodies" correction & curved arrow appear cleanly without pencil.
+    let wordForProgress = 0;
+    let wordTheProgress = 0;
+    let wordBigProgress = 0;
+    let wordBacksProgress = 0;
     let scribbleProgress = 0;
-    let arrowProgress = 0;
     let foodieBrushProgress = 0;
-    let pencilX = 35;
-    let pencilY = 96;
-    let pencilAngle = -35;
+    let arrowProgress = 0;
+    let pencilX = 258;
+    let pencilY = 75;
+    let pencilAngle = 42; // Inverted right-handed pencil tilt (shaft points up-right)
     let pencilOpacity = 0;
     let catchphraseOpacity = 0;
     let catchphraseScale = 1;
 
     if (t >= 13.0) {
       catchphraseOpacity = 1;
-      if (t < 15.0) {
-        // Phase 1: Writing "for the big backs" straight across with pencil (13.0s - 15.0s)
-        const p = clamp((t - 13.0) / 2.0, 0, 1);
-        mainTextBrushProgress = p;
-        pencilX = lerp(28, 520, p);
-        pencilY = 96 + Math.sin(p * 24) * 4;
-        pencilAngle = -35 + Math.sin(p * 24) * 5;
-        pencilOpacity = 1;
-      } else if (t < 15.7) {
-        // Phase 2: Scribbling over "big backs" back and forth with no stopping (15.0s - 15.7s)
-        mainTextBrushProgress = 1;
-        const p = clamp((t - 15.0) / 0.7, 0, 1);
-        scribbleProgress = p;
-        if (p < 0.5) {
-          const subP = p / 0.5;
-          pencilX = lerp(520, 260, subP);
-          pencilY = lerp(78, 74, subP);
-          pencilAngle = -28;
+
+      // Word 1: "for"
+      if (t >= 13.0) {
+        wordForProgress = easeOutCubic(clamp((t - 13.0) / 0.35, 0, 1));
+      }
+
+      // Word 2: "the" (with 0.10s natural pen-lift pause after "for")
+      if (t >= 13.45) {
+        wordTheProgress = easeOutCubic(clamp((t - 13.45) / 0.40, 0, 1));
+      }
+
+      // Word 3: "big" (with 0.13s pause after "the")
+      if (t >= 13.98) {
+        wordBigProgress = easeOutCubic(clamp((t - 13.98) / 0.52, 0, 1));
+      }
+
+      // Word 4: "backs" (with 0.12s pause after "big")
+      if (t >= 14.62) {
+        wordBacksProgress = easeOutCubic(clamp((t - 14.62) / 0.63, 0, 1));
+      }
+
+      // 5. PENCIL EXCLUSIVELY FOR SCRIBBLE OVER "BIG BACKS" (15.40s - 16.40s)
+      if (t >= 15.40 && t < 16.45) {
+        if (t < 15.52) {
+          // Pencil drops into position onto "big backs" from top-right
+          const pIn = clamp((t - 15.40) / 0.12, 0, 1);
+          pencilX = lerp(290, 258, pIn);
+          pencilY = lerp(45, 75, pIn);
+          pencilAngle = 42;
+          pencilOpacity = pIn;
+        } else if (t < 16.25) {
+          // Energetic 3-stroke scribble crossing out "big backs"
+          const p = clamp((t - 15.52) / 0.73, 0, 1);
+          scribbleProgress = p;
+          pencilOpacity = 1;
+          if (p < 0.33) {
+            // Strike 1: Left to right across "big backs"
+            const subP = p / 0.33;
+            pencilX = lerp(258, 524, subP);
+            pencilY = lerp(75, 71, subP) + Math.sin(subP * Math.PI) * 4;
+            pencilAngle = 40 + Math.sin(subP * 14) * 4;
+          } else if (p < 0.66) {
+            // Strike 2: Right to left back across
+            const subP = (p - 0.33) / 0.33;
+            pencilX = lerp(524, 260, subP);
+            pencilY = lerp(71, 81, subP) + Math.sin(subP * Math.PI) * 4;
+            pencilAngle = 44 + Math.sin(subP * 14) * 4;
+          } else {
+            // Strike 3: Left to right final strike
+            const subP = (p - 0.66) / 0.34;
+            pencilX = lerp(260, 520, subP);
+            pencilY = lerp(81, 74, subP) + Math.sin(subP * Math.PI) * 4;
+            pencilAngle = 41 + Math.sin(subP * 14) * 4;
+          }
         } else {
-          const subP = (p - 0.5) / 0.5;
-          pencilX = lerp(260, 520, subP);
-          pencilY = lerp(74, 84, subP);
-          pencilAngle = -42;
+          // Pencil lifts off and swoops away to the top-right
+          scribbleProgress = 1;
+          const pOut = clamp((t - 16.25) / 0.20, 0, 1);
+          pencilX = 520 + pOut * 40;
+          pencilY = 74 - pOut * 45;
+          pencilAngle = 42 + pOut * 12;
+          pencilOpacity = 1 - pOut;
         }
-        pencilOpacity = 1;
-      } else if (t < 16.7) {
-        // Phase 3: Writing "✦ foodies" above with no pause (15.7s - 16.7s)
-        mainTextBrushProgress = 1;
+      } else if (t >= 16.45) {
         scribbleProgress = 1;
-        const p = clamp((t - 15.7) / 1.0, 0, 1);
-        foodieBrushProgress = p;
-        pencilX = lerp(318, 466, p);
-        pencilY = 22 + Math.sin(p * 20) * 3;
-        pencilAngle = -35 + Math.sin(p * 20) * 4;
-        pencilOpacity = 1;
-      } else if (t < 17.2) {
-        // Phase 4: Drawing curved arrow pointing down to the scribble (16.7s - 17.2s)
-        mainTextBrushProgress = 1;
-        scribbleProgress = 1;
-        foodieBrushProgress = 1;
-        const p = clamp((t - 16.7) / 0.5, 0, 1);
-        arrowProgress = p;
-        pencilX = lerp(430, 450, p);
-        pencilY = lerp(32, 64, p);
-        pencilAngle = -48;
-        pencilOpacity = 1;
-      } else if (t < 17.8) {
-        // Phase 5: Pencil lifts off and fades away (17.2s - 17.8s)
-        mainTextBrushProgress = 1;
-        scribbleProgress = 1;
-        foodieBrushProgress = 1;
-        arrowProgress = 1;
-        const p = clamp((t - 17.2) / 0.6, 0, 1);
-        pencilX = 450 + p * 20;
-        pencilY = 64 - p * 30;
-        pencilAngle = -48 - p * 20;
-        pencilOpacity = 1 - p;
-      } else {
-        // Phase 6: Full completed sticker displayed permanently
-        mainTextBrushProgress = 1;
-        scribbleProgress = 1;
-        foodieBrushProgress = 1;
-        arrowProgress = 1;
         pencilOpacity = 0;
+      }
+
+      // 6. "✦ foodies" handwritten correction (16.42s - 17.15s) - NO pencil
+      if (t >= 16.42) {
+        foodieBrushProgress = easeOutCubic(clamp((t - 16.42) / 0.73, 0, 1));
+      }
+
+      // 7. Curved arrow pointing down from foodies to scribble (17.10s - 17.55s) - NO pencil
+      if (t >= 17.10) {
+        arrowProgress = easeOutCubic(clamp((t - 17.10) / 0.45, 0, 1));
       }
     }
 
@@ -1338,7 +1372,10 @@ export default function AdReelStagePage() {
       betaBubbleY,
       catchphraseOpacity,
       catchphraseScale,
-      mainTextBrushProgress,
+      wordForProgress,
+      wordTheProgress,
+      wordBigProgress,
+      wordBacksProgress,
       scribbleProgress,
       arrowProgress,
       foodieBrushProgress,
@@ -2515,17 +2552,59 @@ export default function AdReelStagePage() {
                 }}
               >
                 <defs>
-                  {/* Organic round brush mask for "for the big backs" */}
-                  <mask id="brush-main-mask" maskUnits="userSpaceOnUse">
+                  {/* Organic round brush mask for "for" */}
+                  <mask id="mask-word-for" maskUnits="userSpaceOnUse">
                     <rect x="0" y="0" width="560" height="140" fill="black" />
                     <path
-                      d="M 22 96 L 536 96"
+                      d="M 28 98 L 126 98"
                       fill="none"
                       stroke="white"
                       strokeWidth="80"
                       strokeLinecap="round"
-                      strokeDasharray={520}
-                      strokeDashoffset={520 * (1 - anim.mainTextBrushProgress)}
+                      strokeDasharray={105}
+                      strokeDashoffset={105 * (1 - anim.wordForProgress)}
+                    />
+                  </mask>
+
+                  {/* Organic round brush mask for "the" */}
+                  <mask id="mask-word-the" maskUnits="userSpaceOnUse">
+                    <rect x="0" y="0" width="560" height="140" fill="black" />
+                    <path
+                      d="M 128 98 L 235 98"
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="80"
+                      strokeLinecap="round"
+                      strokeDasharray={115}
+                      strokeDashoffset={115 * (1 - anim.wordTheProgress)}
+                    />
+                  </mask>
+
+                  {/* Organic round brush mask for "big" */}
+                  <mask id="mask-word-big" maskUnits="userSpaceOnUse">
+                    <rect x="0" y="0" width="560" height="140" fill="black" />
+                    <path
+                      d="M 255 98 L 368 98"
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="80"
+                      strokeLinecap="round"
+                      strokeDasharray={120}
+                      strokeDashoffset={120 * (1 - anim.wordBigProgress)}
+                    />
+                  </mask>
+
+                  {/* Organic round brush mask for "backs" */}
+                  <mask id="mask-word-backs" maskUnits="userSpaceOnUse">
+                    <rect x="0" y="0" width="560" height="140" fill="black" />
+                    <path
+                      d="M 370 98 L 536 98"
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="80"
+                      strokeLinecap="round"
+                      strokeDasharray={175}
+                      strokeDashoffset={175 * (1 - anim.wordBacksProgress)}
                     />
                   </mask>
 
@@ -2544,10 +2623,10 @@ export default function AdReelStagePage() {
                   </mask>
                 </defs>
 
-                {/* 1. Main catchphrase: "for the" + "big backs" unmasked with round brush stroke */}
-                {anim.mainTextBrushProgress > 0 && (
-                  <g mask="url(#brush-main-mask)">
-                    {/* "for the" white backing */}
+                {/* 1. Main catchphrase words written out one-by-one */}
+                {/* Word 1: "for" */}
+                {anim.wordForProgress > 0 && (
+                  <g mask="url(#mask-word-for)">
                     <text
                       x="38"
                       y="98"
@@ -2565,9 +2644,8 @@ export default function AdReelStagePage() {
                         paintOrder: "stroke fill",
                       }}
                     >
-                      for the
+                      for
                     </text>
-                    {/* "for the" ink fill */}
                     <text
                       x="38"
                       y="98"
@@ -2580,10 +2658,53 @@ export default function AdReelStagePage() {
                         fill: "#181615",
                       }}
                     >
-                      for the
+                      for
                     </text>
+                  </g>
+                )}
 
-                    {/* "big backs" white backing */}
+                {/* Word 2: "the" */}
+                {anim.wordTheProgress > 0 && (
+                  <g mask="url(#mask-word-the)">
+                    <text
+                      x="138"
+                      y="98"
+                      textAnchor="start"
+                      style={{
+                        fontFamily: "var(--font-comico), sans-serif",
+                        fontSize: "42px",
+                        fontWeight: 900,
+                        letterSpacing: "0.06em",
+                        fill: "#FFFFFF",
+                        stroke: "#FFFFFF",
+                        strokeWidth: "6px",
+                        strokeLinejoin: "round",
+                        strokeLinecap: "round",
+                        paintOrder: "stroke fill",
+                      }}
+                    >
+                      the
+                    </text>
+                    <text
+                      x="138"
+                      y="98"
+                      textAnchor="start"
+                      style={{
+                        fontFamily: "var(--font-comico), sans-serif",
+                        fontSize: "42px",
+                        fontWeight: 900,
+                        letterSpacing: "0.06em",
+                        fill: "#181615",
+                      }}
+                    >
+                      the
+                    </text>
+                  </g>
+                )}
+
+                {/* Word 3: "big" */}
+                {anim.wordBigProgress > 0 && (
+                  <g mask="url(#mask-word-big)">
                     <text
                       x="265"
                       y="98"
@@ -2601,9 +2722,8 @@ export default function AdReelStagePage() {
                         paintOrder: "stroke fill",
                       }}
                     >
-                      big backs
+                      big
                     </text>
-                    {/* "big backs" ink fill */}
                     <text
                       x="265"
                       y="98"
@@ -2616,7 +2736,46 @@ export default function AdReelStagePage() {
                         fill: "#181615",
                       }}
                     >
-                      big backs
+                      big
+                    </text>
+                  </g>
+                )}
+
+                {/* Word 4: "backs" */}
+                {anim.wordBacksProgress > 0 && (
+                  <g mask="url(#mask-word-backs)">
+                    <text
+                      x="380"
+                      y="98"
+                      textAnchor="start"
+                      style={{
+                        fontFamily: "var(--font-comico), sans-serif",
+                        fontSize: "46px",
+                        fontWeight: 900,
+                        letterSpacing: "0.05em",
+                        fill: "#FFFFFF",
+                        stroke: "#FFFFFF",
+                        strokeWidth: "6px",
+                        strokeLinejoin: "round",
+                        strokeLinecap: "round",
+                        paintOrder: "stroke fill",
+                      }}
+                    >
+                      backs
+                    </text>
+                    <text
+                      x="380"
+                      y="98"
+                      textAnchor="start"
+                      style={{
+                        fontFamily: "var(--font-comico), sans-serif",
+                        fontSize: "46px",
+                        fontWeight: 900,
+                        letterSpacing: "0.05em",
+                        fill: "#181615",
+                      }}
+                    >
+                      backs
                     </text>
                   </g>
                 )}
@@ -2625,24 +2784,24 @@ export default function AdReelStagePage() {
                 {anim.scribbleProgress > 0 && (
                   <>
                     <path
-                      d="M 520 80 C 430 72, 350 82, 260 74 C 350 78, 430 80, 520 84"
+                      d="M 258 75 C 330 68, 430 80, 524 72 C 430 82, 330 73, 260 81 C 330 76, 430 79, 520 74"
                       fill="none"
                       stroke="#FFFFFF"
                       strokeWidth="9"
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      strokeDasharray={530}
-                      strokeDashoffset={530 * (1 - anim.scribbleProgress)}
+                      strokeDasharray={820}
+                      strokeDashoffset={820 * (1 - anim.scribbleProgress)}
                     />
                     <path
-                      d="M 520 80 C 430 72, 350 82, 260 74 C 350 78, 430 80, 520 84"
+                      d="M 258 75 C 330 68, 430 80, 524 72 C 430 82, 330 73, 260 81 C 330 76, 430 79, 520 74"
                       fill="none"
                       stroke="#E84A27"
                       strokeWidth="5"
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      strokeDasharray={530}
-                      strokeDashoffset={530 * (1 - anim.scribbleProgress)}
+                      strokeDasharray={820}
+                      strokeDashoffset={820 * (1 - anim.scribbleProgress)}
                     />
                   </>
                 )}
@@ -2716,12 +2875,12 @@ export default function AdReelStagePage() {
                   </>
                 )}
 
-                {/* 5. Realistic Animated Vector Pencil */}
+                {/* 5. Realistic Animated Vector Pencil (ONLY APPEARS TO SCRIBBLE OVER "BIG BACKS") */}
                 {anim.pencilOpacity > 0 && (
                   <g
                     transform={`translate(${anim.pencilX}, ${anim.pencilY}) rotate(${anim.pencilAngle})`}
                     opacity={anim.pencilOpacity}
-                    style={{ filter: "drop-shadow(2px 5px 6px rgba(0,0,0,0.32))" }}
+                    style={{ filter: "drop-shadow(-3px 5px 6px rgba(0,0,0,0.32))" }}
                   >
                     {/* Graphite Lead Tip */}
                     <polygon points="0,0 -3,-8 3,-8" fill="#181615" />

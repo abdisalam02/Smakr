@@ -218,3 +218,4 @@
 - Calibrated `/ad-reel`: restored permanent centered catchphrase at bottom, animated mascot scaling (1.25x hook/outro, 0.94x demo), and animated SMAKR header slide-down with drawn underline.
 - Smooth `/ad-reel`: switched mascot to GPU compositor matrix eliminating scale jitter, and added progressive live writing for catchphrase (writes "for the big backs", scribbles over, and pops "foodies").
 - Refined `/ad-reel` catchphrase: continuous pencil writing begins halfway through (13.0s), unmasking authentic Comico text with organic round brush strokes, continuous strikethrough over "BIG BACKS" (full "S" preserved), elevated "✦ FOODIES", and live vector pencil tracking.
+- Upgraded `/ad-reel` catchphrase to word-by-word handwriting cadence ("for" -> "the" -> "big" -> "backs"), restricted vector pencil strictly to the "BIG BACKS" scribble strike, and inverted pencil to natural right-handed +42° angle.
