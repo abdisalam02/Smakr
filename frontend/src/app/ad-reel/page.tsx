@@ -1095,28 +1095,26 @@ export default function AdReelStagePage() {
         if (supported) mimeType = supported;
       }
 
-      // Wake audio graph and start soundtrack from 0.0s for perfect video sync
-      initAudioContext();
-      if (audioElRef.current && selectedTrackId !== "none" && activeTrack.src) {
-        audioElRef.current.currentTime = 0;
-        audioElRef.current.play().catch(() => {});
-      }
-
-      // Enter recording mode immediately so stage borders/shadows disappear and scale maximizes
+      // 1. Enter recording mode and freeze on 0.0s so stage is completely clean, controls are hidden, and scale maximizes
       setIsDownloading(true);
       setIsRecordMode(true);
       setTimelineSec(0);
       setSpeed(1);
-      setIsPlaying(true);
+      setIsPlaying(false);
 
-      // Create offscreen video element to decode tab frames
+      // 2. Allow React state updates, toolbar unmount, stage re-centering, and MapLibre canvas resize to fully settle
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      mapRef.current?.resize();
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+      // 3. Create offscreen video element to decode tab frames
       const video = document.createElement("video");
       video.srcObject = stream;
       video.muted = true;
       video.playsInline = true;
       await video.play();
 
-      // Attempt native CropTarget (Chrome 104+) to crop stream directly on GPU compositor
+      // 4. Attempt native CropTarget (Chrome 104+) on the fully settled stage container
       let hasNativeCrop = false;
       const stageEl = stageContainerRef.current;
       const [videoTrack] = stream.getVideoTracks();
@@ -1140,7 +1138,10 @@ export default function AdReelStagePage() {
         }
       }
 
-      // Dedicated offscreen master canvas strictly sized to 1080x1920 (or 1920x1080)
+      // Allow GPU compositor frames to switch from full-tab buffer to cropped element buffer
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      // 5. Dedicated offscreen master canvas strictly sized to 1080x1920 (or 1920x1080)
       const exportCanvas = document.createElement("canvas");
       exportCanvas.width = stageW;
       exportCanvas.height = stageH;
@@ -1154,11 +1155,21 @@ export default function AdReelStagePage() {
       const renderCropFrame = () => {
         if (!isCroppingActive) return;
         if (ctx && video.readyState >= 2) {
-          if (hasNativeCrop) {
+          const videoRatio = video.videoWidth / Math.max(1, video.videoHeight);
+          const targetRatio = stageW / stageH;
+          // Guard: Only use native direct draw if the stream video is demonstrably cropped to the stage aspect ratio.
+          // In 9:16 vertical mode (targetRatio ~0.5625), if videoRatio is > 0.95 (landscape/square), the stream is still delivering full tab frames!
+          const isStreamCropped =
+            hasNativeCrop &&
+            (aspectMode === "16:9"
+              ? Math.abs(videoRatio - targetRatio) < 0.2
+              : videoRatio < 0.95);
+
+          if (isStreamCropped) {
             // Video stream is already cropped to stage element by GPU compositor
             ctx.drawImage(video, 0, 0, stageW, stageH);
           } else if (stageContainerRef.current) {
-            // Fallback: extract exact bounding box of stage element from full tab viewport
+            // Precise fallback: extract exact bounding box of stage element from full tab viewport
             const rect = stageContainerRef.current.getBoundingClientRect();
             const scaleX = video.videoWidth / window.innerWidth;
             const scaleY = video.videoHeight / window.innerHeight;
@@ -1166,14 +1177,17 @@ export default function AdReelStagePage() {
             const sy = Math.max(0, rect.top * scaleY);
             const sw = Math.min(video.videoWidth - sx, rect.width * scaleX);
             const sh = Math.min(video.videoHeight - sy, rect.height * scaleY);
-            if (sw > 0 && sh > 0) {
+            if (sw > 10 && sh > 10) {
               ctx.drawImage(video, sx, sy, sw, sh, 0, 0, stageW, stageH);
             }
           }
         }
         cropLoopRef.current = requestAnimationFrame(renderCropFrame);
       };
+
+      // Start the cropping loop and let 2 frames paint to guarantee clean master canvas before recording starts
       cropLoopRef.current = requestAnimationFrame(renderCropFrame);
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Capture 60fps stream from the clean, 1080x1920 cropped master canvas
       const croppedStream = exportCanvas.captureStream(60);
@@ -1246,7 +1260,23 @@ export default function AdReelStagePage() {
         }
       };
 
+      // Start recording the clean, steady 1080x1920 master canvas
       recorder.start(250);
+
+      // 6. Hold for 1.0 second of clean pre-roll buffer at t = 0.0s
+      // Gives the user headroom to trim the very beginning in Instagram Reel / camera roll without losing content
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Guard if recording was aborted during pre-roll
+      if (recorder.state !== "recording") return;
+
+      // 7. Start audio and choreography animation together in 100% lockstep sync
+      initAudioContext();
+      if (audioElRef.current && selectedTrackId !== "none" && activeTrack.src) {
+        audioElRef.current.currentTime = 0;
+        audioElRef.current.play().catch(() => {});
+      }
+      setIsPlaying(true);
     } catch (err) {
       console.warn("Video capture cancelled or failed:", err);
       if (cropLoopRef.current) {
@@ -1275,11 +1305,15 @@ export default function AdReelStagePage() {
   // Live browser tab title feedback while recording (keeps video canvas 100% clean)
   useEffect(() => {
     if (isDownloading) {
-      document.title = `🔴 Recording ${timelineSec.toFixed(1)}s / ${TOTAL_DURATION}s · Smakr Video`;
+      if (timelineSec === 0 && !isPlaying) {
+        document.title = `🔴 [Pre-roll Hold] Starting in 1s · Smakr Video`;
+      } else {
+        document.title = `🔴 Recording ${timelineSec.toFixed(1)}s / ${TOTAL_DURATION}s · Smakr Video`;
+      }
     } else {
       document.title = "Smakr Oslo · Live Ad Reel";
     }
-  }, [isDownloading, timelineSec]);
+  }, [isDownloading, timelineSec, isPlaying]);
 
   // Master 60fps requestAnimationFrame timeline loop (0.0s -> 23.0s)
   useEffect(() => {
