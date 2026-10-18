@@ -214,3 +214,4 @@
 - Scaled up `/ad-reel` 9:16 brand header: enlarged porcelain pill (`text-[36px]`, `px-9 py-4`) and freestanding `SMAKR` logo (`text-[62px]`, 4px die-cut rim) for campaign presence.
 - Updated `/ad-reel` export pipeline to prioritize native MP4 (H.264/AVC) containers for seamless iPhone Camera Roll and Instagram Reel compatibility.
 - Implemented real-time GPU/canvas element cropping (`CropTarget` + 1080x1920 resampler) isolating ONLY the ad stage without browser bars.
+- Deployed 3-act ad choreography (27s loop): Act 1 centered mascot hook, Act 2 phone demo at original speed, Act 3 centered mascot finale with CTA & catchphrase.

@@ -54,7 +54,7 @@ const MAP_STYLE_URL = MAPTILER_KEY
   ? `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}`
   : "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
 
-const TOTAL_DURATION = 23.0;
+const TOTAL_DURATION = 27.0;
 // Exact real-world coordinates of Ochaya - The Matcha from Supabase
 const OCHAYA_LNGLAT: [number, number] = [10.7525, 59.9159];
 
@@ -81,11 +81,23 @@ interface SceneMeta {
 
 const SCENES: SceneMeta[] = [
   {
+    id: 0,
+    code: "S0",
+    label: "Hook: Hungry in Oslo?",
+    start: 0.0,
+    end: 3.5,
+    pose: "shrug",
+    face: "eating-happy",
+    badge: "✦ HUNGRY IN OSLO?",
+    speech: "Hungry in Oslo but have NO clue where to eat? 🤔",
+    subtext: "Stop scrolling Google Maps for 45 minutes.",
+  },
+  {
     id: 1,
     code: "S1",
     label: "Open Feed",
-    start: 0.0,
-    end: 3.5,
+    start: 3.5,
+    end: 7.0,
     pose: "pointing-up",
     face: "smile",
     badge: "✦ OSLO FOOD RADAR",
@@ -96,8 +108,8 @@ const SCENES: SceneMeta[] = [
     id: 2,
     code: "S2",
     label: "Scroll & Pick Dish",
-    start: 3.5,
-    end: 7.5,
+    start: 7.0,
+    end: 11.0,
     pose: "jacket-2",
     face: "eating-happy",
     badge: "✦ DISH FEED",
@@ -108,8 +120,8 @@ const SCENES: SceneMeta[] = [
     id: 3,
     code: "S3",
     label: "Fly to Map Pin",
-    start: 7.5,
-    end: 11.0,
+    start: 11.0,
+    end: 14.5,
     pose: "pointing-up",
     face: "cheeky",
     badge: "✦ 1-TAP MAP VIEW",
@@ -120,8 +132,8 @@ const SCENES: SceneMeta[] = [
     id: 4,
     code: "S4",
     label: "Spot Verdict Card",
-    start: 11.0,
-    end: 14.5,
+    start: 14.5,
+    end: 18.0,
     pose: "shrug",
     face: "loving-grin",
     badge: "✦ SPOT VERDICT",
@@ -132,8 +144,8 @@ const SCENES: SceneMeta[] = [
     id: 5,
     code: "S5",
     label: "Menu & Weekly Pick",
-    start: 14.5,
-    end: 19.0,
+    start: 18.0,
+    end: 22.5,
     pose: "coffee",
     face: "eating-happy",
     badge: "✦ WEEKLY DROP",
@@ -143,12 +155,12 @@ const SCENES: SceneMeta[] = [
   {
     id: 6,
     code: "S6",
-    label: "Beta Invite Loop",
-    start: 19.0,
-    end: 23.0,
+    label: "Beta Closer & Invite",
+    start: 22.5,
+    end: 27.0,
     pose: "pointing-up",
     face: "smile-big",
-    badge: "✦ TRY THE BETA",
+    badge: "✦ JOIN THE BETA",
     speech: "Want early access? Comment 'BETA' for the link 🚀",
     subtext: "smakr.no · Oslo's live food radar",
   },
@@ -524,6 +536,18 @@ export default function AdReelStagePage() {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [stageScale, setStageScale] = useState(0.45);
   const [isDownloading, setIsDownloading] = useState(false);
+
+  // Jump to specific scene time via URL parameter ?t= (e.g. ?t=24.5) for instant inspection
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const p = new URLSearchParams(window.location.search);
+      const t = p.get("t");
+      if (t !== null && !isNaN(parseFloat(t))) {
+        setTimelineSec(parseFloat(t));
+        setIsPlaying(false);
+      }
+    }
+  }, []);
 
   const lastTickRef = useRef<number | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -912,198 +936,266 @@ export default function AdReelStagePage() {
     );
   }, [timelineSec]);
 
+  // Stage + phone geometry (stage logical px). Single source of truth for the
+  // bezel, the veil cutout, the camera padding and the popup projection.
+  const stageW = aspectMode === "9:16" ? 1080 : 1920;
+  const stageH = aspectMode === "9:16" ? 1920 : 1080;
+  const phoneScale = aspectMode === "9:16" ? 1.48 : 1.04;
+  const scaledScreenW = Math.round(PHONE_LOGICAL_W * phoneScale);
+  const scaledScreenH = Math.round(PHONE_LOGICAL_H * phoneScale);
+  const bezelThickness = aspectMode === "9:16" ? 14 : 11;
+  const outerPhoneW = scaledScreenW + bezelThickness * 2;
+  const outerPhoneH = scaledScreenH + bezelThickness * 2;
+  const phoneRight = aspectMode === "9:16" ? 18 : 96;
+  const phoneTop = aspectMode === "9:16" ? 220 : Math.round((stageH - outerPhoneH) / 2);
+  const phoneLeft = stageW - phoneRight - outerPhoneW;
+  const screenLeft = phoneLeft + bezelThickness;
+  const screenTop = phoneTop + bezelThickness;
+  const screenRadius = aspectMode === "9:16" ? 54 : 46;
+
   // ============================================================================
-  // CHOREOGRAPHY ENGINE: Computes Map Camera, Mobile Sheet, Drawers & Touch Cursor
+  // CHOREOGRAPHY ENGINE: 3-Act Narrative (Hook -> Live Demo -> Centered Closer)
+  // Act 1 (0.0s - 3.5s): Center Mascot Hook ("Hungry in Oslo?")
+  // Act 2 (3.5s - 22.5s): Phone Presentation & Walkthrough (100% original speed)
+  // Act 3 (22.5s - 27.0s): Centered Mascot Closer, Beta CTA & Catchphrase
   // ============================================================================
   const anim = useMemo(() => {
     const t = timelineSec;
 
-    // 1. Mobile Bottom Sheet translateY (393x852 logical). Mirrors HomeView snaps:
-    // peek = 600 (~200px strip visible), half = 170, open = 96.
-    // flyToSpot() collapses to peek the instant a dish is tapped (useCityPulseStore).
+    // Stage horizontal coordinates
+    const mascotColWidth = aspectMode === "9:16" ? 390 : 620;
+    const mascotCenterX = Math.round((stageW - mascotColWidth) / 2);
+    const mascotLeftX = aspectMode === "9:16" ? 18 : 76;
+
+    // 1. Mascot Horizontal Sliding Position
+    let mascotX = mascotCenterX;
+    if (t < 2.8) {
+      mascotX = mascotCenterX;
+    } else if (t < 3.5) {
+      const p = easeInOutCubic((t - 2.8) / 0.7);
+      mascotX = lerp(mascotCenterX, mascotLeftX, p);
+    } else if (t < 22.5) {
+      mascotX = mascotLeftX;
+    } else if (t < 23.3) {
+      const p = easeInOutCubic((t - 22.5) / 0.8);
+      mascotX = lerp(mascotLeftX, mascotCenterX, p);
+    } else {
+      mascotX = mascotCenterX;
+    }
+
+    // 2. Phone Horizontal Slide-in & Slide-out
+    let phoneXOffset = 750;
+    let phoneOpacity = 0;
+    if (t < 2.7) {
+      phoneXOffset = 750;
+      phoneOpacity = 0;
+    } else if (t < 3.5) {
+      const p = easeInOutCubic((t - 2.7) / 0.8);
+      phoneXOffset = lerp(750, 0, p);
+      phoneOpacity = p;
+    } else if (t < 22.5) {
+      phoneXOffset = 0;
+      phoneOpacity = 1;
+    } else if (t < 23.3) {
+      const p = easeInOutCubic((t - 22.5) / 0.8);
+      phoneXOffset = lerp(0, 750, p);
+      phoneOpacity = 1 - p;
+    } else {
+      phoneXOffset = 750;
+      phoneOpacity = 0;
+    }
+
+    // 3. Beta CTA Bubble (strictly in Act 3 closer, hidden in rest of video!)
+    let betaBubbleOpacity = 0;
+    let betaBubbleY = 24;
+    let showBetaCtaHighlight = false;
+    if (t >= 22.8) {
+      const p = easeInOutCubic(clamp((t - 22.8) / 0.7, 0, 1));
+      betaBubbleOpacity = p;
+      betaBubbleY = lerp(24, 0, p);
+      showBetaCtaHighlight = t >= 23.5 && t < 26.5;
+    }
+
+    // 4. Catchphrase at bottom (strictly in Act 3 closer, hidden in rest of video!)
+    let catchphraseOpacity = 0;
+    let catchphraseY = 50;
+    if (t >= 23.0) {
+      const p = easeInOutCubic(clamp((t - 23.0) / 0.7, 0, 1));
+      catchphraseOpacity = p;
+      catchphraseY = lerp(50, 0, p);
+    }
+
+    // 5. Top Brand Header scale/emphasis in Act 3 closer
+    let headerScale = 1;
+    let headerY = 0;
+    if (t >= 22.6) {
+      const p = easeInOutCubic(clamp((t - 22.6) / 0.8, 0, 1));
+      headerScale = lerp(1, 1.05, p);
+      headerY = lerp(0, 8, p);
+    }
+
+    // 6. Presentation State Variables (Act 1: idle, Act 2: exact 19.0s sequence, Act 3: closing ease)
     const PEEK = 600;
     let sheetY = PEEK;
-    if (t < 1.1) {
-      sheetY = PEEK;
-    } else if (t < 2.5) {
-      sheetY = lerp(PEEK, 96, easeInOutCubic((t - 1.1) / 1.4));
-    } else if (t < 7.25) {
-      sheetY = 96;
-    } else if (t < 7.85) {
-      sheetY = lerp(96, PEEK, easeInOutCubic((t - 7.25) / 0.6));
-    } else if (t < 17.25) {
-      sheetY = PEEK;
-    } else if (t < 17.85) {
-      // Capsule tap while in peek -> MascotWeeklyDrop onOpen() lifts sheet to half
-      sheetY = lerp(PEEK, 170, easeInOutCubic((t - 17.25) / 0.6));
-    } else if (t < 21.6) {
-      sheetY = 170;
-    } else {
-      sheetY = lerp(170, PEEK, easeInOutCubic((t - 21.6) / 1.4));
-    }
-
-    // 2. Feed scroll offset. Kept after collapse (the real feed keeps its scroll),
-    // eased back to 0 during the loop reset so frame 23.0 == frame 0.0.
     let feedScrollY = 0;
-    if (t >= 3.5 && t < 5.0) {
-      feedScrollY = lerp(0, 265, easeInOutCubic((t - 3.5) / 1.5));
-    } else if (t >= 5.0 && t < 6.4) {
-      feedScrollY = lerp(265, 535, easeInOutCubic((t - 5.0) / 1.4));
-    } else if (t >= 6.4 && t < 21.6) {
-      feedScrollY = 535;
-    } else if (t >= 21.6) {
-      feedScrollY = lerp(535, 0, easeInOutCubic((t - 21.6) / 1.4));
-    }
-
-    const isMatchaCardTapped = t >= 6.6 && t < 7.4;
-
-    // Where (in phone logical px) the camera's focus point should land. 300 sits
-    // just above the popup; 140 keeps the Smakr Pick pin visible above the half sheet.
+    let isMatchaCardTapped = false;
     let focusY = 300;
-    if (t >= 16.6 && t < 17.9) focusY = lerp(300, 140, easeInOutCubic((t - 16.6) / 1.3));
-    else if (t >= 17.9 && t < 21.4) focusY = 140;
-    else if (t >= 21.4) focusY = lerp(140, 300, easeInOutCubic((t - 21.4) / 1.6));
-
-    // 3. Continuous Full-Stage MapLibre Camera Choreography
-    // Every scene smoothly interpolates lng, lat, zoom, pitch, bearing so the background
-    // map AND the map inside the phone move together continuously!
     let camLng = 10.7535;
     let camLat = 59.9178;
     let camZoom = 13.75;
     let camPitch = 0;
     let camBearing = 0;
-
-    if (t < 3.5) {
-      // Gentle cinematic drift across central Oslo
-      const p = t / 3.5;
-      camLng = lerp(10.7535, 10.7555, p);
-      camLat = lerp(59.9178, 59.9192, p);
-      camZoom = lerp(13.75, 13.95, p);
-    } else if (t < 7.5) {
-      // While scrolling feed (Løkka -> Torggata -> Sentrum), background map glides along!
-      const p = easeInOutCubic((t - 3.5) / 4.0);
-      camLng = lerp(10.7555, 10.7528, p);
-      camLat = lerp(59.9192, 59.9165, p);
-      camZoom = lerp(13.95, 14.25, p);
-    } else if (t < 10.2) {
-      // Scene 3: Glide straight to Ochaya Matcha ([10.7525, 59.9159]) matching MapRadarView flyToTarget
-      const p = easeInOutCubic((t - 7.5) / 2.7);
-      camLng = lerp(10.7528, 10.7525, p);
-      camLat = lerp(59.9165, 59.9159, p);
-      camZoom = lerp(14.25, 15.6, p);
-      camPitch = 0;
-      camBearing = 0;
-    } else if (t < 16.6) {
-      // Steady centered radar view on Ochaya
-      camLng = 10.7525;
-      camLat = 59.9159;
-      camZoom = 15.6;
-      camPitch = 0;
-      camBearing = 0;
-    } else if (t < 18.2) {
-      // Glide to the ✦ Smakr Pick pin (Em Oi! [10.7572, 59.9138])
-      const p = easeInOutCubic((t - 16.6) / 1.6);
-      camLng = lerp(10.7525, 10.7572, p);
-      camLat = lerp(59.9159, 59.9138, p);
-      camZoom = lerp(15.6, 15.3, p);
-      camPitch = 0;
-      camBearing = 0;
-    } else if (t < 21.4) {
-      camLng = 10.7572;
-      camLat = 59.9138;
-      camZoom = 15.3;
-      camPitch = 0;
-      camBearing = 0;
-    } else {
-      // Smoothly return to exact Scene 1 starting camera for a 0-seam loop
-      const p = easeInOutCubic((t - 21.4) / 1.6);
-      camLng = lerp(10.7572, 10.7535, p);
-      camLat = lerp(59.9138, 59.9178, p);
-      camZoom = lerp(15.3, 13.75, p);
-      camPitch = 0;
-      camBearing = 0;
-    }
-
-    // 4. Popups & drawers. Same order as the app: flyToSpot -> pin popup ->
-    // Details opens VenueBottomSheet (dimmed modal over everything) -> ✕ clears
-    // selectedVenue (popup goes too) -> capsule tap expands the Weekly Drop.
-    const showOchayaHighlighted = t >= 8.6 && t < 16.6;
-    const showVenuePopupCard = t >= 10.4 && t < 16.6;
-    const isDetailsButtonPressed = t >= 13.6 && t < 14.25;
-    const showRestaurantDetailSheet = t >= 14.35 && t < 16.6;
-    const showWeeklyDropExpanded = t >= 17.4 && t < 21.6;
-    const showBetaCtaHighlight = t >= 19.0 && t < 22.3;
-
-    // 5. Simulated touch cursor (% of the 393x852 phone viewport)
+    let showOchayaHighlighted = false;
+    let showVenuePopupCard = false;
+    let isDetailsButtonPressed = false;
+    let showRestaurantDetailSheet = false;
+    let showWeeklyDropExpanded = false;
     let cursorX = 50;
     let cursorY = 78;
     let isPressed = false;
     let showRipple = false;
 
-    if (t < 1.0) {
-      cursorX = 50;
-      cursorY = 78;
-    } else if (t < 2.4) {
-      // Drag the peek sheet handle up
-      cursorX = 50;
-      cursorY = lerp(78, 19, easeInOutCubic((t - 1.0) / 1.4));
-      isPressed = true;
-    } else if (t < 3.5) {
-      cursorX = 54;
-      cursorY = 64;
-    } else if (t < 6.3) {
-      const cycle = (t - 3.5) % 1.4;
-      cursorX = 54;
-      cursorY = lerp(72, 40, easeInOutCubic(clamp(cycle / 1.0, 0, 1)));
-      isPressed = cycle < 0.95;
-    } else if (t < 7.5) {
-      // Tap the Biscoff Matcha card
-      cursorX = 52;
-      cursorY = 56;
-      isPressed = t >= 6.6 && t < 7.25;
-      showRipple = t >= 6.65 && t < 7.45;
-    } else if (t < 11.2) {
-      cursorX = lerp(52, 50, easeInOutCubic((t - 7.5) / 3.7));
-      cursorY = lerp(56, 44, easeInOutCubic((t - 7.5) / 3.7));
-    } else if (t < 13.4) {
-      // Move to [Details →] on the pin popup
-      const p = easeInOutCubic(clamp((t - 11.2) / 1.4, 0, 1));
-      cursorX = lerp(50, 68, p);
-      cursorY = lerp(44, 49, p);
-    } else if (t < 14.5) {
-      cursorX = 68;
-      cursorY = 49;
-      isPressed = t >= 13.6 && t < 14.25;
-      showRipple = t >= 13.65 && t < 14.4;
-    } else if (t < 16.1) {
-      // Browse the menu bento
-      const p = easeInOutCubic((t - 14.5) / 1.6);
-      cursorX = lerp(68, 50, p);
-      cursorY = lerp(49, 62, p);
-    } else if (t < 16.6) {
-      // Tap ✕ on the venue sheet hero
-      const p = easeInOutCubic(clamp((t - 16.1) / 0.3, 0, 1));
-      cursorX = lerp(50, 92, p);
-      cursorY = lerp(62, 15.5, p);
-      isPressed = t >= 16.4 && t < 16.6;
-      showRipple = t >= 16.42 && t < 16.66;
-    } else if (t < 17.4) {
-      // Tap the ✦ Smakr Pick capsule on the peek sheet header
-      const p = easeInOutCubic(clamp((t - 16.6) / 0.4, 0, 1));
-      cursorX = lerp(92, 75, p);
-      cursorY = lerp(15.5, 79, p);
-      isPressed = t >= 17.0 && t < 17.25;
-      showRipple = t >= 17.02 && t < 17.35;
-    } else if (t < 21.4) {
-      // Follow the sheet up to the expanded Weekly Drop card
-      const p = easeInOutCubic(clamp((t - 17.4) / 1.4, 0, 1));
-      cursorX = lerp(75, 55, p);
-      cursorY = lerp(79, 44, p);
+    if (t < 3.5) {
+      // Act 1: The Hook (gentle background map drift across central Oslo)
+      const p = t / 3.5;
+      camLng = lerp(10.7535, 10.7550, p);
+      camLat = lerp(59.9178, 59.9190, p);
+      camZoom = lerp(13.75, 13.90, p);
+    } else if (t < 22.5) {
+      // Act 2: Exact 19.0s presentation sequence shifted cleanly by +3.5s
+      const origT = t - 3.5;
+
+      // Bottom Sheet translateY
+      if (origT < 1.1) {
+        sheetY = PEEK;
+      } else if (origT < 2.5) {
+        sheetY = lerp(PEEK, 96, easeInOutCubic((origT - 1.1) / 1.4));
+      } else if (origT < 7.25) {
+        sheetY = 96;
+      } else if (origT < 7.85) {
+        sheetY = lerp(96, PEEK, easeInOutCubic((origT - 7.25) / 0.6));
+      } else if (origT < 17.25) {
+        sheetY = PEEK;
+      } else if (origT < 17.85) {
+        sheetY = lerp(PEEK, 170, easeInOutCubic((origT - 17.25) / 0.6));
+      } else {
+        sheetY = 170;
+      }
+
+      // Feed scroll offset
+      if (origT >= 3.5 && origT < 5.0) {
+        feedScrollY = lerp(0, 265, easeInOutCubic((origT - 3.5) / 1.5));
+      } else if (origT >= 5.0 && origT < 6.4) {
+        feedScrollY = lerp(265, 535, easeInOutCubic((origT - 5.0) / 1.4));
+      } else if (origT >= 6.4) {
+        feedScrollY = 535;
+      }
+
+      isMatchaCardTapped = origT >= 6.6 && origT < 7.4;
+
+      // Camera focus point in phone
+      if (origT >= 16.6 && origT < 17.9) focusY = lerp(300, 140, easeInOutCubic((origT - 16.6) / 1.3));
+      else if (origT >= 17.9) focusY = 140;
+
+      // Map camera trajectory
+      if (origT < 3.5) {
+        const p = origT / 3.5;
+        camLng = lerp(10.7550, 10.7555, p);
+        camLat = lerp(59.9190, 59.9192, p);
+        camZoom = lerp(13.90, 13.95, p);
+      } else if (origT < 7.5) {
+        const p = easeInOutCubic((origT - 3.5) / 4.0);
+        camLng = lerp(10.7555, 10.7528, p);
+        camLat = lerp(59.9192, 59.9165, p);
+        camZoom = lerp(13.95, 14.25, p);
+      } else if (origT < 10.2) {
+        const p = easeInOutCubic((origT - 7.5) / 2.7);
+        camLng = lerp(10.7528, 10.7525, p);
+        camLat = lerp(59.9165, 59.9159, p);
+        camZoom = lerp(14.25, 15.6, p);
+      } else if (origT < 16.6) {
+        camLng = 10.7525;
+        camLat = 59.9159;
+        camZoom = 15.6;
+      } else if (origT < 18.2) {
+        const p = easeInOutCubic((origT - 16.6) / 1.6);
+        camLng = lerp(10.7525, 10.7572, p);
+        camLat = lerp(59.9159, 59.9138, p);
+        camZoom = lerp(15.6, 15.3, p);
+      } else {
+        camLng = 10.7572;
+        camLat = 59.9138;
+        camZoom = 15.3;
+      }
+
+      showOchayaHighlighted = origT >= 8.6 && origT < 16.6;
+      showVenuePopupCard = origT >= 10.4 && origT < 16.6;
+      isDetailsButtonPressed = origT >= 13.6 && origT < 14.25;
+      showRestaurantDetailSheet = origT >= 14.35 && origT < 16.6;
+      showWeeklyDropExpanded = origT >= 17.4;
+
+      // Simulated touch cursor
+      if (origT < 1.0) {
+        cursorX = 50;
+        cursorY = 78;
+      } else if (origT < 2.4) {
+        cursorX = 50;
+        cursorY = lerp(78, 19, easeInOutCubic((origT - 1.0) / 1.4));
+        isPressed = true;
+      } else if (origT < 3.5) {
+        cursorX = 54;
+        cursorY = 64;
+      } else if (origT < 6.3) {
+        const cycle = (origT - 3.5) % 1.4;
+        cursorX = 54;
+        cursorY = lerp(72, 40, easeInOutCubic(clamp(cycle / 1.0, 0, 1)));
+        isPressed = cycle < 0.95;
+      } else if (origT < 7.5) {
+        cursorX = 52;
+        cursorY = 56;
+        isPressed = origT >= 6.6 && origT < 7.25;
+        showRipple = origT >= 6.65 && origT < 7.45;
+      } else if (origT < 11.2) {
+        cursorX = lerp(52, 50, easeInOutCubic((origT - 7.5) / 3.7));
+        cursorY = lerp(56, 44, easeInOutCubic((origT - 7.5) / 3.7));
+      } else if (origT < 13.4) {
+        const p = easeInOutCubic(clamp((origT - 11.2) / 1.4, 0, 1));
+        cursorX = lerp(50, 68, p);
+        cursorY = lerp(44, 49, p);
+      } else if (origT < 14.5) {
+        cursorX = 68;
+        cursorY = 49;
+        isPressed = origT >= 13.6 && origT < 14.25;
+        showRipple = origT >= 13.65 && origT < 14.4;
+      } else if (origT < 16.1) {
+        const p = easeInOutCubic((origT - 14.5) / 1.6);
+        cursorX = lerp(68, 50, p);
+        cursorY = lerp(49, 62, p);
+      } else if (origT < 16.6) {
+        const p = easeInOutCubic(clamp((origT - 16.1) / 0.3, 0, 1));
+        cursorX = lerp(50, 92, p);
+        cursorY = lerp(62, 15.5, p);
+        isPressed = origT >= 16.4 && origT < 16.6;
+        showRipple = origT >= 16.42 && origT < 16.66;
+      } else if (origT < 17.4) {
+        const p = easeInOutCubic(clamp((origT - 16.6) / 0.4, 0, 1));
+        cursorX = lerp(92, 75, p);
+        cursorY = lerp(15.5, 79, p);
+        isPressed = origT >= 17.0 && origT < 17.25;
+        showRipple = origT >= 17.02 && origT < 17.35;
+      } else {
+        const p = easeInOutCubic(clamp((origT - 17.4) / 1.4, 0, 1));
+        cursorX = lerp(75, 55, p);
+        cursorY = lerp(79, 44, p);
+      }
     } else {
-      // Return to the Scene 1 start position
-      const p = easeInOutCubic((t - 21.4) / 1.6);
-      cursorX = lerp(55, 50, p);
-      cursorY = lerp(44, 78, p);
+      // Act 3: The Closer (reset feed and return camera smoothly to start for 0-seam loop)
+      sheetY = PEEK;
+      feedScrollY = lerp(535, 0, easeInOutCubic((t - 22.5) / 2.0));
+      const p = easeInOutCubic((t - 22.5) / 4.5);
+      camLng = lerp(10.7572, 10.7535, p);
+      camLat = lerp(59.9138, 59.9178, p);
+      camZoom = lerp(15.3, 13.75, p);
     }
 
     return {
@@ -1126,25 +1218,17 @@ export default function AdReelStagePage() {
       isPressed,
       showRipple,
       focusY,
+      mascotX,
+      phoneXOffset,
+      phoneOpacity,
+      betaBubbleOpacity,
+      betaBubbleY,
+      catchphraseOpacity,
+      catchphraseY,
+      headerScale,
+      headerY,
     };
-  }, [timelineSec]);
-
-  // Stage + phone geometry (stage logical px). Single source of truth for the
-  // bezel, the veil cutout, the camera padding and the popup projection.
-  const stageW = aspectMode === "9:16" ? 1080 : 1920;
-  const stageH = aspectMode === "9:16" ? 1920 : 1080;
-  const phoneScale = aspectMode === "9:16" ? 1.48 : 1.04;
-  const scaledScreenW = Math.round(PHONE_LOGICAL_W * phoneScale);
-  const scaledScreenH = Math.round(PHONE_LOGICAL_H * phoneScale);
-  const bezelThickness = aspectMode === "9:16" ? 14 : 11;
-  const outerPhoneW = scaledScreenW + bezelThickness * 2;
-  const outerPhoneH = scaledScreenH + bezelThickness * 2;
-  const phoneRight = aspectMode === "9:16" ? 18 : 96;
-  const phoneTop = aspectMode === "9:16" ? 220 : Math.round((stageH - outerPhoneH) / 2);
-  const phoneLeft = stageW - phoneRight - outerPhoneW;
-  const screenLeft = phoneLeft + bezelThickness;
-  const screenTop = phoneTop + bezelThickness;
-  const screenRadius = aspectMode === "9:16" ? 54 : 46;
+  }, [timelineSec, aspectMode, stageW]);
 
   // Sync the continuous full-stage MapLibre camera & pin states every frame
   useEffect(() => {
@@ -1269,7 +1353,7 @@ export default function AdReelStagePage() {
                 className="w-28 sm:w-40 accent-[#e84a27] cursor-pointer"
               />
               <span className="font-mono text-[11px] font-bold text-zinc-300 w-20 text-right">
-                {timelineSec.toFixed(1)}s / 23s
+                {timelineSec.toFixed(1)}s / {Math.round(TOTAL_DURATION)}s
               </span>
             </div>
           </div>
@@ -1440,7 +1524,7 @@ export default function AdReelStagePage() {
                 <mask id="stage-veil-mask" maskUnits="userSpaceOnUse" x="0" y="0" width={stageW} height={stageH}>
                   <rect x="0" y="0" width={stageW} height={stageH} fill="#FFFFFF" />
                   <rect
-                    x={screenLeft}
+                    x={screenLeft + anim.phoneXOffset}
                     y={screenTop}
                     width={scaledScreenW}
                     height={scaledScreenH}
@@ -1473,10 +1557,12 @@ export default function AdReelStagePage() {
             {/* "Discover through" in pill border; "SMAKR" outside border like logo */}
             {/* =============================================================== */}
             <div
-              className={`absolute z-30 ${
-                aspectMode === "9:16"
-                  ? "top-[82px] left-1/2 -translate-x-1/2"
-                  : "top-[48px] left-1/2 -translate-x-1/2"
+              style={{
+                transform: `translate3d(-50%, ${anim.headerY}px, 0) scale(${anim.headerScale})`,
+                transition: "transform 0.4s ease-out",
+              }}
+              className={`absolute z-30 left-1/2 ${
+                aspectMode === "9:16" ? "top-[82px]" : "top-[48px]"
               }`}
             >
               <div
@@ -1530,13 +1616,14 @@ export default function AdReelStagePage() {
               style={{
                 width: outerPhoneW,
                 height: outerPhoneH,
-                left: phoneLeft,
+                left: phoneLeft + anim.phoneXOffset,
                 top: phoneTop,
+                opacity: anim.phoneOpacity,
                 // Deep directional left-cast shadow matching the user's inspiration mockup
                 boxShadow:
                   "-42px 52px 84px rgba(18, 16, 14, 0.42), -16px 22px 38px rgba(18, 16, 14, 0.26), 0 12px 30px rgba(18, 16, 14, 0.16)",
               }}
-              className="absolute z-20 rounded-[68px] bg-transparent pointer-events-none ring-2 ring-[#4A4744]/80"
+              className="absolute z-20 rounded-[68px] bg-transparent pointer-events-none ring-2 ring-[#4A4744]/80 transition-opacity duration-300"
             >
               {/* Outer Titanium Bezel Shell (hollow center) */}
               <div
@@ -2232,12 +2319,13 @@ export default function AdReelStagePage() {
             {/* =============================================================== */}
             <div
               style={{
-                left: phoneLeft,
-                width: outerPhoneW,
-                top: phoneTop + outerPhoneH + (aspectMode === "9:16" ? 22 : 12),
+                left: "50%",
+                bottom: aspectMode === "9:16" ? "180px" : "30px",
+                transform: `translate3d(-50%, ${anim.catchphraseY}px, 0)`,
+                opacity: anim.catchphraseOpacity,
                 zIndex: 40,
               }}
-              className="absolute z-[40] flex justify-center pointer-events-none select-none"
+              className="absolute z-[40] flex justify-center pointer-events-none select-none transition-opacity duration-300"
             >
               <svg
                 viewBox="0 0 540 135"
@@ -2407,21 +2495,24 @@ export default function AdReelStagePage() {
             {/* Positioned on left, cleanly moved away from the phone!          */}
             {/* =============================================================== */}
             <div
-              className={`absolute z-30 flex flex-col items-start pointer-events-none ${
+              style={{
+                left: anim.mascotX,
+              }}
+              className={`absolute z-30 flex flex-col items-center pointer-events-none ${
                 aspectMode === "9:16"
-                  ? "left-[18px] bottom-[370px] w-[390px]"
-                  : "left-[76px] bottom-[96px] w-[620px]"
+                  ? "bottom-[370px] w-[390px]"
+                  : "bottom-[96px] w-[620px]"
               }`}
             >
               {/* Speech Bubble — Attached right above Mascot's head! */}
-              <AnimatePresence mode="wait">
+              <AnimatePresence mode="wait" initial={false}>
                 <motion.div
-                  key={activeScene.id}
+                  key={`scene-${activeScene.id}`}
                   initial={{ opacity: 0, y: 14, scale: 0.94 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -8, scale: 0.96 }}
                   transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-                  className="relative w-full rounded-[28px] bg-[#FAF7F2] border border-white/90 shadow-[0_22px_50px_rgba(24,22,21,0.22)] p-5 mb-2"
+                  className="relative w-full rounded-[28px] bg-[#FAF7F2] border border-white/90 shadow-[0_22px_50px_rgba(24,22,21,0.22)] p-5 mb-2 text-center"
                 >
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e84a27]/12 text-[#e84a27] text-xs font-extrabold tracking-wider uppercase mb-2">
                     <span>{activeScene.badge}</span>
@@ -2435,14 +2526,14 @@ export default function AdReelStagePage() {
                     {activeScene.speech}
                   </p>
 
-                  <p className="mt-2 text-xs font-bold text-stone-600 flex items-center gap-1.5">
+                  <p className="mt-2 text-xs font-bold text-stone-600 flex items-center justify-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-[#e84a27] shrink-0" />
                     <span>{activeScene.subtext}</span>
                   </p>
 
                   {/* Speech Bubble Tail pointing directly down to Mascot's head */}
                   <div
-                    className="absolute -bottom-3.5 left-[170px] w-7 h-7 bg-[#FAF7F2] rotate-45 border-r border-b border-black/5"
+                    className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 w-7 h-7 bg-[#FAF7F2] rotate-45 border-r border-b border-black/5"
                   />
                 </motion.div>
               </AnimatePresence>
@@ -2451,7 +2542,7 @@ export default function AdReelStagePage() {
               <motion.div
                 animate={{ y: [0, -6, 0] }}
                 transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
-                className="relative ml-1 drop-shadow-[0_24px_44px_rgba(24,22,21,0.32)]"
+                className="relative drop-shadow-[0_24px_44px_rgba(24,22,21,0.32)]"
               >
                 <div
                   className={`flex items-end justify-center overflow-visible w-full ${
@@ -2476,33 +2567,42 @@ export default function AdReelStagePage() {
                 </div>
               </motion.div>
 
-              {/* Clean Warm Frosted Beta CTA Pill right under Mascot (Safe >260px from bottom) */}
-              <motion.div
-                animate={
-                  anim.showBetaCtaHighlight
-                    ? { scale: [1, 1.05, 1] }
-                    : { scale: 1 }
-                }
-                transition={{ duration: 1.2, repeat: Infinity }}
-                className={`-mt-3 ml-2 inline-flex items-center gap-2.5 px-5 py-3 rounded-full backdrop-blur-xl border shadow-[0_14px_34px_rgba(24,22,21,0.20)] transition-colors ${
-                  anim.showBetaCtaHighlight
-                    ? "bg-[#e84a27] text-white border-white/40"
-                    : "bg-[#FAF7F2]/95 text-[#181615] border-white/90"
-                }`}
+              {/* Clean Warm Frosted Beta CTA Pill — strictly visible in Act 3 closer! */}
+              <div
+                style={{
+                  opacity: anim.betaBubbleOpacity,
+                  transform: `translate3d(0, ${anim.betaBubbleY}px, 0)`,
+                  pointerEvents: anim.betaBubbleOpacity > 0.5 ? "auto" : "none",
+                }}
+                className="transition-all duration-300 -mt-3 flex justify-center w-full"
               >
-                <span
-                  className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold uppercase tracking-wider ${
+                <motion.div
+                  animate={
                     anim.showBetaCtaHighlight
-                      ? "bg-white text-[#e84a27]"
-                      : "bg-[#e84a27] text-white"
+                      ? { scale: [1, 1.05, 1] }
+                      : { scale: 1 }
+                  }
+                  transition={{ duration: 1.2, repeat: Infinity }}
+                  className={`inline-flex items-center gap-2.5 px-6 py-3 rounded-full backdrop-blur-xl border shadow-[0_14px_34px_rgba(24,22,21,0.20)] transition-colors ${
+                    anim.showBetaCtaHighlight
+                      ? "bg-[#e84a27] text-white border-white/40"
+                      : "bg-[#FAF7F2]/95 text-[#181615] border-white/90"
                   }`}
                 >
-                  BETA
-                </span>
-                <span className="text-base font-extrabold tracking-tight">
-                  Comment &ldquo;beta test&rdquo; · smakr.no
-                </span>
-              </motion.div>
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold uppercase tracking-wider ${
+                      anim.showBetaCtaHighlight
+                        ? "bg-white text-[#e84a27]"
+                        : "bg-[#e84a27] text-white"
+                    }`}
+                  >
+                    BETA
+                  </span>
+                  <span className="text-base font-extrabold tracking-tight">
+                    Comment &ldquo;beta test&rdquo; · smakr.no
+                  </span>
+                </motion.div>
+              </div>
             </div>
 
             {/* =============================================================== */}
