@@ -221,3 +221,4 @@
 - Deployed continuous cursive handwriting mask across "for the big backs" (unbroken 13.0s-15.0s flow, zero word delays), single-pass strikethrough over "BIG BACKS" (15.28s-15.58s), and inverted +42° pencil exclusively appearing for the single scribble strike.
 - Expanded `/ad-reel` audio suite to 10 curated CC0 royalty-free tracks (Lo-Fi, Jazz Hop, Upbeat Commercial, Food Vlog, Kitchen Recipe, Urban City, Bubbly Pop, Fresh Finds, Golden Hour, Bakery Piano, plus Mute) and integrated custom audio file upload (.mp3/.wav) baking directly into the MP4 export.
 - Stabilized `/ad-reel` video export startup with layout settling, aspect-ratio crop verification, and a 1.0s steady pre-roll hold at t=0s for clean Instagram trimming.
+- Replaced `/ad-reel` catchphrase reveal mask with a monotonically progressive cursive curve (strokeWidth=48) eliminating pauses between words and end-letter lag.
