@@ -223,3 +223,4 @@
 - Stabilized `/ad-reel` video export startup with layout settling, aspect-ratio crop verification, and a 1.0s steady pre-roll hold at t=0s for clean Instagram trimming.
 - Replaced `/ad-reel` catchphrase reveal mask with a monotonically progressive cursive curve (strokeWidth=48) eliminating pauses between words and end-letter lag.
 - Calibrated `/ad-reel` outro pacing (31.5s total): added 1.4s Apple-smooth easeOutQuint phone exit, smooth mascot center glide, menu dish scrolling, and an extended 7.5s outro hold.
+- Preserved `/ad-reel` Weekly Drop expanded state and feed position while phone slides off in Act 3, eliminating screen reset flash.

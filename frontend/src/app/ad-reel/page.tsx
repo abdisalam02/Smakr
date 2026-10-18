@@ -1739,9 +1739,15 @@ export default function AdReelStagePage() {
         cursorY = lerp(79, 46, p);
       }
     } else {
-      // Act 3: The Closer (reset feed and return camera smoothly to start for 0-seam loop)
-      sheetY = PEEK;
-      feedScrollY = lerp(535, 0, easeInOutQuint(clamp((t - ACT3_TRANS_START) / 2.5, 0, 1)));
+      // Act 3: The Closer (preserve weekly drop presentation on phone as it slides off-screen)
+      sheetY = 170;
+      showWeeklyDropExpanded = true;
+      feedScrollY = 535;
+      focusY = 140;
+      cursorX = 55;
+      cursorY = 46;
+
+      // Smoothly drift background map camera back towards central Oslo for the outro
       const p = easeInOutQuint(clamp((t - ACT3_TRANS_START) / 6.0, 0, 1));
       camLng = lerp(10.7572, 10.7535, p);
       camLat = lerp(59.9138, 59.9178, p);
