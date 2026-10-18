@@ -983,6 +983,24 @@ export default function AdReelStagePage() {
       mascotX = mascotCenterX;
     }
 
+    // 1b. Mascot Scale Animation (Bigger in Act 1 & 3, scaled down next to phone in Act 2)
+    const bigMascotScale = aspectMode === "9:16" ? 1.25 : 1.15;
+    const smallMascotScale = aspectMode === "9:16" ? 0.94 : 0.90;
+    let mascotScale = bigMascotScale;
+    if (t < 2.8) {
+      mascotScale = bigMascotScale;
+    } else if (t < 3.5) {
+      const p = easeInOutCubic((t - 2.8) / 0.7);
+      mascotScale = lerp(bigMascotScale, smallMascotScale, p);
+    } else if (t < 22.5) {
+      mascotScale = smallMascotScale;
+    } else if (t < 23.3) {
+      const p = easeInOutCubic((t - 22.5) / 0.8);
+      mascotScale = lerp(smallMascotScale, bigMascotScale, p);
+    } else {
+      mascotScale = bigMascotScale;
+    }
+
     // 2. Phone Horizontal Slide-in & Slide-out
     let phoneXOffset = 750;
     let phoneOpacity = 0;
@@ -1016,22 +1034,25 @@ export default function AdReelStagePage() {
       showBetaCtaHighlight = t >= 23.5 && t < 26.5;
     }
 
-    // 4. Catchphrase at bottom (strictly in Act 3 closer, hidden in rest of video!)
-    let catchphraseOpacity = 0;
-    let catchphraseY = 50;
-    if (t >= 23.0) {
-      const p = easeInOutCubic(clamp((t - 23.0) / 0.7, 0, 1));
-      catchphraseOpacity = p;
-      catchphraseY = lerp(50, 0, p);
+    // 4. Catchphrase at bottom (permanently visible throughout the ad, centered and scaled up!)
+    const catchphraseOpacity = 1;
+    let catchphraseScale = 1;
+    if (t >= 22.8) {
+      const p = easeInOutCubic(clamp((t - 22.8) / 0.8, 0, 1));
+      catchphraseScale = lerp(1, 1.06, p);
     }
 
-    // 5. Top Brand Header scale/emphasis in Act 3 closer
+    // 5. Top Brand Header: slides down from top in Act 3 outro with animated underline
     let headerScale = 1;
     let headerY = 0;
-    if (t >= 22.6) {
-      const p = easeInOutCubic(clamp((t - 22.6) / 0.8, 0, 1));
-      headerScale = lerp(1, 1.05, p);
-      headerY = lerp(0, 8, p);
+    let brandUnderlineProgress = 0;
+    if (t >= 22.5) {
+      const p = easeInOutCubic(clamp((t - 22.5) / 0.9, 0, 1));
+      headerScale = lerp(1, 1.10, p);
+      headerY = lerp(0, aspectMode === "9:16" ? 64 : 36, p);
+    }
+    if (t >= 23.0) {
+      brandUnderlineProgress = easeInOutCubic(clamp((t - 23.0) / 0.85, 0, 1));
     }
 
     // 6. Presentation State Variables (Act 1: idle, Act 2: exact 19.0s sequence, Act 3: closing ease)
@@ -1219,14 +1240,16 @@ export default function AdReelStagePage() {
       showRipple,
       focusY,
       mascotX,
+      mascotScale,
       phoneXOffset,
       phoneOpacity,
       betaBubbleOpacity,
       betaBubbleY,
       catchphraseOpacity,
-      catchphraseY,
+      catchphraseScale,
       headerScale,
       headerY,
+      brandUnderlineProgress,
     };
   }, [timelineSec, aspectMode, stageW]);
 
@@ -1592,19 +1615,74 @@ export default function AdReelStagePage() {
                     Discover through
                   </span>
                 </div>
-                <span
-                  className={`font-comico tracking-wide text-[#e84a27] ${
-                    aspectMode === "9:16" ? "text-[62px]" : "text-[36px]"
-                  }`}
-                  style={{
-                    filter:
-                      aspectMode === "9:16"
-                        ? "drop-shadow(4px 0 0 #FFFFFF) drop-shadow(-4px 0 0 #FFFFFF) drop-shadow(0 4px 0 #FFFFFF) drop-shadow(0 -4px 0 #FFFFFF) drop-shadow(0 10px 22px rgba(232,74,39,0.36))"
-                        : "drop-shadow(2.5px 0 0 #FFFFFF) drop-shadow(-2.5px 0 0 #FFFFFF) drop-shadow(0 2.5px 0 #FFFFFF) drop-shadow(0 -2.5px 0 #FFFFFF) drop-shadow(0 6px 14px rgba(232,74,39,0.30))",
-                  }}
-                >
-                  SMAKR
-                </span>
+                <div className="relative inline-flex flex-col items-center">
+                  <span
+                    className={`font-comico tracking-wide text-[#e84a27] ${
+                      aspectMode === "9:16" ? "text-[66px]" : "text-[38px]"
+                    }`}
+                    style={{
+                      filter:
+                        aspectMode === "9:16"
+                          ? "drop-shadow(4.5px 0 0 #FFFFFF) drop-shadow(-4.5px 0 0 #FFFFFF) drop-shadow(0 4.5px 0 #FFFFFF) drop-shadow(0 -4.5px 0 #FFFFFF) drop-shadow(0 12px 26px rgba(232,74,39,0.38))"
+                          : "drop-shadow(2.5px 0 0 #FFFFFF) drop-shadow(-2.5px 0 0 #FFFFFF) drop-shadow(0 2.5px 0 #FFFFFF) drop-shadow(0 -2.5px 0 #FFFFFF) drop-shadow(0 6px 14px rgba(232,74,39,0.30))",
+                    }}
+                  >
+                    SMAKR
+                  </span>
+
+                  {/* Animated brand underline that draws under SMAKR in the outro */}
+                  <svg
+                    viewBox="0 0 220 28"
+                    className="absolute -bottom-4 left-1/2 -translate-x-1/2 pointer-events-none overflow-visible"
+                    style={{
+                      width: aspectMode === "9:16" ? "240px" : "150px",
+                      height: aspectMode === "9:16" ? "28px" : "18px",
+                      opacity: anim.brandUnderlineProgress > 0.01 ? 1 : 0,
+                      transition: "opacity 0.2s ease-out",
+                    }}
+                  >
+                    {/* White die-cut outline behind the animated line */}
+                    <path
+                      d="M 6 14 C 55 6, 155 20, 212 11"
+                      fill="none"
+                      stroke="#FFFFFF"
+                      strokeWidth={aspectMode === "9:16" ? "9" : "6"}
+                      strokeLinecap="round"
+                      strokeDasharray={220}
+                      strokeDashoffset={220 * (1 - anim.brandUnderlineProgress)}
+                    />
+                    {/* Vivid Burnt Paprika stroke */}
+                    <path
+                      d="M 6 14 C 55 6, 155 20, 212 11"
+                      fill="none"
+                      stroke="#E84A27"
+                      strokeWidth={aspectMode === "9:16" ? "5" : "3.5"}
+                      strokeLinecap="round"
+                      strokeDasharray={220}
+                      strokeDashoffset={220 * (1 - anim.brandUnderlineProgress)}
+                    />
+                    {/* Sparkle star at the finish tip */}
+                    {anim.brandUnderlineProgress > 0.85 && (
+                      <g
+                        transform={`translate(216, 11) scale(${
+                          aspectMode === "9:16"
+                            ? (anim.brandUnderlineProgress - 0.85) * 6.6
+                            : 0.7
+                        })`}
+                        style={{
+                          filter: "drop-shadow(0 2px 6px rgba(232,74,39,0.5))",
+                        }}
+                      >
+                        <path
+                          d="M 0 -8 Q 1 -1 8 0 Q 1 1 0 8 Q -1 1 -8 0 Q -1 -1 0 -8 Z"
+                          fill="#E84A27"
+                          stroke="#FFFFFF"
+                          strokeWidth="1.5"
+                        />
+                      </g>
+                    )}
+                  </svg>
+                </div>
               </div>
             </div>
 
@@ -2320,20 +2398,20 @@ export default function AdReelStagePage() {
             <div
               style={{
                 left: "50%",
-                bottom: aspectMode === "9:16" ? "180px" : "30px",
-                transform: `translate3d(-50%, ${anim.catchphraseY}px, 0)`,
+                bottom: aspectMode === "9:16" ? "165px" : "28px",
+                transform: `translate3d(-50%, 0, 0) scale(${anim.catchphraseScale})`,
                 opacity: anim.catchphraseOpacity,
                 zIndex: 40,
               }}
-              className="absolute z-[40] flex justify-center pointer-events-none select-none transition-opacity duration-300"
+              className="absolute z-[40] flex justify-center pointer-events-none select-none transition-transform duration-300"
             >
               <svg
                 viewBox="0 0 540 135"
                 className={`overflow-visible ${
-                  aspectMode === "9:16" ? "w-[480px]" : "w-[420px]"
+                  aspectMode === "9:16" ? "w-[560px]" : "w-[440px]"
                 }`}
                 style={{
-                  filter: "drop-shadow(0 6px 16px rgba(24,22,21,0.20))",
+                  filter: "drop-shadow(0 8px 24px rgba(24,22,21,0.24))",
                 }}
               >
                 {/* 1. Tilted "✦ foodies" handwritten correction with curved arrow */}
@@ -2497,8 +2575,10 @@ export default function AdReelStagePage() {
             <div
               style={{
                 left: anim.mascotX,
+                transform: `scale(${anim.mascotScale})`,
+                transformOrigin: "bottom center",
               }}
-              className={`absolute z-30 flex flex-col items-center pointer-events-none ${
+              className={`absolute z-30 flex flex-col items-center pointer-events-none transition-transform duration-300 ${
                 aspectMode === "9:16"
                   ? "bottom-[370px] w-[390px]"
                   : "bottom-[96px] w-[620px]"
