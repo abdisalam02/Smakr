@@ -209,5 +209,5 @@
 - Upgraded `/ad-reel` dialogue to natural, casual phrasing (e.g. "Browse the best food spots around Oslo", "exact prices", "open right now").
 - Resolved `/ad-reel` catchphrase washed-out appearance by elevating it above the linen veil (`z-[40]`, explicit `zIndex: 40`), eliminating blockiness with 6px crisp die-cut outlines, generous letter spacing, open counters, and rich `#181615` ink and `#E84A27` paprika strokes.
 - Restored `/ad-reel` cinematic background map blur (eased to subtle 4px) outside phone via SVG mask cutout, keeping viewport 100% sharp.
-- Centered and enlarged `✦ Discover through Smakr` header pill (`text-[26px]` + `text-[32px]` Comico, `top-[100px]`, `whitespace-nowrap`) with no green dot.
+- Centered header with `✦ Discover through` inside porcelain pill and all-caps `SMAKR` in comico font outside border matching logo.
 - Elevated mascot column to `bottom-[370px]` inline with phone baseline; scaled avatar up to `size: 510` with `shrink-0` ensuring 1:1 scale across all poses.

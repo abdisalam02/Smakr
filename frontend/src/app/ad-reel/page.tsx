@@ -1353,7 +1353,8 @@ export default function AdReelStagePage() {
             />
 
             {/* =============================================================== */}
-            {/* LAYER 2: TOP-CENTERED CAMPAIGN BRAND PILL                       */}
+            {/* LAYER 2: TOP-CENTERED CAMPAIGN BRAND HEADER                     */}
+            {/* "Discover through" in pill border; "SMAKR" outside border like logo */}
             {/* =============================================================== */}
             <div
               className={`absolute z-30 ${
@@ -1362,11 +1363,21 @@ export default function AdReelStagePage() {
                   : "top-[48px] left-1/2 -translate-x-1/2"
               }`}
             >
-              <div className="inline-flex items-center gap-3.5 px-9 py-3.5 rounded-full bg-[#FAF7F2] border border-white/90 shadow-[0_18px_46px_rgba(24,22,21,0.18)] whitespace-nowrap">
-                <span className="font-comico text-xl text-[#e84a27]">✦</span>
-                <span className="font-comico text-[26px] tracking-wide text-[#181615] flex items-center gap-2.5 whitespace-nowrap">
-                  <span>Discover through</span>
-                  <span className="text-[#e84a27] text-[32px] tracking-wider font-extrabold">Smakr</span>
+              <div className="inline-flex items-center gap-3.5 whitespace-nowrap select-none">
+                <div className="inline-flex items-center gap-2.5 px-6 py-2.5 rounded-full bg-[#FAF7F2] border border-white/90 shadow-[0_14px_36px_rgba(24,22,21,0.16)]">
+                  <span className="font-comico text-base text-[#e84a27]">✦</span>
+                  <span className="font-comico text-[22px] tracking-wide text-[#181615]">
+                    Discover through
+                  </span>
+                </div>
+                <span
+                  className="font-comico text-[36px] tracking-wide text-[#e84a27]"
+                  style={{
+                    filter:
+                      "drop-shadow(2.5px 0 0 #FFFFFF) drop-shadow(-2.5px 0 0 #FFFFFF) drop-shadow(0 2.5px 0 #FFFFFF) drop-shadow(0 -2.5px 0 #FFFFFF) drop-shadow(0 6px 14px rgba(232,74,39,0.30))",
+                  }}
+                >
+                  SMAKR
                 </span>
               </div>
             </div>
