@@ -1040,41 +1040,94 @@ export default function AdReelStagePage() {
       showBetaCtaHighlight = t >= 23.5 && t < 26.5;
     }
 
-    // 4. Catchphrase Progressive Live Writing & Correction Choreography:
-    // 0.4s - 1.5s: "for the" writes out
-    // 1.5s - 2.8s: "big backs" writes out
-    // 2.8s - 3.6s: settled reading state ("for the big backs")
-    // 3.6s - 4.3s: marker scribbles across "big backs"
-    // 4.2s - 4.7s: curved arrow draws down
-    // 4.4s - 5.0s: "✦ foodies" springs in above the scribble
-    // 5.0s - 27.0s: full sticker remains permanently on screen
-    let catchphraseForTheP = 0;
-    let catchphraseBigBacksP = 0;
-    let catchphraseScribbleP = 0;
-    let catchphraseArrowP = 0;
-    let catchphraseFoodieP = 0;
-    let catchphraseFoodieScale = 0;
-    const catchphraseOpacity = 1;
+    // 4. Catchphrase Continuous Pencil/Brush Writing Choreography:
+    // Starts halfway through the video (~13.0s) and writes everything straight with no stopping!
+    // 13.0s - 15.2s: pencil writes "for the big backs"
+    // 15.2s - 16.0s: pencil scribbles over "big backs"
+    // 16.0s - 16.5s: pencil draws curved arrow
+    // 16.5s - 17.5s: pencil writes "✦ foodies"
+    // 17.5s - 18.0s: pencil lifts off and fades out
+    // 18.0s - 27.0s: completed hand-drawn sticker remains permanent
+    let mainTextBrushProgress = 0;
+    let scribbleProgress = 0;
+    let arrowProgress = 0;
+    let foodieBrushProgress = 0;
+    let pencilX = 35;
+    let pencilY = 96;
+    let pencilAngle = -35;
+    let pencilOpacity = 0;
+    let catchphraseOpacity = 0;
     let catchphraseScale = 1;
 
-    if (t >= 0.4) {
-      catchphraseForTheP = easeInOutCubic(clamp((t - 0.4) / 1.1, 0, 1));
+    if (t >= 13.0) {
+      catchphraseOpacity = 1;
+      if (t < 15.0) {
+        // Phase 1: Writing "for the big backs" straight across with pencil (13.0s - 15.0s)
+        const p = clamp((t - 13.0) / 2.0, 0, 1);
+        mainTextBrushProgress = p;
+        pencilX = lerp(28, 520, p);
+        pencilY = 96 + Math.sin(p * 24) * 4;
+        pencilAngle = -35 + Math.sin(p * 24) * 5;
+        pencilOpacity = 1;
+      } else if (t < 15.7) {
+        // Phase 2: Scribbling over "big backs" back and forth with no stopping (15.0s - 15.7s)
+        mainTextBrushProgress = 1;
+        const p = clamp((t - 15.0) / 0.7, 0, 1);
+        scribbleProgress = p;
+        if (p < 0.5) {
+          const subP = p / 0.5;
+          pencilX = lerp(520, 260, subP);
+          pencilY = lerp(78, 74, subP);
+          pencilAngle = -28;
+        } else {
+          const subP = (p - 0.5) / 0.5;
+          pencilX = lerp(260, 520, subP);
+          pencilY = lerp(74, 84, subP);
+          pencilAngle = -42;
+        }
+        pencilOpacity = 1;
+      } else if (t < 16.7) {
+        // Phase 3: Writing "✦ foodies" above with no pause (15.7s - 16.7s)
+        mainTextBrushProgress = 1;
+        scribbleProgress = 1;
+        const p = clamp((t - 15.7) / 1.0, 0, 1);
+        foodieBrushProgress = p;
+        pencilX = lerp(318, 466, p);
+        pencilY = 22 + Math.sin(p * 20) * 3;
+        pencilAngle = -35 + Math.sin(p * 20) * 4;
+        pencilOpacity = 1;
+      } else if (t < 17.2) {
+        // Phase 4: Drawing curved arrow pointing down to the scribble (16.7s - 17.2s)
+        mainTextBrushProgress = 1;
+        scribbleProgress = 1;
+        foodieBrushProgress = 1;
+        const p = clamp((t - 16.7) / 0.5, 0, 1);
+        arrowProgress = p;
+        pencilX = lerp(430, 450, p);
+        pencilY = lerp(32, 64, p);
+        pencilAngle = -48;
+        pencilOpacity = 1;
+      } else if (t < 17.8) {
+        // Phase 5: Pencil lifts off and fades away (17.2s - 17.8s)
+        mainTextBrushProgress = 1;
+        scribbleProgress = 1;
+        foodieBrushProgress = 1;
+        arrowProgress = 1;
+        const p = clamp((t - 17.2) / 0.6, 0, 1);
+        pencilX = 450 + p * 20;
+        pencilY = 64 - p * 30;
+        pencilAngle = -48 - p * 20;
+        pencilOpacity = 1 - p;
+      } else {
+        // Phase 6: Full completed sticker displayed permanently
+        mainTextBrushProgress = 1;
+        scribbleProgress = 1;
+        foodieBrushProgress = 1;
+        arrowProgress = 1;
+        pencilOpacity = 0;
+      }
     }
-    if (t >= 1.5) {
-      catchphraseBigBacksP = easeInOutCubic(clamp((t - 1.5) / 1.3, 0, 1));
-    }
-    if (t >= 3.6) {
-      catchphraseScribbleP = easeInOutCubic(clamp((t - 3.6) / 0.7, 0, 1));
-    }
-    if (t >= 4.2) {
-      catchphraseArrowP = easeInOutCubic(clamp((t - 4.2) / 0.5, 0, 1));
-    }
-    if (t >= 4.4) {
-      const p = clamp((t - 4.4) / 0.6, 0, 1);
-      catchphraseFoodieP = p;
-      catchphraseFoodieScale =
-        p < 0.7 ? lerp(0, 1.18, p / 0.7) : lerp(1.18, 1.0, (p - 0.7) / 0.3);
-    }
+
     if (t >= 22.8) {
       const p = easeInOutCubic(clamp((t - 22.8) / 0.8, 0, 1));
       catchphraseScale = lerp(1, 1.06, p);
@@ -1285,12 +1338,14 @@ export default function AdReelStagePage() {
       betaBubbleY,
       catchphraseOpacity,
       catchphraseScale,
-      catchphraseForTheP,
-      catchphraseBigBacksP,
-      catchphraseScribbleP,
-      catchphraseArrowP,
-      catchphraseFoodieP,
-      catchphraseFoodieScale,
+      mainTextBrushProgress,
+      scribbleProgress,
+      arrowProgress,
+      foodieBrushProgress,
+      pencilX,
+      pencilY,
+      pencilAngle,
+      pencilOpacity,
       headerScale,
       headerY,
       brandUnderlineProgress,
@@ -2451,7 +2506,7 @@ export default function AdReelStagePage() {
               className="absolute z-[40] flex justify-center pointer-events-none select-none"
             >
               <svg
-                viewBox="0 0 540 135"
+                viewBox="0 0 560 140"
                 className={`overflow-visible ${
                   aspectMode === "9:16" ? "w-[560px]" : "w-[440px]"
                 }`}
@@ -2460,46 +2515,48 @@ export default function AdReelStagePage() {
                 }}
               >
                 <defs>
-                  {/* Clip path revealing "for the" progressively as it is written */}
-                  <clipPath id="catchphrase-clip-for-the">
-                    <rect
-                      x="0"
-                      y="10"
-                      width={lerp(0, 245, anim.catchphraseForTheP)}
-                      height="115"
+                  {/* Organic round brush mask for "for the big backs" */}
+                  <mask id="brush-main-mask" maskUnits="userSpaceOnUse">
+                    <rect x="0" y="0" width="560" height="140" fill="black" />
+                    <path
+                      d="M 22 96 L 536 96"
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="80"
+                      strokeLinecap="round"
+                      strokeDasharray={520}
+                      strokeDashoffset={520 * (1 - anim.mainTextBrushProgress)}
                     />
-                  </clipPath>
+                  </mask>
 
-                  {/* Clip path revealing "big backs" progressively as it is written */}
-                  <clipPath id="catchphrase-clip-big-backs">
-                    <rect
-                      x="250"
-                      y="10"
-                      width={255 * anim.catchphraseBigBacksP}
-                      height="115"
+                  {/* Organic round brush mask for "✦ foodies" */}
+                  <mask id="brush-foodies-mask" maskUnits="userSpaceOnUse">
+                    <rect x="0" y="0" width="560" height="140" fill="black" />
+                    <path
+                      d="M 312 22 L 472 22"
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="60"
+                      strokeLinecap="round"
+                      strokeDasharray={165}
+                      strokeDashoffset={165 * (1 - anim.foodieBrushProgress)}
                     />
-                  </clipPath>
+                  </mask>
                 </defs>
 
-                {/* 1. Tilted "✦ foodies" handwritten correction with curved arrow */}
-                {anim.catchphraseFoodieP > 0 && (
-                  <g
-                    transform={`translate(362, 36) rotate(-6) scale(${anim.catchphraseFoodieScale})`}
-                    style={{
-                      transformOrigin: "center",
-                      opacity: clamp(anim.catchphraseFoodieP * 2, 0, 1),
-                    }}
-                  >
-                    {/* Crisp white backing for "foodies" */}
+                {/* 1. Main catchphrase: "for the" + "big backs" unmasked with round brush stroke */}
+                {anim.mainTextBrushProgress > 0 && (
+                  <g mask="url(#brush-main-mask)">
+                    {/* "for the" white backing */}
                     <text
-                      x="0"
-                      y="0"
-                      textAnchor="middle"
+                      x="38"
+                      y="98"
+                      textAnchor="start"
                       style={{
                         fontFamily: "var(--font-comico), sans-serif",
-                        fontSize: "30px",
+                        fontSize: "42px",
                         fontWeight: 900,
-                        letterSpacing: "0.04em",
+                        letterSpacing: "0.06em",
                         fill: "#FFFFFF",
                         stroke: "#FFFFFF",
                         strokeWidth: "6px",
@@ -2508,177 +2565,178 @@ export default function AdReelStagePage() {
                         paintOrder: "stroke fill",
                       }}
                     >
-                      ✦ foodies
+                      for the
                     </text>
-                    {/* Saturated #E84A27 Burnt Paprika text */}
+                    {/* "for the" ink fill */}
                     <text
-                      x="0"
-                      y="0"
-                      textAnchor="middle"
+                      x="38"
+                      y="98"
+                      textAnchor="start"
                       style={{
                         fontFamily: "var(--font-comico), sans-serif",
-                        fontSize: "30px",
+                        fontSize: "42px",
                         fontWeight: 900,
-                        letterSpacing: "0.04em",
-                        fill: "#E84A27",
+                        letterSpacing: "0.06em",
+                        fill: "#181615",
                       }}
                     >
-                      ✦ foodies
+                      for the
                     </text>
 
-                    {/* Curved Arrow pointing down to "big backs" */}
-                    {anim.catchphraseArrowP > 0 && (
-                      <>
-                        <path
-                          d="M 68 0 Q 82 12 80 26 M 70 22 L 80 26 L 85 16"
-                          fill="none"
-                          stroke="#FFFFFF"
-                          strokeWidth="6"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeDasharray={70}
-                          strokeDashoffset={70 * (1 - anim.catchphraseArrowP)}
-                        />
-                        <path
-                          d="M 68 0 Q 82 12 80 26 M 70 22 L 80 26 L 85 16"
-                          fill="none"
-                          stroke="#E84A27"
-                          strokeWidth="3.2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeDasharray={70}
-                          strokeDashoffset={70 * (1 - anim.catchphraseArrowP)}
-                        />
-                      </>
-                    )}
+                    {/* "big backs" white backing */}
+                    <text
+                      x="265"
+                      y="98"
+                      textAnchor="start"
+                      style={{
+                        fontFamily: "var(--font-comico), sans-serif",
+                        fontSize: "46px",
+                        fontWeight: 900,
+                        letterSpacing: "0.05em",
+                        fill: "#FFFFFF",
+                        stroke: "#FFFFFF",
+                        strokeWidth: "6px",
+                        strokeLinejoin: "round",
+                        strokeLinecap: "round",
+                        paintOrder: "stroke fill",
+                      }}
+                    >
+                      big backs
+                    </text>
+                    {/* "big backs" ink fill */}
+                    <text
+                      x="265"
+                      y="98"
+                      textAnchor="start"
+                      style={{
+                        fontFamily: "var(--font-comico), sans-serif",
+                        fontSize: "46px",
+                        fontWeight: 900,
+                        letterSpacing: "0.05em",
+                        fill: "#181615",
+                      }}
+                    >
+                      big backs
+                    </text>
                   </g>
                 )}
 
-                {/* 2. Main catchphrase: "for the" + "big backs" */}
-                {/* "for the" with animated progressive reveal */}
-                <g clipPath="url(#catchphrase-clip-for-the)">
-                  <text
-                    x="232"
-                    y="92"
-                    textAnchor="end"
-                    style={{
-                      fontFamily: "var(--font-comico), sans-serif",
-                      fontSize: "44px",
-                      fontWeight: 900,
-                      letterSpacing: "0.06em",
-                      fill: "#FFFFFF",
-                      stroke: "#FFFFFF",
-                      strokeWidth: "6px",
-                      strokeLinejoin: "round",
-                      strokeLinecap: "round",
-                      paintOrder: "stroke fill",
-                    }}
-                  >
-                    for the
-                  </text>
-                  <text
-                    x="232"
-                    y="92"
-                    textAnchor="end"
-                    style={{
-                      fontFamily: "var(--font-comico), sans-serif",
-                      fontSize: "44px",
-                      fontWeight: 900,
-                      letterSpacing: "0.06em",
-                      fill: "#181615",
-                    }}
-                  >
-                    for the
-                  </text>
-                </g>
-
-                {/* Dancing pen tip marker while "for the" is actively writing */}
-                {anim.catchphraseForTheP > 0.04 && anim.catchphraseForTheP < 0.98 && (
-                  <circle
-                    cx={lerp(65, 235, anim.catchphraseForTheP)}
-                    cy={88 + Math.sin(anim.catchphraseForTheP * 18) * 4}
-                    r="4.5"
-                    fill="#E84A27"
-                    stroke="#FFFFFF"
-                    strokeWidth="1.8"
-                    style={{ filter: "drop-shadow(0 2px 4px rgba(232,74,39,0.5))" }}
-                  />
-                )}
-
-                {/* "big backs" with animated progressive reveal */}
-                <g clipPath="url(#catchphrase-clip-big-backs)">
-                  <text
-                    x="258"
-                    y="92"
-                    textAnchor="start"
-                    style={{
-                      fontFamily: "var(--font-comico), sans-serif",
-                      fontSize: "48px",
-                      fontWeight: 900,
-                      letterSpacing: "0.05em",
-                      fill: "#FFFFFF",
-                      stroke: "#FFFFFF",
-                      strokeWidth: "6px",
-                      strokeLinejoin: "round",
-                      strokeLinecap: "round",
-                      paintOrder: "stroke fill",
-                    }}
-                  >
-                    big backs
-                  </text>
-                  <text
-                    x="258"
-                    y="92"
-                    textAnchor="start"
-                    style={{
-                      fontFamily: "var(--font-comico), sans-serif",
-                      fontSize: "48px",
-                      fontWeight: 900,
-                      letterSpacing: "0.05em",
-                      fill: "#181615",
-                    }}
-                  >
-                    big backs
-                  </text>
-                </g>
-
-                {/* Dancing pen tip marker while "big backs" is actively writing */}
-                {anim.catchphraseBigBacksP > 0.04 && anim.catchphraseBigBacksP < 0.98 && (
-                  <circle
-                    cx={250 + 235 * anim.catchphraseBigBacksP}
-                    cy={88 + Math.sin(anim.catchphraseBigBacksP * 20) * 4}
-                    r="4.5"
-                    fill="#E84A27"
-                    stroke="#FFFFFF"
-                    strokeWidth="1.8"
-                    style={{ filter: "drop-shadow(0 2px 4px rgba(232,74,39,0.5))" }}
-                  />
-                )}
-
-                {/* 3. Triple-stroke dynamic marker scribble crossing out "big backs" */}
-                {anim.catchphraseScribbleP > 0 && (
+                {/* 2. Hand-drawn marker strikethrough crossing out "big backs" right through the center */}
+                {anim.scribbleProgress > 0 && (
                   <>
                     <path
-                      d="M 252 83 C 310 76, 390 82, 482 74 C 415 84, 335 79, 256 86 C 320 84, 405 87, 478 80"
+                      d="M 520 80 C 430 72, 350 82, 260 74 C 350 78, 430 80, 520 84"
                       fill="none"
                       stroke="#FFFFFF"
                       strokeWidth="9"
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      strokeDasharray={680}
-                      strokeDashoffset={680 * (1 - anim.catchphraseScribbleP)}
+                      strokeDasharray={530}
+                      strokeDashoffset={530 * (1 - anim.scribbleProgress)}
                     />
                     <path
-                      d="M 252 83 C 310 76, 390 82, 482 74 C 415 84, 335 79, 256 86 C 320 84, 405 87, 478 80"
+                      d="M 520 80 C 430 72, 350 82, 260 74 C 350 78, 430 80, 520 84"
                       fill="none"
                       stroke="#E84A27"
-                      strokeWidth="5.5"
+                      strokeWidth="5"
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      strokeDasharray={680}
-                      strokeDashoffset={680 * (1 - anim.catchphraseScribbleP)}
+                      strokeDasharray={530}
+                      strokeDashoffset={530 * (1 - anim.scribbleProgress)}
                     />
                   </>
+                )}
+
+                {/* 3. Tilted "✦ foodies" handwritten correction elevated above */}
+                {anim.foodieBrushProgress > 0 && (
+                  <g mask="url(#brush-foodies-mask)">
+                    <g transform="translate(392, 22) rotate(-6)">
+                      {/* Crisp white backing for "foodies" */}
+                      <text
+                        x="0"
+                        y="0"
+                        textAnchor="middle"
+                        style={{
+                          fontFamily: "var(--font-comico), sans-serif",
+                          fontSize: "30px",
+                          fontWeight: 900,
+                          letterSpacing: "0.04em",
+                          fill: "#FFFFFF",
+                          stroke: "#FFFFFF",
+                          strokeWidth: "6px",
+                          strokeLinejoin: "round",
+                          strokeLinecap: "round",
+                          paintOrder: "stroke fill",
+                        }}
+                      >
+                        ✦ foodies
+                      </text>
+                      {/* Saturated #E84A27 Burnt Paprika text */}
+                      <text
+                        x="0"
+                        y="0"
+                        textAnchor="middle"
+                        style={{
+                          fontFamily: "var(--font-comico), sans-serif",
+                          fontSize: "30px",
+                          fontWeight: 900,
+                          letterSpacing: "0.04em",
+                          fill: "#E84A27",
+                        }}
+                      >
+                        ✦ foodies
+                      </text>
+                    </g>
+                  </g>
+                )}
+
+                {/* 4. Curved Arrow pointing down from foodies to the scribble */}
+                {anim.arrowProgress > 0 && (
+                  <>
+                    <path
+                      d="M 430 32 C 452 42, 458 52, 450 64 M 442 56 L 450 64 L 458 54"
+                      fill="none"
+                      stroke="#FFFFFF"
+                      strokeWidth="6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeDasharray={75}
+                      strokeDashoffset={75 * (1 - anim.arrowProgress)}
+                    />
+                    <path
+                      d="M 430 32 C 452 42, 458 52, 450 64 M 442 56 L 450 64 L 458 54"
+                      fill="none"
+                      stroke="#E84A27"
+                      strokeWidth="3.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeDasharray={75}
+                      strokeDashoffset={75 * (1 - anim.arrowProgress)}
+                    />
+                  </>
+                )}
+
+                {/* 5. Realistic Animated Vector Pencil */}
+                {anim.pencilOpacity > 0 && (
+                  <g
+                    transform={`translate(${anim.pencilX}, ${anim.pencilY}) rotate(${anim.pencilAngle})`}
+                    opacity={anim.pencilOpacity}
+                    style={{ filter: "drop-shadow(2px 5px 6px rgba(0,0,0,0.32))" }}
+                  >
+                    {/* Graphite Lead Tip */}
+                    <polygon points="0,0 -3,-8 3,-8" fill="#181615" />
+                    {/* Sharpened Cedar Collar */}
+                    <polygon points="-3,-8 3,-8 5,-17 -5,-17" fill="#F3D19C" />
+                    {/* Hexagon Body in Burnt Paprika */}
+                    <rect x="-5" y="-62" width="10" height="45" rx="1.5" fill="#E84A27" />
+                    {/* Facet Line */}
+                    <line x1="0" y1="-62" x2="0" y2="-17" stroke="#C93B1B" strokeWidth="1.2" />
+                    {/* Polished Silver Ferrule */}
+                    <rect x="-5" y="-70" width="10" height="8" fill="#D1D5DB" />
+                    <line x1="-5" y1="-66" x2="5" y2="-66" stroke="#9CA3AF" strokeWidth="0.8" />
+                    {/* Pink Rubber Eraser */}
+                    <path d="M -5 -70 C -5 -78, 5 -78, 5 -70 Z" fill="#F472B6" />
+                  </g>
                 )}
               </svg>
             </div>

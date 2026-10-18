@@ -217,3 +217,4 @@
 - Deployed 3-act ad choreography (27s loop): Act 1 centered mascot hook, Act 2 phone demo at original speed, Act 3 centered mascot finale with CTA & catchphrase.
 - Calibrated `/ad-reel`: restored permanent centered catchphrase at bottom, animated mascot scaling (1.25x hook/outro, 0.94x demo), and animated SMAKR header slide-down with drawn underline.
 - Smooth `/ad-reel`: switched mascot to GPU compositor matrix eliminating scale jitter, and added progressive live writing for catchphrase (writes "for the big backs", scribbles over, and pops "foodies").
+- Refined `/ad-reel` catchphrase: continuous pencil writing begins halfway through (13.0s), unmasking authentic Comico text with organic round brush strokes, continuous strikethrough over "BIG BACKS" (full "S" preserved), elevated "✦ FOODIES", and live vector pencil tracking.
