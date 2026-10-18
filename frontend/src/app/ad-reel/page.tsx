@@ -529,6 +529,8 @@ export default function AdReelStagePage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const stageContainerRef = useRef<HTMLDivElement | null>(null);
+  const cropLoopRef = useRef<number | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const pinMarkersRef = useRef<Record<string, HTMLElement>>({});
@@ -640,6 +642,10 @@ export default function AdReelStagePage() {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
           mediaRecorderRef.current.stop();
         }
+        if (cropLoopRef.current) {
+          cancelAnimationFrame(cropLoopRef.current);
+          cropLoopRef.current = null;
+        }
         setIsDownloading(false);
         setIsRecordMode(false);
         setCountdown(null);
@@ -666,8 +672,9 @@ export default function AdReelStagePage() {
 
   /**
    * Direct Video Export / Download:
-   * Uses browser native MediaRecorder to capture the stage and automatically
-   * download smakr-oslo-ad-reel.webm as soon as the 23-second loop finishes!
+   * Uses browser native tab capture + real-time element cropping to record ONLY
+   * the ad stage canvas (strictly 1080x1920 in 9:16 or 1920x1080 in 16:9, zero black bars).
+   * Automatically packages and downloads smakr-oslo-ad-reel.mp4 when the 23-second loop completes!
    */
   const handleDownloadVideo = async () => {
     if (isDownloading) return;
@@ -706,9 +713,85 @@ export default function AdReelStagePage() {
         if (supported) mimeType = supported;
       }
 
-      const recorder = new MediaRecorder(stream, {
+      // Enter recording mode immediately so stage borders/shadows disappear and scale maximizes
+      setIsDownloading(true);
+      setIsRecordMode(true);
+      setTimelineSec(0);
+      setSpeed(1);
+      setIsPlaying(true);
+
+      // Create offscreen video element to decode tab frames
+      const video = document.createElement("video");
+      video.srcObject = stream;
+      video.muted = true;
+      video.playsInline = true;
+      await video.play();
+
+      // Attempt native CropTarget (Chrome 104+) to crop stream directly on GPU compositor
+      let hasNativeCrop = false;
+      const stageEl = stageContainerRef.current;
+      const [videoTrack] = stream.getVideoTracks();
+      if (
+        typeof window !== "undefined" &&
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        "CropTarget" in window &&
+        stageEl &&
+        videoTrack &&
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        typeof (videoTrack as any).cropTo === "function"
+      ) {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const cropTarget = await (window as any).CropTarget.fromElement(stageEl);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (videoTrack as any).cropTo(cropTarget);
+          hasNativeCrop = true;
+        } catch (e) {
+          console.warn("Native CropTarget cropTo failed, using canvas element crop fallback:", e);
+        }
+      }
+
+      // Dedicated offscreen master canvas strictly sized to 1080x1920 (or 1920x1080)
+      const exportCanvas = document.createElement("canvas");
+      exportCanvas.width = stageW;
+      exportCanvas.height = stageH;
+      const ctx = exportCanvas.getContext("2d", { alpha: false });
+      if (ctx) {
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+      }
+
+      let isCroppingActive = true;
+      const renderCropFrame = () => {
+        if (!isCroppingActive) return;
+        if (ctx && video.readyState >= 2) {
+          if (hasNativeCrop) {
+            // Video stream is already cropped to stage element by GPU compositor
+            ctx.drawImage(video, 0, 0, stageW, stageH);
+          } else if (stageContainerRef.current) {
+            // Fallback: extract exact bounding box of stage element from full tab viewport
+            const rect = stageContainerRef.current.getBoundingClientRect();
+            const scaleX = video.videoWidth / window.innerWidth;
+            const scaleY = video.videoHeight / window.innerHeight;
+            const sx = Math.max(0, rect.left * scaleX);
+            const sy = Math.max(0, rect.top * scaleY);
+            const sw = Math.min(video.videoWidth - sx, rect.width * scaleX);
+            const sh = Math.min(video.videoHeight - sy, rect.height * scaleY);
+            if (sw > 0 && sh > 0) {
+              ctx.drawImage(video, sx, sy, sw, sh, 0, 0, stageW, stageH);
+            }
+          }
+        }
+        cropLoopRef.current = requestAnimationFrame(renderCropFrame);
+      };
+      cropLoopRef.current = requestAnimationFrame(renderCropFrame);
+
+      // Capture 60fps stream from the clean, 1080x1920 cropped master canvas
+      const croppedStream = exportCanvas.captureStream(60);
+
+      const recorder = new MediaRecorder(croppedStream, {
         mimeType,
-        videoBitsPerSecond: 8000000,
+        videoBitsPerSecond: 12000000,
       });
       mediaRecorderRef.current = recorder;
 
@@ -719,6 +802,16 @@ export default function AdReelStagePage() {
       };
 
       recorder.onstop = () => {
+        isCroppingActive = false;
+        if (cropLoopRef.current) {
+          cancelAnimationFrame(cropLoopRef.current);
+          cropLoopRef.current = null;
+        }
+        video.pause();
+        video.srcObject = null;
+        video.remove();
+        exportCanvas.remove();
+
         const chunks = recordedChunksRef.current;
         if (chunks.length > 0) {
           const blob = new Blob(chunks, { type: mimeType });
@@ -748,14 +841,13 @@ export default function AdReelStagePage() {
         }
       };
 
-      setIsDownloading(true);
-      setIsRecordMode(true);
-      setTimelineSec(0);
-      setSpeed(1);
-      setIsPlaying(true);
       recorder.start(250);
     } catch (err) {
       console.warn("Video capture cancelled or failed:", err);
+      if (cropLoopRef.current) {
+        cancelAnimationFrame(cropLoopRef.current);
+        cropLoopRef.current = null;
+      }
       setIsDownloading(false);
       setIsRecordMode(false);
     }
@@ -1293,6 +1385,17 @@ export default function AdReelStagePage() {
         </header>
       )}
 
+      {/* Floating Exit Record Mode button for touch devices / quick exit */}
+      {isRecordMode && !isDownloading && (
+        <button
+          type="button"
+          onClick={() => setIsRecordMode(false)}
+          className="fixed top-4 right-4 z-[120] px-3.5 py-1.5 rounded-full bg-black/75 hover:bg-black/90 backdrop-blur-md text-white text-xs font-bold border border-white/20 shadow-xl cursor-pointer transition-all"
+        >
+          ✕ Exit Record Mode
+        </button>
+      )}
+
       {/* ===================================================================== */}
       {/* THE STAGE (1080x1920 in 9:16 OR 1920x1080 in 16:9)                    */}
       {/* ===================================================================== */}
@@ -1305,13 +1408,19 @@ export default function AdReelStagePage() {
           className="relative flex items-center justify-center"
         >
           <div
+            ref={stageContainerRef}
+            id="stage-ad-container"
             style={{
               width: stageW,
               height: stageH,
               transform: `scale(${stageScale})`,
               transformOrigin: "top left",
             }}
-            className="absolute top-0 left-0 overflow-hidden rounded-[24px] shadow-[0_30px_90px_rgba(0,0,0,0.65)] bg-[#F5EFE4]"
+            className={`absolute top-0 left-0 overflow-hidden bg-[#F5EFE4] ${
+              isDownloading || isRecordMode
+                ? "rounded-none shadow-none"
+                : "rounded-[24px] shadow-[0_30px_90px_rgba(0,0,0,0.65)]"
+            }`}
           >
             {/* =============================================================== */}
             {/* LAYER 0: CONTINUOUS FULL-STAGE LIVE MAPLIBRE GL MAP             */}

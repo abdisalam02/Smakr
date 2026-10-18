@@ -213,3 +213,4 @@
 - Elevated mascot column to `bottom-[370px]` inline with phone baseline; scaled avatar up to `size: 510` with `shrink-0` ensuring 1:1 scale across all poses.
 - Scaled up `/ad-reel` 9:16 brand header: enlarged porcelain pill (`text-[36px]`, `px-9 py-4`) and freestanding `SMAKR` logo (`text-[62px]`, 4px die-cut rim) for campaign presence.
 - Updated `/ad-reel` export pipeline to prioritize native MP4 (H.264/AVC) containers for seamless iPhone Camera Roll and Instagram Reel compatibility.
+- Implemented real-time GPU/canvas element cropping (`CropTarget` + 1080x1920 resampler) isolating ONLY the ad stage without browser bars.
