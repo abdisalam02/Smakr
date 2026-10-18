@@ -7,6 +7,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import {
   ArrowUpRight,
   Bookmark,
+  Check,
   ChevronDown,
   Compass,
   Download,
@@ -18,6 +19,7 @@ import {
   LocateFixed,
   MapPin,
   Maximize2,
+  Music,
   Navigation,
   Pause,
   Play,
@@ -31,6 +33,8 @@ import {
   ThumbsUp,
   Utensils,
   Video,
+  Volume2,
+  VolumeX,
   X,
 } from "lucide-react";
 import { SmakrMascotRig } from "@/components/studio/SmakrMascotRig";
@@ -53,6 +57,52 @@ const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY || "ThoacZP1opK329U6Av
 const MAP_STYLE_URL = MAPTILER_KEY
   ? `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}`
   : "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
+
+interface AdAudioTrack {
+  id: string;
+  name: string;
+  genre: string;
+  src: string;
+  desc: string;
+}
+
+const AD_AUDIO_TRACKS: AdAudioTrack[] = [
+  {
+    id: "chill",
+    name: "Chill Lo-Fi Beat",
+    genre: "Chillhop",
+    src: "/audio/chill-beat.mp3",
+    desc: "Warm head-nodding lo-fi rhythm with Rhodes keys",
+  },
+  {
+    id: "jazz",
+    name: "Smooth Jazz Hop",
+    genre: "Jazz Lounge",
+    src: "/audio/jazz-groove.mp3",
+    desc: "Upright acoustic bass, cafe keys & relaxed snare",
+  },
+  {
+    id: "upbeat",
+    name: "Upbeat Commercial",
+    genre: "Modern Pop",
+    src: "/audio/upbeat-ad.mp3",
+    desc: "Catchy energetic commercial bounce for high-engagement reels",
+  },
+  {
+    id: "happy",
+    name: "Happy Food Vlog",
+    genre: "Acoustic Foodie",
+    src: "/audio/happy-vibe.mp3",
+    desc: "Sunny, playful acoustic groove matching Oslo foodies",
+  },
+  {
+    id: "none",
+    name: "Mute (Silent Video)",
+    genre: "Silent",
+    src: "",
+    desc: "Export clean video with no background track",
+  },
+];
 
 const TOTAL_DURATION = 27.0;
 // Exact real-world coordinates of Ochaya - The Matcha from Supabase
@@ -555,6 +605,227 @@ export default function AdReelStagePage() {
   const [stageScale, setStageScale] = useState(0.45);
   const [isDownloading, setIsDownloading] = useState(false);
 
+  // Audio Soundtrack & SFX state
+  const [selectedTrackId, setSelectedTrackId] = useState<string>("chill");
+  const [isAudioMuted, setIsAudioMuted] = useState<boolean>(false);
+  const [audioVolume, setAudioVolume] = useState<number>(0.75);
+  const [enableSfx, setEnableSfx] = useState<boolean>(true);
+  const [showAudioMenu, setShowAudioMenu] = useState<boolean>(false);
+
+  const audioElRef = useRef<HTMLAudioElement | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const audioDestRef = useRef<MediaStreamAudioDestinationNode | null>(null);
+  const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const musicGainRef = useRef<GainNode | null>(null);
+  const sfxGainRef = useRef<GainNode | null>(null);
+  const lastTriggeredSfxRef = useRef<Record<string, number>>({});
+
+  const activeTrack = useMemo(
+    () => AD_AUDIO_TRACKS.find((t) => t.id === selectedTrackId) || AD_AUDIO_TRACKS[0],
+    [selectedTrackId]
+  );
+
+  // Initialize / resume Web Audio Graph (mixed directly into speaker output and MediaRecorder stream)
+  const initAudioContext = () => {
+    if (typeof window === "undefined") return null;
+    if (!audioCtxRef.current) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const ctx = new AudioCtx();
+      const dest = ctx.createMediaStreamDestination();
+      const musicGain = ctx.createGain();
+      const sfxGain = ctx.createGain();
+
+      musicGain.gain.value = isAudioMuted ? 0 : audioVolume;
+      sfxGain.gain.value = enableSfx ? 0.75 : 0;
+
+      musicGain.connect(dest);
+      musicGain.connect(ctx.destination);
+
+      sfxGain.connect(dest);
+      sfxGain.connect(ctx.destination);
+
+      audioCtxRef.current = ctx;
+      audioDestRef.current = dest;
+      musicGainRef.current = musicGain;
+      sfxGainRef.current = sfxGain;
+    }
+
+    if (audioElRef.current && audioCtxRef.current && musicGainRef.current && !sourceNodeRef.current) {
+      try {
+        const src = audioCtxRef.current.createMediaElementSource(audioElRef.current);
+        src.connect(musicGainRef.current);
+        sourceNodeRef.current = src;
+      } catch (e) {
+        console.warn("Audio element source connect notice:", e);
+      }
+    }
+
+    if (audioCtxRef.current.state === "suspended") {
+      audioCtxRef.current.resume();
+    }
+    return audioCtxRef.current;
+  };
+
+  // Play realistic graphite pencil friction scratch sound (at 15.28s)
+  const triggerPencilScratch = () => {
+    const ctx = initAudioContext();
+    if (!ctx || !sfxGainRef.current || !enableSfx) return;
+    try {
+      const bufferSize = Math.floor(ctx.sampleRate * 0.30);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        const stroke = Math.sin(i / 14) * 0.5 + 0.5;
+        data[i] = (Math.random() * 2 - 1) * stroke * (1 - i / bufferSize);
+      }
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      const filter = ctx.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.frequency.value = 2600;
+      filter.Q.value = 2.5;
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.38, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.29);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(sfxGainRef.current);
+      noise.start();
+    } catch (e) {
+      console.warn("SFX scratch error:", e);
+    }
+  };
+
+  // Play friendly wooden / tactile bubble pop sound on taps
+  const triggerPop = (freq = 620) => {
+    const ctx = initAudioContext();
+    if (!ctx || !sfxGainRef.current || !enableSfx) return;
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(freq * 1.8, ctx.currentTime + 0.04);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.4, ctx.currentTime + 0.08);
+
+      gain.gain.setValueAtTime(0.28, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+
+      osc.connect(gain);
+      gain.connect(sfxGainRef.current);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.09);
+    } catch (e) {
+      console.warn("SFX pop error:", e);
+    }
+  };
+
+  // Play gentle whoosh sound on scene transitions
+  const triggerWhoosh = () => {
+    const ctx = initAudioContext();
+    if (!ctx || !sfxGainRef.current || !enableSfx) return;
+    try {
+      const bufferSize = Math.floor(ctx.sampleRate * 0.26);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.sin((Math.PI * i) / bufferSize);
+      }
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      const filter = ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(320, ctx.currentTime);
+      filter.frequency.exponentialRampToValueAtTime(1300, ctx.currentTime + 0.13);
+      filter.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.26);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.22, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.26);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(sfxGainRef.current);
+      noise.start();
+    } catch (e) {
+      console.warn("SFX whoosh error:", e);
+    }
+  };
+
+  // Synchronize audio track volume and gain node
+  useEffect(() => {
+    const el = audioElRef.current;
+    if (el) {
+      el.volume = isAudioMuted ? 0 : audioVolume;
+    }
+    if (musicGainRef.current) {
+      musicGainRef.current.gain.value = isAudioMuted ? 0 : audioVolume;
+    }
+    if (sfxGainRef.current) {
+      sfxGainRef.current.gain.value = enableSfx ? 0.75 : 0;
+    }
+  }, [isAudioMuted, audioVolume, enableSfx]);
+
+  // Synchronize soundtrack playback with timeline loop
+  useEffect(() => {
+    const el = audioElRef.current;
+    if (!el) return;
+    if (selectedTrackId === "none" || !activeTrack.src) {
+      el.pause();
+      return;
+    }
+    if (isPlaying && countdown === null) {
+      if (Math.abs(el.currentTime - timelineSec) > 0.35) {
+        el.currentTime = timelineSec % (el.duration || TOTAL_DURATION);
+      }
+      el.play().catch(() => {});
+    } else {
+      el.pause();
+    }
+  }, [isPlaying, countdown, selectedTrackId, activeTrack.src]);
+
+  // Trigger choreographed tactile sound effects during playback
+  useEffect(() => {
+    if (!isPlaying || countdown !== null) return;
+    const t = timelineSec;
+    if (t < 0.5) {
+      lastTriggeredSfxRef.current = {};
+    }
+    // Transition whoosh at 2.7s
+    if (t >= 2.7 && t < 2.9 && !lastTriggeredSfxRef.current.w1) {
+      lastTriggeredSfxRef.current.w1 = 1;
+      triggerWhoosh();
+    }
+    // Card tap pop at 6.6s
+    if (t >= 6.6 && t < 6.8 && !lastTriggeredSfxRef.current.p1) {
+      lastTriggeredSfxRef.current.p1 = 1;
+      triggerPop(520);
+    }
+    // Pencil scribble scratch at 15.28s
+    if (t >= 15.28 && t < 15.42 && !lastTriggeredSfxRef.current.scratch) {
+      lastTriggeredSfxRef.current.scratch = 1;
+      triggerPencilScratch();
+    }
+    // Foodies sparkle pop at 15.75s
+    if (t >= 15.75 && t < 15.90 && !lastTriggeredSfxRef.current.fp) {
+      lastTriggeredSfxRef.current.fp = 1;
+      triggerPop(840);
+    }
+    // Detail button tap pop at 16.42s
+    if (t >= 16.42 && t < 16.55 && !lastTriggeredSfxRef.current.p2) {
+      lastTriggeredSfxRef.current.p2 = 1;
+      triggerPop(680);
+    }
+    // Outro transition whoosh at 22.5s
+    if (t >= 22.5 && t < 22.7 && !lastTriggeredSfxRef.current.w2) {
+      lastTriggeredSfxRef.current.w2 = 1;
+      triggerWhoosh();
+    }
+  }, [timelineSec, isPlaying, countdown]);
+
   // Jump to specific scene time via URL parameter ?t= (e.g. ?t=24.5) for instant inspection
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -744,15 +1015,23 @@ export default function AdReelStagePage() {
       // Prioritize MP4 (H.264/AVC) so the export saves directly to iPhone Camera Roll & Instagram without conversion
       const candidateTypes = [
         "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
-        "video/mp4;codecs=avc1",
+        "video/mp4;codecs=avc1,aac",
         "video/mp4",
-        "video/webm;codecs=vp9",
+        "video/webm;codecs=vp9,opus",
+        "video/webm;codecs=vp8,opus",
         "video/webm",
       ];
       let mimeType = "video/webm";
       if (typeof MediaRecorder !== "undefined") {
         const supported = candidateTypes.find((t) => MediaRecorder.isTypeSupported(t));
         if (supported) mimeType = supported;
+      }
+
+      // Wake audio graph and start soundtrack from 0.0s for perfect video sync
+      initAudioContext();
+      if (audioElRef.current && selectedTrackId !== "none" && activeTrack.src) {
+        audioElRef.current.currentTime = 0;
+        audioElRef.current.play().catch(() => {});
       }
 
       // Enter recording mode immediately so stage borders/shadows disappear and scale maximizes
@@ -831,9 +1110,22 @@ export default function AdReelStagePage() {
       // Capture 60fps stream from the clean, 1080x1920 cropped master canvas
       const croppedStream = exportCanvas.captureStream(60);
 
-      const recorder = new MediaRecorder(croppedStream, {
+      // Mix audio tracks into the recorded stream if soundtrack or SFX are active
+      let recordStream = croppedStream;
+      if (audioDestRef.current && (selectedTrackId !== "none" || enableSfx)) {
+        const audioTracks = audioDestRef.current.stream.getAudioTracks();
+        if (audioTracks.length > 0) {
+          recordStream = new MediaStream([
+            ...croppedStream.getVideoTracks(),
+            ...audioTracks,
+          ]);
+        }
+      }
+
+      const recorder = new MediaRecorder(recordStream, {
         mimeType,
         videoBitsPerSecond: 12000000,
+        ...(recordStream.getAudioTracks().length > 0 ? { audioBitsPerSecond: 192000 } : {}),
       });
       mediaRecorderRef.current = recorder;
 
@@ -870,6 +1162,9 @@ export default function AdReelStagePage() {
           }, 2000);
         }
 
+        if (audioElRef.current) {
+          audioElRef.current.pause();
+        }
         stream.getTracks().forEach((track) => track.stop());
         mediaStreamRef.current = null;
         mediaRecorderRef.current = null;
@@ -1560,6 +1855,153 @@ export default function AdReelStagePage() {
               )}
               <span className="hidden sm:inline">Safe Zone</span>
             </button>
+
+            {/* Audio Soundtrack & SFX Selector */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  initAudioContext();
+                  setShowAudioMenu((v) => !v);
+                }}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold border transition-colors cursor-pointer ${
+                  showAudioMenu
+                    ? "bg-[#e84a27] border-[#e84a27] text-white shadow-xs"
+                    : selectedTrackId !== "none" && !isAudioMuted
+                    ? "bg-white/10 hover:bg-white/15 border-white/15 text-zinc-100"
+                    : "bg-white/5 hover:bg-white/10 border-transparent text-zinc-400"
+                }`}
+                title="Choose ad music and sound effects"
+              >
+                {isAudioMuted || selectedTrackId === "none" ? (
+                  <VolumeX className="w-3.5 h-3.5 text-zinc-400" />
+                ) : (
+                  <Music className="w-3.5 h-3.5 text-[#e84a27]" />
+                )}
+                <span className="max-w-[80px] sm:max-w-[120px] truncate">
+                  {activeTrack.name}
+                </span>
+                <ChevronDown className="w-3 h-3 text-zinc-400" />
+              </button>
+
+              {/* Audio Popover */}
+              <AnimatePresence>
+                {showAudioMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 6, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute top-full mt-2 right-0 z-[110] w-72 p-3 bg-[#1c1a18] border border-white/15 rounded-2xl shadow-2xl backdrop-blur-xl text-left select-none"
+                  >
+                    <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10">
+                      <div>
+                        <h4 className="font-comico text-sm text-white tracking-wide">
+                          AD SOUNDTRACK
+                        </h4>
+                        <p className="text-[10px] text-zinc-400">
+                          Bakes with video into the download
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowAudioMenu(false)}
+                        className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Track List */}
+                    <div className="space-y-1 mb-2.5 max-h-48 overflow-y-auto no-scrollbar">
+                      {AD_AUDIO_TRACKS.map((track) => {
+                        const isSelected = selectedTrackId === track.id;
+                        return (
+                          <button
+                            key={track.id}
+                            type="button"
+                            onClick={() => {
+                              initAudioContext();
+                              setSelectedTrackId(track.id);
+                              if (isAudioMuted) setIsAudioMuted(false);
+                            }}
+                            className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-all cursor-pointer ${
+                              isSelected
+                                ? "bg-[#e84a27]/25 border border-[#e84a27]/70 text-white"
+                                : "hover:bg-white/5 border border-transparent text-zinc-300"
+                            }`}
+                          >
+                            <div className="min-w-0 pr-2">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-bold truncate">
+                                  {track.name}
+                                </span>
+                                <span className="px-1.5 py-0.2 rounded-md bg-white/10 text-[9px] font-mono font-medium text-zinc-300 shrink-0">
+                                  {track.genre}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-zinc-400 line-clamp-1 mt-0.5">
+                                {track.desc}
+                              </p>
+                            </div>
+                            {isSelected && (
+                              <Check className="w-4 h-4 text-[#e84a27] shrink-0" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Volume & SFX Controls */}
+                    <div className="pt-2 border-t border-white/10 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setIsAudioMuted((m) => !m)}
+                          className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 cursor-pointer"
+                          title={isAudioMuted ? "Unmute" : "Mute"}
+                        >
+                          {isAudioMuted ? (
+                            <VolumeX className="w-3.5 h-3.5 text-zinc-500" />
+                          ) : (
+                            <Volume2 className="w-3.5 h-3.5 text-[#e84a27]" />
+                          )}
+                        </button>
+                        <input
+                          type="range"
+                          min={0}
+                          max={1}
+                          step={0.05}
+                          value={isAudioMuted ? 0 : audioVolume}
+                          onChange={(e) => {
+                            initAudioContext();
+                            setAudioVolume(parseFloat(e.target.value));
+                            if (isAudioMuted) setIsAudioMuted(false);
+                          }}
+                          className="flex-1 accent-[#e84a27] h-1.5 bg-white/10 rounded-lg cursor-pointer"
+                        />
+                        <span className="font-mono text-[10px] text-zinc-400 w-8 text-right">
+                          {isAudioMuted ? "0%" : `${Math.round(audioVolume * 100)}%`}
+                        </span>
+                      </div>
+
+                      <label className="flex items-center justify-between text-[11px] text-zinc-300 cursor-pointer pt-1">
+                        <span>Tactile SFX (Pencil scratch &amp; pops)</span>
+                        <input
+                          type="checkbox"
+                          checked={enableSfx}
+                          onChange={(e) => {
+                            initAudioContext();
+                            setEnableSfx(e.target.checked);
+                          }}
+                          className="accent-[#e84a27] w-3.5 h-3.5 cursor-pointer rounded"
+                        />
+                      </label>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
             {/* Direct Video Download Button */}
             <button
@@ -2911,6 +3353,16 @@ export default function AdReelStagePage() {
           </div>
         </div>
       </div>
+
+      {/* Persistent HTML Audio Element for Soundtrack Playback & MediaRecorder Capture */}
+      <audio
+        ref={audioElRef}
+        src={activeTrack.src || undefined}
+        preload="auto"
+        loop
+        crossOrigin="anonymous"
+        className="hidden"
+      />
     </div>
   );
 }
