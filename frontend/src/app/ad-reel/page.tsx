@@ -692,11 +692,18 @@ export default function AdReelStagePage() {
       mediaStreamRef.current = stream;
       recordedChunksRef.current = [];
 
-      let mimeType = "video/webm;codecs=vp9";
+      // Prioritize MP4 (H.264/AVC) so the export saves directly to iPhone Camera Roll & Instagram without conversion
+      const candidateTypes = [
+        "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+        "video/mp4;codecs=avc1",
+        "video/mp4",
+        "video/webm;codecs=vp9",
+        "video/webm",
+      ];
+      let mimeType = "video/webm";
       if (typeof MediaRecorder !== "undefined") {
-        if (!MediaRecorder.isTypeSupported(mimeType)) {
-          mimeType = MediaRecorder.isTypeSupported("video/webm") ? "video/webm" : "video/mp4";
-        }
+        const supported = candidateTypes.find((t) => MediaRecorder.isTypeSupported(t));
+        if (supported) mimeType = supported;
       }
 
       const recorder = new MediaRecorder(stream, {
