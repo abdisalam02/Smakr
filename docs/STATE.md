@@ -216,3 +216,4 @@
 - Implemented real-time GPU/canvas element cropping (`CropTarget` + 1080x1920 resampler) isolating ONLY the ad stage without browser bars.
 - Deployed 3-act ad choreography (27s loop): Act 1 centered mascot hook, Act 2 phone demo at original speed, Act 3 centered mascot finale with CTA & catchphrase.
 - Calibrated `/ad-reel`: restored permanent centered catchphrase at bottom, animated mascot scaling (1.25x hook/outro, 0.94x demo), and animated SMAKR header slide-down with drawn underline.
+- Smooth `/ad-reel`: switched mascot to GPU compositor matrix eliminating scale jitter, and added progressive live writing for catchphrase (writes "for the big backs", scribbles over, and pops "foodies").
