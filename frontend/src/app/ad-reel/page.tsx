@@ -32,6 +32,7 @@ import {
   Star,
   ThumbsUp,
   Utensils,
+  Upload,
   Video,
   Volume2,
   VolumeX,
@@ -94,6 +95,48 @@ const AD_AUDIO_TRACKS: AdAudioTrack[] = [
     genre: "Acoustic Foodie",
     src: "/audio/happy-vibe.mp3",
     desc: "Sunny, playful acoustic groove matching Oslo foodies",
+  },
+  {
+    id: "recipe",
+    name: "Kitchen Recipe Groove",
+    genre: "Cooking Vibe",
+    src: "/audio/recipe-groove.mp3",
+    desc: "Jaunty upbeat foodie rhythm with crisp kitchen bounce",
+  },
+  {
+    id: "city",
+    name: "Urban City Energy",
+    genre: "City Pulse",
+    src: "/audio/city-pulse.mp3",
+    desc: "Driving modern beat with young Oslo street pulse",
+  },
+  {
+    id: "bubbly",
+    name: "Playful Bubbly Pop",
+    genre: "Cute / Fun",
+    src: "/audio/bubbly-pop.mp3",
+    desc: "Lighthearted, cheerful cartoon bounce for food adventures",
+  },
+  {
+    id: "fresh",
+    name: "Fresh Finds Beat",
+    genre: "Discovery",
+    src: "/audio/fresh-finds.mp3",
+    desc: "Bright exploration pop for uncovering hidden culinary gems",
+  },
+  {
+    id: "sunset",
+    name: "Golden Hour Stroll",
+    genre: "Sunset Soul",
+    src: "/audio/sunset-stroll.mp3",
+    desc: "Relaxed, warm soul groove for evening dining and drinks",
+  },
+  {
+    id: "cafe",
+    name: "Oslo Bakery Piano",
+    genre: "Nordic Cafe",
+    src: "/audio/cafe-keys.mp3",
+    desc: "Gentle acoustic jazz chords & mellow morning pastry vibe",
   },
   {
     id: "none",
@@ -620,10 +663,35 @@ export default function AdReelStagePage() {
   const sfxGainRef = useRef<GainNode | null>(null);
   const lastTriggeredSfxRef = useRef<Record<string, number>>({});
 
+  const [customTrack, setCustomTrack] = useState<AdAudioTrack | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const allTracks = useMemo(() => {
+    if (customTrack) return [customTrack, ...AD_AUDIO_TRACKS];
+    return AD_AUDIO_TRACKS;
+  }, [customTrack]);
+
   const activeTrack = useMemo(
-    () => AD_AUDIO_TRACKS.find((t) => t.id === selectedTrackId) || AD_AUDIO_TRACKS[0],
-    [selectedTrackId]
+    () => allTracks.find((t) => t.id === selectedTrackId) || allTracks[0],
+    [allTracks, selectedTrackId]
   );
+
+  const handleCustomAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const newTrack: AdAudioTrack = {
+      id: "custom",
+      name: file.name.replace(/\.[^/.]+$/, "").slice(0, 24),
+      genre: "Custom Audio",
+      src: url,
+      desc: "User uploaded audio track",
+    };
+    setCustomTrack(newTrack);
+    setSelectedTrackId("custom");
+    setIsAudioMuted(false);
+    initAudioContext();
+  };
 
   // Initialize / resume Web Audio Graph (mixed directly into speaker output and MediaRecorder stream)
   const initAudioContext = () => {
@@ -1913,8 +1981,8 @@ export default function AdReelStagePage() {
                     </div>
 
                     {/* Track List */}
-                    <div className="space-y-1 mb-2.5 max-h-48 overflow-y-auto no-scrollbar">
-                      {AD_AUDIO_TRACKS.map((track) => {
+                    <div className="space-y-1 mb-2.5 max-h-56 overflow-y-auto no-scrollbar">
+                      {allTracks.map((track) => {
                         const isSelected = selectedTrackId === track.id;
                         return (
                           <button
@@ -1950,6 +2018,23 @@ export default function AdReelStagePage() {
                           </button>
                         );
                       })}
+
+                      {/* Custom Audio Upload Option */}
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl border border-dashed border-white/25 hover:border-[#e84a27] hover:bg-[#e84a27]/10 text-[11px] font-bold text-zinc-200 transition-all cursor-pointer mt-1.5"
+                      >
+                        <Upload className="w-3.5 h-3.5 text-[#e84a27]" />
+                        <span>Upload Custom Audio (.mp3, .wav)</span>
+                      </button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="audio/*"
+                        onChange={handleCustomAudioUpload}
+                        className="hidden"
+                      />
                     </div>
 
                     {/* Volume & SFX Controls */}
