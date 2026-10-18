@@ -222,3 +222,4 @@
 - Expanded `/ad-reel` audio suite to 10 curated CC0 royalty-free tracks (Lo-Fi, Jazz Hop, Upbeat Commercial, Food Vlog, Kitchen Recipe, Urban City, Bubbly Pop, Fresh Finds, Golden Hour, Bakery Piano, plus Mute) and integrated custom audio file upload (.mp3/.wav) baking directly into the MP4 export.
 - Stabilized `/ad-reel` video export startup with layout settling, aspect-ratio crop verification, and a 1.0s steady pre-roll hold at t=0s for clean Instagram trimming.
 - Replaced `/ad-reel` catchphrase reveal mask with a monotonically progressive cursive curve (strokeWidth=48) eliminating pauses between words and end-letter lag.
+- Calibrated `/ad-reel` outro pacing (31.5s total): added 1.4s Apple-smooth easeOutQuint phone exit, smooth mascot center glide, menu dish scrolling, and an extended 7.5s outro hold.

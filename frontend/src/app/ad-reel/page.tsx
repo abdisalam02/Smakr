@@ -147,7 +147,7 @@ const AD_AUDIO_TRACKS: AdAudioTrack[] = [
   },
 ];
 
-const TOTAL_DURATION = 27.0;
+const TOTAL_DURATION = 31.5;
 // Exact real-world coordinates of Ochaya - The Matcha from Supabase
 const OCHAYA_LNGLAT: [number, number] = [10.7525, 59.9159];
 
@@ -238,7 +238,7 @@ const SCENES: SceneMeta[] = [
     code: "S5",
     label: "Menu & Weekly Pick",
     start: 18.0,
-    end: 22.5,
+    end: 24.0,
     pose: "coffee",
     face: "eating-happy",
     badge: "✦ WEEKLY DROP",
@@ -249,8 +249,8 @@ const SCENES: SceneMeta[] = [
     id: 6,
     code: "S6",
     label: "Beta Closer & Invite",
-    start: 22.5,
-    end: 27.0,
+    start: 24.0,
+    end: 31.5,
     pose: "pointing-up",
     face: "smile-big",
     badge: "✦ JOIN THE BETA",
@@ -502,6 +502,29 @@ function easeInOutCubic(t: number) {
 function easeOutCubic(t: number) {
   const x = clamp(t, 0, 1);
   return 1 - Math.pow(1 - x, 3);
+}
+
+/**
+ * Quintic easing (5th-degree polynomial):
+ * Delivers ultra-smooth acceleration and whisper-quiet deceleration
+ * with continuous 2nd derivatives (zero jerk) matching Apple CoreAnimation & GSAP power4.
+ */
+function easeOutQuint(t: number) {
+  const x = clamp(t, 0, 1);
+  return 1 - Math.pow(1 - x, 5);
+}
+
+function easeInOutQuint(t: number) {
+  const x = clamp(t, 0, 1);
+  return x < 0.5 ? 16 * Math.pow(x, 5) : 1 - Math.pow(-2 * x + 2, 5) / 2;
+}
+
+/**
+ * Apple-grade modal spring-like ease approximation of cubic-bezier(0.16, 1, 0.3, 1)
+ */
+function easeAppleSmooth(t: number) {
+  const x = clamp(t, 0, 1);
+  return 1 - Math.pow(1 - x, 4);
 }
 
 function lerp(a: number, b: number, t: number) {
@@ -882,13 +905,23 @@ export default function AdReelStagePage() {
       lastTriggeredSfxRef.current.fp = 1;
       triggerPop(840);
     }
-    // Detail button tap pop at 16.42s
-    if (t >= 16.42 && t < 16.55 && !lastTriggeredSfxRef.current.p2) {
+    // Detail button tap pop at 17.15s
+    if (t >= 17.15 && t < 17.30 && !lastTriggeredSfxRef.current.p2) {
       lastTriggeredSfxRef.current.p2 = 1;
       triggerPop(680);
     }
-    // Outro transition whoosh at 22.5s
-    if (t >= 22.5 && t < 22.7 && !lastTriggeredSfxRef.current.w2) {
+    // Close ✕ button tap pop at 21.3s
+    if (t >= 21.30 && t < 21.45 && !lastTriggeredSfxRef.current.pClose) {
+      lastTriggeredSfxRef.current.pClose = 1;
+      triggerPop(560);
+    }
+    // Weekly drop capsule tap pop at 21.65s
+    if (t >= 21.65 && t < 21.80 && !lastTriggeredSfxRef.current.pDrop) {
+      lastTriggeredSfxRef.current.pDrop = 1;
+      triggerPop(720);
+    }
+    // Outro transition whoosh at 24.0s
+    if (t >= 24.0 && t < 24.2 && !lastTriggeredSfxRef.current.w2) {
       lastTriggeredSfxRef.current.w2 = 1;
       triggerWhoosh();
     }
@@ -1385,20 +1418,20 @@ export default function AdReelStagePage() {
     // Synchronized transition timing for 100% smooth, non-jittery movement
     const ACT1_TRANS_START = 2.7;
     const ACT1_TRANS_DUR = 0.8;
-    const ACT3_TRANS_START = 22.5;
-    const ACT3_TRANS_DUR = 0.8;
+    const ACT3_TRANS_START = 24.0;
+    const ACT3_TRANS_DUR = 1.4;
 
     // 1. Mascot Horizontal Sliding Position (Pure continuous function)
     let mascotX = mascotCenterX;
     if (t < ACT1_TRANS_START) {
       mascotX = mascotCenterX;
     } else if (t < ACT1_TRANS_START + ACT1_TRANS_DUR) {
-      const p = easeInOutCubic((t - ACT1_TRANS_START) / ACT1_TRANS_DUR);
+      const p = easeAppleSmooth((t - ACT1_TRANS_START) / ACT1_TRANS_DUR);
       mascotX = lerp(mascotCenterX, mascotLeftX, p);
     } else if (t < ACT3_TRANS_START) {
       mascotX = mascotLeftX;
     } else if (t < ACT3_TRANS_START + ACT3_TRANS_DUR) {
-      const p = easeInOutCubic((t - ACT3_TRANS_START) / ACT3_TRANS_DUR);
+      const p = easeInOutQuint((t - ACT3_TRANS_START) / ACT3_TRANS_DUR);
       mascotX = lerp(mascotLeftX, mascotCenterX, p);
     } else {
       mascotX = mascotCenterX;
@@ -1411,12 +1444,12 @@ export default function AdReelStagePage() {
     if (t < ACT1_TRANS_START) {
       mascotScale = bigMascotScale;
     } else if (t < ACT1_TRANS_START + ACT1_TRANS_DUR) {
-      const p = easeInOutCubic((t - ACT1_TRANS_START) / ACT1_TRANS_DUR);
+      const p = easeAppleSmooth((t - ACT1_TRANS_START) / ACT1_TRANS_DUR);
       mascotScale = lerp(bigMascotScale, smallMascotScale, p);
     } else if (t < ACT3_TRANS_START) {
       mascotScale = smallMascotScale;
     } else if (t < ACT3_TRANS_START + ACT3_TRANS_DUR) {
-      const p = easeInOutCubic((t - ACT3_TRANS_START) / ACT3_TRANS_DUR);
+      const p = easeInOutQuint((t - ACT3_TRANS_START) / ACT3_TRANS_DUR);
       mascotScale = lerp(smallMascotScale, bigMascotScale, p);
     } else {
       mascotScale = bigMascotScale;
@@ -1429,30 +1462,30 @@ export default function AdReelStagePage() {
       phoneXOffset = 750;
       phoneOpacity = 0;
     } else if (t < ACT1_TRANS_START + ACT1_TRANS_DUR) {
-      const p = easeInOutCubic((t - ACT1_TRANS_START) / ACT1_TRANS_DUR);
+      const p = easeAppleSmooth((t - ACT1_TRANS_START) / ACT1_TRANS_DUR);
       phoneXOffset = lerp(750, 0, p);
       phoneOpacity = p;
     } else if (t < ACT3_TRANS_START) {
       phoneXOffset = 0;
       phoneOpacity = 1;
     } else if (t < ACT3_TRANS_START + ACT3_TRANS_DUR) {
-      const p = easeInOutCubic((t - ACT3_TRANS_START) / ACT3_TRANS_DUR);
-      phoneXOffset = lerp(0, 750, p);
-      phoneOpacity = 1 - p;
+      const p = easeInOutQuint((t - ACT3_TRANS_START) / ACT3_TRANS_DUR);
+      phoneXOffset = lerp(0, 850, p);
+      phoneOpacity = 1 - easeOutCubic(clamp((t - (ACT3_TRANS_START + 0.35)) / (ACT3_TRANS_DUR - 0.35), 0, 1));
     } else {
-      phoneXOffset = 750;
+      phoneXOffset = 850;
       phoneOpacity = 0;
     }
 
     // 3. Beta CTA Bubble (strictly in Act 3 closer, hidden in rest of video!)
     let betaBubbleOpacity = 0;
-    let betaBubbleY = 24;
+    let betaBubbleY = 28;
     let showBetaCtaHighlight = false;
-    if (t >= 22.8) {
-      const p = easeInOutCubic(clamp((t - 22.8) / 0.7, 0, 1));
+    if (t >= 24.6) {
+      const p = easeAppleSmooth(clamp((t - 24.6) / 0.85, 0, 1));
       betaBubbleOpacity = p;
-      betaBubbleY = lerp(24, 0, p);
-      showBetaCtaHighlight = t >= 23.5 && t < 26.5;
+      betaBubbleY = lerp(28, 0, p);
+      showBetaCtaHighlight = t >= 25.5 && t < 30.8;
     }
 
     // 4. Catchphrase Continuous Physical Handwriting & Single-Strike Scribble Choreography:
@@ -1520,8 +1553,8 @@ export default function AdReelStagePage() {
       }
     }
 
-    if (t >= 22.8) {
-      const p = easeInOutCubic(clamp((t - 22.8) / 0.8, 0, 1));
+    if (t >= 24.6) {
+      const p = easeAppleSmooth(clamp((t - 24.6) / 0.9, 0, 1));
       catchphraseScale = lerp(1, 1.06, p);
     }
 
@@ -1529,19 +1562,20 @@ export default function AdReelStagePage() {
     let headerScale = 1;
     let headerY = 0;
     let brandUnderlineProgress = 0;
-    if (t >= 22.5) {
-      const p = easeInOutCubic(clamp((t - 22.5) / 0.9, 0, 1));
+    if (t >= 24.0) {
+      const p = easeAppleSmooth(clamp((t - 24.0) / 1.1, 0, 1));
       headerScale = lerp(1, 1.10, p);
       headerY = lerp(0, aspectMode === "9:16" ? 64 : 36, p);
     }
-    if (t >= 23.0) {
-      brandUnderlineProgress = easeInOutCubic(clamp((t - 23.0) / 0.85, 0, 1));
+    if (t >= 24.8) {
+      brandUnderlineProgress = easeOutQuint(clamp((t - 24.8) / 0.95, 0, 1));
     }
 
-    // 6. Presentation State Variables (Act 1: idle, Act 2: exact 19.0s sequence, Act 3: closing ease)
+    // 6. Presentation State Variables (Act 1: idle, Act 2: exact sequence, Act 3: closing ease)
     const PEEK = 600;
     let sheetY = PEEK;
     let feedScrollY = 0;
+    let menuScrollY = 0;
     let isMatchaCardTapped = false;
     let focusY = 300;
     let camLng = 10.7535;
@@ -1565,32 +1599,32 @@ export default function AdReelStagePage() {
       camLng = lerp(10.7535, 10.7550, p);
       camLat = lerp(59.9178, 59.9190, p);
       camZoom = lerp(13.75, 13.90, p);
-    } else if (t < 22.5) {
-      // Act 2: Exact 19.0s presentation sequence shifted cleanly by +3.5s
+    } else if (t < ACT3_TRANS_START) {
+      // Act 2: Presentation sequence shifted cleanly by +3.5s
       const origT = t - 3.5;
 
       // Bottom Sheet translateY
       if (origT < 1.1) {
         sheetY = PEEK;
       } else if (origT < 2.5) {
-        sheetY = lerp(PEEK, 96, easeInOutCubic((origT - 1.1) / 1.4));
+        sheetY = lerp(PEEK, 96, easeAppleSmooth((origT - 1.1) / 1.4));
       } else if (origT < 7.25) {
         sheetY = 96;
       } else if (origT < 7.85) {
-        sheetY = lerp(96, PEEK, easeInOutCubic((origT - 7.25) / 0.6));
-      } else if (origT < 17.25) {
+        sheetY = lerp(96, PEEK, easeAppleSmooth((origT - 7.25) / 0.6));
+      } else if (origT < 17.5) {
         sheetY = PEEK;
-      } else if (origT < 17.85) {
-        sheetY = lerp(PEEK, 170, easeInOutCubic((origT - 17.25) / 0.6));
+      } else if (origT < 18.2) {
+        sheetY = lerp(PEEK, 170, easeAppleSmooth((origT - 17.5) / 0.7));
       } else {
         sheetY = 170;
       }
 
       // Feed scroll offset
       if (origT >= 3.5 && origT < 5.0) {
-        feedScrollY = lerp(0, 265, easeInOutCubic((origT - 3.5) / 1.5));
+        feedScrollY = lerp(0, 265, easeInOutQuint((origT - 3.5) / 1.5));
       } else if (origT >= 5.0 && origT < 6.4) {
-        feedScrollY = lerp(265, 535, easeInOutCubic((origT - 5.0) / 1.4));
+        feedScrollY = lerp(265, 535, easeInOutQuint((origT - 5.0) / 1.4));
       } else if (origT >= 6.4) {
         feedScrollY = 535;
       }
@@ -1598,8 +1632,8 @@ export default function AdReelStagePage() {
       isMatchaCardTapped = origT >= 6.6 && origT < 7.4;
 
       // Camera focus point in phone
-      if (origT >= 16.6 && origT < 17.9) focusY = lerp(300, 140, easeInOutCubic((origT - 16.6) / 1.3));
-      else if (origT >= 17.9) focusY = 140;
+      if (origT >= 17.0 && origT < 18.4) focusY = lerp(300, 140, easeAppleSmooth((origT - 17.0) / 1.4));
+      else if (origT >= 18.4) focusY = 140;
 
       // Map camera trajectory
       if (origT < 3.5) {
@@ -1608,21 +1642,21 @@ export default function AdReelStagePage() {
         camLat = lerp(59.9190, 59.9192, p);
         camZoom = lerp(13.90, 13.95, p);
       } else if (origT < 7.5) {
-        const p = easeInOutCubic((origT - 3.5) / 4.0);
+        const p = easeAppleSmooth((origT - 3.5) / 4.0);
         camLng = lerp(10.7555, 10.7528, p);
         camLat = lerp(59.9192, 59.9165, p);
         camZoom = lerp(13.95, 14.25, p);
       } else if (origT < 10.2) {
-        const p = easeInOutCubic((origT - 7.5) / 2.7);
+        const p = easeAppleSmooth((origT - 7.5) / 2.7);
         camLng = lerp(10.7528, 10.7525, p);
         camLat = lerp(59.9165, 59.9159, p);
         camZoom = lerp(14.25, 15.6, p);
-      } else if (origT < 16.6) {
+      } else if (origT < 17.2) {
         camLng = 10.7525;
         camLat = 59.9159;
         camZoom = 15.6;
-      } else if (origT < 18.2) {
-        const p = easeInOutCubic((origT - 16.6) / 1.6);
+      } else if (origT < 18.8) {
+        const p = easeAppleSmooth((origT - 17.2) / 1.6);
         camLng = lerp(10.7525, 10.7572, p);
         camLat = lerp(59.9159, 59.9138, p);
         camZoom = lerp(15.6, 15.3, p);
@@ -1632,19 +1666,19 @@ export default function AdReelStagePage() {
         camZoom = 15.3;
       }
 
-      showOchayaHighlighted = origT >= 8.6 && origT < 16.6;
-      showVenuePopupCard = origT >= 10.4 && origT < 16.6;
+      showOchayaHighlighted = origT >= 8.6 && origT < 17.5;
+      showVenuePopupCard = origT >= 10.4 && origT < 17.5;
       isDetailsButtonPressed = origT >= 13.6 && origT < 14.25;
-      showRestaurantDetailSheet = origT >= 14.35 && origT < 16.6;
-      showWeeklyDropExpanded = origT >= 17.4;
+      showRestaurantDetailSheet = origT >= 14.35 && origT < 17.5;
+      showWeeklyDropExpanded = origT >= 18.2;
 
-      // Simulated touch cursor
+      // Simulated touch cursor & menu scrolling
       if (origT < 1.0) {
         cursorX = 50;
         cursorY = 78;
       } else if (origT < 2.4) {
         cursorX = 50;
-        cursorY = lerp(78, 19, easeInOutCubic((origT - 1.0) / 1.4));
+        cursorY = lerp(78, 19, easeAppleSmooth((origT - 1.0) / 1.4));
         isPressed = true;
       } else if (origT < 3.5) {
         cursorX = 54;
@@ -1652,7 +1686,7 @@ export default function AdReelStagePage() {
       } else if (origT < 6.3) {
         const cycle = (origT - 3.5) % 1.4;
         cursorX = 54;
-        cursorY = lerp(72, 40, easeInOutCubic(clamp(cycle / 1.0, 0, 1)));
+        cursorY = lerp(72, 40, easeAppleSmooth(clamp(cycle / 1.0, 0, 1)));
         isPressed = cycle < 0.95;
       } else if (origT < 7.5) {
         cursorX = 52;
@@ -1660,10 +1694,10 @@ export default function AdReelStagePage() {
         isPressed = origT >= 6.6 && origT < 7.25;
         showRipple = origT >= 6.65 && origT < 7.45;
       } else if (origT < 11.2) {
-        cursorX = lerp(52, 50, easeInOutCubic((origT - 7.5) / 3.7));
-        cursorY = lerp(56, 44, easeInOutCubic((origT - 7.5) / 3.7));
+        cursorX = lerp(52, 50, easeAppleSmooth((origT - 7.5) / 3.7));
+        cursorY = lerp(56, 44, easeAppleSmooth((origT - 7.5) / 3.7));
       } else if (origT < 13.4) {
-        const p = easeInOutCubic(clamp((origT - 11.2) / 1.4, 0, 1));
+        const p = easeAppleSmooth(clamp((origT - 11.2) / 1.4, 0, 1));
         cursorX = lerp(50, 68, p);
         cursorY = lerp(44, 49, p);
       } else if (origT < 14.5) {
@@ -1671,32 +1705,44 @@ export default function AdReelStagePage() {
         cursorY = 49;
         isPressed = origT >= 13.6 && origT < 14.25;
         showRipple = origT >= 13.65 && origT < 14.4;
-      } else if (origT < 16.1) {
-        const p = easeInOutCubic((origT - 14.5) / 1.6);
+      } else if (origT < 15.6) {
+        // Move into venue detail sheet dishes
+        const p = easeAppleSmooth((origT - 14.5) / 1.1);
         cursorX = lerp(68, 50, p);
-        cursorY = lerp(49, 62, p);
-      } else if (origT < 16.6) {
-        const p = easeInOutCubic(clamp((origT - 16.1) / 0.3, 0, 1));
-        cursorX = lerp(50, 92, p);
-        cursorY = lerp(62, 15.5, p);
-        isPressed = origT >= 16.4 && origT < 16.6;
-        showRipple = origT >= 16.42 && origT < 16.66;
-      } else if (origT < 17.4) {
-        const p = easeInOutCubic(clamp((origT - 16.6) / 0.4, 0, 1));
+        cursorY = lerp(49, 54, p);
+      } else if (origT < 17.0) {
+        // Smoothly scroll down the menu dishes
+        const p = easeInOutQuint((origT - 15.6) / 1.4);
+        menuScrollY = lerp(0, 115, p);
+        cursorX = lerp(50, 52, p);
+        cursorY = lerp(54, 68, p);
+        isPressed = false;
+      } else if (origT < 17.5) {
+        // Glides up to close ✕ button
+        menuScrollY = 115;
+        const p = easeAppleSmooth((origT - 17.0) / 0.5);
+        cursorX = lerp(52, 92, p);
+        cursorY = lerp(68, 15.5, p);
+        isPressed = origT >= 17.3 && origT < 17.5;
+        showRipple = origT >= 17.32 && origT < 17.52;
+      } else if (origT < 18.2) {
+        // Glides down to weekly drop capsule in feed sheet
+        const p = easeAppleSmooth((origT - 17.5) / 0.7);
         cursorX = lerp(92, 75, p);
         cursorY = lerp(15.5, 79, p);
-        isPressed = origT >= 17.0 && origT < 17.25;
-        showRipple = origT >= 17.02 && origT < 17.35;
+        isPressed = origT >= 18.0 && origT < 18.2;
+        showRipple = origT >= 18.02 && origT < 18.24;
       } else {
-        const p = easeInOutCubic(clamp((origT - 17.4) / 1.4, 0, 1));
+        // Rests peacefully while weekly spotlight dish is proudly displayed
+        const p = easeAppleSmooth(clamp((origT - 18.2) / 1.0, 0, 1));
         cursorX = lerp(75, 55, p);
-        cursorY = lerp(79, 44, p);
+        cursorY = lerp(79, 46, p);
       }
     } else {
       // Act 3: The Closer (reset feed and return camera smoothly to start for 0-seam loop)
       sheetY = PEEK;
-      feedScrollY = lerp(535, 0, easeInOutCubic((t - 22.5) / 2.0));
-      const p = easeInOutCubic((t - 22.5) / 4.5);
+      feedScrollY = lerp(535, 0, easeInOutQuint(clamp((t - ACT3_TRANS_START) / 2.5, 0, 1)));
+      const p = easeInOutQuint(clamp((t - ACT3_TRANS_START) / 6.0, 0, 1));
       camLng = lerp(10.7572, 10.7535, p);
       camLat = lerp(59.9138, 59.9178, p);
       camZoom = lerp(15.3, 13.75, p);
@@ -1705,6 +1751,7 @@ export default function AdReelStagePage() {
     return {
       sheetY,
       feedScrollY,
+      menuScrollY,
       isMatchaCardTapped,
       camLng,
       camLat,
@@ -2842,9 +2889,16 @@ export default function AdReelStagePage() {
                           </div>
                         </div>
 
-                        {/* 2. Scrollable Body */}
-                        <div className="flex-1 overflow-y-auto p-4 space-y-3.5 text-xs no-scrollbar overscroll-contain">
-                          {/* Cover Photo with Authentic Badge */}
+                        {/* 2. Scrollable Body with smooth animated scroll */}
+                        <div className="flex-1 overflow-hidden p-4 text-xs no-scrollbar">
+                          <div
+                            style={{
+                              transform: `translate3d(0, -${anim.menuScrollY}px, 0)`,
+                              willChange: "transform",
+                            }}
+                            className="space-y-3.5"
+                          >
+                            {/* Cover Photo with Authentic Badge */}
                           <div className="relative w-full h-36 rounded-2xl overflow-hidden border border-zinc-200 bg-zinc-100 shadow-xs shrink-0">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
@@ -2999,7 +3053,8 @@ export default function AdReelStagePage() {
                             </div>
                           </div>
                         </div>
-                      </motion.div>
+                      </div>
+                    </motion.div>
                     )}
                   </AnimatePresence>
 
