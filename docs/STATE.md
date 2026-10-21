@@ -1,4 +1,7 @@
 # Project State
+- Converted Spotify card to single track: "I Wonder" by Kanye West with Graduation album art and no open link.
+- Unified stage scale and eye-line across looks with inset-0 fixed backdrop, eliminating mobile address-bar scroll resize and jumping.
+- Pushed commit 0d26233 to remote repository at https://github.com/abdisalam02/Smakr.git on branch main.
 - Positioned Look 3 (Noir Trench) to hug the right screen edge, clearing contact actions and inquiry buttons.
 - Replaced second image with new high-res Chambray Denim cutout (IMG_5196-removebg-preview.png).
 - Replaced looks with new high-quality cutouts in exact order: 2-remove (Linen), 3-remove (Tailored Suit), 1-remove (Noir Trench).
