@@ -317,7 +317,7 @@ export function CreateFoodPostModal() {
               detectCategoryKey(fromVenue.name)
           : CATEGORY_ICONS[0].key
       );
-      setFormatType("restaurant");
+      setFormatType(fromVenue?.spot_type === "food_truck" ? "food_truck" : "restaurant");
       setTiktokUrl("");
       setIsExtractingTikTok(false);
       setQuery("");
@@ -749,7 +749,7 @@ export function CreateFoodPostModal() {
         created_at_relative: "Just now",
         is_official_pick: true,
         dietary_tags: [],
-        spot_type: formatType,
+        spot_type: (finalVenue.spot_type || formatType) as "restaurant" | "food_truck" | "popup",
       };
 
       addFoodPost(optimistic);

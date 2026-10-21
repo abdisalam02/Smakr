@@ -45,17 +45,17 @@ export default function PartnerPage() {
         </div>
 
         {/* Hero Section */}
-        <div className="space-y-2">
-          <div className="text-xs font-bold uppercase tracking-wider text-[#e84a27]">
-            Oslo Kitchens · Pop-up Residencies · Food Trucks
+        <div className="space-y-3">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e84a27]/10 text-[#e84a27] text-xs font-bold uppercase tracking-wider">
+            <span>✦ Oslo Kitchen Partner Studio</span>
           </div>
 
-          <h1 className="font-comico text-3xl sm:text-5xl font-black text-zinc-900 dark:text-white leading-[1.08] tracking-tight">
-            Design Your <span className="text-[#e84a27]">Radar Card</span>
+          <h1 className="font-comico text-3xl sm:text-5xl font-black text-[#181615] dark:text-white leading-[1.08] tracking-tight">
+            Manage your spot. <span className="text-[#e84a27]">Control what foodies see.</span>
           </h1>
 
-          <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 max-w-2xl leading-relaxed font-normal">
-            Google Maps shows blurry doors and outdated photos. Put your real signature dish, in-house NOK price, and schedule directly on Oslo's food radar.
+          <p className="text-xs sm:text-sm text-[#6E655F] dark:text-[#A89E96] max-w-xl leading-relaxed font-normal">
+            Replace blurry doors and outdated photos with your real kitchen photography, exact in-house NOK prices, and live batches directly on Oslo's food radar.
           </p>
         </div>
 

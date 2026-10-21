@@ -153,7 +153,7 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
   return (
     <div
       onClick={handleClick}
-      className={`group relative flex items-center gap-3.5 p-3 rounded-3xl bg-[#FAF7F2] dark:bg-[#181615] border border-[#181615]/10 dark:border-white/10 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer active:scale-[0.99] select-none overflow-hidden min-h-[116px] max-h-[136px] ${
+      className={`group relative flex items-center gap-3.5 p-3 rounded-3xl bg-[#FAF7F2]/80 dark:bg-[#181615]/80 backdrop-blur-xl border border-white/70 dark:border-white/10 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)] hover:shadow-md transition-all duration-200 cursor-pointer active:scale-[0.99] select-none overflow-hidden min-h-[116px] max-h-[136px] ${
         popupStatus.isDimmedCard ? "opacity-50 grayscale-[20%]" : ""
       }`}
     >
@@ -215,9 +215,12 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
           </div>
         )}
 
+        {/* Soft bleed / translucency gradient towards text */}
+        <div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-r from-transparent via-[#FAF7F2]/40 to-[#FAF7F2]/90 dark:via-[#181615]/40 dark:to-[#181615]/90 pointer-events-none z-[2]" />
+
         {/* Google Rating Badge bottom-left */}
         {hasGoogleRating && (
-          <div className="absolute bottom-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/75 backdrop-blur-md text-white text-[10px] font-bold shadow-xs">
+          <div className="absolute bottom-2 left-2 z-[3] flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/75 backdrop-blur-md text-white text-[10px] font-bold shadow-xs">
             <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
             <span className="font-sans font-bold tracking-tight text-white">{venue.google_rating!.toFixed(1)}</span>
           </div>
@@ -238,31 +241,18 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
 
       {/* Right Column — Strictly 4 Clean Lines (flex-1 min-w-0) */}
       <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5 h-[112px]">
-        {/* Line 1: Category + Live Status */}
+        {/* Line 1: Category Icon & Name */}
         <div className="flex items-center justify-between gap-2">
           <span className="text-[11px] font-semibold text-[#e84a27] uppercase tracking-wider flex items-center gap-1 font-comico truncate">
             <span>{categoryInfo.emoji}</span>
             <span className="truncate">{categoryInfo.label}</span>
           </span>
 
-          <div className="flex items-center gap-1 shrink-0">
-            {venue.spot_type === "popup" && (
-              <span className="text-[9.5px] font-bold px-1.5 py-0.2 rounded-full bg-amber-500 text-zinc-950">
-                Pop-up
-              </span>
-            )}
-            <span
-              className={`text-[9.5px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border ${
-                liveOpenStatus.color === "green"
-                  ? "bg-emerald-50 text-emerald-800 border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-300"
-                  : liveOpenStatus.color === "orange"
-                  ? "bg-amber-50 text-amber-800 border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300"
-                  : "bg-zinc-100 text-zinc-600 border-zinc-200/80 dark:bg-zinc-800 dark:text-zinc-300"
-              }`}
-            >
-              <span>{liveOpenStatus.badgeText}</span>
+          {venue.spot_type === "popup" && (
+            <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-[#e84a27] text-white font-comico shrink-0 tracking-wide">
+              Pop-up
             </span>
-          </div>
+          )}
         </div>
 
         {/* Line 2: Venue Title + Price Tier */}
@@ -288,9 +278,9 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
           )}
         </p>
 
-        {/* Line 4: Signature Dish / Batch Note + Map Action */}
+        {/* Line 4: Opening Hours (Theme-matched, no green) / Batch Note + Map Action */}
         <div className="border-t border-[#181615]/8 dark:border-white/10 pt-1.5 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1 text-xs truncate min-w-0">
+          <div className="flex items-center gap-1.5 text-xs truncate min-w-0">
             {venue.kitchen_status && venue.kitchen_status.status === "fresh_batch" ? (
               <span className="text-[10px] font-bold text-[#e84a27] flex items-center gap-1 truncate animate-pulse">
                 <span>🔥</span>
@@ -302,9 +292,9 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
                 <span className="truncate">Few left today</span>
               </span>
             ) : (
-              <span className="text-xs font-semibold text-[#181615] dark:text-zinc-200 truncate flex items-center gap-1">
-                <span className="text-[#e84a27]">✦</span>
-                <span className="truncate">{signature || "Curated Oslo Spot"}</span>
+              <span className="text-xs font-medium text-[#6E655F] dark:text-zinc-400 truncate flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#6E655F]/60 dark:bg-zinc-400/60 shrink-0" />
+                <span className="truncate">{liveOpenStatus.badgeText}</span>
               </span>
             )}
           </div>

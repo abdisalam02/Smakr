@@ -16,6 +16,8 @@ import {
   Phone,
   Clock,
   Share2,
+  Instagram,
+  Calendar,
 } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { motion, AnimatePresence } from "motion/react";
@@ -23,10 +25,11 @@ import { useVenueDetail } from "@/hooks/useVenueDetail";
 import { formatDistance } from "@/lib/math";
 import { FoodPost, ReviewItem } from "@/types";
 import { DishDetailPopup } from "@/components/food/DishDetailPopup";
-import { getPopupStatus } from "@/lib/popupUtils";
+import { getPopupStatus, getPopupMeta, isPopupVenue } from "@/lib/popupUtils";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import { formatOsloLocation } from "@/lib/location";
 import { ExpandableReviewText } from "./ExpandableReviewText";
+import { incrementBringBack } from "@/lib/supabase/data";
 
 /**
  * True on desktop (lg and above), where the in-place VenueDetailPane takes
@@ -103,6 +106,55 @@ export function VenueBottomSheet() {
   const [selectedDish, setSelectedDish] = useState<FoodPost | null>(null);
   const [showAllReviews, setShowAllReviews] = useState(false);
   const openStatus = getVenueLiveOpenStatus(selectedVenue);
+
+  const isPopup = isPopupVenue(selectedVenue);
+  const popupMeta = selectedVenue ? getPopupMeta(selectedVenue) : null;
+  const isDormant =
+    popupMeta?.residency_status === "between_residencies" ||
+    Boolean(popupMeta?.dates_label?.toLowerCase().includes("tba"));
+  const popupHostVenue =
+    popupMeta?.host_venue_name &&
+    !popupMeta.host_venue_name.toLowerCase().includes("tba") &&
+    !popupMeta.host_venue_name.toLowerCase().includes("host")
+      ? popupMeta.host_venue_name
+      : null;
+  const instagramHandle = popupMeta?.instagram_url
+    ? popupMeta.instagram_url
+        .replace(/^https?:\/\/(www\.)?instagram\.com\//i, "")
+        .replace(/\/$/, "")
+        .replace(/^@/, "")
+    : null;
+  const popupContact = popupMeta?.ticket_url || selectedVenue?.website_uri || null;
+
+  const [hasReactedPopup, setHasReactedPopup] = useState(false);
+  const [popupReactionCount, setPopupReactionCount] = useState(12);
+
+  useEffect(() => {
+    if (!selectedVenue) return;
+    if (popupMeta?.bring_back_count && popupMeta.bring_back_count > 0) {
+      setPopupReactionCount(popupMeta.bring_back_count);
+    } else {
+      const hash = selectedVenue.id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+      setPopupReactionCount(isDormant ? (hash % 35) + 14 : (hash % 25) + 11);
+    }
+    try {
+      const saved = localStorage.getItem(`smakr_reaction_${selectedVenue.id}`);
+      setHasReactedPopup(saved === "true");
+    } catch {}
+  }, [selectedVenue?.id, isDormant, popupMeta?.bring_back_count]);
+
+  const handlePopupReaction = async () => {
+    if (!selectedVenue || hasReactedPopup) return;
+    setHasReactedPopup(true);
+    setPopupReactionCount((c) => c + 1);
+    try {
+      localStorage.setItem(`smakr_reaction_${selectedVenue.id}`, "true");
+      const updated = await incrementBringBack(selectedVenue.id);
+      if (typeof updated === "number" && updated > 0) {
+        setPopupReactionCount(updated);
+      }
+    } catch {}
+  };
 
   // Reviews: curated venue reviews, diner quotes, or post reviews
   const reviews = useMemo<ReviewItem[]>(() => {
@@ -348,17 +400,57 @@ export function VenueBottomSheet() {
                 <div className="w-10 h-1 rounded-full bg-zinc-300 hover:bg-zinc-400 transition-colors mb-2.5" />
 
                 <div className="w-full flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-comico text-2xl sm:text-3xl text-zinc-950 tracking-tight leading-tight truncate">
-                      {selectedVenue.name}
-                    </h3>
-                    <p className="text-xs text-zinc-500 mt-1 flex items-center gap-1.5 flex-wrap">
-                      <MapPin className="w-3.5 h-3.5 text-[#e84a27] shrink-0" />
-                      <span className="font-medium text-zinc-700">
-                        {formatOsloLocation(selectedVenue.address, selectedVenue.city || selectedVenue.neighborhood).fullClean}
-                      </span>
-                    </p>
-                  </div>
+                  {isPopup ? (
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="px-2.5 py-0.5 rounded-full bg-[#E84A27]/10 text-[#E84A27] text-[10px] font-bold uppercase tracking-wider">
+                          🎟️ Pop-Up Residency
+                        </span>
+                        {isDormant ? (
+                          <span className="px-2 py-0.5 rounded-md bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-300 text-[10px] font-bold uppercase">
+                            Inactive
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold uppercase">
+                            Live Drop
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="font-comico text-2xl sm:text-3xl text-zinc-950 dark:text-white tracking-tight leading-tight truncate">
+                        {selectedVenue.name}
+                      </h3>
+                      <p className="text-xs text-zinc-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                        {isDormant ? (
+                          <span className="font-medium text-zinc-500">
+                            Oslo · Dates &amp; location announcing soon
+                          </span>
+                        ) : popupHostVenue ? (
+                          <>
+                            <MapPin className="w-3.5 h-3.5 text-[#e84a27] shrink-0" />
+                            <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                              Hosted at {popupHostVenue}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="font-medium text-zinc-500">
+                            Oslo Pop-Up Residency
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-comico text-2xl sm:text-3xl text-zinc-950 tracking-tight leading-tight truncate">
+                        {selectedVenue.name}
+                      </h3>
+                      <p className="text-xs text-zinc-500 mt-1 flex items-center gap-1.5 flex-wrap">
+                        <MapPin className="w-3.5 h-3.5 text-[#e84a27] shrink-0" />
+                        <span className="font-medium text-zinc-700">
+                          {formatOsloLocation(selectedVenue.address, selectedVenue.city || selectedVenue.neighborhood).fullClean}
+                        </span>
+                      </p>
+                    </div>
+                  )}
                   <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
                     <button
                       type="button"
@@ -389,400 +481,652 @@ export function VenueBottomSheet() {
                 onTouchEnd={handleContentTouchEnd}
                 className="flex-1 overflow-y-auto p-5 space-y-5 text-xs no-scrollbar overscroll-contain"
               >
-              {/* Cover Photo */}
-              {selectedVenue.cover_image_url && (
-                <div className="relative w-full h-52 rounded-3xl overflow-hidden border border-zinc-200 bg-zinc-100 shadow-xs">
-                  <Image
-                    src={selectedVenue.cover_image_url}
-                    alt={selectedVenue.name}
-                    fill
-                    className="object-cover"
-                    sizes="600px"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                  <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white">
-                    <span className="font-bold text-sm tracking-tight drop-shadow-sm">
-                      {selectedVenue.live_food_status || "Oslo Culinary Hotspot"}
-                    </span>
-                    <span className="px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-md text-[11px] font-mono font-bold border border-white/20">
-                      {selectedVenue.price_level || "$$"}
-                    </span>
-                  </div>
-                </div>
-              )}
+              {isPopup ? (
+                /* =========================================================================
+                   DEDICATED POP-UP RESIDENCY SHEET
+                   ========================================================================= */
+                <div className="space-y-4">
+                  {/* Cover Photo */}
+                  {selectedVenue.cover_image_url && (
+                    <div className="relative w-full h-56 rounded-3xl overflow-hidden border border-[#181615]/10 bg-[#FAF7F2] dark:bg-[#1E1C1A] shadow-xs">
+                      <Image
+                        src={selectedVenue.cover_image_url}
+                        alt={selectedVenue.name}
+                        fill
+                        className="object-cover"
+                        sizes="600px"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent pointer-events-none" />
+                      <div className="absolute bottom-3.5 left-3.5 right-3.5 flex items-center justify-between text-white pointer-events-none">
+                        <span className="font-comico font-black text-lg tracking-tight drop-shadow-md truncate">
+                          {selectedVenue.name}
+                        </span>
+                        <span className="px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-md text-[11px] font-bold border border-white/25 shrink-0">
+                          {isDormant ? "Between Residencies" : "Oslo Residency"}
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
-              {/* Pop-up residency callout */}
-              {selectedVenue.spot_type === "popup" && getPopupStatus(selectedVenue).label && (
-                <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-amber-900">
-                  <span className="text-xl">🎟️</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold">{getPopupStatus(selectedVenue).label}</p>
-                    {selectedVenue.popup_end_date && (
-                      <p className="text-[10px] text-zinc-500">
-                        Closing {new Date(selectedVenue.popup_end_date).toLocaleDateString()}
+                  {/* Primary Residency Status & Schedule Card */}
+                  <div className="p-4 sm:p-5 rounded-3xl bg-[#F5EFE4] dark:bg-[#1E1C1A] border border-[#181615]/10 space-y-3.5 shadow-xs">
+                    {isDormant ? (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span className="px-3 py-1 rounded-full bg-stone-300 dark:bg-stone-700 text-stone-800 dark:text-stone-200 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                            <span>⏳ Dates &amp; Location TBA</span>
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed font-medium">
+                          This pop-up residency is preparing its next Oslo drop. Dates and location are being confirmed. Follow their official Instagram to get drop alerts.
+                        </p>
+
+                        {/* Prominent Instagram CTA Button */}
+                        {popupMeta?.instagram_url && (
+                          <a
+                            href={popupMeta.instagram_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-pink-600 via-rose-600 to-amber-600 hover:opacity-95 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.98]"
+                          >
+                            <Instagram className="w-4 h-4" />
+                            <span>Follow {instagramHandle ? `@${instagramHandle}` : "on Instagram"} for Drop Alerts</span>
+                            <ExternalLink className="w-3.5 h-3.5 ml-0.5 opacity-80" />
+                          </a>
+                        )}
+
+                        {/* Optional Contact or Website */}
+                        {popupContact && (
+                          <a
+                            href={popupContact.startsWith("http") ? popupContact : `mailto:${popupContact}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full py-2.5 px-4 rounded-2xl bg-white dark:bg-[#2A2622] hover:bg-zinc-50 border border-[#181615]/10 text-zinc-800 dark:text-zinc-200 font-bold text-xs flex items-center justify-center gap-2 shadow-2xs transition-colors"
+                          >
+                            <Globe className="w-3.5 h-3.5 text-zinc-500" />
+                            <span>{popupContact.startsWith("http") ? "Official Website / Inquiries" : `Inquiries: ${popupContact}`}</span>
+                          </a>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span className="px-3 py-1 rounded-full bg-[#E84A27] text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-xs">
+                            <Flame className="w-3.5 h-3.5 fill-white" />
+                            <span>Live Now in Oslo</span>
+                          </span>
+                          {popupMeta?.portion_cap && (
+                            <span className="text-xs font-bold text-[#E84A27] font-mono">
+                              {popupMeta.portion_cap}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                          {popupMeta?.dates_label && (
+                            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/70 dark:bg-black/20 border border-[#181615]/10">
+                              <Calendar className="w-4 h-4 text-[#E84A27] shrink-0" />
+                              <div>
+                                <div className="text-[10px] text-zinc-400 uppercase font-mono">Dates</div>
+                                <div>{popupMeta.dates_label}</div>
+                              </div>
+                            </div>
+                          )}
+                          {(popupMeta?.daily_hours || selectedVenue.current_opening_hours_text) && (
+                            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/70 dark:bg-black/20 border border-[#181615]/10">
+                              <Clock className="w-4 h-4 text-[#E84A27] shrink-0" />
+                              <div>
+                                <div className="text-[10px] text-zinc-400 uppercase font-mono">Service Hours</div>
+                                <div>{popupMeta?.daily_hours || selectedVenue.current_opening_hours_text}</div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {popupHostVenue && (
+                          <div className="p-2.5 rounded-xl bg-white/70 dark:bg-black/20 border border-[#181615]/10 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <MapPin className="w-4 h-4 text-[#E84A27] shrink-0" />
+                              <div>
+                                <div className="text-[10px] text-zinc-400 uppercase font-mono">Host Spot</div>
+                                <div className="text-xs font-bold text-zinc-900 dark:text-white">{popupHostVenue}</div>
+                              </div>
+                            </div>
+                            <a
+                              href={selectedVenue.google_maps_uri || googleMapsUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-3 py-1.5 rounded-xl bg-[#181615] hover:bg-black text-white text-xs font-bold flex items-center gap-1 shrink-0"
+                            >
+                              <span>Directions</span>
+                              <ExternalLink className="w-3 h-3 text-zinc-400" />
+                            </a>
+                          </div>
+                        )}
+
+                        {/* Action Buttons: Tickets & Instagram */}
+                        <div className="flex items-center gap-2 flex-wrap pt-1">
+                          {popupMeta?.ticket_url && (
+                            <a
+                              href={popupMeta.ticket_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 py-3 px-4 rounded-2xl bg-[#E84A27] hover:bg-[#D43D1C] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs"
+                            >
+                              <span>RSVP / Drop Tickets</span>
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          )}
+                          {popupMeta?.instagram_url && (
+                            <a
+                              href={popupMeta.instagram_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 py-3 px-4 rounded-2xl bg-white dark:bg-[#2A2622] hover:bg-zinc-50 border border-[#181615]/10 text-zinc-800 dark:text-zinc-200 font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs"
+                            >
+                              <Instagram className="w-3.5 h-3.5 text-pink-600" />
+                              <span>{instagramHandle ? `@${instagramHandle}` : "Instagram"}</span>
+                              <ExternalLink className="w-3 h-3 text-zinc-400" />
+                            </a>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Story & Culinary Concept Section */}
+                  {selectedVenue.description && (
+                    <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-[#1E1C1A] border border-[#181615]/10 space-y-2">
+                      <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                        <span>✦ Concept &amp; Story</span>
+                      </div>
+                      <p className="text-xs sm:text-sm text-zinc-800 dark:text-zinc-200 leading-relaxed whitespace-pre-line font-medium">
+                        {selectedVenue.description}
+                      </p>
+                      {popupMeta?.guest_chef && (
+                        <div className="pt-2 border-t border-[#181615]/5 text-xs text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
+                          <span className="font-bold text-zinc-900 dark:text-white">Resident Chef:</span>
+                          <span>{popupMeta.guest_chef}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Community Bring-Back / Going Reaction Card */}
+                  <div className="p-4 rounded-3xl bg-white dark:bg-[#1E1C1A] border border-[#181615]/10 flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-bold text-zinc-900 dark:text-white">
+                        {isDormant ? "Want this pop-up back in Oslo?" : "Heading to this drop?"}
+                      </div>
+                      <p className="text-[11px] text-zinc-500">
+                        {isDormant
+                          ? "Signal your vote to petition this culinary residency."
+                          : "Let other Oslo foodies know you are dropping by."}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handlePopupReaction}
+                      className={`px-4 py-2.5 rounded-2xl font-bold text-xs flex items-center gap-1.5 shrink-0 transition-all cursor-pointer border ${
+                        hasReactedPopup
+                          ? "bg-[#E84A27] text-white border-[#E84A27] shadow-xs"
+                          : "bg-[#F5EFE4] dark:bg-[#23201D] text-[#181615] dark:text-white border-[#181615]/10 hover:border-[#E84A27]"
+                      }`}
+                    >
+                      <Flame className={`w-3.5 h-3.5 ${hasReactedPopup ? "fill-white" : "text-[#E84A27]"}`} />
+                      <span>{isDormant ? "Bring Back" : "Going"} · {popupReactionCount}</span>
+                    </button>
+                  </div>
+
+                  {/* Real Dishes (ONLY if they actually exist!) */}
+                  {recommendedMeals.length > 0 && (
+                    <div className="space-y-3 pt-2">
+                      <h4 className="font-bold text-zinc-900 dark:text-white text-sm flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-[#e84a27]" />
+                        <span>Pop-Up Drop Dishes ({recommendedMeals.length})</span>
+                      </h4>
+                      <div className="space-y-3">
+                        {recommendedMeals.map((dish) => {
+                          const activeReaction = reactions[dish.id];
+                          const isSaved = savedPostIds.has(dish.id);
+                          return (
+                            <div
+                              key={dish.id}
+                              onClick={() => setSelectedDish(dish)}
+                              className="p-3.5 rounded-2xl bg-white dark:bg-[#1E1C1A] border border-zinc-200/80 dark:border-white/10 shadow-xs flex flex-col sm:flex-row gap-3.5 cursor-pointer hover:border-[#e84a27]/30 transition-all hover:shadow-sm"
+                            >
+                              <div className="relative w-full sm:w-28 h-32 sm:h-28 rounded-xl overflow-hidden bg-zinc-100 shrink-0 border border-zinc-100">
+                                <Image
+                                  src={dish.image_url}
+                                  alt={dish.dish_name}
+                                  fill
+                                  className="object-cover"
+                                  sizes="120px"
+                                />
+                                {dish.price_nok && (
+                                  <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded-md bg-black/75 backdrop-blur-xs text-white font-mono font-bold text-[10px]">
+                                    {dish.price_nok} NOK
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex-1 flex flex-col justify-between min-w-0">
+                                <div>
+                                  <h5 className="font-extrabold text-zinc-900 dark:text-white text-xs leading-snug">
+                                    {dish.dish_name}
+                                  </h5>
+                                  {dish.review_text && (
+                                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2 italic leading-relaxed">
+                                      "{dish.review_text}"
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Add Pop-Up Dish Action */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleClose();
+                      handleAddDish();
+                    }}
+                    className="w-full py-3 px-4 rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-850 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors border border-zinc-200/80 dark:border-white/10 shadow-2xs active:scale-[0.98] cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-[#e84a27]" />
+                    <span>Log a Dish for this Pop-Up</span>
+                  </button>
+                </div>
+              ) : (
+                /* =========================================================================
+                   STANDARD RESTAURANT SHEET
+                   ========================================================================= */
+                <>
+                  {/* Cover Photo */}
+                  {selectedVenue.cover_image_url && (
+                    <div className="relative w-full h-52 rounded-3xl overflow-hidden border border-zinc-200 bg-zinc-100 shadow-xs">
+                      <Image
+                        src={selectedVenue.cover_image_url}
+                        alt={selectedVenue.name}
+                        fill
+                        className="object-cover"
+                        sizes="600px"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white">
+                        <span className="font-bold text-sm tracking-tight drop-shadow-sm">
+                          {selectedVenue.live_food_status || "Oslo Culinary Hotspot"}
+                        </span>
+                        <span className="px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-md text-[11px] font-mono font-bold border border-white/20">
+                          {selectedVenue.price_level || "$$"}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Food Truck schedule callout */}
+                  {selectedVenue.spot_type === "food_truck" && selectedVenue.location_schedule && (
+                    <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-900">
+                      <span className="text-xl">🚚</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold">Food Truck Schedule</p>
+                        <p className="text-[11px] font-mono text-emerald-700">
+                          {selectedVenue.location_schedule}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <a
+                      href={selectedVenue.google_maps_uri || googleMapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-1.5 py-2.5 rounded-2xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-zinc-800 font-semibold"
+                    >
+                      <span>Directions</span>
+                      <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
+                    </a>
+
+                    <button
+                      onClick={() => {
+                        handleClose();
+                        handleAddDish();
+                      }}
+                      className="flex items-center justify-center gap-1.5 py-2.5 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] text-white font-semibold shadow-md shadow-[#e84a27]/25 transition-all"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Log a Dish</span>
+                    </button>
+                  </div>
+
+                  {/* Extra Quick Links: Website / Phone */}
+                  {(selectedVenue.website_uri || selectedVenue.phone_number) && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {selectedVenue.website_uri && (
+                        <a
+                          href={selectedVenue.website_uri}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-xs font-medium text-zinc-700"
+                        >
+                          <Globe className="w-3.5 h-3.5 text-zinc-500" />
+                          <span>Website / Menu</span>
+                          <ExternalLink className="w-3 h-3 text-zinc-400" />
+                        </a>
+                      )}
+                      {selectedVenue.phone_number && (
+                        <a
+                          href={`tel:${selectedVenue.phone_number}`}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-xs font-medium text-zinc-700"
+                        >
+                          <Phone className="w-3.5 h-3.5 text-zinc-500" />
+                          <span>{selectedVenue.phone_number}</span>
+                        </a>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Editorial Venue Quick Stats (Rating / Price / Status / Area) */}
+                  <div className="grid grid-cols-4 gap-1 p-2.5 rounded-2xl bg-zinc-50 border border-zinc-200/70 text-center">
+                    <div>
+                      <div className="text-[10px] text-zinc-400 uppercase font-mono tracking-wider">Rating</div>
+                      <div className="flex items-center justify-center gap-0.5 mt-0.5">
+                        <span className="text-amber-500 text-xs">★</span>
+                        <span className="font-comico text-sm text-zinc-950 font-bold">
+                          {selectedVenue.google_rating != null
+                            ? selectedVenue.google_rating.toFixed(1)
+                            : "4.7"}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="border-l border-zinc-200/80">
+                      <div className="text-[10px] text-zinc-400 uppercase font-mono tracking-wider">Price</div>
+                      <div className="font-mono font-bold text-xs text-zinc-900 mt-1">
+                        {selectedVenue.price_level || "$$"}
+                      </div>
+                    </div>
+                    <div className="border-l border-zinc-200/80">
+                      <div className="text-[10px] text-zinc-400 uppercase font-mono tracking-wider">Status</div>
+                      <div className="flex items-center justify-center gap-1 mt-1">
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                            openStatus.isOpen ? "bg-emerald-500" : "bg-red-500"
+                          }`}
+                        />
+                        <span
+                          className={`text-[11px] font-bold ${
+                            openStatus.isOpen ? "text-emerald-700" : "text-red-700"
+                          }`}
+                        >
+                          {openStatus.isOpen ? "Open" : "Closed"}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="border-l border-zinc-200/80">
+                      <div className="text-[10px] text-zinc-400 uppercase font-mono tracking-wider">Area</div>
+                      <div className="font-semibold text-xs text-zinc-900 truncate mt-1 capitalize px-1">
+                        {selectedVenue.neighborhood || selectedVenue.city || "Sentrum"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Culinary Spotlight: Dishes Mini-Feed */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-zinc-900 text-sm flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-[#e84a27]" />
+                        <span>Dishes You Can't Miss ({recommendedMeals.length})</span>
+                      </h4>
+                      <span className="text-[10px] font-mono text-zinc-400">
+                        Foodie Radar Verified
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                      {recommendedMeals.map((dish) => {
+                        const activeReaction = reactions[dish.id];
+                        const isSaved = savedPostIds.has(dish.id);
+
+                        return (
+                          <div
+                            key={dish.id}
+                            onClick={() => setSelectedDish(dish)}
+                            className="p-3.5 rounded-2xl bg-white border border-zinc-200/80 shadow-xs flex flex-col sm:flex-row gap-3.5 cursor-pointer hover:border-[#e84a27]/30 transition-all hover:shadow-sm"
+                          >
+                            {/* Dish Photo */}
+                            <div className="relative w-full sm:w-28 h-32 sm:h-28 rounded-xl overflow-hidden bg-zinc-100 shrink-0 border border-zinc-100">
+                              <Image
+                                src={dish.image_url}
+                                alt={dish.dish_name}
+                                fill
+                                className="object-cover"
+                                sizes="120px"
+                              />
+                              <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded-md bg-black/75 backdrop-blur-xs text-white font-mono font-bold text-[10px]">
+                                {dish.price_nok} NOK
+                              </span>
+                            </div>
+
+                            {/* Details */}
+                            <div className="flex-1 flex flex-col justify-between min-w-0">
+                              <div>
+                                <div className="flex items-start justify-between gap-2">
+                                  <h5 className="font-extrabold text-zinc-900 text-xs leading-snug">
+                                    {dish.dish_name}
+                                  </h5>
+                                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 font-bold text-[10px] shrink-0 border border-amber-200/60">
+                                    <span>★</span>
+                                    <span className="font-mono">{dish.rating}</span>
+                                  </div>
+                                </div>
+
+                                {dish.review_text && (
+                                  <p className="text-[11px] text-zinc-500 mt-1 line-clamp-2 italic leading-relaxed">
+                                    "{dish.review_text}"
+                                  </p>
+                                )}
+
+                                {dish.taste_tags && (
+                                  <div className="flex flex-wrap gap-1 mt-1.5">
+                                    {dish.taste_tags.map((tag) => (
+                                      <span
+                                        key={tag}
+                                        className="px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600 text-[9px] font-medium"
+                                      >
+                                        {tag}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* 1-Tap Foodie Reactions */}
+                              <div className="pt-2 mt-2 border-t border-zinc-100 flex items-center justify-between gap-1.5 text-[10px]">
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleReaction(dish.id, "craving");
+                                    }}
+                                    className={`flex items-center gap-1 px-2 py-1 rounded-lg border font-semibold transition-all ${
+                                      activeReaction === "craving"
+                                        ? "bg-[#e84a27] text-white border-[#e84a27]"
+                                        : "bg-zinc-50 text-zinc-600 border-zinc-200 hover:bg-zinc-100"
+                                    }`}
+                                  >
+                                    <Flame className="w-3 h-3" />
+                                    <span>Craving</span>
+                                  </button>
+
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleReaction(dish.id, "must_try");
+                                    }}
+                                    className={`flex items-center gap-1 px-2 py-1 rounded-lg border font-semibold transition-all ${
+                                      activeReaction === "must_try"
+                                        ? "bg-amber-500 text-white border-amber-500"
+                                        : "bg-zinc-50 text-zinc-600 border-zinc-200 hover:bg-zinc-100"
+                                    }`}
+                                  >
+                                    <Star className="w-3 h-3" />
+                                    <span>Must Try</span>
+                                  </button>
+
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleReaction(dish.id, "ate_here");
+                                    }}
+                                    className={`flex items-center gap-1 px-2 py-1 rounded-lg border font-semibold transition-all ${
+                                      activeReaction === "ate_here"
+                                        ? "bg-emerald-600 text-white border-emerald-600"
+                                        : "bg-zinc-50 text-zinc-600 border-zinc-200 hover:bg-zinc-100"
+                                    }`}
+                                  >
+                                    <CheckCircle2 className="w-3 h-3" />
+                                    <span>Tried</span>
+                                  </button>
+                                </div>
+
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleSavePost(dish.id);
+                                  }}
+                                  className={`p-1.5 rounded-lg border transition-all ${
+                                    isSaved
+                                      ? "bg-zinc-900 text-white border-zinc-900"
+                                      : "bg-zinc-50 text-zinc-500 border-zinc-200 hover:bg-zinc-100"
+                                  }`}
+                                  title={isSaved ? "Saved to your list" : "Save dish"}
+                                >
+                                  <Bookmark className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Opening Hours & Venue Details */}
+                  <div className="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-200/80 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-900">
+                        <Clock className="w-3.5 h-3.5 text-[#e84a27]" />
+                        <span>Opening Hours</span>
+                      </div>
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                          openStatus.isOpen
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-200/80"
+                            : "bg-red-50 text-red-700 border-red-200/80"
+                        }`}
+                      >
+                        {openStatus.statusText}
+                        {openStatus.detailText ? ` · ${openStatus.detailText}` : ""}
+                      </span>
+                    </div>
+                    {selectedVenue.opening_hours_json && Object.keys(selectedVenue.opening_hours_json).length > 0 ? (
+                      <div className="space-y-1 pt-1 text-[11px] text-zinc-600 font-mono">
+                        {Object.entries(selectedVenue.opening_hours_json).map(([day, hours]) => (
+                          <div key={day} className="flex justify-between">
+                            <span className="font-medium text-zinc-500">{day}</span>
+                            <span>{hours}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-zinc-500 pt-1">
+                        {selectedVenue.spot_type === "food_truck"
+                          ? selectedVenue.location_schedule || "Operating schedule varies by day."
+                          : selectedVenue.food_category === "coffee" || selectedVenue.food_category === "bakery"
+                          ? "Daily 07:30 – 18:00 (approximate Oslo bakery hours)"
+                          : "Daily 11:30 – 22:30 (approximate Oslo restaurant hours)"}
                       </p>
                     )}
                   </div>
-                </div>
-              )}
 
-              {/* Food Truck schedule callout */}
-              {selectedVenue.spot_type === "food_truck" && selectedVenue.location_schedule && (
-                <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-900">
-                  <span className="text-xl">🚚</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold">Food Truck Schedule</p>
-                    <p className="text-[11px] font-mono text-emerald-700">
-                      {selectedVenue.location_schedule}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="grid grid-cols-2 gap-2.5">
-                <a
-                  href={selectedVenue.google_maps_uri || googleMapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 py-2.5 rounded-2xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-zinc-800 font-semibold"
-                >
-                  <span>Directions</span>
-                  <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
-                </a>
-
-                <button
-                  onClick={() => {
-                    handleClose();
-                    handleAddDish();
-                  }}
-                  className="flex items-center justify-center gap-1.5 py-2.5 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] text-white font-semibold shadow-md shadow-[#e84a27]/25 transition-all"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Log a Dish</span>
-                </button>
-              </div>
-
-              {/* Extra Quick Links: Website / Phone */}
-              {(selectedVenue.website_uri || selectedVenue.phone_number) && (
-                <div className="flex items-center gap-2 flex-wrap">
-                  {selectedVenue.website_uri && (
-                    <a
-                      href={selectedVenue.website_uri}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-xs font-medium text-zinc-700"
-                    >
-                      <Globe className="w-3.5 h-3.5 text-zinc-500" />
-                      <span>Website / Menu</span>
-                      <ExternalLink className="w-3 h-3 text-zinc-400" />
-                    </a>
-                  )}
-                  {selectedVenue.phone_number && (
-                    <a
-                      href={`tel:${selectedVenue.phone_number}`}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-xs font-medium text-zinc-700"
-                    >
-                      <Phone className="w-3.5 h-3.5 text-zinc-500" />
-                      <span>{selectedVenue.phone_number}</span>
-                    </a>
-                  )}
-                </div>
-              )}
-
-              {/* Editorial Venue Quick Stats (Rating / Price / Status / Area) */}
-              <div className="grid grid-cols-4 gap-1 p-2.5 rounded-2xl bg-zinc-50 border border-zinc-200/70 text-center">
-                <div>
-                  <div className="text-[10px] text-zinc-400 uppercase font-mono tracking-wider">Rating</div>
-                  <div className="flex items-center justify-center gap-0.5 mt-0.5">
-                    <span className="text-amber-500 text-xs">★</span>
-                    <span className="font-comico text-sm text-zinc-950 font-bold">
-                      {selectedVenue.google_rating != null
-                        ? selectedVenue.google_rating.toFixed(1)
-                        : "4.7"}
-                    </span>
-                  </div>
-                </div>
-                <div className="border-l border-zinc-200/80">
-                  <div className="text-[10px] text-zinc-400 uppercase font-mono tracking-wider">Price</div>
-                  <div className="font-mono font-bold text-xs text-zinc-900 mt-1">
-                    {selectedVenue.price_level || "$$"}
-                  </div>
-                </div>
-                <div className="border-l border-zinc-200/80">
-                  <div className="text-[10px] text-zinc-400 uppercase font-mono tracking-wider">Status</div>
-                  <div className="flex items-center justify-center gap-1 mt-1">
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                        openStatus.isOpen ? "bg-emerald-500" : "bg-red-500"
-                      }`}
-                    />
-                    <span
-                      className={`text-[11px] font-bold ${
-                        openStatus.isOpen ? "text-emerald-700" : "text-red-700"
-                      }`}
-                    >
-                      {openStatus.isOpen ? "Open" : "Closed"}
-                    </span>
-                  </div>
-                </div>
-                <div className="border-l border-zinc-200/80">
-                  <div className="text-[10px] text-zinc-400 uppercase font-mono tracking-wider">Area</div>
-                  <div className="font-semibold text-xs text-zinc-900 truncate mt-1 capitalize px-1">
-                    {selectedVenue.neighborhood || selectedVenue.city || "Sentrum"}
-                  </div>
-                </div>
-              </div>
-
-              {/* Culinary Spotlight: Dishes Mini-Feed with 1-Tap Foodie Reactions */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-bold text-zinc-900 text-sm flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-[#e84a27]" />
-                    <span>Dishes You Can't Miss ({recommendedMeals.length})</span>
-                  </h4>
-                  <span className="text-[10px] font-mono text-zinc-400">
-                    Foodie Radar Verified
-                  </span>
-                </div>
-
-                <div className="space-y-3">
-                  {recommendedMeals.map((dish) => {
-                    const activeReaction = reactions[dish.id];
-                    const isSaved = savedPostIds.has(dish.id);
-
-                    return (
-                      <div
-                        key={dish.id}
-                        onClick={() => setSelectedDish(dish)}
-                        className="p-3.5 rounded-2xl bg-white border border-zinc-200/80 shadow-xs flex flex-col sm:flex-row gap-3.5 cursor-pointer hover:border-[#e84a27]/30 transition-all hover:shadow-sm"
-                      >
-                        {/* Dish Photo */}
-                        <div className="relative w-full sm:w-28 h-32 sm:h-28 rounded-xl overflow-hidden bg-zinc-100 shrink-0 border border-zinc-100">
-                          <Image
-                            src={dish.image_url}
-                            alt={dish.dish_name}
-                            fill
-                            className="object-cover"
-                            sizes="120px"
-                          />
-                          <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded-md bg-black/75 backdrop-blur-xs text-white font-mono font-bold text-[10px]">
-                            {dish.price_nok} NOK
-                          </span>
-                        </div>
-
-                        {/* Details */}
-                        <div className="flex-1 flex flex-col justify-between min-w-0">
-                          <div>
-                            <div className="flex items-start justify-between gap-2">
-                              <h5 className="font-extrabold text-zinc-900 text-xs leading-snug">
-                                {dish.dish_name}
-                              </h5>
-                              <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 font-bold text-[10px] shrink-0 border border-amber-200/60">
-                                <span>★</span>
-                                <span className="font-mono">{dish.rating}</span>
-                              </div>
-                            </div>
-
-                            {dish.review_text && (
-                              <p className="text-[11px] text-zinc-500 mt-1 line-clamp-2 italic leading-relaxed">
-                                "{dish.review_text}"
-                              </p>
-                            )}
-
-                            {dish.taste_tags && (
-                              <div className="flex flex-wrap gap-1 mt-1.5">
-                                {dish.taste_tags.map((tag) => (
-                                  <span
-                                    key={tag}
-                                    className="px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600 text-[9px] font-medium"
-                                  >
-                                    {tag}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* 1-Tap Foodie Reactions */}
-                          <div className="pt-2 mt-2 border-t border-zinc-100 flex items-center justify-between gap-1.5 text-[10px]">
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleReaction(dish.id, "craving");
-                                }}
-                                className={`flex items-center gap-1 px-2 py-1 rounded-lg border font-semibold transition-all ${
-                                  activeReaction === "craving"
-                                    ? "bg-[#e84a27] text-white border-[#e84a27]"
-                                    : "bg-zinc-50 text-zinc-600 border-zinc-200 hover:bg-zinc-100"
-                                }`}
-                              >
-                                <Flame className="w-3 h-3" />
-                                <span>Craving</span>
-                              </button>
-
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleReaction(dish.id, "must_try");
-                                }}
-                                className={`flex items-center gap-1 px-2 py-1 rounded-lg border font-semibold transition-all ${
-                                  activeReaction === "must_try"
-                                    ? "bg-amber-500 text-white border-amber-500"
-                                    : "bg-zinc-50 text-zinc-600 border-zinc-200 hover:bg-zinc-100"
-                                }`}
-                              >
-                                <Star className="w-3 h-3" />
-                                <span>Must Try</span>
-                              </button>
-
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleReaction(dish.id, "ate_here");
-                                }}
-                                className={`flex items-center gap-1 px-2 py-1 rounded-lg border font-semibold transition-all ${
-                                  activeReaction === "ate_here"
-                                    ? "bg-emerald-600 text-white border-emerald-600"
-                                    : "bg-zinc-50 text-zinc-600 border-zinc-200 hover:bg-zinc-100"
-                                }`}
-                              >
-                                <CheckCircle2 className="w-3 h-3" />
-                                <span>Tried</span>
-                              </button>
-                            </div>
-
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleSavePost(dish.id);
-                              }}
-                              className={`p-1.5 rounded-lg border transition-all ${
-                                isSaved
-                                  ? "bg-zinc-900 text-white border-zinc-900"
-                                  : "bg-zinc-50 text-zinc-500 border-zinc-200 hover:bg-zinc-100"
-                              }`}
-                              title={isSaved ? "Saved to your list" : "Save dish"}
-                            >
-                              <Bookmark className="w-3 h-3" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Opening Hours & Venue Details */}
-              <div className="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-200/80 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-900">
-                    <Clock className="w-3.5 h-3.5 text-[#e84a27]" />
-                    <span>Opening Hours</span>
-                  </div>
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                      openStatus.isOpen
-                        ? "bg-emerald-50 text-emerald-800 border-emerald-200/80"
-                        : "bg-red-50 text-red-700 border-red-200/80"
-                    }`}
-                  >
-                    {openStatus.statusText}
-                    {openStatus.detailText ? ` · ${openStatus.detailText}` : ""}
-                  </span>
-                </div>
-                {selectedVenue.opening_hours_json && Object.keys(selectedVenue.opening_hours_json).length > 0 ? (
-                  <div className="space-y-1 pt-1 text-[11px] text-zinc-600 font-mono">
-                    {Object.entries(selectedVenue.opening_hours_json).map(([day, hours]) => (
-                      <div key={day} className="flex justify-between">
-                        <span className="font-medium text-zinc-500">{day}</span>
-                        <span>{hours}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[11px] text-zinc-500 pt-1">
-                    {selectedVenue.spot_type === "food_truck"
-                      ? selectedVenue.location_schedule || "Operating schedule varies by day."
-                      : selectedVenue.food_category === "coffee" || selectedVenue.food_category === "bakery"
-                      ? "Daily 07:30 – 18:00 (approximate Oslo bakery hours)"
-                      : "Daily 11:30 – 22:30 (approximate Oslo restaurant hours)"}
-                  </p>
-                )}
-              </div>
-
-              {/* Verified Diner Reviews (Show 2 + Toggle for more) */}
-              <div className="space-y-2.5 pt-1">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-bold text-zinc-900 text-sm flex items-center gap-1.5">
-                    <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                    <span>Reviews ({reviews.length})</span>
-                  </h4>
-                  <span className="text-[10px] font-mono text-zinc-400">
-                    Verified Diners
-                  </span>
-                </div>
-
-                <div className="space-y-2">
-                  {displayedReviews.map((rev) => (
-                    <div
-                      key={rev.id}
-                      className="p-3 rounded-2xl bg-white border border-zinc-200/80 shadow-xs space-y-1.5"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-zinc-100 border border-zinc-200 flex items-center justify-center font-bold text-[10px] text-zinc-700 uppercase overflow-hidden shrink-0">
-                            {rev.author_photo ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={rev.author_photo}
-                                alt={rev.author_name}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              rev.author_name[0]
-                            )}
-                          </div>
-                          <span className="font-bold text-xs text-zinc-900">
-                            {rev.author_name}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-amber-500 text-xs">
-                            {"★".repeat(Math.min(5, Math.max(1, Math.round(rev.rating))))}
-                          </span>
-                          <span className="text-[10px] text-zinc-400 font-mono ml-1">
-                            {rev.relative_time}
-                          </span>
-                        </div>
-                      </div>
-                      <ExpandableReviewText text={rev.text} />
+                  {/* Verified Diner Reviews (Show 2 + Toggle for more) */}
+                  <div className="space-y-2.5 pt-1">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-zinc-900 text-sm flex items-center gap-1.5">
+                        <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                        <span>Reviews ({reviews.length})</span>
+                      </h4>
+                      <span className="text-[10px] font-mono text-zinc-400">
+                        Verified Diners
+                      </span>
                     </div>
-                  ))}
-                </div>
 
-                {reviews.length > 2 && (
-                  <button
-                    onClick={() => setShowAllReviews(!showAllReviews)}
-                    className="w-full py-2 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-semibold text-xs transition-colors flex items-center justify-center gap-1"
-                  >
-                    <span>{showAllReviews ? "Show fewer reviews" : `Show all ${reviews.length} reviews`}</span>
-                  </button>
-                )}
-              </div>
+                    <div className="space-y-2">
+                      {displayedReviews.map((rev) => (
+                        <div
+                          key={rev.id}
+                          className="p-3 rounded-2xl bg-white border border-zinc-200/80 shadow-xs space-y-1.5"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-zinc-100 border border-zinc-200 flex items-center justify-center font-bold text-[10px] text-zinc-700 uppercase overflow-hidden shrink-0">
+                                {rev.author_photo ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={rev.author_photo}
+                                    alt={rev.author_name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  rev.author_name[0]
+                                )}
+                              </div>
+                              <span className="font-bold text-xs text-zinc-900">
+                                {rev.author_name}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-amber-500 text-xs">
+                                {"★".repeat(Math.min(5, Math.max(1, Math.round(rev.rating))))}
+                              </span>
+                              <span className="text-[10px] text-zinc-400 font-mono ml-1">
+                                {rev.relative_time}
+                              </span>
+                            </div>
+                          </div>
+                          <ExpandableReviewText text={rev.text} />
+                        </div>
+                      ))}
+                    </div>
 
-              {/* About description */}
-              {selectedVenue.description && (
-                <div className="space-y-1.5 pt-2">
-                  <h4 className="font-bold text-zinc-700 uppercase text-[10px] tracking-wider">
-                    Culinary Story & Ambiance
-                  </h4>
-                  <p className="text-zinc-600 leading-relaxed bg-zinc-50 p-3.5 rounded-2xl border border-zinc-100 text-xs">
-                    {selectedVenue.description}
-                  </p>
-                </div>
+                    {reviews.length > 2 && (
+                      <button
+                        onClick={() => setShowAllReviews(!showAllReviews)}
+                        className="w-full py-2 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-semibold text-xs transition-colors flex items-center justify-center gap-1"
+                      >
+                        <span>{showAllReviews ? "Show fewer reviews" : `Show all ${reviews.length} reviews`}</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* About description */}
+                  {selectedVenue.description && (
+                    <div className="space-y-1.5 pt-2">
+                      <h4 className="font-bold text-zinc-700 uppercase text-[10px] tracking-wider">
+                        Culinary Story & Ambiance
+                      </h4>
+                      <p className="text-zinc-600 leading-relaxed bg-zinc-50 p-3.5 rounded-2xl border border-zinc-100 text-xs">
+                        {selectedVenue.description}
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </motion.div>

@@ -38,6 +38,8 @@ export interface PartnerRestaurantCardPreviewProps {
   venue: Venue;
   coverImageUrl?: string;
   openingHours?: string;
+  description?: string;
+  onEditDescription?: () => void;
   spotType?: SpotType | "standard" | "pop_up";
   locationSchedule?: string;
   priceLevel?: string;
@@ -61,6 +63,8 @@ export const PartnerRestaurantCardPreview = React.memo(
     venue,
     coverImageUrl,
     openingHours,
+    description,
+    onEditDescription,
     spotType = "standard",
     locationSchedule,
     priceLevel,
@@ -142,6 +146,12 @@ export const PartnerRestaurantCardPreview = React.memo(
 
         {/* Scrollable Sheet Content */}
         <div className="p-5 sm:p-6 space-y-5">
+          {/* Partner Guidance Banner */}
+          <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-[#e84a27]/10 border border-[#e84a27]/25 text-xs text-[#e84a27] font-semibold">
+            <Sparkles className="w-4 h-4 shrink-0" />
+            <span>Interactive card preview · Tap any section with a pencil or camera icon to edit your live details.</span>
+          </div>
+
           {/* Cover Photo with Tap-to-Edit Floating Affordance Pill */}
           <div className="group relative w-full h-52 sm:h-60 rounded-3xl overflow-hidden border border-[var(--surface-border)] bg-zinc-900 shadow-xs">
             {displayCover.startsWith("http") || displayCover.startsWith("/") ? (
@@ -175,15 +185,15 @@ export const PartnerRestaurantCardPreview = React.memo(
               </span>
             </div>
 
-            {/* Floating Affordance Pill: [ ✎ Swap Hero Photo ] */}
+            {/* Floating Affordance Pill: [ 📷 Change Cover Photo ] */}
             {onEditCoverPhoto && (
               <button
                 type="button"
                 onClick={onEditCoverPhoto}
-                className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#181615]/85 hover:bg-[#e84a27] text-white text-xs font-bold backdrop-blur-md border border-white/25 shadow-md transition-all cursor-pointer active:scale-95"
+                className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#e84a27] hover:bg-[#d43d1c] text-white text-xs font-bold shadow-lg transition-all cursor-pointer active:scale-95 border border-white/30"
               >
-                <Pencil className="w-3.5 h-3.5" />
-                <span>Swap Hero Photo</span>
+                <Camera className="w-3.5 h-3.5" />
+                <span>Change Cover Photo</span>
               </button>
             )}
           </div>
@@ -215,21 +225,26 @@ export const PartnerRestaurantCardPreview = React.memo(
             </div>
           )}
 
-          {/* Action Row */}
-          <div className="grid grid-cols-2 gap-2.5">
-            <div className="flex items-center justify-center gap-1.5 py-2.5 rounded-2xl bg-[var(--surface-raised)] border border-[var(--surface-border)] text-zinc-700 dark:text-zinc-300 font-semibold text-xs">
-              <span>Directions</span>
-              <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
-            </div>
+          {/* Public Action Preview (Disabled for partner editing) */}
+          <div className="space-y-1">
+            <div className="grid grid-cols-2 gap-2.5 opacity-40 pointer-events-none select-none">
+              <div className="flex items-center justify-center gap-1.5 py-2.5 rounded-2xl bg-[var(--surface-raised)] border border-[var(--surface-border)] text-zinc-600 dark:text-zinc-400 font-semibold text-xs">
+                <span>Directions</span>
+                <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
+              </div>
 
-            <div className="flex items-center justify-center gap-1.5 py-2.5 rounded-2xl bg-[#e84a27] text-white font-semibold text-xs shadow-xs">
-              <Plus className="w-4 h-4" />
-              <span>Log a Dish</span>
+              <div className="flex items-center justify-center gap-1.5 py-2.5 rounded-2xl bg-zinc-400 dark:bg-zinc-700 text-white font-semibold text-xs shadow-xs">
+                <Plus className="w-4 h-4" />
+                <span>Log a Dish</span>
+              </div>
+            </div>
+            <div className="text-[10px] text-center text-zinc-400 font-medium">
+              (Diner buttons preview · Inactive in editor)
             </div>
           </div>
 
           {/* Quick Stats Row with Edit Trigger */}
-          <div className="relative group p-3 rounded-2xl bg-[var(--surface-raised)] border border-[var(--surface-border)]">
+          <div className="relative group p-3.5 rounded-2xl bg-[var(--surface-raised)] border border-[var(--surface-border)]">
             <div className="grid grid-cols-4 gap-1 text-center">
               <div>
                 <div className="text-[10px] text-zinc-400 uppercase font-mono tracking-wider">Rating</div>
@@ -274,11 +289,11 @@ export const PartnerRestaurantCardPreview = React.memo(
               </div>
             </div>
 
-            {/* Hours display line */}
-            <div className="mt-2.5 pt-2 border-t border-[var(--surface-border)] flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
+            {/* Hours display line with prominent [ ✎ Edit Hours ] button */}
+            <div className="mt-3 pt-2.5 border-t border-[var(--surface-border)] flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
               <div className="flex items-center gap-1.5 truncate">
-                <Clock className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                <span className="truncate">
+                <Clock className="w-3.5 h-3.5 text-[#e84a27] shrink-0" />
+                <span className="truncate font-medium text-zinc-800 dark:text-zinc-200">
                   {openingHours || venue.current_opening_hours_text || "Hours set by Google Maps"}
                 </span>
               </div>
@@ -287,13 +302,35 @@ export const PartnerRestaurantCardPreview = React.memo(
                 <button
                   type="button"
                   onClick={onEditHours}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#FAF7F2] dark:bg-zinc-800 border border-[var(--surface-border)] hover:border-[#e84a27] text-[11px] font-bold text-[#e84a27] shadow-xs shrink-0 ml-2 cursor-pointer transition-all active:scale-95"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FAF7F2] dark:bg-zinc-800 border border-[#e84a27]/30 hover:bg-[#e84a27] hover:border-[#e84a27] text-[11px] font-bold text-[#e84a27] hover:text-white shadow-xs shrink-0 ml-2 cursor-pointer transition-all active:scale-95"
                 >
                   <Pencil className="w-3 h-3" />
-                  <span>Hours &amp; Live Batch</span>
+                  <span>Edit Hours</span>
                 </button>
               )}
             </div>
+          </div>
+
+          {/* Editorial Story / Description */}
+          <div className="relative group p-4 rounded-2xl bg-[var(--surface-raised)] border border-[var(--surface-border)] space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#e84a27]">
+                ✦ Oslo Editorial Story
+              </span>
+              {onEditDescription && (
+                <button
+                  type="button"
+                  onClick={onEditDescription}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FAF7F2] dark:bg-zinc-800 border border-[#e84a27]/30 hover:bg-[#e84a27] hover:border-[#e84a27] text-[11px] font-bold text-[#e84a27] hover:text-white transition-all cursor-pointer active:scale-95 shadow-xs"
+                >
+                  <Pencil className="w-3 h-3" />
+                  <span>Edit Story</span>
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed font-normal">
+              {description || venue.description || "Prepared in-house daily with fresh ingredients and seasonal Oslo produce."}
+            </p>
           </div>
 
           {/* Dishes You Can't Miss Section */}
@@ -419,6 +456,18 @@ export const PartnerRestaurantCardPreview = React.memo(
                     </div>
                   </div>
                 ))}
+
+                {/* Dashed Add Another Dish Card */}
+                {onAddDish && (
+                  <button
+                    type="button"
+                    onClick={onAddDish}
+                    className="w-full p-4 rounded-2xl border-2 border-dashed border-[#e84a27]/30 hover:border-[#e84a27] bg-[#e84a27]/5 hover:bg-[#e84a27]/10 flex items-center justify-center gap-2 text-xs font-bold text-[#e84a27] transition-all cursor-pointer active:scale-98"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>+ Add Another Dish to Menu</span>
+                  </button>
+                )}
               </div>
             )}
           </div>

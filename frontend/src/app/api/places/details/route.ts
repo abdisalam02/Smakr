@@ -75,6 +75,49 @@ export async function GET(request: Request) {
     place = mockPlace(q || placeId || "Oslo Venue", category);
   }
 
+  // Hybrid description fallback when editorialSummary is missing
+  if (!place.description || !place.description.trim()) {
+    const geminiKey = process.env.GEMINI_API_KEY;
+    let synthesized = "";
+    if (geminiKey && place.reviews && place.reviews.length > 0) {
+      try {
+        const reviewSnippets = place.reviews
+          .slice(0, 4)
+          .map((r: any) => r.text)
+          .filter(Boolean)
+          .join(" ");
+        const prompt = `Write a factual, single-sentence Warm Nordic description (12-18 words, no exclamation marks, no adjectives like "seamless" or "curated") for this Oslo restaurant. Name: ${place.name}, Category: ${category}, Neighborhood: ${place.neighborhood || "Oslo"}. Reviews context: ${reviewSnippets.slice(0, 400)}`;
+        const aiRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { maxOutputTokens: 60, temperature: 0.3 },
+            }),
+            signal: AbortSignal.timeout(3000),
+          }
+        );
+        if (aiRes.ok) {
+          const aiData = await aiRes.json();
+          synthesized = aiData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+          synthesized = synthesized.replace(/^["']|["']$/g, "").replace(/\n/g, " ").trim();
+        }
+      } catch {
+        // Fallback to deterministic template below
+      }
+    }
+
+    if (!synthesized) {
+      const area = place.neighborhood && place.neighborhood !== "sentrum" ? place.neighborhood : "Oslo";
+      const catLabel = category && category !== "all" ? category.replace(/_/g, " ") : "culinary";
+      synthesized = `Standout ${catLabel} spot in ${area} preparing fresh specialties and drinks daily.`;
+    }
+
+    place.description = synthesized;
+  }
+
   // Enrich photos with database dish posts if venue_id provided or photo count < 4
   const client = getSupabaseClient();
   if (client && (venueId || placeId)) {

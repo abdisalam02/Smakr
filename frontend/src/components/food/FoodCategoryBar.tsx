@@ -79,7 +79,7 @@ export function FoodCategoryBar({ compact = false }: FoodCategoryBarProps) {
           return (
             <button
               key={cat.id}
-              onClick={() => setFeedCategory(cat.id)}
+              onClick={() => setFeedCategory(isActive && cat.id !== "all" ? "all" : cat.id)}
               className={`group flex items-center gap-2 px-3 py-1.5 rounded-full text-xs transition-all select-none ${
                 isActive
                   ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-semibold shadow-xs"

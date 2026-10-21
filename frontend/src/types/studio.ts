@@ -459,6 +459,23 @@ export interface PhotoState {
   bgColor: string;
 }
 
+export interface StudioVenueItem {
+  id: string;
+  name: string;
+  address: string;
+  neighborhood?: string;
+  dish?: string;
+  price?: string;
+  photo?: string;
+  rating?: number | null;
+  icon?: string;
+  lat: number;
+  lng: number;
+  x?: number; // canvas X offset or px
+  y?: number; // canvas Y offset or px
+  scale?: number;
+}
+
 export interface MapShotState {
   venueId: string | null;
   name: string;
@@ -471,6 +488,13 @@ export interface MapShotState {
   style: MapStyleKey;
   zoom: number;
   pitch: number;
+  /** Multi-venue round-up support (2 to 4 spots on single canvas) */
+  venues?: StudioVenueItem[];
+  activeVenueIndex?: number;
+  layoutMode?: 'single' | 'multi_compact' | 'multi_full';
+  multiPlacementMode?: 'auto_stack' | 'bento' | 'free_drag';
+  autoFitCamera?: boolean;
+  roundupTitle?: string;
   /** Vertical pin position as a fraction of canvas height (0.1 to 0.9). */
   pinY: number;
   showPin: boolean;

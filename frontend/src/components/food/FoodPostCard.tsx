@@ -8,7 +8,7 @@ import { FoodPost } from "@/types";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { setPostLike, setPostSave } from "@/lib/supabase/data";
 import { OfficialSmakrMascot } from "@/lib/officialSmakrMascot";
-import { getPopupStatus } from "@/lib/popupUtils";
+import { getPopupStatus, getPopupMeta } from "@/lib/popupUtils";
 import { formatOsloLocation } from "@/lib/location";
 import { getDistanceInMeters, formatDistance } from "@/lib/math";
 
@@ -35,6 +35,8 @@ export const FoodPostCard = React.memo(function FoodPostCard({
   const toggleLikePost = useCityPulseStore((state) => state.toggleLikePost);
   const toggleSavePost = useCityPulseStore((state) => state.toggleSavePost);
   const flyToSpot = useCityPulseStore((state) => state.flyToSpot);
+  const selectVenueById = useCityPulseStore((state) => state.selectVenueById);
+  const setIsVenueDetailModalOpen = useCityPulseStore((state) => state.setIsVenueDetailModalOpen);
   const currentUser = useCityPulseStore((state) => state.currentUser);
   const userLocation = useCityPulseStore((state) => state.userLocation);
   const setQuickEditPost = useCityPulseStore((state) => state.setQuickEditPost);
@@ -44,6 +46,33 @@ export const FoodPostCard = React.memo(function FoodPostCard({
   const mascotConfig = useCityPulseStore((state) => state.mascotConfig);
 
   const popupStatus = getPopupStatus(linkedVenue);
+  const popupMeta = linkedVenue ? getPopupMeta(linkedVenue) : null;
+  const isPopup = linkedVenue?.spot_type === "popup" || post.spot_type === "popup";
+  const isPopupInactive = Boolean(
+    isPopup && (
+      !popupMeta?.dates_label ||
+      popupMeta.dates_label.toLowerCase().includes("tba") ||
+      popupMeta.residency_status === "between_residencies" ||
+      popupStatus.status === "dormant" ||
+      popupStatus.status === "expired" ||
+      popupStatus.status === "grace" ||
+      (!linkedVenue?.popup_start_date && !linkedVenue?.popup_end_date && !popupMeta?.dates_label)
+    )
+  );
+  const isPopupActive = isPopup && !isPopupInactive;
+
+  // A pop-up has no confirmed location if address is TBA, host venue is TBA, or dormant
+  const isLocationTBA = Boolean(
+    isPopup && (
+      !linkedVenue?.address ||
+      linkedVenue.address.toLowerCase().includes("tba") ||
+      !post.spot_address ||
+      post.spot_address.toLowerCase().includes("tba") ||
+      popupMeta?.host_venue_name?.toLowerCase().includes("tba") ||
+      isPopupInactive
+    )
+  );
+  const hasConfirmedLocation = !isLocationTBA;
   const kStatus = linkedVenue?.kitchen_status || post.kitchen_status;
   const activeKitchenStatus = kStatus?.status && kStatus.status !== "normal" ? kStatus.status : null;
   const kitchenBatchNote = kStatus?.batch_note;
@@ -240,13 +269,29 @@ export const FoodPostCard = React.memo(function FoodPostCard({
     setTimeout(() => setShowHeart(false), 700);
   };
 
+  const handleOpenDetails = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (post.spot_id) {
+      selectVenueById(post.spot_id);
+      setIsVenueDetailModalOpen(true);
+    }
+  };
+
   const handleFlyToRadar = (e?: React.MouseEvent) => {
     e?.stopPropagation();
+    if (isPopup && !hasConfirmedLocation) {
+      handleOpenDetails();
+      return;
+    }
     flyToSpot(post.spot_coords, post.spot_id);
   };
 
   const handleCardClick = () => {
-    flyToSpot(post.spot_coords, post.spot_id);
+    if (isPopup && !hasConfirmedLocation) {
+      handleOpenDetails();
+    } else {
+      flyToSpot(post.spot_coords, post.spot_id);
+    }
   };
 
   return (
@@ -256,7 +301,13 @@ export const FoodPostCard = React.memo(function FoodPostCard({
       transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
       onClick={handleCardClick}
       onDoubleClick={handleDoubleTap}
-      className={`group relative w-full rounded-[26px] overflow-hidden border border-black/[0.08] dark:border-white/10 bg-[#181615]/80 backdrop-blur-md shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer select-none ${
+      className={`group relative w-full rounded-[26px] overflow-hidden border bg-[#181615]/80 backdrop-blur-md shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer select-none ${
+        isPopupActive
+          ? "border-[#E84A27]/40 dark:border-[#E84A27]/50 shadow-[0_4px_20px_rgba(232,74,39,0.14)]"
+          : isPopupInactive
+          ? "border-black/[0.08] dark:border-white/10 opacity-95"
+          : "border-black/[0.08] dark:border-white/10"
+      } ${
         popupStatus.isDimmedCard ? "opacity-50 grayscale-[20%]" : ""
       }`}
     >
@@ -323,13 +374,28 @@ export const FoodPostCard = React.memo(function FoodPostCard({
 
         {/* Floating Top Badges (Over Image) */}
         <div className="absolute top-3 inset-x-3 flex items-start justify-between gap-2 z-10 pointer-events-auto">
-          {/* Top-Left: Explicit kr Price Sticker / Quick-Add Price / Pop-up / Truck Badge */}
+          {/* Top-Left: Pop-up / Price / Kitchen Badge */}
           <div className="flex flex-wrap items-center gap-1.5 max-w-[70%]">
+            {/* Pop-up Badge in Top-Left so the fact that it's a popup immediately sticks out! */}
+            {isPopup && (
+              <span
+                className={`font-sans font-bold tracking-tight px-3 py-1 rounded-full text-xs shadow-md flex items-center gap-1.5 ${
+                  isPopupActive
+                    ? "bg-[#E84A27] text-white"
+                    : "bg-[#FAF7F2] text-[#181615] border border-black/10"
+                }`}
+              >
+                <span>🎟️</span>
+                <span>{isPopupActive ? "Live Pop-Up Drop" : "Pop-Up Residency"}</span>
+              </span>
+            )}
+
+            {/* Price (ONLY if there is a real NOK price; never show the '$$ · + kr' money thing for popups) */}
             {typeof post.price_nok === "number" && post.price_nok > 0 ? (
               <span className="font-sans font-bold tracking-tight bg-[#e84a27] text-white px-3 py-1 rounded-full text-xs shadow-md rotate-[-1deg]">
                 {post.price_nok} kr
               </span>
-            ) : isViewerAdmin ? (
+            ) : !isPopup && isViewerAdmin ? (
               <button
                 type="button"
                 onClick={(e) => {
@@ -341,7 +407,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
               >
                 {post.price_tier || linkedVenue?.price_level ? `${post.price_tier || linkedVenue?.price_level} · + kr` : "+ Add kr"}
               </button>
-            ) : (post.price_tier || linkedVenue?.price_level) ? (
+            ) : !isPopup && (post.price_tier || linkedVenue?.price_level) ? (
               <span className="font-sans font-bold tracking-tight bg-black/60 backdrop-blur-md text-zinc-200 border border-white/15 px-2.5 py-1 rounded-full text-xs shadow-md">
                 {post.price_tier || linkedVenue?.price_level}
               </span>
@@ -367,13 +433,13 @@ export const FoodPostCard = React.memo(function FoodPostCard({
               </span>
             )}
 
-            {/* Pop-up Badges */}
-            {popupStatus.status === "active" && (
-              <span className="bg-amber-500 text-zinc-950 font-bold px-2.5 py-1 rounded-full text-[11px] backdrop-blur-md shadow-md animate-pulse">
-                {popupStatus.label}
+            {!isPopup && popupStatus.status === "active" && (
+              <span className="bg-[#E84A27] text-white font-bold px-2.5 py-1 rounded-full text-[11px] shadow-sm flex items-center gap-1">
+                <Flame className="w-3 h-3 fill-white" />
+                <span>{popupStatus.label}</span>
               </span>
             )}
-            {popupStatus.status === "grace" && (
+            {!isPopup && popupStatus.status === "grace" && (
               <span className="bg-zinc-800/90 text-zinc-300 font-medium px-2.5 py-1 rounded-full text-[11px] backdrop-blur-md border border-white/10">
                 {popupStatus.label}
               </span>
@@ -406,10 +472,12 @@ export const FoodPostCard = React.memo(function FoodPostCard({
               </button>
             )}
 
-            <span className="bg-black/60 backdrop-blur-md text-amber-400 font-bold px-2.5 py-1 rounded-full text-xs border border-white/10 flex items-center gap-1 shadow-xs">
-              <span className="text-amber-400 text-xs">★</span>
-              <span className="font-sans font-bold text-white text-xs tracking-tight">{displayRating}</span>
-            </span>
+            {!isPopup && (
+              <span className="bg-black/60 backdrop-blur-md text-amber-400 font-bold px-2.5 py-1 rounded-full text-xs border border-white/10 flex items-center gap-1 shadow-xs">
+                <span className="text-amber-400 text-xs">★</span>
+                <span className="font-sans font-bold text-white text-xs tracking-tight">{displayRating}</span>
+              </span>
+            )}
 
             <button
               onClick={(e) => {
@@ -440,6 +508,18 @@ export const FoodPostCard = React.memo(function FoodPostCard({
 
         {/* Overlaid Editorial Content (Bottom Half of Photo) */}
         <div className="absolute bottom-0 inset-x-0 p-3.5 sm:p-4 z-10 flex flex-col justify-end pointer-events-auto">
+          {/* Pop-Up Status Header (Clean typography, zero neon) */}
+          {isPopup && (
+            <div className="flex items-center gap-1.5 mb-1 text-[11px]">
+              <span className={`font-mono font-extrabold uppercase tracking-wider flex items-center gap-1 text-[11px] ${
+                isPopupActive ? "text-[#FF8566]" : "text-[#FAF7F2]"
+              }`}>
+                <span className="text-[#E84A27]">✦</span>
+                <span>{isPopupActive ? `Pop-Up Drop · ${popupMeta?.dates_label || "Live Now"}` : "Pop-Up Residency · Next Dates TBA"}</span>
+              </span>
+            </div>
+          )}
+
           {/* Dish Title (Capitalized) */}
           <h3 className="font-bold text-lg sm:text-xl leading-snug drop-shadow-sm text-white line-clamp-1 capitalize">
             {post.dish_name}
@@ -449,6 +529,17 @@ export const FoodPostCard = React.memo(function FoodPostCard({
           <div className="text-xs font-medium text-zinc-300 drop-shadow-sm mt-0.5 flex items-center gap-1.5 flex-wrap">
             <MapPin className="w-3 h-3 text-[#e84a27] shrink-0" />
             <span className="font-semibold text-white">{post.spot_name}</span>
+            {isPopup && (
+              <span
+                className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[9.5px] font-bold border ${
+                  isPopupActive
+                    ? "bg-[#E84A27]/25 border-[#E84A27]/40 text-[#FF8566]"
+                    : "bg-white/15 border-white/20 text-[#FAF7F2]"
+                }`}
+              >
+                Pop-Up
+              </span>
+            )}
             {isVerifiedKitchen && (
               <span
                 className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-full bg-emerald-500/25 border border-emerald-400/40 text-[9.5px] text-emerald-300 font-bold"
@@ -459,8 +550,8 @@ export const FoodPostCard = React.memo(function FoodPostCard({
               </span>
             )}
             <span className="text-zinc-400">·</span>
-            <span>{locationInfo.neighborhood}</span>
-            {walkingDistance && (
+            <span>{hasConfirmedLocation ? locationInfo.neighborhood : "Location TBA"}</span>
+            {hasConfirmedLocation && walkingDistance && (
               <span className="text-emerald-400 font-semibold font-mono text-[11px]">
                 · {walkingDistance}
               </span>
@@ -483,8 +574,8 @@ export const FoodPostCard = React.memo(function FoodPostCard({
             </div>
           )}
 
-          {/* Concise Dish-Specific Smakr Verdict (✦ Quote Only — no "Taste Note:" label) */}
-          {dishVerdict && (
+          {/* Concise Dish-Specific Smakr Verdict (✦ Quote Only — Permanent spots only; removed for popups) */}
+          {!isPopup && dishVerdict && (
             <div className="bg-black/45 backdrop-blur-md border border-white/15 rounded-xl px-2.5 py-1.5 my-2 max-w-[96%]">
               <p className="text-[11px] text-zinc-100 leading-snug line-clamp-2">
                 <span className="text-[#E84A27] font-bold not-italic mr-1">✦</span>
@@ -518,7 +609,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
               </span>
             </div>
 
-            {/* Right Group: 3 Clean Balanced Tactile Actions [🔥 4] + [📤 Share] + [Map ↗] */}
+            {/* Right Group: 3 Clean Balanced Tactile Actions */}
             <div className="flex items-center gap-1.5 shrink-0">
               {/* Action 1: Single Tactile Flame Reaction Pill */}
               <button
@@ -550,18 +641,31 @@ export const FoodPostCard = React.memo(function FoodPostCard({
                 <Send className="w-3.5 h-3.5 stroke-[2] -translate-x-[0.5px] translate-y-[0.5px]" />
               </button>
 
-              {/* Action 3: High-Affordance [Map ↗] Flight Button */}
-              <button
-                type="button"
-                onClick={handleFlyToRadar}
-                className="h-9 px-3.5 rounded-full bg-[#FAF7F2] text-[#181615] border-2 border-[#181615] shadow-[0_2px_0_#181615] hover:bg-[#E84A27] hover:text-white hover:border-[#181615] active:translate-y-[1px] active:shadow-none transition-all text-xs font-extrabold flex items-center gap-1 cursor-pointer shrink-0"
-                title="Locate on map"
-                aria-label="Locate on map"
-              >
-                <Compass className="w-3.5 h-3.5 stroke-[2.2]" />
-                <span>Map</span>
-                <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
-              </button>
+              {/* Action 3: [Map ↗] Flight Button (ONLY if location is confirmed) or [Details ↗] */}
+              {hasConfirmedLocation ? (
+                <button
+                  type="button"
+                  onClick={handleFlyToRadar}
+                  className="h-9 px-3.5 rounded-full bg-[#FAF7F2] text-[#181615] border-2 border-[#181615] shadow-[0_2px_0_#181615] hover:bg-[#E84A27] hover:text-white hover:border-[#181615] active:translate-y-[1px] active:shadow-none transition-all text-xs font-extrabold flex items-center gap-1 cursor-pointer shrink-0"
+                  title="Locate on map"
+                  aria-label="Locate on map"
+                >
+                  <Compass className="w-3.5 h-3.5 stroke-[2.2]" />
+                  <span>Map</span>
+                  <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                </button>
+              ) : isPopup ? (
+                <button
+                  type="button"
+                  onClick={handleOpenDetails}
+                  className="h-9 px-3.5 rounded-full bg-[#FAF7F2] text-[#181615] border-2 border-[#181615] shadow-[0_2px_0_#181615] hover:bg-[#E84A27] hover:text-white hover:border-[#181615] active:translate-y-[1px] active:shadow-none transition-all text-xs font-extrabold flex items-center gap-1 cursor-pointer shrink-0"
+                  title="View drop details"
+                  aria-label="View drop details"
+                >
+                  <span>Details</span>
+                  <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                </button>
+              ) : null}
             </div>
           </div>
         </div>

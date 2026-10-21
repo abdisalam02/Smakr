@@ -233,7 +233,11 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                 onClick={() => {
                   if (savedOnly) toggleSavedOnly();
                   if (pill.kind === "category") {
-                    setFeedCategory(pill.id);
+                    if (pill.id === "all") {
+                      setFeedCategory("all");
+                    } else {
+                      setFeedCategory(currentCategory === pill.id ? "all" : pill.id);
+                    }
                   } else {
                     toggleDietary(pill.id);
                   }
@@ -281,7 +285,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                   <button
                     key={st.id}
                     type="button"
-                    onClick={() => setSpotTypeFilter(st.id)}
+                    onClick={() => setSpotTypeFilter(isActive && st.id !== "all" ? "all" : st.id)}
                     className={`px-3 py-1 rounded-full text-xs font-medium border flex items-center gap-1.5 transition-all active:scale-95 ${
                       isActive
                         ? "bg-[#e84a27] text-white border-[#e84a27] font-bold shadow-xs"

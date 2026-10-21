@@ -23,6 +23,7 @@ export const PLACES_FIELD_MASK = [
   "websiteUri",
   "googleMapsUri",
   "nationalPhoneNumber",
+  "editorialSummary",
 ]
   .map((f) => (f === "id" ? "places.id" : `places.${f}`))
   .join(",");
@@ -45,6 +46,7 @@ export const PLACE_DETAILS_FIELD_MASK = [
   "websiteUri",
   "googleMapsUri",
   "nationalPhoneNumber",
+  "editorialSummary",
 ].join(",");
 
 const NEIGHBORHOOD_HINTS: [RegExp, string][] = [
@@ -83,6 +85,7 @@ export interface PlaceResult {
   website_uri?: string;
   google_maps_uri?: string;
   phone_number?: string;
+  description?: string | null;
 }
 
 /** Shape of a single review in a Places API (New) result. */
@@ -114,6 +117,7 @@ export interface GooglePlaceNew {
   websiteUri?: string;
   googleMapsUri?: string;
   nationalPhoneNumber?: string;
+  editorialSummary?: { text?: string; languageCode?: string };
 }
 
 export function mapPriceLevel(raw?: string): "$" | "$$" | "$$$" | null {
@@ -173,6 +177,7 @@ export function mapGooglePlace(p: GooglePlaceNew, category = "all"): PlaceResult
     website_uri: p.websiteUri,
     google_maps_uri: p.googleMapsUri,
     phone_number: p.nationalPhoneNumber,
+    description: p.editorialSummary?.text?.trim() || null,
   };
 }
 
@@ -254,5 +259,6 @@ export function mockPlace(query: string, category = "all"): PlaceResult {
     rating,
     user_ratings_total: count,
     photos: Array.from({ length: photoCount }, (_, i) => `mock:${i}`),
+    description: `Standout ${category === "all" ? "culinary" : category.replace(/_/g, " ")} spot in ${inferNeighborhood(clean)} preparing fresh specialties daily.`,
   };
 }

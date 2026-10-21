@@ -1,9 +1,10 @@
 'use client';
 
-import React, { forwardRef, useEffect, useRef } from 'react';
+import React, { forwardRef, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { MAP_STYLE_URLS, type MapShotState } from '@/types/studio';
+import { MAP_STYLE_URLS, type MapShotState, type StudioVenueItem } from '@/types/studio';
 
 if (typeof window !== 'undefined') {
   maplibregl.setWorkerUrl('/maplibre/maplibre-gl-worker.mjs');
@@ -44,16 +45,219 @@ interface MapShotProps {
   onMapChange?: (coords: [number, number], zoom: number, pitch: number) => void;
 }
 
+/**
+ * MultiVenuePin
+ * Fixed-size circular pin anchored at center to exact GPS coordinate with zIndex 50
+ * so it is NEVER hidden by any card on the map.
+ */
+function MultiVenuePin({
+  venue,
+  index,
+  s,
+}: {
+  venue: StudioVenueItem;
+  index: number;
+  s: MapShotState;
+}) {
+  const pinSize = 72;
+  return (
+    <div
+      className="relative flex items-center justify-center rounded-full bg-white/95 shrink-0 transition-transform select-none cursor-pointer"
+      style={{
+        width: pinSize,
+        height: pinSize,
+        fontSize: pinSize * 0.52,
+        border: '3.5px solid rgba(255, 255, 255, 0.95)',
+        boxShadow:
+          '0 0 36px 8px rgba(232, 74, 39, 0.35), 0 10px 24px rgba(0, 0, 0, 0.25)',
+      }}
+    >
+      <span>{venue.icon || '🍽️'}</span>
+      <span
+        className="absolute -top-1 -right-1 flex items-center justify-center rounded-full bg-[#e84a27] text-white font-comico font-black border-2 border-white shadow-md"
+        style={{
+          width: 26,
+          height: 26,
+          fontSize: 13,
+        }}
+      >
+        {index + 1}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * MultiVenueCard
+ * Scalable Warm Nordic card anchored below the pin with adaptive width and edge safety.
+ */
+function MultiVenueCard({
+  venue,
+  index,
+  s,
+  t,
+  totalSpots,
+}: {
+  venue: StudioVenueItem;
+  index: number;
+  s: MapShotState;
+  t: (typeof THEMES)[keyof typeof THEMES];
+  totalSpots: number;
+}) {
+  const isCompact = s.layoutMode === 'multi_compact';
+  const scale = s.cardScale || 1;
+  // Adaptive card width: when 4 spots, 300px; when 3 spots, 340px; when 2 spots, 380px
+  const defaultWidth = totalSpots >= 4 ? 300 : totalSpots === 3 ? 340 : 380;
+  const cardWidth = Math.min(s.cardWidth || 860, defaultWidth);
+
+  // Alternating slight lateral offset so adjacent pins don't completely stack cards directly on top of each other
+  const staggerX = totalSpots > 1 ? (index % 2 === 0 ? -14 : 14) : 0;
+
+  return (
+    <div
+      className="transition-transform select-none pointer-events-auto"
+      style={{
+        marginTop: 48 + (s.cardOffsetY || 0),
+        width: cardWidth,
+        transform: `translate3d(${staggerX}px, 0, 0) scale(${scale})`,
+        transformOrigin: 'top center',
+      }}
+    >
+      <section
+        className="shadow-2xl border transition-all hover:scale-[1.02]"
+        style={{
+          background: t.card,
+          color: t.ink,
+          borderRadius: Math.round((s.cardRadius || 44) * 0.65),
+          border: `2px solid ${t.border}`,
+          boxShadow: '0 20px 48px -10px rgba(0, 0, 0, 0.35)',
+          padding: totalSpots >= 4 ? '12px 14px' : '16px 18px',
+        }}
+      >
+        <div className="flex items-center gap-3 sm:gap-3.5">
+          {s.showPhoto && venue.photo && (
+            <div
+              className="shrink-0 overflow-hidden border border-black/10 shadow-xs relative"
+              style={{
+                width: totalSpots >= 4 ? 72 : 84,
+                height: totalSpots >= 4 ? 72 : 84,
+                minWidth: totalSpots >= 4 ? 72 : 84,
+                maxWidth: totalSpots >= 4 ? 72 : 84,
+                minHeight: totalSpots >= 4 ? 72 : 84,
+                maxHeight: totalSpots >= 4 ? 72 : 84,
+                borderRadius: Math.round((s.cardRadius || 44) * 0.35),
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={venue.photo}
+                alt={venue.name}
+                crossOrigin="anonymous"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
+
+          <div className="min-w-0 flex-1 overflow-hidden">
+            <h3
+              className={`font-comico uppercase tracking-wide leading-tight truncate ${
+                totalSpots >= 4 ? 'text-lg' : 'text-xl'
+              }`}
+              style={{ color: t.ink }}
+            >
+              {venue.name}
+            </h3>
+
+            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+              {s.showRating && venue.rating != null && (
+                <div className="inline-flex items-center gap-1 rounded-md bg-black px-2 py-0.5 font-comico text-xs text-white shadow-xs shrink-0">
+                  <span className="text-amber-400 text-[10px]">★</span>
+                  <span>{typeof venue.rating === 'number' ? venue.rating.toFixed(1) : venue.rating}</span>
+                </div>
+              )}
+
+              {venue.neighborhood && (
+                <div
+                  className="inline-flex items-center gap-0.5 rounded-md px-2 py-0.5 font-sans text-[11px] font-bold shrink-0"
+                  style={{
+                    background: s.cardTheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(24,22,21,0.06)',
+                    color: t.ink,
+                  }}
+                >
+                  <span>📍</span>
+                  <span className="truncate max-w-[90px]">{venue.neighborhood}</span>
+                </div>
+              )}
+            </div>
+
+            {venue.dish && (
+              <div
+                className="mt-1 inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-bold max-w-full truncate"
+                style={{
+                  background: s.cardTheme === 'paprika' ? 'rgba(255,255,255,0.18)' : 'rgba(232, 74, 39, 0.12)',
+                  color: s.cardTheme === 'paprika' ? '#ffffff' : '#e84a27',
+                }}
+              >
+                <span className="truncate">
+                  {venue.dish} {venue.price ? `· ${venue.price}` : ''}
+                </span>
+              </div>
+            )}
+
+            {s.showAddress && venue.address && (
+              <p
+                className="mt-1 text-[11px] font-semibold leading-snug truncate opacity-75"
+                style={{ color: t.sub }}
+              >
+                📍 {venue.address}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {!isCompact && s.showButtons && (
+          <div
+            className="mt-2.5 pt-2 flex gap-1.5"
+            style={{ borderTop: `1.5px solid ${t.border}` }}
+          >
+            <div
+              className="w-full flex items-center justify-center gap-1 rounded-lg py-1.5 px-2 text-center text-[11px] font-bold shadow-xs"
+              style={{
+                background: s.cardTheme === 'paprika' ? '#ffffff' : '#e84a27',
+                color: s.cardTheme === 'paprika' ? '#e84a27' : '#ffffff',
+              }}
+            >
+              <span>{s.ctaText || '🔗 See all Oslo picks · @smakr.no'}</span>
+            </div>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
 export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot(
   { s, w, h, interactive = true, onMapChange },
   forwardedRef
 ) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const markersRef = useRef<maplibregl.Marker[]>([]);
   const styleRef = useRef(s.style);
+  const [portalTargets, setPortalTargets] = useState<
+    { pinEl: HTMLDivElement; cardEl: HTMLDivElement; venue: StudioVenueItem; index: number }[]
+  >([]);
 
   const exportTarget = s.exportTarget || 'card-only';
   const needsMap = exportTarget === 'full-scene' || exportTarget === 'map-only';
+
+  const isMulti = Boolean(
+    s.venues &&
+      s.venues.length > 1 &&
+      s.layoutMode &&
+      s.layoutMode !== 'single'
+  );
+  const venuesList = isMulti ? s.venues! : [];
 
   // Initialize MapLibre GL only if map rendering is requested
   useEffect(() => {
@@ -111,6 +315,9 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
     mapRef.current = map;
 
     return () => {
+      markersRef.current.forEach((m) => m.remove());
+      markersRef.current = [];
+      setPortalTargets([]);
       map.off('moveend', handleMoveEnd);
       map.remove();
       mapRef.current = null;
@@ -118,9 +325,12 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [needsMap, interactive]);
 
-  // Synchronize style and camera changes
+  // Synchronize style, markers and camera changes
   useEffect(() => {
-    if (!needsMap) return;
+    if (!needsMap) {
+      setPortalTargets([]);
+      return;
+    }
     const map = mapRef.current;
     if (!map) return;
 
@@ -131,16 +341,96 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
 
     map.resize();
 
-    const pinCy = (s.pinY || 0.36) * h;
-    const bottomPadding = Math.max(0, Math.round(h - 2 * pinCy));
+    // Clear old markers
+    markersRef.current.forEach((m) => m.remove());
+    markersRef.current = [];
 
-    map.jumpTo({
-      center: [s.lng, s.lat],
-      padding: { top: 0, bottom: bottomPadding, left: 0, right: 0 },
-      zoom: s.zoom,
-      pitch: s.pitch,
-    });
-  }, [needsMap, s.style, s.lng, s.lat, s.zoom, s.pitch, s.pinY, w, h]);
+    if (isMulti && venuesList.length > 0) {
+      // Add multi-venue markers: Pin Marker (anchor: center, zIndex: 50) + Card Marker (anchor: top, zIndex: 20 + idx)
+      // Pin is on zIndex 50 so it is NEVER hidden by any card on the map.
+      const bounds = new maplibregl.LngLatBounds();
+      const newTargets: { pinEl: HTMLDivElement; cardEl: HTMLDivElement; venue: StudioVenueItem; index: number }[] = [];
+
+      venuesList.forEach((v, idx) => {
+        bounds.extend([v.lng, v.lat]);
+
+        // 1. Pin Marker — always on top layer (zIndex: 100 on MapLibre marker wrapper)
+        const pinEl = document.createElement('div');
+        pinEl.className = 'smakr-multi-spot-pin-marker';
+        pinEl.style.position = 'relative';
+        pinEl.style.cursor = 'pointer';
+
+        const pinMarker = new maplibregl.Marker({
+          element: pinEl,
+          anchor: 'center',
+        })
+          .setLngLat([v.lng, v.lat])
+          .addTo(map);
+
+        // Ensure MapLibre marker root element has highest stacking context
+        pinMarker.getElement().style.zIndex = '100';
+        markersRef.current.push(pinMarker);
+
+        // 2. Card Marker — lower layer (zIndex: 20 + idx on MapLibre marker wrapper)
+        const cardEl = document.createElement('div');
+        cardEl.className = 'smakr-multi-spot-card-marker';
+        cardEl.style.position = 'relative';
+        cardEl.style.cursor = 'pointer';
+
+        const cardMarker = new maplibregl.Marker({
+          element: cardEl,
+          anchor: 'top',
+        })
+          .setLngLat([v.lng, v.lat])
+          .addTo(map);
+
+        // Ensure card marker root element stays below all pins
+        cardMarker.getElement().style.zIndex = String(20 + idx);
+        markersRef.current.push(cardMarker);
+
+        newTargets.push({ pinEl, cardEl, venue: v, index: idx });
+      });
+
+      setPortalTargets(newTargets);
+
+      if (s.autoFitCamera !== false && !bounds.isEmpty()) {
+        map.fitBounds(bounds, {
+          padding: {
+            top: 220,
+            bottom: 340,
+            left: 340,
+            right: 340,
+          },
+          maxZoom: 14.8,
+          duration: 0,
+        });
+      }
+    } else {
+      setPortalTargets([]);
+      const pinCy = (s.pinY || 0.36) * h;
+      const bottomPadding = Math.max(0, Math.round(h - 2 * pinCy));
+
+      map.jumpTo({
+        center: [s.lng, s.lat],
+        padding: { top: 0, bottom: bottomPadding, left: 0, right: 0 },
+        zoom: s.zoom,
+        pitch: s.pitch,
+      });
+    }
+  }, [
+    needsMap,
+    s.style,
+    s.lng,
+    s.lat,
+    s.zoom,
+    s.pitch,
+    s.pinY,
+    s.autoFitCamera,
+    isMulti,
+    venuesList,
+    w,
+    h,
+  ]);
 
   const t = THEMES[s.cardTheme] || THEMES.cream;
   const pinSize = 140 * (s.pinScale || 1);
@@ -298,8 +588,120 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
     </section>
   );
 
-  // TARGET: Card Only (Transparent Venue Card + Floating Pin Sticker for Canva)
+  // Multi-Venue Floating Cards Element for Transparent Card-Only Export (Canva / IG Stories)
+  const renderMultiCards = (standalone = false) => {
+    return (
+      <div
+        className="flex flex-col items-center gap-6 p-6 select-none"
+        style={{
+          width: '100%',
+          maxWidth: 960,
+          transform: `scale(${scale})`,
+          transformOrigin: 'top center',
+        }}
+      >
+        {s.roundupTitle && (
+          <div className="flex items-center gap-3 px-6 py-2.5 rounded-full bg-[#181615] text-white shadow-xl border border-white/15">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#e84a27] animate-pulse" />
+            <span className="font-comico text-2xl uppercase tracking-wider">
+              {s.roundupTitle}
+            </span>
+            <span className="px-2.5 py-0.5 rounded-full bg-white/15 text-xs font-bold text-white uppercase tracking-wider font-mono">
+              {venuesList.length} SPOTS
+            </span>
+          </div>
+        )}
+
+        <div className={`grid ${venuesList.length > 2 ? 'grid-cols-2' : 'grid-cols-1'} gap-6 w-full`}>
+          {venuesList.map((venue, idx) => (
+            <div key={venue.id || idx} className="flex flex-col items-center">
+              {/* Pin badge attached over card */}
+              <div
+                className="relative -mb-6 z-10 flex items-center justify-center rounded-full bg-white shadow-xl"
+                style={{
+                  width: 68,
+                  height: 68,
+                  fontSize: 34,
+                  border: '3.5px solid white',
+                  boxShadow: '0 0 30px 6px rgba(232, 74, 39, 0.3), 0 8px 16px rgba(0, 0, 0, 0.2)',
+                }}
+              >
+                <span>{venue.icon || '🍽️'}</span>
+                <span className="absolute -top-1 -right-1 flex items-center justify-center rounded-full bg-[#e84a27] text-white font-comico font-black text-xs w-6 h-6 border-2 border-white shadow-md">
+                  {idx + 1}
+                </span>
+              </div>
+
+              {/* Venue Card matching Image 1 Structure */}
+              <div
+                className="p-5 rounded-3xl shadow-xl border w-full flex items-center gap-4 transition-transform"
+                style={{
+                  background: t.card,
+                  color: t.ink,
+                  border: `2px solid ${t.border}`,
+                  borderRadius: Math.round((s.cardRadius || 44) * 0.75),
+                  paddingTop: '28px',
+                }}
+              >
+                {venue.photo && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={venue.photo}
+                    alt=""
+                    crossOrigin="anonymous"
+                    className="w-20 h-20 rounded-2xl object-cover shrink-0 border border-black/10"
+                  />
+                )}
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-comico text-2xl uppercase tracking-wide truncate">
+                    {venue.name}
+                  </h3>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    {venue.rating != null && (
+                      <span className="px-2 py-0.5 rounded-md bg-black text-white font-comico text-xs flex items-center gap-0.5">
+                        <span className="text-amber-400 text-[10px]">★</span>
+                        <span>{typeof venue.rating === 'number' ? venue.rating.toFixed(1) : venue.rating}</span>
+                      </span>
+                    )}
+                    {venue.neighborhood && (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-black/5 dark:bg-white/10 truncate">
+                        📍 {venue.neighborhood}
+                      </span>
+                    )}
+                  </div>
+                  {venue.dish && (
+                    <p className="text-xs font-bold text-[#e84a27] mt-1 truncate">
+                      {venue.dish} {venue.price ? `· ${venue.price}` : ''}
+                    </p>
+                  )}
+                  {venue.address && (
+                    <p className="text-[11px] font-semibold opacity-70 mt-0.5 truncate">
+                      📍 {venue.address}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // TARGET: Card Only (Transparent Card/Cards for Canva)
   if (exportTarget === 'card-only') {
+    if (isMulti) {
+      return (
+        <div
+          ref={forwardedRef}
+          style={{ width: w, minHeight: h, background: 'transparent' }}
+          className="relative flex flex-col items-center justify-center p-6 bg-transparent select-none"
+        >
+          {renderMultiCards(true)}
+        </div>
+      );
+    }
+
     return (
       <div
         ref={forwardedRef}
@@ -343,9 +745,48 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
         className="absolute inset-0 w-full h-full"
       />
 
-      {s.showPin && renderPin(false)}
+      {/* Floating Round-up Title Banner (Multi-Spot Mode Only) */}
+      {isMulti && s.roundupTitle && (
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 px-6 py-2.5 rounded-full bg-[#181615] text-white shadow-2xl border border-white/15 backdrop-blur-md pointer-events-none">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#e84a27] animate-pulse" />
+          <span className="font-comico text-2xl uppercase tracking-wider">
+            {s.roundupTitle}
+          </span>
+          <span className="px-2.5 py-0.5 rounded-full bg-white/15 text-xs font-bold text-white uppercase tracking-wider font-mono">
+            {venuesList.length} SPOTS
+          </span>
+        </div>
+      )}
 
-      {exportTarget === 'full-scene' && s.showCardInfo !== false && renderCard(false)}
+      {/* Single Spot Mode: Centered Pin and Card */}
+      {!isMulti && s.showPin && renderPin(false)}
+      {!isMulti && exportTarget === 'full-scene' && s.showCardInfo !== false && renderCard(false)}
+
+      {/* Multi-Spot Mode: Pins (layer 50) and Cards (layer 20) via Portals */}
+      {isMulti &&
+        exportTarget === 'full-scene' &&
+        portalTargets.map(({ pinEl, cardEl, venue, index }) => (
+          <React.Fragment key={venue.id || index}>
+            {createPortal(
+              <MultiVenuePin
+                venue={venue}
+                index={index}
+                s={s}
+              />,
+              pinEl
+            )}
+            {createPortal(
+              <MultiVenueCard
+                venue={venue}
+                index={index}
+                s={s}
+                t={t}
+                totalSpots={venuesList.length}
+              />,
+              cardEl
+            )}
+          </React.Fragment>
+        ))}
     </div>
   );
 });

@@ -59,6 +59,7 @@ import {
   type UiKitExportTarget,
   type CardTheme,
   type MapStyleKey,
+  type StudioVenueItem,
 } from '@/types/studio';
 
 interface Props {
@@ -189,10 +190,10 @@ export function StudioControls({
     }
     return 'presets';
   });
-  const [mapSlot, setMapSlot] = useState<'spot' | 'target' | 'style' | 'caption'>(() => {
+  const [mapSlot, setMapSlot] = useState<'spot' | 'multi' | 'target' | 'style' | 'caption'>(() => {
     if (typeof window !== 'undefined') {
       const s = new URLSearchParams(window.location.search).get('slot');
-      if (s === 'spot' || s === 'target' || s === 'style' || s === 'caption') return s;
+      if (s === 'spot' || s === 'multi' || s === 'target' || s === 'style' || s === 'caption') return s;
     }
     return 'spot';
   });
@@ -363,9 +364,10 @@ export function StudioControls({
 
   const mapSlots = useMemo(
     () => [
-      { id: 'spot', label: `🔍 Pick Oslo Spot (${allSpots.length})`, title: 'Pick Oslo Spot', icon: '🔍' },
+      { id: 'spot', label: `🔍 Pick Spot (${allSpots.length})`, title: 'Pick Oslo Spot', icon: '🔍' },
+      { id: 'multi', label: '🗺️ Multi-Spot Crawl', title: 'Multi-Venue Round-Up', icon: '🗺️' },
       { id: 'target', label: '🎯 Export Target', title: 'Export Target', icon: '🎯' },
-      { id: 'style', label: '🗺️ Style & Camera', title: 'Style & Camera', icon: '🗺️' },
+      { id: 'style', label: '🎨 Style & Camera', title: 'Style & Camera', icon: '🎨' },
       { id: 'caption', label: '📝 IG Caption', title: 'AI IG Caption & SEO', icon: '📝' },
     ],
     [allSpots.length]
@@ -417,7 +419,20 @@ export function StudioControls({
 
   const handleSelectSlot = (id: string) => {
     if (activeMode === 'mascot') setMascotSlot(id as any);
-    else if (activeMode === 'venue-map') setMapSlot(id as any);
+    else if (activeMode === 'venue-map') {
+      setMapSlot(id as any);
+      if (id === 'spot') {
+        onUpdateMap({ layoutMode: 'single' });
+      } else if (id === 'multi') {
+        onUpdateMap({
+          layoutMode:
+            state.map.layoutMode && state.map.layoutMode !== 'single'
+              ? state.map.layoutMode
+              : 'multi_compact',
+          autoFitCamera: true,
+        });
+      }
+    }
     else if (activeMode === 'dish-title') {
       if (id === 'caption') {
         setTitleSlot('caption');
@@ -1326,6 +1341,7 @@ export function StudioControls({
                             featuredDish: spot.featuredDish,
                             lat: spot.lat,
                             lng: spot.lng,
+                            layoutMode: 'single',
                           });
                           const rawDish = (spot.featuredDish || spot.name)
                             .replace(/^[^\wA-Za-zÀ-ÿ0-9]+/, '')
@@ -1465,6 +1481,7 @@ export function StudioControls({
                                 photo,
                                 lat: place.latitude || 59.9139,
                                 lng: place.longitude || 10.7522,
+                                layoutMode: 'single',
                               })
                             }
                             className="p-2.5 rounded-xl bg-white border border-[#E6DEC8] hover:border-[#e84a27] text-left flex items-center gap-3 transition-all active:scale-98"
@@ -1489,6 +1506,291 @@ export function StudioControls({
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {mapSlot === 'multi' && (
+              <div className="space-y-4">
+                {/* Multi-Venue Crawl Header & Summary */}
+                <div className="p-3 rounded-2xl bg-white border border-[#D8CFC0] flex items-center justify-between shadow-2xs">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-8 h-8 rounded-xl bg-[#FAF7F2] border border-[#E6DEC8] flex items-center justify-center text-lg shadow-2xs">
+                      🗺️
+                    </span>
+                    <div>
+                      <span className="block text-xs font-bold text-[#231F1D]">
+                        Oslo Multi-Spot Crawl
+                      </span>
+                      <span className="block text-[10px] text-[#6E655F]">
+                        {(state.map.venues || []).length} locations pinned on map
+                      </span>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full bg-[#e84a27] text-white text-[10px] font-bold uppercase tracking-wider">
+                    {(state.map.venues || []).length} Spots
+                  </span>
+                </div>
+
+                {/* Round-up Title Input */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-[#231F1D] flex items-center justify-between">
+                    <span>Round-up Headline</span>
+                    <span className="text-[10px] text-[#8C827A] font-normal">
+                      Shown at top of multi-card
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    value={state.map.roundupTitle || ''}
+                    onChange={(e) => onUpdateMap({ roundupTitle: e.target.value })}
+                    placeholder="e.g. Oslo Sourdough Crawl, Top 3 Matcha..."
+                    className="w-full h-10 px-3.5 rounded-xl border border-[#D8CFC0] bg-white text-xs font-bold text-[#231F1D] focus:border-[#e84a27] outline-hidden placeholder:text-[#8C827A]"
+                  />
+                </div>
+
+                {/* Active Spots Chip List */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-[#231F1D]">
+                      Active Oslo Spots ({(state.map.venues || []).length}/4)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => onUpdateMap({ autoFitCamera: true })}
+                      className="text-[10px] font-bold text-[#e84a27] hover:underline cursor-pointer flex items-center gap-1"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>Fit Map Camera</span>
+                    </button>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {(state.map.venues || []).map((v, idx) => (
+                      <div
+                        key={v.id || idx}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-[#D8CFC0] text-xs font-bold text-[#231F1D] shadow-2xs"
+                      >
+                        <span className="w-5 h-5 rounded-md bg-[#e84a27] text-white text-[10px] font-comico flex items-center justify-center">
+                          {idx + 1}
+                        </span>
+                        <span className="truncate max-w-[130px]">{v.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = (state.map.venues || []).filter(
+                              (_, i) => i !== idx
+                            );
+                            onUpdateMap({ venues: updated });
+                          }}
+                          className="text-[#8C827A] hover:text-[#e84a27] p-0.5 rounded-full cursor-pointer"
+                          title="Remove spot"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Density Switcher */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-[#231F1D]">
+                    Card Density Mode
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onUpdateMap({ layoutMode: 'multi_compact' })}
+                      className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                        state.map.layoutMode === 'multi_compact'
+                          ? 'bg-[#FAF7F2] border-[#e84a27] text-[#e84a27] ring-1 ring-[#e84a27]'
+                          : 'bg-white border-[#D8CFC0] text-[#6E655F]'
+                      }`}
+                    >
+                      <span>🏷️ Compact (Recommended)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onUpdateMap({ layoutMode: 'multi_full' })}
+                      className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                        state.map.layoutMode === 'multi_full'
+                          ? 'bg-[#FAF7F2] border-[#e84a27] text-[#e84a27] ring-1 ring-[#e84a27]'
+                          : 'bg-white border-[#D8CFC0] text-[#6E655F]'
+                      }`}
+                    >
+                      <span>🪪 Full Cards</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Multi Card Sizing & Scale (Icon remains static at GPS coordinate) */}
+                <div className="p-3 bg-white rounded-2xl border border-[#E6DEC8] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[#231F1D]">CRAWL CARDS SIZE</span>
+                    <span className="text-xs font-mono font-bold text-[#e84a27]">
+                      {Math.round((state.map.cardScale || 1) * 100)}%
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onUpdateMap({
+                          cardScale: Math.max(0.6, Math.round(((state.map.cardScale || 1) - 0.05) * 100) / 100),
+                        })
+                      }
+                      className="w-8 h-8 rounded-lg bg-[#EFEAE1] hover:bg-[#E6DEC8] font-bold text-[#231F1D] text-sm flex items-center justify-center transition-all cursor-pointer"
+                      title="Smaller cards"
+                    >
+                      -
+                    </button>
+                    {[
+                      { label: '85% (Compact)', val: 0.85 },
+                      { label: '100% (Standard)', val: 1.0 },
+                      { label: '115% (Hero)', val: 1.15 },
+                    ].map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => onUpdateMap({ cardScale: preset.val })}
+                        className={`flex-1 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                          Math.abs((state.map.cardScale || 1) - preset.val) < 0.03
+                            ? 'bg-[#231F1D] text-white shadow-xs'
+                            : 'bg-[#FAF7F2] text-[#5C534E] hover:text-[#231F1D]'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onUpdateMap({
+                          cardScale: Math.min(1.35, Math.round(((state.map.cardScale || 1) + 0.05) * 100) / 100),
+                        })
+                      }
+                      className="w-8 h-8 rounded-lg bg-[#EFEAE1] hover:bg-[#E6DEC8] font-bold text-[#231F1D] text-sm flex items-center justify-center transition-all cursor-pointer"
+                      title="Larger cards"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                {/* Card Vertical Position Relative to Pin */}
+                <div className="p-3 bg-white rounded-2xl border border-[#E6DEC8] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[#231F1D]">CARD VERTICAL OFFSET</span>
+                    <span className="text-xs font-mono font-bold text-[#e84a27]">
+                      {(state.map.cardOffsetY || 0) > 0 ? `+${state.map.cardOffsetY}px` : `${state.map.cardOffsetY || 0}px`}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onUpdateMap({
+                          cardOffsetY: Math.max(-120, (state.map.cardOffsetY || 0) - 20),
+                        })
+                      }
+                      className="py-1.5 rounded-xl text-xs font-bold bg-[#FAF7F2] text-[#231F1D] border border-[#E6DEC8] hover:bg-[#EFEAE1] transition-all cursor-pointer"
+                    >
+                      Higher ↑
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onUpdateMap({ cardOffsetY: 0 })}
+                      className="py-1.5 rounded-xl text-xs font-bold bg-[#FAF7F2] text-[#5C534E] border border-[#E6DEC8] hover:bg-[#EFEAE1] transition-all cursor-pointer"
+                    >
+                      Reset
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onUpdateMap({
+                          cardOffsetY: Math.min(120, (state.map.cardOffsetY || 0) + 20),
+                        })
+                      }
+                      className="py-1.5 rounded-xl text-xs font-bold bg-[#FAF7F2] text-[#231F1D] border border-[#E6DEC8] hover:bg-[#EFEAE1] transition-all cursor-pointer"
+                    >
+                      Lower ↓
+                    </button>
+                  </div>
+                </div>
+
+                {/* Add Spots from Database */}
+                <div className="space-y-2 pt-2 border-t border-[#D8CFC0]">
+                  <label className="text-[11px] font-bold text-[#231F1D]">
+                    + Add Spot to Crawl (Tap to add)
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-[190px] overflow-y-auto pr-0.5">
+                    {allSpots.slice(0, 14).map((spot) => {
+                      const isAdded = (state.map.venues || []).some(
+                        (v) =>
+                          v.id === spot.id ||
+                          v.name.toLowerCase() === spot.name.toLowerCase()
+                      );
+                      const isMax = (state.map.venues || []).length >= 4;
+
+                      return (
+                        <button
+                          key={spot.id || spot.name}
+                          type="button"
+                          disabled={isAdded || isMax}
+                          onClick={() => {
+                            if (isAdded || isMax) return;
+                            const newVenue: StudioVenueItem = {
+                              id: spot.id || `spot_${Date.now()}`,
+                              name: spot.name,
+                              address: spot.address,
+                              neighborhood: spot.neighborhood,
+                              dish:
+                                spot.featuredDish?.split('·')[0]?.trim() ||
+                                spot.name,
+                              price: spot.featuredDish?.includes('·')
+                                ? spot.featuredDish.split('·')[1].trim()
+                                : undefined,
+                              icon: spot.icon,
+                              rating: spot.rating,
+                              photo: spot.photo,
+                              lat: spot.lat,
+                              lng: spot.lng,
+                            };
+                            const updated = [
+                              ...(state.map.venues || []),
+                              newVenue,
+                            ];
+                            onUpdateMap({
+                              venues: updated,
+                              layoutMode:
+                                state.map.layoutMode === 'multi_full'
+                                  ? 'multi_full'
+                                  : 'multi_compact',
+                              autoFitCamera: true,
+                            });
+                          }}
+                          className={`p-2 rounded-xl border text-left flex items-center justify-between gap-2 text-xs transition-all ${
+                            isAdded
+                              ? 'bg-emerald-50 border-emerald-300 text-emerald-800 opacity-70 cursor-default'
+                              : isMax
+                              ? 'bg-white border-[#D8CFC0] opacity-40 cursor-not-allowed'
+                              : 'bg-white border-[#D8CFC0] hover:border-[#e84a27] text-[#231F1D] cursor-pointer active:scale-98'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <span className="text-base">{spot.icon}</span>
+                            <span className="font-bold truncate">
+                              {spot.name}
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-bold shrink-0">
+                            {isAdded ? '✓ Added' : '+ Add'}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             )}
 

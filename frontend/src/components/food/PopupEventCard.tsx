@@ -2,26 +2,10 @@
 
 import React from "react";
 import Image from "next/image";
-import {
-  Flame,
-  Calendar,
-  MapPin,
-  ExternalLink,
-  Navigation,
-  Sparkles,
-  Ticket,
-  ChefHat,
-  Clock,
-  Zap,
-} from "lucide-react";
+import { Bookmark, Flame, Calendar, Clock, ExternalLink } from "lucide-react";
 import type { FoodPost, Venue } from "@/types";
-import {
-  getPopupStatus,
-  getPopupMeta,
-  getPopupUrgencyLabel,
-} from "@/lib/popupUtils";
+import { getPopupStatus, getPopupMeta } from "@/lib/popupUtils";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
-import { incrementBringBack } from "@/lib/supabase/data";
 
 export interface PopupEventCardProps {
   post?: FoodPost | null;
@@ -35,63 +19,28 @@ export function PopupEventCard({
   priority = false,
 }: PopupEventCardProps) {
   const selectVenueById = useCityPulseStore((s) => s.selectVenueById);
-  const flyToSpot = useCityPulseStore((s) => s.flyToSpot);
-  const setIsVenueDetailModalOpen = useCityPulseStore(
-    (s) => s.setIsVenueDetailModalOpen
-  );
+  const setIsVenueDetailModalOpen = useCityPulseStore((s) => s.setIsVenueDetailModalOpen);
+  const savedPostIds = useCityPulseStore((s) => s.savedPostIds);
+  const toggleSavePost = useCityPulseStore((s) => s.toggleSavePost);
 
   const popupStatus = getPopupStatus(venue);
   const popupMeta = getPopupMeta(venue);
-  const urgencyLabel = getPopupUrgencyLabel(venue);
 
-  const dishName =
-    post?.dish_name ||
-    venue.signature_dishes?.[0] ||
-    venue.name ||
-    "Residency Special";
-  const displayImage =
-    post?.image_url ||
-    venue.cover_image_url ||
-    "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=800&q=80";
+  const title = venue.name || "Oslo Pop-Up";
 
-  const priceNok = post?.price_nok || 195;
-  const hostVenueName =
-    popupMeta?.host_venue_name || venue.address || "Oslo, Norway";
-  const guestChef = popupMeta?.guest_chef || null;
-  const eventHours = popupMeta?.event_hours || "17:00 – Sold Out";
-  const dateLabel =
-    popupMeta?.date_label ||
-    (venue.popup_end_date
-      ? `Til ${new Date(venue.popup_end_date).toLocaleDateString("en-GB", {
-          day: "numeric",
-          month: "short",
-        })}`
-      : "This Weekend");
-  const batchLimit = popupMeta?.batch_limit || "Limited batch";
-  const tasteNote =
-    post?.review_text ||
+  const story =
     venue.description ||
-    "Limited residency serving authentic small-batch food in Oslo.";
+    post?.review_text ||
+    "Limited culinary residency drop in Oslo.";
 
-  const handleOpenVenue = () => {
-    selectVenueById(venue.id);
-    setIsVenueDetailModalOpen(true);
-  };
+  const displayImage =
+    venue.cover_image_url ||
+    post?.image_url ||
+    "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=1200&q=80";
 
-  const handleFlyToMap = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    selectVenueById(venue.id);
-    if (
-      Number.isFinite(venue.latitude) &&
-      Number.isFinite(venue.longitude) &&
-      venue.latitude !== 0
-    ) {
-      flyToSpot([venue.longitude, venue.latitude], venue.id);
-    }
-  };
-
-  const isDimmed = popupStatus.isDimmedCard;
-  const isExpired = popupStatus.status === "expired" || popupStatus.status === "grace";
+  const rawCategory = venue.food_category || post?.category || "pop_up";
+  const displayCategory =
+    rawCategory.charAt(0).toUpperCase() + rawCategory.slice(1).replace(/_/g, " ");
 
   const residencyStatus =
     popupMeta?.residency_status ||
@@ -101,250 +50,140 @@ export function PopupEventCard({
       ? "between_residencies"
       : "active");
 
-  const isDormant = residencyStatus === "between_residencies";
+  const isDormant =
+    residencyStatus === "between_residencies" ||
+    Boolean(popupMeta?.dates_label?.toLowerCase().includes("tba"));
   const isUpcoming = residencyStatus === "next_confirmed";
-  const isActive = residencyStatus === "active";
+  const isActive = residencyStatus === "active" && !isDormant;
 
-  const [hasReacted, setHasReacted] = React.useState(false);
-  const [reactionCount, setReactionCount] = React.useState(() => {
-    if (popupMeta?.bring_back_count && popupMeta.bring_back_count > 0) {
-      return popupMeta.bring_back_count;
-    }
-    const hash = venue.id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
-    return isDormant ? (hash % 35) + 14 : (hash % 25) + 11;
-  });
+  const postId = post?.id || `popup_post_${venue.id}`;
+  const isSaved = savedPostIds ? savedPostIds.has(postId) : false;
 
-  React.useEffect(() => {
-    try {
-      const saved = localStorage.getItem(`smakr_reaction_${venue.id}`);
-      if (saved === "true") {
-        setHasReacted(true);
-      }
-    } catch {}
-  }, [venue.id]);
+  const handleOpenDetails = () => {
+    selectVenueById(venue.id);
+    setIsVenueDetailModalOpen(true);
+  };
 
-  const handleToggleReaction = async (e: React.MouseEvent) => {
+  const handleToggleBookmark = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (hasReacted) return;
-    setHasReacted(true);
-    setReactionCount((c) => c + 1);
-    try {
-      localStorage.setItem(`smakr_reaction_${venue.id}`, "true");
-      const updatedCount = await incrementBringBack(venue.id);
-      if (typeof updatedCount === "number" && updatedCount > 0) {
-        setReactionCount(updatedCount);
-      }
-    } catch {}
+    toggleSavePost(postId);
   };
 
   return (
     <article
-      onClick={handleOpenVenue}
-      className={`group relative w-full rounded-[26px] bg-[#FAF7F2] dark:bg-[#1E1C1A] border-2 border-[#181615] dark:border-white/15 shadow-[0_8px_24px_rgba(24,22,21,0.08)] overflow-hidden cursor-pointer select-none transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 ${
-        isDormant ? "bg-[#F3EFE8] dark:bg-[#1A1816]" : ""
+      onClick={handleOpenDetails}
+      className={`group relative w-full aspect-[16/10] sm:aspect-[16/9] min-h-[230px] max-h-[270px] rounded-[24px] sm:rounded-[28px] overflow-hidden bg-[#181615] border transition-all duration-300 cursor-pointer select-none flex flex-col justify-between p-3.5 sm:p-4 ${
+        isDormant
+          ? "grayscale-[25%] opacity-90 border-black/10 dark:border-white/10 shadow-md"
+          : isActive
+          ? "border-[#E84A27]/40 shadow-[0_4px_20px_rgba(232,74,39,0.14)] hover:shadow-xl"
+          : "border-black/10 dark:border-white/10 shadow-lg hover:shadow-xl"
       }`}
     >
-      {/* =========================================================================
-          TOP URGENCY RIBBON BY RESIDENCY STATE
-          ========================================================================= */}
-      <div
-        className={`flex items-center justify-between gap-1.5 px-3 sm:px-4 py-2 border-b-2 border-[#181615] flex-wrap ${
-          isActive
-            ? "bg-[#181615] text-[#FAF7F2]"
-            : isUpcoming
-            ? "bg-[#2B1810] text-[#FAF7F2]"
-            : "bg-[#262320] text-[#FAF7F2]"
-        }`}
-      >
-        <div className="flex items-center gap-1.5 min-w-0">
-          {isActive && (
-            <span className="px-2.5 py-0.5 rounded-full bg-[#E84A27] text-white font-extrabold text-[10px] sm:text-[11px] tracking-wide uppercase flex items-center gap-1 shrink-0 animate-pulse">
-              <Flame className="w-3 h-3 fill-white" />
-              <span>LIVE NOW · {urgencyLabel}</span>
+      {/* Background Photo */}
+      <Image
+        src={displayImage}
+        alt={title}
+        fill
+        priority={priority}
+        unoptimized={displayImage.startsWith("/api/places/photos")}
+        className="object-cover transition-transform duration-700 group-hover:scale-105 pointer-events-none"
+        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+      />
+
+      {/* Dark Vignette & Gradient Overlay (Crisp bottom readability) */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/55 to-black/25 pointer-events-none" />
+
+      {/* =====================================================================
+          TOP HEADER BAR: CATEGORY PILL + STATUS PILL & BOOKMARK
+          ===================================================================== */}
+      <div className="relative z-10 flex items-center justify-between gap-2">
+        {/* Left: Category / Dietary Badge */}
+        <span className="px-2.5 py-0.5 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md text-white text-[11px] font-semibold tracking-wide border border-white/20 transition-colors shadow-2xs">
+          {displayCategory}
+        </span>
+
+        {/* Right: Status Pill & Bookmark Button */}
+        <div className="flex items-center gap-1.5">
+          {isDormant ? (
+            <span className="px-2.5 py-0.5 rounded-full bg-stone-900/80 backdrop-blur-md text-stone-300 text-[10px] font-bold border border-white/15 uppercase tracking-wider">
+              Inactive · TBA
+            </span>
+          ) : isActive ? (
+            <span className="px-2.5 py-0.5 rounded-full bg-[#E84A27] text-white text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-xs">
+              <Flame className="w-2.5 h-2.5 fill-white" />
+              <span>Live Now</span>
+            </span>
+          ) : (
+            <span className="px-2.5 py-0.5 rounded-full bg-[#FAF7F2] text-[#181615] text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-xs">
+              <Calendar className="w-2.5 h-2.5" />
+              <span>Next Drop</span>
             </span>
           )}
 
-          {isUpcoming && (
-            <span className="px-2.5 py-0.5 rounded-full bg-amber-500 text-black font-extrabold text-[10px] sm:text-[11px] tracking-wide uppercase flex items-center gap-1 shrink-0">
-              <Calendar className="w-3 h-3 fill-black" />
-              <span>NEXT DROP · {dateLabel}</span>
-            </span>
-          )}
-
-          {isDormant && (
-            <span className="px-2.5 py-0.5 rounded-full bg-stone-700 text-stone-200 font-extrabold text-[10px] sm:text-[11px] tracking-wide uppercase flex items-center gap-1 shrink-0">
-              <span>⏸</span>
-              <span>BETWEEN RESIDENCIES · OSLO</span>
-            </span>
-          )}
-
-          <span className="text-[11px] font-bold text-zinc-300 truncate">
-            {isDormant
-              ? `PREVIOUSLY AT: ${hostVenueName.replace(/^Hosted at /i, "")}`
-              : `HOSTED AT: ${hostVenueName.replace(/^Hosted at /i, "")}`}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-1 text-[10px] font-bold text-zinc-400 shrink-0">
-          <Clock className="w-3 h-3 text-[#E84A27]" />
-          <span>{eventHours}</span>
+          <button
+            type="button"
+            onClick={handleToggleBookmark}
+            aria-label="Bookmark pop-up"
+            className="p-1.5 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md text-white border border-white/20 transition-all cursor-pointer shadow-2xs active:scale-90"
+          >
+            <Bookmark
+              className={`w-3.5 h-3.5 transition-colors ${
+                isSaved ? "fill-white text-white" : "text-white"
+              }`}
+            />
+          </button>
         </div>
       </div>
 
-      {/* =========================================================================
-          HERO DISH PHOTO (16:10 or 4:3 Full Bleed)
-          ========================================================================= */}
-      <div className="relative aspect-[16/10] sm:aspect-[4/3] w-full overflow-hidden bg-stone-900">
-        <Image
-          src={displayImage}
-          alt={dishName}
-          fill
-          priority={priority}
-          unoptimized={displayImage.startsWith("/api/places/photos")}
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
-          sizes="(max-width: 640px) 100vw, 500px"
-        />
-
-        {/* Bottom dark scrim */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
-
-        {/* Tilted Burnt Paprika Price Sticker (-1.5deg) */}
-        <div
-          style={{ transform: "rotate(-1.5deg)" }}
-          className="absolute top-3 right-3 px-3 py-1 rounded-xl bg-[#E84A27] text-white font-comico text-sm sm:text-base font-black shadow-md border border-white/20"
-        >
-          {priceNok} kr
-        </div>
-
-        {/* Guest Chef Badge */}
-        {guestChef && (
-          <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#FAF7F2]/95 dark:bg-[#1E1C1A]/95 backdrop-blur-md text-[#181615] dark:text-white text-[11px] font-bold shadow-sm border border-[#181615]/10">
-            <ChefHat className="w-3 h-3 text-[#E84A27]" />
-            <span>{guestChef}</span>
-          </div>
-        )}
-
-        {/* Overlay Title at bottom of photo */}
-        <div className="absolute bottom-2.5 inset-x-3.5 text-white pointer-events-none">
-          <div className="text-[10px] font-mono uppercase tracking-widest text-amber-300 font-bold">
-            {isDormant ? "OSLO CHEF COLLECTIVE" : "OSLO POP-UP RESIDENCY"}
-          </div>
-          <h3 className="font-comico text-xl sm:text-2xl font-black text-white tracking-tight leading-tight truncate drop-shadow-md">
-            {dishName}
+      {/* =====================================================================
+          BOTTOM CONTENT: TITLE + CONCEPT STORY + COMPACT FULL-WIDTH CTA PILL
+          ===================================================================== */}
+      <div className="relative z-10 space-y-2 pt-2">
+        <div>
+          <h3 className="font-comico font-black text-xl sm:text-2xl text-white tracking-tight leading-tight line-clamp-1 drop-shadow-md">
+            {title}
           </h3>
-        </div>
-      </div>
-
-      {/* =========================================================================
-          BODY: TACTILE TICKET SECTION WITH DASHED DIVIDER
-          ========================================================================= */}
-      <div className="p-4 sm:p-5 space-y-3 bg-[#FAF7F2] dark:bg-[#1E1C1A] text-[#181615] dark:text-[#FAF7F2]">
-        {/* Host Venue Subtitle */}
-        <div className="flex items-center justify-between gap-2 text-xs">
-          <div className="flex items-center gap-1.5 font-bold text-[#181615] dark:text-white truncate">
-            <MapPin className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
-            <span className="truncate">
-              {venue.name} · {venue.neighborhood || venue.city || "Oslo"}
-            </span>
-          </div>
-
-          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-[#181615]/5 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 shrink-0">
-            {isDormant ? "Brand Profile" : "Residency"}
-          </span>
-        </div>
-
-        {/* Dashed Ticket Divider */}
-        <div className="border-t-2 border-dashed border-[#181615]/15 dark:border-white/15 pt-2">
-          {/* Insider Taste Note */}
-          <p className="text-xs text-[#2B1810]/80 dark:text-zinc-300 leading-relaxed italic line-clamp-2">
-            ✦ "{tasteNote}"
+          <p className="mt-0.5 text-white/80 text-[11px] sm:text-xs font-medium leading-snug line-clamp-1 drop-shadow-sm">
+            {story}
           </p>
         </div>
 
-        {/* =========================================================================
-            FOOTER BAR: DATES, BATCH GAUGE & ACTIONS
-            ========================================================================= */}
-        <div className="pt-2 border-t border-[#181615]/10 dark:border-white/10 flex items-center justify-between gap-2 flex-wrap text-xs">
-          {/* Dates & Batch Pill */}
-          <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#2B1810]/75 dark:text-zinc-400">
-            <span className="font-bold text-[#E84A27] flex items-center gap-1">
-              <Calendar className="w-3 h-3" />
-              <span>{dateLabel}</span>
-            </span>
-            <span>·</span>
-            <span className="flex items-center gap-1 truncate font-medium">
-              <Zap className="w-3 h-3 text-amber-500 shrink-0" />
-              <span className="truncate">{batchLimit}</span>
-            </span>
+        {/* Inactive hint or Drop details indicator */}
+        {isDormant ? (
+          <div className="text-[10px] font-medium text-stone-300/80">
+            Dates &amp; location announcing soon
           </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
-            {/* Interactive Reaction Button */}
-            <button
-              type="button"
-              onClick={handleToggleReaction}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer border ${
-                hasReacted
-                  ? "bg-[#E84A27] text-white border-[#E84A27] shadow-xs"
-                  : isDormant
-                  ? "bg-orange-500/10 hover:bg-orange-500/20 text-[#E84A27] border-orange-500/30"
-                  : "bg-black/5 dark:bg-white/10 hover:bg-[#E84A27]/10 text-[#181615] dark:text-zinc-200 border-[#181615]/10 dark:border-white/10"
-              }`}
-              title={
-                isDormant
-                  ? "Vote to petition this chef for another Oslo residency"
-                  : isUpcoming
-                  ? "Remind me when residency opens"
-                  : "Signal you are attending"
-              }
-            >
-              {isDormant ? (
-                <>
-                  <Flame className={`w-3.5 h-3.5 ${hasReacted ? "fill-white text-white" : "text-[#E84A27] fill-[#E84A27]"}`} />
-                  <span>Bring Back · {reactionCount}</span>
-                </>
-              ) : isUpcoming ? (
-                <>
-                  <span className="text-xs">🔔</span>
-                  <span>Remind Me · {reactionCount}</span>
-                </>
-              ) : (
-                <>
-                  <span className="text-xs">🙋</span>
-                  <span>Going · {reactionCount}</span>
-                </>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleFlyToMap}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-black/5 dark:bg-white/10 hover:bg-[#E84A27] hover:text-white text-[#181615] dark:text-zinc-200 font-bold text-[11px] transition-all cursor-pointer"
-              title="Locate on Map Radar"
-            >
-              <Navigation className="w-3 h-3 text-[#E84A27] group-hover:text-white" />
-              <span>Radar</span>
-            </button>
-
-            {popupMeta?.rsvp_url ? (
-              <a
-                href={popupMeta.rsvp_url}
-                target="_blank"
-                rel="noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#181615] hover:bg-[#2B1810] text-white font-bold text-[11px] shadow-xs transition-all cursor-pointer"
-              >
-                <Ticket className="w-3 h-3 text-amber-400" />
-                <span>{isUpcoming ? "RSVP / Info" : "RSVP"}</span>
-              </a>
-            ) : (
-              <span className="px-2.5 py-1.5 rounded-xl bg-[#E84A27]/10 text-[#E84A27] font-bold text-[10px] tracking-wide font-mono uppercase">
-                Walk-in
-              </span>
+        ) : popupMeta?.dates_label ? (
+          <div className="flex items-center gap-2 text-[10.5px] font-semibold text-white/90">
+            <span className="flex items-center gap-1 text-[#FF8566]">
+              <Calendar className="w-3 h-3" />
+              <span>{popupMeta.dates_label}</span>
+            </span>
+            {popupMeta?.host_venue_name && !popupMeta.host_venue_name.toLowerCase().includes("tba") && (
+              <>
+                <span>·</span>
+                <span className="truncate">At {popupMeta.host_venue_name}</span>
+              </>
             )}
           </div>
-        </div>
+        ) : null}
+
+        {/* Honey Glazed Chicken Style White Rounded Pill CTA */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleOpenDetails();
+          }}
+          className={`w-full py-2 sm:py-2.5 rounded-full font-bold text-xs tracking-wide flex items-center justify-center gap-1.5 shadow-md transition-transform active:scale-[0.98] cursor-pointer ${
+            isDormant
+              ? "bg-[#FAF7F2]/95 hover:bg-white text-[#181615]"
+              : "bg-white hover:bg-stone-100 text-[#181615]"
+          }`}
+        >
+          <span>{isDormant ? "View Pop-Up Residency" : "View Pop-Up Details"}</span>
+        </button>
       </div>
     </article>
   );

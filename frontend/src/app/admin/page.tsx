@@ -43,6 +43,7 @@ import { BodyFontPicker } from "@/components/ui/FontSwitcher";
 import { PartnerClaimsQueue } from "@/components/admin/PartnerClaimsQueue";
 import { AdminPopupWizardModal } from "@/components/admin/AdminPopupWizardModal";
 import { VisualPhotoSwitcher } from "@/components/ui/VisualPhotoSwitcher";
+import { isPopupVenue } from "@/lib/popupUtils";
 import { TimeSlotPicker } from "@/components/ui/TimeSlotPicker";
 
 /* ------------------------------------------------------------------ */
@@ -150,7 +151,7 @@ export default function AdminControlCenterPage() {
   const [popupFilter, setPopupFilter] = useState<"all" | "active" | "next_confirmed" | "between_residencies">("all");
 
   const popupVenues = useMemo(
-    () => venues.filter((v) => v.spot_type === "pop_up" || Boolean(v.popup_meta)),
+    () => venues.filter((v) => isPopupVenue(v)),
     [venues]
   );
 
@@ -920,9 +921,21 @@ export default function AdminControlCenterPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {filteredPopups.map((p) => {
                   const meta = p.popup_meta;
-                  const currentStatus: ResidencyStatus = meta?.residency_status || "active";
-                  const hostVenueName = meta?.host_venue_name || p.address || "Oslo Host";
-                  const coverPhoto = p.cover_image_url || "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=800&q=80";
+                  const isDormant =
+                    meta?.residency_status === "between_residencies" ||
+                    Boolean(meta?.dates_label?.toLowerCase().includes("tba"));
+                  const currentStatus: ResidencyStatus = isDormant
+                    ? "between_residencies"
+                    : meta?.residency_status || "active";
+                  const hostVenueName =
+                    meta?.host_venue_name &&
+                    !meta.host_venue_name.toLowerCase().includes("tba") &&
+                    !meta.host_venue_name.toLowerCase().includes("host")
+                      ? meta.host_venue_name
+                      : null;
+                  const coverPhoto =
+                    p.cover_image_url ||
+                    "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=800&q=80";
 
                   return (
                     <div
@@ -935,7 +948,7 @@ export default function AdminControlCenterPage() {
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={coverPhoto} alt={p.name} className="w-full h-full object-cover" />
                           <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-black/75 text-white text-[9px] font-bold">
-                            {currentStatus === "active" ? "🔥 Live" : currentStatus === "next_confirmed" ? "📅 Drop" : "⏸ Dormant"}
+                            {currentStatus === "active" ? "🔥 Live" : currentStatus === "next_confirmed" ? "📅 Drop" : "⏸ Inactive"}
                           </span>
                         </div>
 
@@ -946,7 +959,7 @@ export default function AdminControlCenterPage() {
                               {p.name}
                             </h3>
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-500/10 text-[#e84a27] font-mono shrink-0">
-                              {p.signature_dishes?.[0] ? "195 kr" : "Drop"}
+                              {isDormant ? "Inactive" : "Drop"}
                             </span>
                           </div>
 
@@ -957,17 +970,29 @@ export default function AdminControlCenterPage() {
                             </p>
                           )}
 
-                          <p className="text-xs text-zinc-600 dark:text-zinc-300 truncate flex items-center gap-1">
-                            <MapPin className="w-3.5 h-3.5 text-zinc-400" />
-                            <span>At {hostVenueName}</span>
-                          </p>
+                          {hostVenueName && (
+                            <p className="text-xs text-zinc-600 dark:text-zinc-300 truncate flex items-center gap-1">
+                              <MapPin className="w-3.5 h-3.5 text-zinc-400" />
+                              <span>At {hostVenueName}</span>
+                            </p>
+                          )}
 
                           <div className="flex items-center gap-2 pt-1 text-[11px] text-zinc-500 flex-wrap">
-                            <span>{meta?.dates_label || "Active run"}</span>
-                            <span>·</span>
-                            <span>{meta?.daily_hours || meta?.event_hours || "17:00 – Late"}</span>
-                            {meta?.portion_cap && (
-                              <span className="font-bold text-[#e84a27]">· {meta.portion_cap}</span>
+                            {isDormant ? (
+                              <span className="text-stone-500 font-semibold">Dates &amp; location TBA</span>
+                            ) : (
+                              <>
+                                <span>{meta?.dates_label || "Active run"}</span>
+                                {(meta?.daily_hours || meta?.event_hours) && (
+                                  <>
+                                    <span>·</span>
+                                    <span>{meta.daily_hours || meta.event_hours}</span>
+                                  </>
+                                )}
+                                {meta?.portion_cap && (
+                                  <span className="font-bold text-[#e84a27]">· {meta.portion_cap}</span>
+                                )}
+                              </>
                             )}
                           </div>
                         </div>

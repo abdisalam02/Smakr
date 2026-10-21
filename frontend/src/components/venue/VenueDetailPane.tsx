@@ -19,6 +19,8 @@ import {
   Globe,
   Phone,
   ExternalLink,
+  Instagram,
+  Calendar,
 } from "lucide-react";
 import { FoodPost, Neighborhood, Venue } from "@/types";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
@@ -26,7 +28,7 @@ import { useVenueDetail } from "@/hooks/useVenueDetail";
 import { DietaryBadge } from "@/components/ui/DietaryBadge";
 import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
 import { DishDetailPopup } from "@/components/food/DishDetailPopup";
-import { getPopupStatus } from "@/lib/popupUtils";
+import { getPopupStatus, getPopupMeta, isPopupVenue } from "@/lib/popupUtils";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import { formatOsloLocation } from "@/lib/location";
 import { ExpandableReviewText } from "./ExpandableReviewText";
@@ -147,6 +149,24 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
   const isOpenNow = liveOpenStatus.isOpen;
   const vibe = venue.vibe;
 
+  const isPopup = isPopupVenue(venue);
+  const popupMeta = venue ? getPopupMeta(venue) : null;
+  const isDormant =
+    popupMeta?.residency_status === "between_residencies" ||
+    Boolean(popupMeta?.dates_label?.toLowerCase().includes("tba"));
+  const popupHostVenue =
+    popupMeta?.host_venue_name &&
+    !popupMeta.host_venue_name.toLowerCase().includes("tba") &&
+    !popupMeta.host_venue_name.toLowerCase().includes("host")
+      ? popupMeta.host_venue_name
+      : null;
+  const instagramHandle = popupMeta?.instagram_url
+    ? popupMeta.instagram_url
+        .replace(/^https?:\/\/(www\.)?instagram\.com\//i, "")
+        .replace(/\/$/, "")
+        .replace(/^@/, "")
+    : null;
+
   const handleLogDish = () => {
     openCreateDish();
   };
@@ -258,96 +278,216 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
 
         {/* Title + meta */}
         <div className="space-y-2">
+          {isPopup && (
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="px-2.5 py-0.5 rounded-full bg-[#E84A27]/10 text-[#E84A27] text-[10px] font-bold uppercase tracking-wider">
+                🎟️ Pop-Up Residency
+              </span>
+              {isDormant ? (
+                <span className="px-2 py-0.5 rounded-md bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-300 text-[10px] font-bold uppercase">
+                  Inactive
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold uppercase">
+                  Live Drop
+                </span>
+              )}
+            </div>
+          )}
+
           <h1 className="font-comico text-2xl xl:text-3xl text-[var(--foreground)] leading-tight">
             {venue.name}
           </h1>
 
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="flex items-center gap-1 text-xs text-zinc-500">
-              <MapPin className="w-3.5 h-3.5 text-[#e84a27] shrink-0" />
-              <span className="truncate">
-                {formatOsloLocation(venue.address, venue.city || neighborhoodLabel).fullClean}
+            {isPopup ? (
+              <span className="text-xs text-zinc-500 font-medium">
+                {isDormant
+                  ? "Oslo · Dates & location announcing soon"
+                  : popupHostVenue
+                  ? `Hosted at ${popupHostVenue}`
+                  : "Oslo Pop-Up Residency"}
               </span>
-            </span>
-            <span
-              className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                liveOpenStatus.color === "green"
-                  ? "text-emerald-700 bg-emerald-50 border-emerald-200/70"
-                  : liveOpenStatus.color === "orange"
-                  ? "text-amber-800 bg-amber-50 border-amber-200/70"
-                  : "text-zinc-700 bg-zinc-100 border-zinc-200/70"
-              }`}
-            >
-              <span>{liveOpenStatus.badgeText}</span>
-            </span>
-            {googleRating != null && (
-              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200/70">
-                <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                <span className="font-mono">{googleRating.toFixed(1)}</span>
-                {googleCount > 0 && (
-                  <span className="font-normal text-amber-700/80">({googleCount} Google)</span>
+            ) : (
+              <>
+                <span className="flex items-center gap-1 text-xs text-zinc-500">
+                  <MapPin className="w-3.5 h-3.5 text-[#e84a27] shrink-0" />
+                  <span className="truncate">
+                    {formatOsloLocation(venue.address, venue.city || neighborhoodLabel).fullClean}
+                  </span>
+                </span>
+                <span
+                  className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                    liveOpenStatus.color === "green"
+                      ? "text-emerald-700 bg-emerald-50 border-emerald-200/70"
+                      : liveOpenStatus.color === "orange"
+                      ? "text-amber-800 bg-amber-50 border-amber-200/70"
+                      : "text-zinc-700 bg-zinc-100 border-zinc-200/70"
+                  }`}
+                >
+                  <span>{liveOpenStatus.badgeText}</span>
+                </span>
+                {googleRating != null && (
+                  <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200/70">
+                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                    <span className="font-mono">{googleRating.toFixed(1)}</span>
+                    {googleCount > 0 && (
+                      <span className="font-normal text-amber-700/80">({googleCount} Google)</span>
+                    )}
+                  </span>
                 )}
-              </span>
+              </>
             )}
           </div>
 
           {venue.description && (
-            <p className="text-xs text-zinc-500 leading-relaxed line-clamp-2">
+            <p className="text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed font-medium pt-1">
               {venue.description}
             </p>
           )}
 
-          {/* Quick Action Links: Directions, Website, Phone */}
-          <div className="flex items-center gap-2 flex-wrap pt-1">
-            <a
-              href={venue.google_maps_uri || googleMapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--surface-raised)] hover:bg-zinc-100 dark:hover:bg-white/10 border border-[var(--surface-border)] text-xs font-semibold text-zinc-700 dark:text-zinc-200 transition-colors"
-            >
-              <MapPin className="w-3.5 h-3.5 text-[#e84a27]" />
-              <span>Directions</span>
-              <ExternalLink className="w-3 h-3 text-zinc-400" />
-            </a>
+          {/* Quick Action Links: Distinct for Pop-up vs Restaurant */}
+          {isPopup ? (
+            <div className="space-y-3 pt-2">
+              <div className="p-4 rounded-2xl bg-[#F5EFE4] dark:bg-[#1E1C1A] border border-[#181615]/10 space-y-3">
+                {isDormant ? (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="px-2.5 py-1 rounded-full bg-stone-300 dark:bg-stone-700 text-stone-800 dark:text-stone-200 text-xs font-bold uppercase tracking-wider">
+                        ⏳ Dates &amp; Location TBA
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                      Next residency dates and location are being confirmed. Follow Instagram for drop updates.
+                    </p>
+                    {popupMeta?.instagram_url && (
+                      <a
+                        href={popupMeta.instagram_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-amber-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
+                      >
+                        <Instagram className="w-4 h-4" />
+                        <span>Follow {instagramHandle ? `@${instagramHandle}` : "on Instagram"} for Drop Alerts</span>
+                        <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                      </a>
+                    )}
+                    {venue.website_uri && (
+                      <a
+                        href={venue.website_uri}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-2 px-3 rounded-xl bg-white dark:bg-[#2A2622] border border-[#181615]/10 text-xs font-bold text-zinc-800 dark:text-zinc-200 flex items-center justify-center gap-1.5"
+                      >
+                        <Globe className="w-3.5 h-3.5 text-zinc-500" />
+                        <span>Website / Inquiries</span>
+                      </a>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="px-2.5 py-1 rounded-full bg-[#E84A27] text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                        <Flame className="w-3.5 h-3.5 fill-white" />
+                        <span>Live Now</span>
+                      </span>
+                      {popupMeta?.portion_cap && (
+                        <span className="text-xs font-bold text-[#E84A27] font-mono">{popupMeta.portion_cap}</span>
+                      )}
+                    </div>
 
-            {venue.website_uri && (
+                    <div className="text-xs font-semibold space-y-1 text-zinc-800 dark:text-zinc-200">
+                      {popupMeta?.dates_label && (
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-[#E84A27]" />
+                          <span>{popupMeta.dates_label}</span>
+                        </div>
+                      )}
+                      {(popupMeta?.daily_hours || venue.current_opening_hours_text) && (
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-[#E84A27]" />
+                          <span>{popupMeta?.daily_hours || venue.current_opening_hours_text}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap pt-1">
+                      {popupHostVenue && (
+                        <a
+                          href={venue.google_maps_uri || googleMapsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 py-2.5 px-3 rounded-xl bg-[#181615] text-white hover:bg-black text-xs font-bold flex items-center justify-center gap-1.5"
+                        >
+                          <MapPin className="w-3.5 h-3.5 text-[#E84A27]" />
+                          <span>Directions to {popupHostVenue}</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                      {popupMeta?.ticket_url && (
+                        <a
+                          href={popupMeta.ticket_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="py-2.5 px-4 rounded-xl bg-[#E84A27] hover:bg-[#D43D1C] text-white text-xs font-bold"
+                        >
+                          RSVP / Tickets
+                        </a>
+                      )}
+                      {popupMeta?.instagram_url && (
+                        <a
+                          href={popupMeta.instagram_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="py-2.5 px-3 rounded-xl bg-white dark:bg-[#2A2622] border border-[#181615]/10 text-xs font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1"
+                        >
+                          <Instagram className="w-3.5 h-3.5 text-pink-600" />
+                          <span>Instagram</span>
+                        </a>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 flex-wrap pt-1">
               <a
-                href={venue.website_uri}
+                href={venue.google_maps_uri || googleMapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--surface-raised)] hover:bg-zinc-100 dark:hover:bg-white/10 border border-[var(--surface-border)] text-xs font-semibold text-zinc-700 dark:text-zinc-200 transition-colors"
               >
-                <Globe className="w-3.5 h-3.5 text-zinc-500" />
-                <span>Website / Menu</span>
+                <MapPin className="w-3.5 h-3.5 text-[#e84a27]" />
+                <span>Directions</span>
                 <ExternalLink className="w-3 h-3 text-zinc-400" />
               </a>
-            )}
 
-            {venue.phone_number && (
-              <a
-                href={`tel:${venue.phone_number}`}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--surface-raised)] hover:bg-zinc-100 dark:hover:bg-white/10 border border-[var(--surface-border)] text-xs font-semibold text-zinc-700 dark:text-zinc-200 transition-colors"
-              >
-                <Phone className="w-3.5 h-3.5 text-zinc-500" />
-                <span>{venue.phone_number}</span>
-              </a>
-            )}
-          </div>
+              {venue.website_uri && (
+                <a
+                  href={venue.website_uri}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--surface-raised)] hover:bg-zinc-100 dark:hover:bg-white/10 border border-[var(--surface-border)] text-xs font-semibold text-zinc-700 dark:text-zinc-200 transition-colors"
+                >
+                  <Globe className="w-3.5 h-3.5 text-zinc-500" />
+                  <span>Website / Menu</span>
+                  <ExternalLink className="w-3 h-3 text-zinc-400" />
+                </a>
+              )}
 
-          {/* Pop-up residency callout */}
-          {venue.spot_type === "popup" && getPopupStatus(venue).label && (
-            <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-amber-900 dark:text-amber-200">
-              <span className="text-xl">🎟️</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold">{getPopupStatus(venue).label}</p>
-                {venue.popup_end_date && (
-                  <p className="text-[10px] text-zinc-500 dark:text-zinc-400">
-                    Residency closing {new Date(venue.popup_end_date).toLocaleDateString()}
-                  </p>
-                )}
-              </div>
+              {venue.phone_number && (
+                <a
+                  href={`tel:${venue.phone_number}`}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--surface-raised)] hover:bg-zinc-100 dark:hover:bg-white/10 border border-[var(--surface-border)] text-xs font-semibold text-zinc-700 dark:text-zinc-200 transition-colors"
+                >
+                  <Phone className="w-3.5 h-3.5 text-zinc-500" />
+                  <span>{venue.phone_number}</span>
+                </a>
+              )}
             </div>
           )}
+        </div>
 
           {/* Food Truck schedule callout */}
           {venue.spot_type === "food_truck" && venue.location_schedule && (
@@ -361,38 +501,39 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
               </div>
             </div>
           )}
-        </div>
 
-        {/* Live vibe indicators */}
-        <div className="grid grid-cols-3 gap-2">
-          <VibeStat
-            icon={Gauge}
-            label="Speed"
-            value={
-              vibe?.avg_download_mbps != null
-                ? `${Math.round(vibe.avg_download_mbps)} Mbps`
-                : "Fast"
-            }
-          />
-          <VibeStat
-            icon={Armchair}
-            label="Seating"
-            value={vibe?.seat_label || "Plenty"}
-          />
-          <VibeStat
-            icon={Clock}
-            label="Best Time"
-            value={
-              vibe?.overall_status
-                ? VIBE_LABELS[vibe.overall_status] || vibe.overall_status
-                : "Optimal"
-            }
-            tone="success"
-          />
-        </div>
+        {/* Live vibe indicators (Restaurants only) */}
+        {!isPopup && (
+          <div className="grid grid-cols-3 gap-2">
+            <VibeStat
+              icon={Gauge}
+              label="Speed"
+              value={
+                vibe?.avg_download_mbps != null
+                  ? `${Math.round(vibe.avg_download_mbps)} Mbps`
+                  : "Fast"
+              }
+            />
+            <VibeStat
+              icon={Armchair}
+              label="Seating"
+              value={vibe?.seat_label || "Plenty"}
+            />
+            <VibeStat
+              icon={Clock}
+              label="Best Time"
+              value={
+                vibe?.overall_status
+                  ? VIBE_LABELS[vibe.overall_status] || vibe.overall_status
+                  : "Optimal"
+              }
+              tone="success"
+            />
+          </div>
+        )}
 
-        {/* ================= CURATED DINER REVIEWS ================= */}
-        {curatedReviews.length > 0 && (
+        {/* ================= CURATED DINER REVIEWS (Restaurants only) ================= */}
+        {!isPopup && curatedReviews.length > 0 && (
           <section className="space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold text-[var(--foreground)] flex items-center gap-1.5">
@@ -426,31 +567,46 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
           </section>
         )}
 
-        {/* ================= DISHES YOU CAN'T MISS ================= */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-[var(--foreground)] flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-[#e84a27]" />
-              <span>Dishes You Can&apos;t Miss ({recommendedMeals.length})</span>
-            </h2>
-            <span className="text-[10px] font-mono text-zinc-400">
-              Foodie Radar Verified
-            </span>
-          </div>
+        {/* ================= DISHES SECTION ================= */}
+        {(!isPopup || recommendedMeals.length > 0) && (
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold text-[var(--foreground)] flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-[#e84a27]" />
+                <span>
+                  {isPopup
+                    ? `Pop-Up Drop Dishes (${recommendedMeals.length})`
+                    : `Dishes You Can't Miss (${recommendedMeals.length})`}
+                </span>
+              </h2>
+              <span className="text-[10px] font-mono text-zinc-400">
+                Foodie Radar Verified
+              </span>
+            </div>
 
-          <button
-            onClick={handleLogDish}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] text-white font-bold text-xs shadow-md shadow-[#e84a27]/25 transition-all active:scale-[0.99]"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Log a Dish Here</span>
-          </button>
+            {!isPopup ? (
+              <button
+                onClick={handleLogDish}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] text-white font-bold text-xs shadow-md shadow-[#e84a27]/25 transition-all active:scale-[0.99]"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Log a Dish Here</span>
+              </button>
+            ) : (
+              <button
+                onClick={handleLogDish}
+                className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-2xl bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-bold text-xs border border-zinc-200/80 dark:border-white/10 transition-colors shadow-2xs active:scale-[0.99]"
+              >
+                <Plus className="w-3.5 h-3.5 text-[#e84a27]" />
+                <span>Log a Dish for this Pop-Up</span>
+              </button>
+            )}
 
-          {recommendedMeals.length === 0 ? (
-            <p className="text-xs text-zinc-400 text-center py-8">
-              No dishes logged here yet — be the first foodie to add one.
-            </p>
-          ) : (
+            {recommendedMeals.length === 0 ? (
+              <p className="text-xs text-zinc-400 text-center py-8">
+                No dishes logged here yet — be the first foodie to add one.
+              </p>
+            ) : (
             <div className="grid grid-cols-2 gap-3">
               {recommendedMeals.map((dish) => {
                 const isSaved = savedPostIds.has(dish.id);
@@ -548,8 +704,10 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
             </div>
           )}
         </section>
+      )}
 
-        {/* Directions */}
+      {/* Directions (Only when location is confirmed) */}
+      {!isDormant && (
         <a
           href={googleMapsUrl}
           target="_blank"
@@ -559,6 +717,7 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
           <MapPin className="w-3.5 h-3.5 text-[#e84a27]" />
           <span>Open in Google Maps</span>
         </a>
+      )}
       </div>
 
       {/* Dish Detail Popup */}

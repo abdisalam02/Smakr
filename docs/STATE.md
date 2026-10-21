@@ -1,4 +1,42 @@
 # Project State
+- Positioned Look 3 (Noir Trench) to hug the right screen edge, clearing contact actions and inquiry buttons.
+- Replaced second image with new high-res Chambray Denim cutout (IMG_5196-removebg-preview.png).
+- Replaced looks with new high-quality cutouts in exact order: 2-remove (Linen), 3-remove (Tailored Suit), 1-remove (Noir Trench).
+- Preserved calibrated responsive positions and svh viewport bounds across all three visual stages.
+- Removed price tier money pill, Google star ratings, batch portion caps, and comments from pop-up dish cards.
+- Elevated Pop-Up badge to top-left position and added prominent '✦ Pop-Up Residency' kicker above dish titles.
+- Conditioned card clicks and map buttons: pop-ups with TBA locations open detail sheets instead of flying to the map.
+- Purged all neon yellow and garish gradient boxes from pop-up dish cards, aligning with Smakr Warm Nordic theme.
+- Built explicit active vs inactive pop-up styling: inactive pop-ups (TBA dates) render muted dark glass pills with calm typography.
+- Active pop-ups render signature Smakr Oslo orange accents (#E84A27) with Live Pop-Up flame indicators.
+- Separated Dishes feed from Spots feed: Dishes tab exclusively renders FoodPostCards with pop-up drop styling; Spots radar renders compact venue cards.
+- Minimized PopupEventCard to sleek aspect-[16/10] (240px height) preserving Honey Glazed Chicken aesthetic without towering over radar.
+- Added pop-up ticket twist, glowing amber border, and portion cap note to FoodPostCard for pop-up dishes.
+- Added "+ Log a Dish for this Pop-Up" in pop-up bottom sheet and detail pane, ensuring spot_type is properly set.
+- Upgraded FeedEmptyState with 1-tap shortcut to explore pop-up residencies in Spots radar when pop-up filter has no dishes.
+- Built dedicated Pop-Up Sheet in VenueBottomSheet and VenueDetailPane omitting restaurant stats, directions to TBA, and dish log buttons.
+- Eliminated automatic synthetic dish creation on pop-up publishing; cleaned up legacy auto-generated dishes from DB.
+- Set Pop-up feed card title to display pop-up brand name directly without appending dummy "Special" or "Signature".
+- Overhauled pop-up feed card with vertical full-bleed Honey Glazed Chicken layout, dark gradient, and white CTA.
+- Unified Admin Pop-up Creator into a single-screen studio with photo dropzone, food chips, Instagram handle, and TBA toggle.
+- Added dedicated Pop-Up Socials & Drop Hub to mobile sheet and desktop detail pane with Instagram and RSVP buttons.
+- Fixed pop-up feed visibility and cleansed admin pop-up cards of hardcoded dummy prices and awkward TBA strings.
+- Fixed Studio Multi-Spot card blowout with strict photo bounds, elevated pins to z-index 100, and padded fitBounds by 340px.
+- Transformed mobile feed bottom sheet into translucent frosted glass (backdrop-blur-2xl, 80% opacity) revealing map behind.
+- Built frictionless Fast Drop mode in Admin Pop-up Wizard with photo presets, 1-tap TBA mode (hiding dates/location), and instant publish.
+- Studio Multi-Spot Crawl: separated pins to z-index 50 above cards, padded fitBounds by 280px, and adapted widths so cards never clip edges.
+- Main Feed Filters: enabled 1-tap filter toggle off across category, spot-type, and dietary pills back to "all".
+- FoodSpotCard: applied frosted glass styling, soft image bleed towards text, removed curated text, and relocated opening hours in theme colors.
+- Restructured Studio Multi-Spot Crawl: each pin now has its own Image-1-style card anchored directly beneath it on the map.
+- Kept map pins static to venue GPS coordinates while enabling responsive card scaling and vertical offsets.
+- Separated Single Spot and Multi-Spot modes: selecting Pick Spot or any venue immediately resets the map to single-spot focus.
+- Overhauled Partner Studio (/partner) with lively imagery, 4-step wizard transitions, direct photo upload, and distinct edit triggers.
+- Rebuilt Pop-up Residency card and flow with Warm Nordic ticket styling and "Until sold out" portion cap.
+- Compiled complete Database Contract Audit artifact for partner claims, pop-ups, and kitchen tokens.
+- Deployed simplified WYSIWYG Partner Studio (/partner) with instant spot resolver, 4:3 dish card modal, and 2-field verification claim.
+- Integrated Google Places editorialSummary with Gemini Flash Warm Nordic description fallback into venue pipeline.
+- Built Studio Multi-Venue MapShot (/studio) supporting 2–4 Oslo spots, numbered rank badges ①–④, fitBounds, and compact density mode.
+- Aligned partner propose and claim resolution APIs to persist descriptions, cover photos, and full multi-dish menus.
 - Pushed commit 11edcdd to remote repository at https://github.com/abdisalam02/Sadija.git.
 - Removed look-2, streamlined stage progression to 3 looks (Linen, Denim, Noir Trench) with dedicated breathing spacer.
 - Eliminated mobile scroll jitter and address-bar resize bounce across mobile browsers via svh viewport units.

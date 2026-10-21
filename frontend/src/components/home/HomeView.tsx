@@ -22,7 +22,7 @@ import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
 import { SmakrSIcon } from "@/components/ui/SmakrSIcon";
 import { UtensilsCrossed, Plus, Map as MapIcon, LayoutGrid } from "lucide-react";
 import type { FoodPost, Venue, WeeklyPick } from "@/types";
-import { isVisibleInFeed, getPopupUrgencyScore } from "@/lib/popupUtils";
+import { isVisibleInFeed, getPopupUrgencyScore, isPopupVenue } from "@/lib/popupUtils";
 
 /**
  * MapLibre is a large dependency — load it lazily (client-only) so it never
@@ -321,7 +321,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
 
   const popupVenues = useMemo(() => {
     return venues
-      .filter((v) => (v.spot_type === "popup" || v.id.startsWith("popup-")) && isVisibleInFeed(v))
+      .filter((v) => isPopupVenue(v) && isVisibleInFeed(v))
       .sort((a, b) => getPopupUrgencyScore(a) - getPopupUrgencyScore(b));
   }, [venues]);
 
@@ -643,23 +643,9 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                       : "grid-cols-1 xl:grid-cols-2"
                   } gap-4`}
                 >
-                  {filteredPosts.map((post, index) => {
-                    const linkedVenue = venues.find((v) => v.id === post.spot_id);
-                    const isPopup = linkedVenue?.spot_type === "popup" || post.spot_type === "popup" || spotTypeFilter === "popup";
-                    if (isPopup && linkedVenue) {
-                      return (
-                        <PopupEventCard
-                          key={post.id}
-                          post={post}
-                          venue={linkedVenue}
-                          priority={isDesktop && index === 0}
-                        />
-                      );
-                    }
-                    return (
-                      <FoodPostCard key={post.id} post={post} priority={isDesktop && index === 0} />
-                    );
-                  })}
+                  {filteredPosts.map((post, index) => (
+                    <FoodPostCard key={post.id} post={post} priority={isDesktop && index === 0} />
+                  ))}
                 </div>
               )
             ) : (
@@ -752,10 +738,10 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
           transform: `translate3d(0, ${getSnapTranslateY(mobileSheet)}px, 0)`,
           transition: "transform 0.38s cubic-bezier(0.16, 1, 0.3, 1)",
         }}
-        className="lg:hidden absolute left-0 right-0 top-[57px] z-20 bg-[#FAF7F2] dark:bg-[#181615] rounded-t-3xl border-t border-black/[0.08] shadow-2xl flex flex-col will-change-transform pb-[140px]"
+        className="lg:hidden absolute left-0 right-0 top-[57px] z-20 bg-[#FAF7F2]/80 dark:bg-[#181615]/80 backdrop-blur-2xl rounded-t-3xl border-t border-white/60 dark:border-white/10 shadow-2xl flex flex-col will-change-transform pb-[140px]"
       >
           {/* Sticky Sheet Header: Grab Handle + Mascot Drop Pill + Category Filter Bar */}
-          <div className="sticky top-0 z-20 bg-[#FAF7F2] dark:bg-[#181615] border-b border-black/[0.06] rounded-t-3xl shrink-0">
+          <div className="sticky top-0 z-20 bg-[#FAF7F2]/80 dark:bg-[#181615]/80 backdrop-blur-xl border-b border-black/[0.06] dark:border-white/[0.06] rounded-t-3xl shrink-0">
             <div
               onTouchStart={handleHeaderTouchStart}
               onTouchMove={handleHeaderTouchMove}
@@ -841,23 +827,9 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                     mobileSheet === "peek" ? "pointer-events-none" : ""
                   }`}
                 >
-                  {filteredPosts.map((post, index) => {
-                    const linkedVenue = venues.find((v) => v.id === post.spot_id);
-                    const isPopup = linkedVenue?.spot_type === "popup" || post.spot_type === "popup" || spotTypeFilter === "popup";
-                    if (isPopup && linkedVenue) {
-                      return (
-                        <PopupEventCard
-                          key={post.id}
-                          post={post}
-                          venue={linkedVenue}
-                          priority={!isDesktop && index === 0}
-                        />
-                      );
-                    }
-                    return (
-                      <FoodPostCard key={post.id} post={post} priority={!isDesktop && index === 0} />
-                    );
-                  })}
+                  {filteredPosts.map((post, index) => (
+                    <FoodPostCard key={post.id} post={post} priority={!isDesktop && index === 0} />
+                  ))}
                 </div>
               )
             ) : (

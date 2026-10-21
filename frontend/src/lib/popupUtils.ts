@@ -10,10 +10,24 @@ export interface PopupStatus {
 }
 
 /**
+ * Helper to identify whether a venue is a pop-up residency regardless of
+ * naming variants ("popup", "pop_up", "popup-...", or presence of popup_meta).
+ */
+export function isPopupVenue(venue?: Venue | null): boolean {
+  if (!venue) return false;
+  return (
+    venue.spot_type === "popup" ||
+    venue.spot_type === "pop_up" ||
+    venue.id.startsWith("popup") ||
+    Boolean(venue.popup_meta)
+  );
+}
+
+/**
  * Calculates the real-time operational status for a pop-up residency
  */
 export function getPopupStatus(venue?: Venue | null): PopupStatus {
-  if (!venue || venue.spot_type !== "popup") {
+  if (!venue || !isPopupVenue(venue)) {
     return { status: "none" };
   }
 
@@ -121,7 +135,7 @@ export function getPopupStatus(venue?: Venue | null): PopupStatus {
  */
 export function isVisibleInFeed(venue?: Venue | null): boolean {
   if (!venue) return true;
-  if (venue.spot_type !== "popup") return true;
+  if (!isPopupVenue(venue)) return true;
   const meta = getPopupMeta(venue);
   if (meta?.residency_status === "between_residencies") return true;
   if (!venue.popup_end_date && !meta?.residency_status) return true;
