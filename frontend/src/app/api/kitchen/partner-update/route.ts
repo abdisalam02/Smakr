@@ -154,7 +154,6 @@ export async function POST(req: NextRequest) {
       if (rawDishName) postPatch.dish_name = rawDishName;
       if (rawImageUrl) {
         postPatch.dish_image = rawImageUrl;
-        postPatch.image_url = rawImageUrl;
       }
       if (priceNok !== undefined) postPatch.price_nok = priceNok;
 

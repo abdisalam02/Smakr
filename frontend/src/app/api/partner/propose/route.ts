@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { curatedVenuePhotos } from "@/lib/places/curatedPhotos";
 
 export const runtime = "nodejs";
+
+const VENUE_FIELDS =
+  "id, name, address, image_url, opening_hours, current_opening_hours_text, " +
+  "spot_type, location_schedule, category, google_rating, google_reviews_count, " +
+  "vibe_signals, description, signature_dishes";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const SUPABASE_SERVICE_KEY =
@@ -54,6 +60,14 @@ function isValidImageUrl(url: string): boolean {
   }
 }
 
+function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .slice(0, 60);
+}
+
 export async function POST(req: NextRequest) {
   try {
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
@@ -78,7 +92,9 @@ export async function POST(req: NextRequest) {
 
     const applicant = body.applicant || {};
     const name = typeof applicant.name === "string" ? applicant.name.trim().slice(0, 100) : "";
-    const role = typeof applicant.role === "string" ? applicant.role.trim().toLowerCase() : "";
+    const role = typeof applicant.role === "string" && applicant.role.trim()
+      ? applicant.role.trim().toLowerCase()
+      : "owner";
     const email = typeof applicant.email === "string" ? applicant.email.trim().toLowerCase() : "";
     const phone = typeof applicant.phone === "string" ? applicant.phone.trim().replace(/\s+/g, "") : "";
     const instagram = typeof applicant.instagram === "string" ? applicant.instagram.trim().slice(0, 50) : "";
@@ -121,6 +137,34 @@ export async function POST(req: NextRequest) {
     const category = typeof proposedCard.category === "string" ? proposedCard.category.trim() : undefined;
     const dietaryTags = Array.isArray(proposedCard.dietaryTags) ? proposedCard.dietaryTags.slice(0, 6) : [];
 
+    // Description, Cover Photo, Multi-dish menu, and Pop-up metadata enrichment
+    const description =
+      typeof body.description === "string"
+        ? body.description.trim().slice(0, 500)
+        : typeof body.proposedChanges?.description === "string"
+        ? body.proposedChanges.description.trim().slice(0, 500)
+        : undefined;
+    const coverImageUrl =
+      typeof body.coverImageUrl === "string"
+        ? body.coverImageUrl.trim()
+        : typeof body.proposedChanges?.coverImageUrl === "string"
+        ? body.proposedChanges.coverImageUrl.trim()
+        : undefined;
+    const menuDishes = Array.isArray(body.dishes)
+      ? body.dishes
+      : Array.isArray(body.proposedChanges?.menuDishes)
+      ? body.proposedChanges.menuDishes
+      : undefined;
+    const popupMeta = body.popupMeta || body.proposedChanges?.popupMeta;
+    const googlePlaceId =
+      typeof body.googlePlaceId === "string"
+        ? body.googlePlaceId.trim()
+        : typeof body.proposedChanges?.googlePlaceId === "string"
+        ? body.proposedChanges.googlePlaceId.trim()
+        : null;
+    const fallbackLat = Number(body.latitude ?? body.proposedChanges?.latitude);
+    const fallbackLng = Number(body.longitude ?? body.proposedChanges?.longitude);
+
     let priceNok: number | null = null;
     if (proposedCard.priceNok !== undefined && proposedCard.priceNok !== null && proposedCard.priceNok !== "") {
       const parsed = parseInt(String(proposedCard.priceNok), 10);
@@ -156,8 +200,17 @@ export async function POST(req: NextRequest) {
     if (isUuid) {
       const { data } = await supabase
         .from("venues")
-        .select("id, name, address, image_url, opening_hours, current_opening_hours_text, spot_type, location_schedule, category, google_rating, google_reviews_count, vibe_signals")
+        .select(VENUE_FIELDS)
         .eq("id", venueId)
+        .maybeSingle();
+      venue = data;
+    }
+
+    if (!venue && googlePlaceId) {
+      const { data } = await supabase
+        .from("venues")
+        .select(VENUE_FIELDS)
+        .eq("google_place_id", googlePlaceId)
         .maybeSingle();
       venue = data;
     }
@@ -174,22 +227,56 @@ export async function POST(req: NextRequest) {
         ? body.neighborhood.trim().slice(0, 50)
         : "sentrum";
 
+      const fallbackSlug = `${slugify(fallbackName) || "venue"}-${Date.now()
+        .toString(36)
+        .slice(-5)}`;
+      const parsedLat = Number.isFinite(fallbackLat) ? fallbackLat : 59.9139;
+      const parsedLng = Number.isFinite(fallbackLng) ? fallbackLng : 10.7522;
+      const fallbackImage =
+        coverImageUrl ||
+        (isValidImageUrl(imageUrl) ? imageUrl : null) ||
+        curatedVenuePhotos(category || "all", 1)[0];
+      const openingHoursJson = openingHours ? { summary: openingHours } : {};
+      const googleRatingRaw = Number(
+        body.googleRating ?? body.proposedChanges?.googleRating
+      );
+      const googleReviewsRaw = Number(
+        body.googleReviewsCount ?? body.proposedChanges?.googleReviewsCount
+      );
+
       const { data: createdVenue, error: insertErr } = await supabase
         .from("venues")
         .insert({
           name: fallbackName,
+          slug: fallbackSlug,
           address: fallbackAddress,
           neighborhood: fallbackNeighborhood,
-          latitude: 59.9139,
-          longitude: 10.7522,
-          image_url: isValidImageUrl(imageUrl) ? imageUrl : null,
+          latitude: parsedLat,
+          longitude: parsedLng,
+          image_url: fallbackImage,
+          price_level: typeof body.priceLevel === "string" ? body.priceLevel : "$$",
+          open_now: typeof body.openNow === "boolean" ? body.openNow : true,
+          google_place_id: googlePlaceId,
+          google_rating: Number.isFinite(googleRatingRaw) ? googleRatingRaw : null,
+          google_reviews_count: Number.isFinite(googleReviewsRaw) ? googleReviewsRaw : 0,
+          google_maps_url:
+            typeof body.googleMapsUrl === "string" ? body.googleMapsUrl : null,
+          website_uri: typeof body.websiteUri === "string" ? body.websiteUri : null,
+          phone_number: typeof body.phoneNumber === "string" ? body.phoneNumber : null,
           spot_type: spotType || "restaurant",
           current_opening_hours_text: openingHours || null,
+          opening_hours: openingHoursJson,
           location_schedule: locationSchedule || null,
           category: category || "all",
-          vibe_signals: { partner_verified: false },
+          description: description || null,
+          curated_reviews: Array.isArray(body.curatedReviews) ? body.curatedReviews : [],
+          dietary_tags: Array.isArray(dietaryTags) ? dietaryTags : [],
+          vibe_signals: {
+            partner_verified: false,
+            ...(popupMeta ? { popup_meta: popupMeta } : {}),
+          },
         })
-        .select("id, name, address, image_url, current_opening_hours_text, spot_type, location_schedule, category, google_rating, google_reviews_count, vibe_signals")
+        .select(VENUE_FIELDS)
         .single();
 
       if (insertErr || !createdVenue) {
@@ -213,7 +300,8 @@ export async function POST(req: NextRequest) {
       venue_name: venue.name,
       address: venue.address,
       cover_image_url: venue.image_url || null,
-      opening_hours: venue.current_opening_hours_text || (typeof venue.opening_hours === "string" ? venue.opening_hours : null),
+      opening_hours: venue.current_opening_hours_text || venue.opening_hours || null,
+      description: venue.description || null,
       spot_type: venue.spot_type,
       location_schedule: venue.location_schedule,
       dish_name: livePost?.dish_name || venue.name,
@@ -224,7 +312,7 @@ export async function POST(req: NextRequest) {
       dietary_tags: livePost?.dietary_tags || [],
     };
 
-    const proposedPayload = {
+    const proposedPayload: Record<string, unknown> = {
       dish_name: dishName,
       price_nok: priceNok,
       image_url: imageUrl,
@@ -234,6 +322,17 @@ export async function POST(req: NextRequest) {
       opening_hours: openingHours,
       location_schedule: locationSchedule,
       spot_type: spotType,
+      description: description || undefined,
+      cover_image_url: coverImageUrl || undefined,
+      dishes: menuDishes || undefined,
+      popup_meta: popupMeta || undefined,
+      taste_tags: Array.isArray(proposedCard.tasteTags)
+        ? proposedCard.tasteTags.slice(0, 6)
+        : undefined,
+      item_availability:
+        typeof proposedCard.itemAvailability === "string"
+          ? proposedCard.itemAvailability
+          : undefined,
     };
 
     // 3. Insert into partner_claims table
@@ -274,6 +373,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
           success: true,
           claimId: `claim_fallback_${Date.now()}`,
+          referenceCode: String(Date.now()).slice(-14).toUpperCase(),
           note: "Recorded via fallback pending table migration.",
         });
       }
@@ -294,6 +394,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       claimId: claimInsert.id,
+      referenceCode: String(claimInsert.id).replace(/-/g, "").slice(0, 14).toUpperCase(),
     });
   } catch (err) {
     return NextResponse.json(
