@@ -233,6 +233,7 @@ export function EditPostModal({ post, onClose }: EditPostModalProps) {
     const { error } = await updateFoodPost(post.id, {
       dishName: name,
       venueId,
+      category,
       dishImage: imageUrl.trim() || null,
       reviewText: review.trim() || null,
       priceNok: parsedPrice,

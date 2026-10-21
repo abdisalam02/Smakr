@@ -351,54 +351,36 @@ export default function AdminControlCenterPage() {
       showToast("Give the new venue a name.");
       return;
     }
-    const venue: Venue = {
-      id: `spot-${vName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}-${Date.now()
-        .toString()
-        .slice(-4)}`,
+
+    const result = await insertVenue({
       name: vName.trim(),
       address: vAddress.trim() || "Oslo",
-      city: "Oslo",
+      category: vCategory,
+      neighborhood: vNeighborhood as any,
       latitude: Number(vLat) || 59.9171,
       longitude: Number(vLng) || 10.7516,
-      place_type: "cafe",
-      food_category: vCategory,
-      price_level: "$$",
-      signature_dishes: [],
-      live_food_status: vStatus.trim() || undefined,
-      neighborhood: vNeighborhood,
-      dietary_tags: vDietary,
-      open_now: vOpenNow,
-      cover_image_url: null,
-      description: null,
-      has_wifi: true,
-      has_outlets: false,
-      silent_zone: false,
-      outdoor_seating: false,
-      dog_friendly: false,
-      open_late: false,
-      baseline_seats: 3,
-      baseline_noise: 2,
-      baseline_outlets: false,
-      distance_meters: null,
-      vibe: emptyVibe(),
-    };
-    addVenue(venue);
-    showToast(`Added ${venue.name} to the radar ✅`);
+      dietaryTags: vDietary,
+      openNow: vOpenNow,
+    });
+
+    if (!result.success || !result.venue) {
+      showToast(result.error || "Could not add this venue to the live radar.");
+      return;
+    }
+
+    // Use the real DB row (UUID), not a temporary optimistic id. On a reused
+    // Google/slug match, merge the returned venue instead of appending a copy.
+    if (result.reused) {
+      updateVenue(result.venue.id, result.venue);
+    } else {
+      addVenue(result.venue);
+    }
+
+    showToast("Added " + result.venue.name + " to the radar 🛰️");
     setVName("");
     setVAddress("");
     setVStatus("");
     setVDietary([]);
-
-    await insertVenue({
-      name: venue.name,
-      address: venue.address,
-      category: venue.food_category,
-      neighborhood: venue.neighborhood as any,
-      latitude: venue.latitude,
-      longitude: venue.longitude,
-      dietaryTags: venue.dietary_tags,
-      openNow: venue.open_now,
-    }).catch(() => {});
   };
 
   const startEdit = (venue: Venue) => setEditing({ ...venue });

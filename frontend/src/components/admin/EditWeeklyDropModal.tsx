@@ -21,6 +21,7 @@ export function EditWeeklyDropModal({ isOpen, onClose }: EditWeeklyDropModalProp
   const [venueId, setVenueId] = useState(weeklyPick.venue_id);
   const [dishName, setDishName] = useState(weeklyPick.dish_name);
   const [dishImage, setDishImage] = useState(weeklyPick.dish_image);
+  const [mascotAvatarUrl, setMascotAvatarUrl] = useState(weeklyPick.mascot_avatar_url || "");
   const [speechBubble, setSpeechBubble] = useState(weeklyPick.speech_bubble);
   const [priceNok, setPriceNok] = useState(String(weeklyPick.price_nok || ""));
   const [weekLabel, setWeekLabel] = useState(weeklyPick.week_label || "This Week's Pick");
@@ -31,6 +32,7 @@ export function EditWeeklyDropModal({ isOpen, onClose }: EditWeeklyDropModalProp
       setVenueId(weeklyPick.venue_id);
       setDishName(weeklyPick.dish_name);
       setDishImage(weeklyPick.dish_image);
+      setMascotAvatarUrl(weeklyPick.mascot_avatar_url || "");
       setSpeechBubble(weeklyPick.speech_bubble);
       setPriceNok(String(weeklyPick.price_nok || ""));
       setWeekLabel(weeklyPick.week_label || "This Week's Pick");
@@ -62,6 +64,18 @@ export function EditWeeklyDropModal({ isOpen, onClose }: EditWeeklyDropModalProp
     showToast("Photo uploaded.");
   };
 
+  const handleMascotUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const { url, error } = await uploadDishPhoto(file);
+    if (error || !url) {
+      showToast(error ?? "Mascot upload failed.");
+      return;
+    }
+    setMascotAvatarUrl(url);
+    showToast("Mascot avatar uploaded.");
+  };
+
   const handleSave = async () => {
     if (!venueId) {
       showToast("Select a venue for the Weekly Drop.");
@@ -78,6 +92,7 @@ export function EditWeeklyDropModal({ isOpen, onClose }: EditWeeklyDropModalProp
         venue_id: venueId,
         dish_name: dishName.trim() || "Chef's pick",
         dish_image: dishImage.trim() || "/images/placeholder-dish.jpg",
+        mascot_avatar_url: mascotAvatarUrl.trim() || undefined,
         speech_bubble: speechBubble.trim(),
         coords,
         price_nok: parsedPrice,
@@ -96,6 +111,7 @@ export function EditWeeklyDropModal({ isOpen, onClose }: EditWeeklyDropModalProp
         weekLabel: updatedPick.week_label,
         latitude: coords[1],
         longitude: coords[0],
+        mascotAvatarUrl: updatedPick.mascot_avatar_url ?? null,
       });
 
       if (error) {
@@ -239,6 +255,44 @@ export function EditWeeklyDropModal({ isOpen, onClose }: EditWeeklyDropModalProp
                   <Upload className="w-3.5 h-3.5 text-[#e84a27]" />
                   <span>Upload photo</span>
                   <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Mascot Avatar */}
+          <div>
+            <label className="text-[11px] font-semibold text-zinc-300 mb-1 block">
+              Mascot Avatar
+            </label>
+            <div className="flex items-center gap-3">
+              <div className="relative w-14 h-14 rounded-full overflow-hidden bg-white/5 border border-white/10 shrink-0">
+                {mascotAvatarUrl ? (
+                  <Image
+                    src={mascotAvatarUrl}
+                    alt="Weekly mascot"
+                    fill
+                    unoptimized
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-[9px] text-zinc-500">
+                    None
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0 space-y-1.5">
+                <input
+                  type="text"
+                  value={mascotAvatarUrl}
+                  onChange={(e) => setMascotAvatarUrl(e.target.value)}
+                  placeholder="https://… or upload avatar"
+                  className="w-full text-xs px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-hidden focus:border-[#e84a27]"
+                />
+                <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-[11px] font-semibold text-white cursor-pointer transition-colors">
+                  <Upload className="w-3.5 h-3.5 text-[#e84a27]" />
+                  <span>Upload avatar</span>
+                  <input type="file" accept="image/*" onChange={handleMascotUpload} className="hidden" />
                 </label>
               </div>
             </div>

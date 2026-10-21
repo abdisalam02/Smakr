@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 /**
  * PKCE auth callback.
  *
- * Google OAuth and email magic links both return an authorization `code` that
+ * Google OAuth and email confirmation links both return an authorization `code` that
  * must be exchanged for a session cookie pair. Because the exchange writes
  * cookies, it has to happen in a Route Handler (not a Server Component).
  */

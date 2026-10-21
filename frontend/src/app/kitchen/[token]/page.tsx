@@ -14,8 +14,16 @@ import {
   MapPin,
   Check,
   ArrowLeft,
+  Trash2,
 } from "lucide-react";
 import type { KitchenLiveStatus } from "@/types";
+
+interface PartnerDish {
+  id: string;
+  dishName: string;
+  priceNok: number | null;
+  imageUrl?: string;
+}
 
 interface KitchenRemotePageProps {
   params: Promise<{ token: string }>;
@@ -38,6 +46,10 @@ export default function KitchenRemotePage({ params }: KitchenRemotePageProps) {
   const [batchNote, setBatchNote] = useState("");
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [broadcastSuccess, setBroadcastSuccess] = useState(false);
+  const [dishes, setDishes] = useState<PartnerDish[]>([]);
+  const [menuLoading, setMenuLoading] = useState(false);
+  const [menuError, setMenuError] = useState<string | null>(null);
+  const [deletingDishId, setDeletingDishId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -67,6 +79,66 @@ export default function KitchenRemotePage({ params }: KitchenRemotePageProps) {
       cancelled = true;
     };
   }, [token]);
+
+  useEffect(() => {
+    if (!venue?.id) return;
+    let cancelled = false;
+
+    async function loadMenu() {
+      setMenuLoading(true);
+      setMenuError(null);
+      try {
+        const res = await fetch(`/api/partner/dishes?venue_id=${encodeURIComponent(venue!.id)}`);
+        const data = await res.json();
+        if (cancelled) return;
+        if (!res.ok || !data.success) {
+          setMenuError(data.error || "Could not load the menu.");
+          setDishes([]);
+        } else {
+          setDishes(Array.isArray(data.dishes) ? data.dishes : []);
+        }
+      } catch {
+        if (!cancelled) setMenuError("Could not load the menu.");
+      } finally {
+        if (!cancelled) setMenuLoading(false);
+      }
+    }
+
+    loadMenu();
+    return () => {
+      cancelled = true;
+    };
+  }, [venue?.id]);
+
+  const handleRemoveDish = async (dish: PartnerDish) => {
+    if (!venue) return;
+    const confirmed = window.confirm(`Remove ${dish.dishName} from the public menu?`);
+    if (!confirmed) return;
+
+    setDeletingDishId(dish.id);
+    setMenuError(null);
+    try {
+      const res = await fetch("/api/partner/dishes", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          venueId: venue.id,
+          kitchenToken: token,
+          dishId: dish.id,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        setMenuError(data.error || "Could not remove this dish.");
+        return;
+      }
+      setDishes((prev) => prev.filter((item) => item.id !== dish.id));
+    } catch {
+      setMenuError("Could not remove this dish due to a network error.");
+    } finally {
+      setDeletingDishId(null);
+    }
+  };
 
   const handleBroadcast = async () => {
     if (!venue) return;
@@ -351,6 +423,67 @@ export default function KitchenRemotePage({ params }: KitchenRemotePageProps) {
 
           <p className="text-[10.5px] text-zinc-400 text-center mt-3 leading-relaxed">
             Batch statuses automatically reset after 14 hours. No password required for this private kitchen link.
+          </p>
+        </section>
+
+        {/* Menu Card */}
+        <section aria-label="Menu Card" className="space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+              Menu Card
+            </span>
+            <span className="text-[10px] font-mono text-zinc-400">
+              {dishes.length} dish{dishes.length === 1 ? "" : "es"}
+            </span>
+          </div>
+
+          {menuError && (
+            <p className="rounded-xl bg-red-50 border border-red-200 px-3 py-2 text-[11px] text-red-700">
+              {menuError}
+            </p>
+          )}
+
+          {menuLoading ? (
+            <div className="rounded-2xl bg-white border border-[#E7E0D4] p-4 flex items-center justify-center">
+              <Loader2 className="w-4 h-4 animate-spin text-[#e84a27]" />
+            </div>
+          ) : dishes.length === 0 ? (
+            <p className="rounded-2xl bg-white border border-[#E7E0D4] p-4 text-center text-[11px] text-zinc-400">
+              No published dishes on this menu card yet.
+            </p>
+          ) : (
+            <div className="rounded-2xl bg-white border border-[#E7E0D4] divide-y divide-[#E7E0D4] overflow-hidden">
+              {dishes.map((dish) => (
+                <div key={dish.id} className="flex items-center gap-3 p-3">
+                  <div className="w-9 h-9 rounded-lg bg-[#F3EEE5] text-[#b85434] flex items-center justify-center text-xs font-black shrink-0">
+                    {dish.dishName.slice(0, 1).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-bold text-zinc-900 truncate">{dish.dishName}</div>
+                    {dish.priceNok != null && (
+                      <div className="text-[10px] font-mono text-zinc-400">{dish.priceNok} NOK</div>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveDish(dish)}
+                    disabled={deletingDishId === dish.id}
+                    aria-label={`Remove ${dish.dishName} from the menu`}
+                    className="p-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors cursor-pointer"
+                  >
+                    {deletingDishId === dish.id ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <p className="text-[10px] text-zinc-400 leading-relaxed">
+            Removing a dish archives it from the public menu. Existing likes and saves stay intact.
           </p>
         </section>
       </main>

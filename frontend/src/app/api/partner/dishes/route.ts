@@ -422,3 +422,84 @@ export async function PATCH(req: NextRequest) {
     );
   }
 }
+
+/**
+ * DELETE /api/partner/dishes
+ * Archive one dish belonging to the token's venue. Archiving keeps reaction
+ * history intact while removing the dish from the public menu.
+ */
+export async function DELETE(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
+  if (!checkRateLimit(ip)) {
+    return NextResponse.json({ success: false, error: "Too many dish updates." }, { status: 429 });
+  }
+
+  const supabase = getAdminClient();
+  if (!supabase) {
+    return NextResponse.json({ success: false, error: "Database unavailable" }, { status: 503 });
+  }
+
+  try {
+    const body = await req.json().catch(() => ({}));
+    const venueId = String(body.venueId ?? body.venue_id ?? "").trim();
+    const token = String(body.kitchenToken ?? body.token ?? "").trim();
+    const dishId = String(body.dishId ?? body.id ?? "").trim();
+
+    if (!UUID_RE.test(venueId) || !UUID_RE.test(dishId) || !token) {
+      return NextResponse.json(
+        { success: false, error: "Missing venueId, dishId or kitchenToken." },
+        { status: 400 }
+      );
+    }
+
+    if (!(await authorizeVenue(supabase, venueId, token))) {
+      return NextResponse.json({ success: false, error: "Invalid kitchen token." }, { status: 403 });
+    }
+
+    const { data: existing, error: existingError } = await supabase
+      .from("food_posts")
+      .select("id, dish_name")
+      .eq("id", dishId)
+      .eq("venue_id", venueId)
+      .maybeSingle();
+
+    if (existingError || !existing) {
+      return NextResponse.json(
+        { success: false, error: "Dish not found for this venue." },
+        { status: 404 }
+      );
+    }
+
+    const { error } = await supabase
+      .from("food_posts")
+      .update({ is_archived: true, is_published: false })
+      .eq("id", dishId)
+      .eq("venue_id", venueId);
+
+    if (error) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+
+    const { data: venue } = await supabase
+      .from("venues")
+      .select("signature_dishes")
+      .eq("id", venueId)
+      .maybeSingle();
+
+    if (Array.isArray(venue?.signature_dishes)) {
+      const next = venue.signature_dishes.filter(
+        (name: unknown) => name !== existing.dish_name
+      );
+      if (next.length !== venue.signature_dishes.length) {
+        await supabase.from("venues").update({ signature_dishes: next }).eq("id", venueId);
+      }
+    }
+
+    return NextResponse.json({ success: true, archived: true, dishId });
+  } catch (err) {
+    return NextResponse.json(
+      { success: false, error: err instanceof Error ? err.message : "Delete failed." },
+      { status: 500 }
+    );
+  }
+}

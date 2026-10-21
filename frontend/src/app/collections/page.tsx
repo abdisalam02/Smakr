@@ -1,59 +1,109 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { fetchCollections, fetchCollectionVenues } from "@/lib/api";
+import React, { useMemo, useState } from "react";
 import { SavedCollection, Venue } from "@/types";
 import { CollectionCard } from "@/components/collections/CollectionCard";
 import { VenueCard } from "@/components/venue/VenueCard";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
-import { OSLO_CURATED_COLLECTIONS, INITIAL_OSLO_SPOTS } from "@/lib/seeds";
-import { ArrowLeft, Loader2, Compass } from "lucide-react";
+import { ArrowLeft, Compass } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-export default function CollectionsPage() {
-  const [collections, setCollections] = useState<SavedCollection[]>(OSLO_CURATED_COLLECTIONS);
-  const [selectedCollection, setSelectedCollection] = useState<SavedCollection | null>(null);
-  const [collectionVenues, setCollectionVenues] = useState<Venue[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [loadingVenues, setLoadingVenues] = useState(false);
+type CollectionDefinition = {
+  id: string;
+  title: string;
+  description: string;
+  emoji: string;
+  tag: string;
+  matches: (venue: Venue) => boolean;
+};
 
+const COLLECTION_DEFINITIONS: CollectionDefinition[] = [
+  {
+    id: "staff-picks",
+    title: "Smakr Staff Picks",
+    description:
+      "The dishes and spots the Smakr editorial team keeps coming back to. Marked picks only — no filler.",
+    emoji: "⭐",
+    tag: "Editorial",
+    matches: (venue) => venue.is_official_pick === true,
+  },
+  {
+    id: "ramen-noodles",
+    title: "Ramen & Noodle Run",
+    description:
+      "Broth, noodles and comfort bowls across Oslo — from late-night ramen to Vietnamese and Korean favourites.",
+    emoji: "🍜",
+    tag: "Comfort Food",
+    matches: (venue) => {
+      const cat = String(venue.food_category || "").toLowerCase();
+      return ["ramen", "japanese", "noodles", "vietnamese", "korean"].includes(cat);
+    },
+  },
+  {
+    id: "coffee-bakery",
+    title: "Coffee & Bakery Stops",
+    description:
+      "Flat whites, cardamom buns and quiet corners for a laptop session or a slow morning.",
+    emoji: "☕",
+    tag: "Café Mode",
+    matches: (venue) => {
+      const cat = String(venue.food_category || "").toLowerCase();
+      return ["coffee", "bakery", "dessert", "cafe"].includes(cat);
+    },
+  },
+  {
+    id: "street-food",
+    title: "Street Food & Quick Bites",
+    description:
+      "Pizza slices, smashburgers, tacos and kebabs — the high-reward, low-friction Oslo eats.",
+    emoji: "🌮",
+    tag: "Quick Bites",
+    matches: (venue) => {
+      const cat = String(venue.food_category || "").toLowerCase();
+      return ["street_food", "burger", "pizza", "kebab", "tacos", "sandwich", "pastrami"].includes(cat);
+    },
+  },
+  {
+    id: "open-now",
+    title: "Open Right Now",
+    description:
+      "Live spots currently flagged open. Useful when the group chat has already spent 25 minutes deciding.",
+    emoji: "🟢",
+    tag: "Live",
+    matches: (venue) => venue.open_now === true,
+  },
+];
+
+export default function CollectionsPage() {
+  const venues = useCityPulseStore((state) => state.venues);
   const setSelectedVenue = useCityPulseStore((state) => state.setSelectedVenue);
   const setMapCenter = useCityPulseStore((state) => state.setMapCenter);
+  const [selectedCollection, setSelectedCollection] = useState<SavedCollection | null>(null);
   const router = useRouter();
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const data = await fetchCollections();
-        if (Array.isArray(data) && data.length > 0) {
-          setCollections(data);
-        }
-      } catch (err) {
-        console.warn("Backend collections API not available, using curated collections:", err);
-      }
-    }
-    load();
-  }, []);
+  const collections = useMemo<SavedCollection[]>(() => {
+    return COLLECTION_DEFINITIONS.map((definition) => {
+      const venueIds = venues
+        .filter((venue) => definition.matches(venue))
+        .map((venue) => venue.id);
+      return {
+        id: definition.id,
+        title: definition.title,
+        description: definition.description,
+        emoji: definition.emoji,
+        tag: definition.tag,
+        is_curated: true,
+        created_at: null,
+        venue_ids: venueIds,
+      };
+    }).filter((collection) => collection.venue_ids.length > 0);
+  }, [venues]);
 
-  async function handleSelectCollection(col: SavedCollection) {
-    setSelectedCollection(col);
-    setLoadingVenues(true);
-    try {
-      const data = await fetchCollectionVenues(col.id);
-      if (Array.isArray(data) && data.length > 0) {
-        setCollectionVenues(data);
-      } else {
-        // Fallback from local seed venues
-        const localVenues = INITIAL_OSLO_SPOTS.filter((v) => col.venue_ids.includes(v.id));
-        setCollectionVenues(localVenues);
-      }
-    } catch {
-      const localVenues = INITIAL_OSLO_SPOTS.filter((v) => col.venue_ids.includes(v.id));
-      setCollectionVenues(localVenues);
-    } finally {
-      setLoadingVenues(false);
-    }
-  }
+  const collectionVenues = useMemo<Venue[]>(() => {
+    if (!selectedCollection) return [];
+    const ids = new Set(selectedCollection.venue_ids);
+    return venues.filter((venue) => ids.has(venue.id));
+  }, [selectedCollection, venues]);
 
   function handleOpenOnMap(venue: Venue) {
     setSelectedVenue(venue as any);
@@ -67,10 +117,10 @@ export default function CollectionsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#e5dec9] pb-4">
         <div>
           <h1 className="text-xl font-bold text-[#221e19] tracking-tight">
-            Oslo Secret Study Guides & Curated Zones
+            Oslo Curated Collections
           </h1>
           <p className="text-xs text-[#6b6459] mt-0.5">
-            Handpicked study sanctuaries: Blindern specialist libraries, 24/7 OsloMet hideaways, archive reading rooms, and laptop cafés.
+            Live picks from the Smakr radar: staff favourites, ramen runs, coffee stops and what&apos;s open right now.
           </p>
         </div>
 
@@ -80,18 +130,13 @@ export default function CollectionsPage() {
             className="self-start flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#ffffff] text-[#221e19] hover:text-[#b85434] border border-[#e3dcce] text-xs font-semibold transition-colors shadow-xs"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>All Guides</span>
+            <span>All Collections</span>
           </button>
         )}
       </div>
 
       {/* Body */}
-      {loading ? (
-        <div className="py-16 flex flex-col items-center justify-center text-[#6b6459] gap-2">
-          <Loader2 className="w-5 h-5 animate-spin text-[#b85434]" />
-          <p className="text-xs">Loading guides...</p>
-        </div>
-      ) : selectedCollection ? (
+      {selectedCollection ? (
         <div className="space-y-4">
           <div className="p-5 rounded-2xl bg-[#ffffff] border border-[#ded5c2] flex items-start gap-4 shadow-xs">
             <span className="text-3xl p-2.5 bg-[#fbf9f5] rounded-xl border border-[#ded5c2] shrink-0">
@@ -114,11 +159,7 @@ export default function CollectionsPage() {
             </div>
           </div>
 
-          {loadingVenues ? (
-            <div className="py-10 flex justify-center">
-              <Loader2 className="w-5 h-5 animate-spin text-[#b85434]" />
-            </div>
-          ) : (
+          {collectionVenues.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               {collectionVenues.map((venue) => (
                 <VenueCard
@@ -128,17 +169,27 @@ export default function CollectionsPage() {
                 />
               ))}
             </div>
+          ) : (
+            <div className="py-12 flex flex-col items-center justify-center text-center text-[#6b6459] gap-2">
+              <Compass className="w-6 h-6 text-[#b85434]" />
+              <p className="text-xs">No live spots match this collection yet.</p>
+            </div>
           )}
         </div>
-      ) : (
+      ) : collections.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
           {collections.map((col) => (
             <CollectionCard
               key={col.id}
               collection={col}
-              onClick={() => handleSelectCollection(col)}
+              onClick={() => setSelectedCollection(col)}
             />
           ))}
+        </div>
+      ) : (
+        <div className="py-16 flex flex-col items-center justify-center text-center text-[#6b6459] gap-2">
+          <Compass className="w-6 h-6 text-[#b85434]" />
+          <p className="text-xs">Live venue data is still loading. Check back in a moment.</p>
         </div>
       )}
     </div>

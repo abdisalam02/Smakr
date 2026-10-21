@@ -15,7 +15,7 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 export const runtime = "nodejs";
 
 /**
- * Only admins and official Smakr editors may spend AI/Places quota here.
+ * Only admins may spend AI/Places quota here.
  * Public card rendering uses a deterministic local fallback instead.
  */
 async function canUseAiCurator(): Promise<boolean> {
@@ -28,11 +28,11 @@ async function canUseAiCurator(): Promise<boolean> {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role,is_official")
+    .select("role")
     .eq("id", user.id)
     .maybeSingle();
 
-  return profile?.role === "admin" || profile?.is_official === true;
+  return profile?.role === "admin";
 }
 
 function resolveGeminiApiKey(): string {
@@ -452,7 +452,7 @@ export async function POST(req: NextRequest) {
   try {
     if (!(await canUseAiCurator())) {
       return NextResponse.json(
-        { error: "Unauthorized. Admin or official account required." },
+        { error: "Unauthorized. Admin account required." },
         { status: 403 }
       );
     }

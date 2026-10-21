@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const venueId = typeof body.venueId === "string" ? body.venueId.trim() : "";
     const token = typeof body.kitchenToken === "string" ? body.kitchenToken.trim() : "";
+    const dishId = typeof body.dishId === "string" ? body.dishId.trim() : "";
 
     if (!venueId || !token) {
       return NextResponse.json(
@@ -148,7 +149,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: vUpdateErr.message }, { status: 500 });
     }
 
-    // 3. Update existing food post if dishName, priceNok or imageUrl is provided
+    // 3. Update ONE food post if dishName, priceNok or imageUrl is provided.
+    // Never update every dish on the venue — a partner editing the featured dish
+    // must not rename the rest of the menu.
     if (rawDishName || rawImageUrl || priceNok !== undefined) {
       const postPatch: Record<string, unknown> = {};
       if (rawDishName) postPatch.dish_name = rawDishName;
@@ -157,10 +160,25 @@ export async function POST(req: NextRequest) {
       }
       if (priceNok !== undefined) postPatch.price_nok = priceNok;
 
-      await supabase
-        .from("food_posts")
-        .update(postPatch)
-        .eq("venue_id", venueId);
+      let targetPostId = dishId;
+      if (!targetPostId) {
+        const { data: featuredPost } = await supabase
+          .from("food_posts")
+          .select("id")
+          .eq("venue_id", venueId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        targetPostId = featuredPost?.id || "";
+      }
+
+      if (targetPostId) {
+        await supabase
+          .from("food_posts")
+          .update(postPatch)
+          .eq("id", targetPostId)
+          .eq("venue_id", venueId);
+      }
     }
 
     return NextResponse.json({

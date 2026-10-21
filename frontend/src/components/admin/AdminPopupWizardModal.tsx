@@ -20,7 +20,12 @@ import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
 import type { Venue, FoodCategory, ResidencyStatus, FoodPost, Neighborhood } from "@/types";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { PopupEventCard } from "@/components/food/PopupEventCard";
-import { insertVenue, updateVenue as updateVenueDb, uploadDishPhoto } from "@/lib/supabase/data";
+import {
+  insertVenue,
+  updateVenue as updateVenueDb,
+  uploadDishPhoto,
+  insertFoodPost,
+} from "@/lib/supabase/data";
 
 export interface AdminPopupWizardModalProps {
   isOpen: boolean;
@@ -46,6 +51,7 @@ export function AdminPopupWizardModal({
   const addVenue = useCityPulseStore((s) => s.addVenue);
   const updateVenue = useCityPulseStore((s) => s.updateVenue);
   const addFoodPost = useCityPulseStore((s) => s.addFoodPost);
+  const currentUser = useCityPulseStore((s) => s.currentUser);
   const showToast = useCityPulseStore((s) => s.showToast);
 
   // Form Fields
@@ -243,23 +249,27 @@ export function AdminPopupWizardModal({
       };
 
       if (editingPopupVenue) {
-        updateVenue(finalVenue.id, finalVenue);
-        await updateVenueDb(finalVenue.id, {
+        const updateResult = await updateVenueDb(finalVenue.id, {
           name: finalVenue.name,
           address: finalVenue.address,
           description: description || undefined,
           imageUrl: finalVenue.cover_image_url || undefined,
           spotType: "popup",
           popupMeta: finalVenue.popup_meta || undefined,
-        }).catch(() => {});
-        showToast(`Updated residency: ${finalVenue.name}`, "success");
-      } else {
-        addVenue(finalVenue);
+        });
 
-        await insertVenue({
+        if (!updateResult.success) {
+          showToast(updateResult.error || "Could not update this pop-up.", "error");
+          return;
+        }
+
+        updateVenue(finalVenue.id, finalVenue);
+        showToast("Updated residency: " + finalVenue.name, "success");
+      } else {
+        const venueResult = await insertVenue({
           name: finalVenue.name,
           address: finalVenue.address,
-          category: category,
+          category,
           latitude: finalVenue.latitude,
           longitude: finalVenue.longitude,
           imageUrl: finalVenue.cover_image_url || undefined,
@@ -268,7 +278,58 @@ export function AdminPopupWizardModal({
           spotType: "popup",
           popupMeta: finalVenue.popup_meta || undefined,
           neighborhood: "sentrum" as any,
-        }).catch(() => {});
+        });
+
+        if (!venueResult.success || !venueResult.venue) {
+          showToast(venueResult.error || "Could not publish this pop-up.", "error");
+          return;
+        }
+
+        const savedVenue = venueResult.venue;
+        if (venueResult.reused) {
+          updateVenue(savedVenue.id, savedVenue);
+        } else {
+          addVenue(savedVenue);
+        }
+
+        // Persist the popup's dish card too, not just the venue shell.
+        if (currentUser?.id) {
+          const dishResult = await insertFoodPost({
+            venueId: savedVenue.id,
+            authorId: currentUser.id,
+            dishName: previewPost.dish_name,
+            category,
+            dishImage: previewPost.image_url,
+            reviewText: previewPost.review_text,
+            priceNok: previewPost.price_nok,
+            rating: previewPost.rating,
+            dietaryTags: previewPost.dietary_tags,
+            isOfficialPick: true,
+            tasteTags: previewPost.taste_tags,
+            dropBadge: previewPost.drop_badge || undefined,
+            itemAvailability: "Available Now",
+          });
+
+          if (dishResult.success && dishResult.dish) {
+            addFoodPost({
+              ...previewPost,
+              id: dishResult.dish.id,
+              spot_id: savedVenue.id,
+              spot_name: savedVenue.name,
+              spot_address: savedVenue.address,
+            });
+          } else {
+            showToast(
+              dishResult.error || "Pop-up saved, but the dish card could not be published.",
+              "error"
+            );
+          }
+        } else {
+          showToast(
+            "Pop-up venue saved, but no admin session was available for the dish card.",
+            "error"
+          );
+        }
 
         showToast("Pop-up published to live Oslo Radar!", "success");
       }
@@ -280,7 +341,6 @@ export function AdminPopupWizardModal({
       setIsPublishing(false);
     }
   };
-
   if (!isOpen) return null;
 
   return (

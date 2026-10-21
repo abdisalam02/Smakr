@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from "react";
 import { X, Loader2, Check, Send } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 /**
  * In-app Beta Feedback drawer — a lightweight, mobile-first bottom sheet that
@@ -62,7 +61,6 @@ export function BetaFeedbackDrawer() {
     }
 
     setSubmitting(true);
-    const supabase = getSupabaseBrowserClient();
 
     const device_info = {
       userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
@@ -72,17 +70,22 @@ export function BetaFeedbackDrawer() {
     };
 
     let ok = false;
-    if (supabase) {
-      const { error } = await supabase.from("beta_feedback").insert({
-        user_id: currentUser?.id || null,
-        user_email: currentUser?.email || null,
-        user_handle: currentUser?.handle || null,
-        category,
-        feedback,
-        device_info,
+    try {
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category,
+          feedback,
+          device_info,
+          user_handle: currentUser?.handle ?? null,
+        }),
       });
-      ok = !error;
-      if (error) console.warn("[beta] feedback insert failed:", error.message);
+      const payload = await res.json().catch(() => null);
+      ok = res.ok && Boolean(payload?.success);
+      if (!ok) console.warn("[beta] feedback submit failed:", payload?.error || res.status);
+    } catch (err) {
+      console.warn("[beta] feedback submit failed:", err);
     }
 
     setSubmitting(false);

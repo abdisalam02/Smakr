@@ -187,7 +187,6 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
           icon: spotIcon || linkedVenue.icon,
           curatedReviews: nextCurated,
           kitchenStatus: updatedKStatus,
-          imageUrl: imageUrl || linkedVenue.cover_image_url || undefined,
         });
       }
 

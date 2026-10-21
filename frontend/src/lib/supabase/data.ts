@@ -112,6 +112,7 @@ export async function fetchActiveWeeklyDrop(): Promise<WeeklyPick> {
       venue_id: row.venue_id,
       dish_name: row.dish_name ?? DEFAULT_WEEKLY_PICK.dish_name,
       dish_image: row.dish_image ?? DEFAULT_WEEKLY_PICK.dish_image,
+      mascot_avatar_url: row.mascot_avatar_url ?? undefined,
       speech_bubble: row.speech_bubble ?? DEFAULT_WEEKLY_PICK.speech_bubble,
       coords: [
         row.longitude ?? DEFAULT_WEEKLY_PICK.coords[0],
@@ -136,9 +137,21 @@ function isUuid(value: string | null | undefined): boolean {
   return typeof value === "string" && UUID_RE.test(value);
 }
 
+function reconcileReactionCounts(postId: string): void {
+  if (typeof window === "undefined") return;
+  void fetch("/api/reactions/reconcile", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ postId }),
+    keepalive: true,
+  }).catch(() => {
+    // Best-effort: the UI already applied the optimistic count.
+  });
+}
+
 export async function setPostLike(userId: string, postId: string, liked: boolean): Promise<void> {
   const supabase = getSupabaseBrowserClient();
-  // Only live (UUID) rows can be persisted — seed ids are local-only.
+  // Only live (UUID) rows can be persisted - seed ids are local-only.
   if (!supabase || !isUuid(userId) || !isUuid(postId)) return;
   try {
     if (liked) {
@@ -148,6 +161,8 @@ export async function setPostLike(userId: string, postId: string, liked: boolean
     }
   } catch (err) {
     console.warn("[data] setPostLike failed (kept optimistic):", err);
+  } finally {
+    reconcileReactionCounts(postId);
   }
 }
 
@@ -162,6 +177,8 @@ export async function setPostSave(userId: string, postId: string, saved: boolean
     }
   } catch (err) {
     console.warn("[data] setPostSave failed (kept optimistic):", err);
+  } finally {
+    reconcileReactionCounts(postId);
   }
 }
 
@@ -824,6 +841,8 @@ export interface WeeklyPickBroadcastInput {
   weekLabel: string;
   latitude: number;
   longitude: number;
+  /** Optional mascot avatar used by the weekly-drop card and map pin. */
+  mascotAvatarUrl?: string | null;
 }
 
 /**
@@ -851,6 +870,14 @@ export async function broadcastWeeklyPick(
       p_longitude: input.longitude,
     });
     if (!rpcErr && rpcId) {
+      // The RPC predates mascot support; apply it with a tiny follow-up update.
+      if (input.mascotAvatarUrl !== undefined) {
+        const { error: mascotError } = await supabase
+          .from("weekly_picks")
+          .update({ mascot_avatar_url: input.mascotAvatarUrl || null })
+          .eq("id", rpcId);
+        if (mascotError) return { error: mascotError.message };
+      }
       return { error: null };
     }
 
@@ -859,13 +886,14 @@ export async function broadcastWeeklyPick(
     const { error } = await supabase.from("weekly_picks").insert({
       venue_id: input.venueId,
       dish_name: input.dishName,
-      // `weekly_picks.dish_image` is NOT NULL — fall back to an empty string.
+      // `weekly_picks.dish_image` is NOT NULL - fall back to an empty string.
       dish_image: input.dishImage || "",
       price_nok: input.priceNok,
       speech_bubble: input.speechBubble,
       week_label: input.weekLabel,
       latitude: input.latitude,
       longitude: input.longitude,
+      mascot_avatar_url: input.mascotAvatarUrl || null,
       is_active: true,
     });
     return { error: error?.message ?? null };
