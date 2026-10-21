@@ -92,9 +92,7 @@ export function FoodFeed() {
       if (staffPicksOnly && !venue.is_official_pick) return false;
 
       if (currentCategory !== "all") {
-        if (currentCategory === "coffee" && venue.place_type === "cafe") {
-          // match
-        } else if (venue.food_category !== currentCategory) {
+        if (venue.food_category !== currentCategory) {
           return false;
         }
       }
@@ -121,7 +119,7 @@ export function FoodFeed() {
       <FoodCategoryBar />
 
       {/* Feed Container */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-5 no-scrollbar pb-24">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-5 no-scrollbar pb-36">
         {/* Header Bar */}
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-4 pb-2 border-b border-zinc-200/60">
           <div>

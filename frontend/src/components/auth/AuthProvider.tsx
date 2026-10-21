@@ -146,10 +146,8 @@ export function AuthProvider({
       if (cancelled) return;
 
       if (profile) {
-        const isAdmin =
-          profile.role === "admin" ||
-          (profile.handle || "").toLowerCase().includes("smak") ||
-          (profile.handle || "").toLowerCase().includes("niwache");
+        // Admin is a role, never a handle/email heuristic.
+        const isAdmin = profile.role === "admin";
         setCurrentUser({
           id: profile.id,
           email: user.email,
@@ -247,7 +245,10 @@ export function AuthProvider({
 
       // Instant, network-free hydration so the header shows the user on the
       // first frame; the `profiles` row then enriches it in the background.
-      if (!useCityPulseStore.getState().currentUser) {
+      // Always replace a different identity so a stale/cached admin user can
+      // never survive a new sign-in.
+      const existing = useCityPulseStore.getState().currentUser;
+      if (!existing || existing.id !== uid) {
         setCurrentUser(metaUser(session));
       }
       setIsAuthResolved(true);

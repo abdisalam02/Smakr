@@ -49,6 +49,7 @@ import {
 } from "@/lib/onboardingAvatar";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { useSyncAppData } from "@/hooks/useSyncAppData";
+import { PartnerPromoAdCard } from "@/components/ad/PartnerPromoAdCard";
 
 if (typeof window !== "undefined") {
   maplibregl.setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
@@ -647,6 +648,23 @@ export default function AdReelStagePage() {
   useSyncAppData(true);
   const storePosts = useCityPulseStore((s) => s.foodPosts);
   const weeklyPick = useCityPulseStore((s) => s.weeklyPick);
+  const venues = useCityPulseStore((s) => s.venues);
+
+  // Campaign switcher: Partner Announcement Ad (Static) vs Motion Reel (Video)
+  const [activeCampaignTab, setActiveCampaignTab] = useState<"partner_ad" | "motion_reel">("partner_ad");
+  const [partnerAdAspect, setPartnerAdAspect] = useState<"4:5" | "9:16">("4:5");
+  const [partnerAdHook, setPartnerAdHook] = useState<"front_door" | "delivery_markup" | "food_radar">("front_door");
+  const [selectedPartnerVenueId, setSelectedPartnerVenueId] = useState<string>("");
+  const [customHeadline, setCustomHeadline] = useState<string>("");
+  const [customSubheadline, setCustomSubheadline] = useState<string>("");
+
+  const activePartnerVenue = useMemo(() => {
+    if (selectedPartnerVenueId) {
+      const found = venues.find((v) => v.id === selectedPartnerVenueId);
+      if (found) return found;
+    }
+    return venues[0] || null;
+  }, [venues, selectedPartnerVenueId]);
 
   const [aspectMode, setAspectMode] = useState<AspectMode>("9:16");
   const [isPlaying, setIsPlaying] = useState<boolean>(() => {
@@ -1873,7 +1891,53 @@ export default function AdReelStagePage() {
       {/* ===================================================================== */}
       {!isRecordMode && (
         <header className="w-full max-w-6xl mx-auto px-4 pt-3 pb-2 flex flex-wrap items-center justify-between gap-2 z-50">
-          <div className="flex items-center gap-2 bg-[#22201E] border border-white/10 rounded-2xl px-3 py-1.5 shadow-lg">
+          {/* Campaign Studio Switcher */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center p-1 rounded-2xl bg-[#22201E] border border-white/10 shadow-lg text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveCampaignTab("partner_ad");
+                  setIsPlaying(false);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+                  activeCampaignTab === "partner_ad"
+                    ? "bg-[#e84a27] text-white shadow-xs"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Partner Ad (Static)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveCampaignTab("motion_reel")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+                  activeCampaignTab === "motion_reel"
+                    ? "bg-[#e84a27] text-white shadow-xs"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                <Video className="w-3.5 h-3.5" />
+                <span>Motion Reel (Video)</span>
+              </button>
+            </div>
+          </div>
+
+          {activeCampaignTab === "partner_ad" ? (
+            <div className="flex items-center gap-2">
+              <a
+                href="/partner"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-bold transition-colors cursor-pointer border border-white/10"
+              >
+                <span>Open /partner Studio</span>
+                <ExternalLink className="w-3.5 h-3.5 text-[#e84a27]" />
+              </a>
+            </div>
+          ) : (
+            <>
+            <div className="flex items-center gap-2 bg-[#22201E] border border-white/10 rounded-2xl px-3 py-1.5 shadow-lg">
             <span className="w-2.5 h-2.5 rounded-full bg-[#e84a27] animate-pulse" />
             <span className="font-comico text-xs tracking-wider text-white uppercase">
               SMAKR AD STAGE
@@ -2197,6 +2261,8 @@ export default function AdReelStagePage() {
               <span>Record (H)</span>
             </button>
           </div>
+          </>
+          )}
         </header>
       )}
 
@@ -2212,9 +2278,129 @@ export default function AdReelStagePage() {
       )}
 
       {/* ===================================================================== */}
-      {/* THE STAGE (1080x1920 in 9:16 OR 1920x1080 in 16:9)                    */}
+      {/* THE STAGE: STATIC PARTNER AD STUDIO VS MOTION REEL VIDEO               */}
       {/* ===================================================================== */}
-      <div className="flex-1 w-full flex items-center justify-center overflow-hidden">
+      {activeCampaignTab === "partner_ad" ? (
+        <div className="flex-1 w-full overflow-y-auto px-4 py-6 flex flex-col items-center">
+          <div className="w-full max-w-3xl space-y-5">
+            {/* Top Toolbar for Partner Ad */}
+            <div className="p-4 rounded-3xl bg-[#1c1a18] border border-white/10 flex flex-wrap items-center justify-between gap-3 shadow-lg">
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Hook Angle Selector */}
+                <div className="flex items-center p-1 rounded-xl bg-black/40 border border-white/10 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setPartnerAdHook("front_door")}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                      partnerAdHook === "front_door" ? "bg-[#e84a27] text-white" : "text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    Google Front Door
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPartnerAdHook("delivery_markup")}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                      partnerAdHook === "delivery_markup" ? "bg-[#e84a27] text-white" : "text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    Delivery Markup
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPartnerAdHook("food_radar")}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                      partnerAdHook === "food_radar" ? "bg-[#e84a27] text-white" : "text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    Live Food Radar
+                  </button>
+                </div>
+
+                {/* Aspect Ratio Switcher */}
+                <div className="flex items-center p-1 rounded-xl bg-black/40 border border-white/10 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setPartnerAdAspect("4:5")}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                      partnerAdAspect === "4:5" ? "bg-white text-zinc-950 font-black" : "text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    4:5 Feed
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPartnerAdAspect("9:16")}
+                    className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                      partnerAdAspect === "9:16" ? "bg-white text-zinc-950 font-black" : "text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    9:16 Story
+                  </button>
+                </div>
+              </div>
+
+              {/* Spot Selector */}
+              {venues.length > 0 && (
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-zinc-400 font-medium">Spot:</span>
+                  <select
+                    value={selectedPartnerVenueId || activePartnerVenue?.id || ""}
+                    onChange={(e) => setSelectedPartnerVenueId(e.target.value)}
+                    className="px-3 py-1.5 rounded-xl bg-black/50 border border-white/10 text-white font-bold focus:outline-none focus:border-[#e84a27]"
+                  >
+                    {venues.slice(0, 25).map((v) => (
+                      <option key={v.id} value={v.id} className="bg-[#1c1a18] text-white">
+                        {v.name} ({v.neighborhood || v.city || "Oslo"})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Custom Headline & Subheadline Inputs */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-3xl bg-[#1c1a18] border border-white/10 text-xs">
+              <div>
+                <label className="text-[11px] font-bold text-zinc-400 block mb-1">
+                  Custom Headline (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={customHeadline}
+                  onChange={(e) => setCustomHeadline(e.target.value)}
+                  placeholder="Defaults to active hook angle..."
+                  className="w-full px-3 py-2 rounded-xl bg-black/50 border border-white/10 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-[#e84a27]"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold text-zinc-400 block mb-1">
+                  Custom Subheadline (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={customSubheadline}
+                  onChange={(e) => setCustomSubheadline(e.target.value)}
+                  placeholder="Defaults to active hook angle..."
+                  className="w-full px-3 py-2 rounded-xl bg-black/50 border border-white/10 text-white text-xs placeholder:text-zinc-500 focus:outline-none focus:border-[#e84a27]"
+                />
+              </div>
+            </div>
+
+            {/* Center Visual Ad Card Preview */}
+            <div className="flex justify-center py-4">
+              <PartnerPromoAdCard
+                venue={activePartnerVenue}
+                aspectRatio={partnerAdAspect}
+                hookType={partnerAdHook}
+                headline={customHeadline || undefined}
+                subheadline={customSubheadline || undefined}
+              />
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 w-full flex items-center justify-center overflow-hidden">
         <div
           style={{
             width: Math.round(stageW * stageScale),
@@ -3533,6 +3719,7 @@ export default function AdReelStagePage() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Persistent HTML Audio Element for Soundtrack Playback & MediaRecorder Capture */}
       <audio

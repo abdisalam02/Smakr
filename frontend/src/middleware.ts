@@ -18,6 +18,18 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+
+  // Performance bypass: Public API endpoints never need SSR session refreshes
+  if (
+    pathname.startsWith("/api/places") ||
+    pathname.startsWith("/api/kitchen") ||
+    pathname.startsWith("/api/partner") ||
+    pathname.startsWith("/api/ai")
+  ) {
+    return NextResponse.next();
+  }
+
   // Supabase not configured yet (beta fallback) — let requests through.
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return NextResponse.next({ request });
 
@@ -45,13 +57,13 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isAdminRoute = request.nextUrl.pathname.startsWith("/admin");
+  const isAdminRoute =
+    request.nextUrl.pathname.startsWith("/admin") ||
+    request.nextUrl.pathname.startsWith("/studio") ||
+    request.nextUrl.pathname.startsWith("/ad-reel") ||
+    request.nextUrl.pathname.startsWith("/mascot-studio");
 
-  // The client-only "Beta Dev Access" bypass can't produce a server session, so
-  // outside production we defer /admin protection to the client-side role gate.
-  const devBypassAllowed = process.env.NODE_ENV !== "production";
-
-  if (isAdminRoute && !user && !devBypassAllowed) {
+  if (isAdminRoute && !user) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/";
     redirectUrl.search = "";

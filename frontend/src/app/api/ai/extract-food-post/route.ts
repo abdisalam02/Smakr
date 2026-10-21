@@ -39,14 +39,14 @@ function localCulinaryNlpExtract(rawTitle: string, authorName: string, thumbnail
   const lower = (rawTitle + " " + authorName).toLowerCase();
 
   let dish_name = "Artisanal Chef Specialty";
-  let spot_name = "Sandwich & Stuff (Prindsens Hage)";
-  let spot_id = "spot-sandwich-and-stuff";
+  let spot_name = "";
+  let spot_id = "";
   let category = "street_food";
-  let price_nok = 145;
-  let rating = 9.6;
-  let taste_tags = ["Crispy Crust", "Loaded Fries", "Juicy", "Must Try"];
-  let review_text = "Discovered arguably one of the best sandwiches in Oslo—crispy bread, tender savory meat, and perfectly seasoned loaded fries.";
-  let image_url = thumbnail || FOOD_IMAGE_MAP.sandwich;
+  let price_nok = 185;
+  let rating = 9.5;
+  let taste_tags: string[] = ["OsloEats", "Specialty"];
+  let review_text = rawTitle ? `Recommendation by ${authorName}: "${rawTitle.replace(/\s+/g, " ").slice(0, 150)}"` : "Curated Oslo food discovery.";
+  let image_url = thumbnail || "";
 
   // 1. Sandwich & Stuff / Prindsens Hage
   if (
@@ -168,8 +168,20 @@ function localCulinaryNlpExtract(rawTitle: string, authorName: string, thumbnail
     if (clean.length > 35) {
       clean = clean.slice(0, 35).trim();
     }
-    dish_name = clean || "Oslo Foodie Discovery";
-    review_text = `Discovered by ${authorName}: "${rawTitle.replace(/\s+/g, " ").slice(0, 150)}..."`;
+    dish_name = clean || "Signature Dish";
+    review_text = rawTitle ? `Highlighted by ${authorName}: "${rawTitle.replace(/\s+/g, " ").slice(0, 150)}"` : "Specialty recommendation.";
+
+    // Keyword category detection
+    if (lower.includes("ramen") || lower.includes("noodle") || lower.includes("broth")) category = "ramen";
+    else if (lower.includes("burger") || lower.includes("smash")) category = "burger";
+    else if (lower.includes("pizza") || lower.includes("slice")) category = "pizza";
+    else if (lower.includes("sushi") || lower.includes("maki") || lower.includes("sashimi")) category = "sushi";
+    else if (lower.includes("coffee") || lower.includes("espresso") || lower.includes("kaffe")) category = "coffee";
+    else if (lower.includes("bakery") || lower.includes("croissant") || lower.includes("bun") || lower.includes("bolle")) category = "bakery";
+    else if (lower.includes("dessert") || lower.includes("is") || lower.includes("ice cream")) category = "dessert";
+    else category = "street_food";
+
+    image_url = thumbnail || FOOD_IMAGE_MAP[category] || FOOD_IMAGE_MAP.street_food;
   }
 
   return {
@@ -196,13 +208,36 @@ export async function POST(req: NextRequest) {
     let author = "Oslo Foodie";
     let thumbnail = "";
 
-    // If a TikTok URL is provided, query TikTok oEmbed API
-    if (url && url.includes("tiktok.com")) {
+    // If a TikTok URL is provided, resolve redirect and query TikTok oEmbed API
+    if (url && (url.includes("tiktok.com") || url.includes("vm.tiktok.com"))) {
       try {
-        const oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(url.trim())}`;
+        let resolvedUrl = url.trim();
+
+        // 1. Resolve mobile shortened links (vm.tiktok.com / /t/...)
+        if (resolvedUrl.includes("vm.tiktok.com") || resolvedUrl.includes("/t/")) {
+          try {
+            const headRes = await fetch(resolvedUrl, {
+              method: "GET",
+              redirect: "follow",
+              headers: {
+                "User-Agent":
+                  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+              },
+            });
+            if (headRes.url) {
+              resolvedUrl = headRes.url;
+            }
+          } catch (redirectErr) {
+            console.warn("Could not resolve TikTok short link redirect:", redirectErr);
+          }
+        }
+
+        // 2. Query oEmbed with modern browser headers
+        const oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(resolvedUrl)}`;
         const res = await fetch(oembedUrl, {
           headers: {
-            "User-Agent": "Mozilla/5.0 (compatible; SmakrBot/1.0)",
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
           },
         });
         if (res.ok) {
@@ -210,6 +245,27 @@ export async function POST(req: NextRequest) {
           titleText = data.title || titleText;
           author = data.author_name ? `@${data.author_name}` : author;
           thumbnail = data.thumbnail_url || "";
+
+          // 3. Server-side proxy for TikTok CDN image to avoid hotlink/CORS 403 blocks
+          if (thumbnail && thumbnail.includes("tiktokcdn.com")) {
+            try {
+              const imgRes = await fetch(thumbnail, {
+                headers: {
+                  "User-Agent":
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+                  Referer: "https://www.tiktok.com/",
+                },
+              });
+              if (imgRes.ok) {
+                const buffer = await imgRes.arrayBuffer();
+                const contentType = imgRes.headers.get("content-type") || "image/jpeg";
+                const base64 = Buffer.from(buffer).toString("base64");
+                thumbnail = `data:${contentType};base64,${base64}`;
+              }
+            } catch (imgErr) {
+              console.warn("Failed to convert TikTok thumbnail to data URI:", imgErr);
+            }
+          }
         }
       } catch (err) {
         console.warn("TikTok oEmbed fetch failed, using fallback:", err);
@@ -220,23 +276,23 @@ export async function POST(req: NextRequest) {
     const geminiKey = process.env.GEMINI_API_KEY;
     if (geminiKey && titleText.trim()) {
       try {
-        const prompt = `You are a food critic and menu curator for 'Smakr', an Oslo food discovery guide.
-Analyze this social media food post caption / title:
+        const prompt = `You are a culinary critic and food discovery editor for 'Smakr', an Oslo food guide.
+Analyze this social media post caption / title:
 "${titleText}" (Creator: ${author})
 
 Extract and generate a structured JSON object with these exact keys:
-- dish_name: Short, clean, mouth-watering dish title (2 to 5 words, e.g. "Crispy Pork Sandwich with Loaded Fries", NOT a conversational caption or POV rant).
-- spot_name: The Oslo restaurant or cafe name mentioned (e.g. "Sandwich & Stuff (Prindsens Hage)"). If none is found, use a famous matching spot.
-- category: One of ["coffee", "bakery", "ramen", "burger", "pizza", "street_food", "sushi", "dessert", "drinks"].
-- price_nok: Realistic Oslo restaurant price in NOK (integer between 40 and 260).
+- dish_name: Short, clean dish title (2 to 5 words, e.g. "Tokyo Duck Shio Ramen", NOT a conversational rant or hashtag dump).
+- spot_name: The Oslo restaurant, pop-up, or cafe name mentioned. If none is found, return "".
+- category: One of ["coffee", "bakery", "ramen", "burger", "pizza", "street_food", "sushi", "dessert", "drinks", "fried_chicken", "pasta", "tacos"].
+- price_nok: Realistic Oslo restaurant price in NOK (integer between 40 and 280).
 - rating: Number between 9.1 and 9.8.
-- taste_tags: Array of 3 or 4 short mouthwatering descriptors (e.g. ["Crispy Crust", "Loaded Fries", "Tender Pork", "Prindsens Hage"]).
-- review_text: A concise 1-2 sentence appetizing recommendation written from a food critic's perspective, removing any hashtags or social media clickbait.
+- taste_tags: Array of 3 or 4 short mouthwatering descriptors (e.g. ["Crispy Crust", "Rich Duck Broth", "Alkaline Noodles"]).
+- review_text: A concise 1-2 sentence appetizing verdict written from an insider perspective.
 
 Respond with ONLY raw JSON without markdown code fences.`;
 
         const geminiRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${geminiKey}`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -252,24 +308,20 @@ Respond with ONLY raw JSON without markdown code fences.`;
           const rawReply = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
           if (rawReply) {
             const parsed = JSON.parse(rawReply);
-            const spotId =
-              parsed.spot_name?.toLowerCase().includes("prindsen") ||
-              parsed.spot_name?.toLowerCase().includes("sandwich")
-                ? "spot-sandwich-and-stuff"
-                : "spot-ca-phe-gronland";
+            const resolvedCategory = parsed.category || "street_food";
 
             return NextResponse.json({
               success: true,
               data: {
-                dish_name: parsed.dish_name || "Artisanal Food Specialty",
-                spot_name: parsed.spot_name || "Sandwich & Stuff (Prindsens Hage)",
-                spot_id: spotId,
-                category: parsed.category || "street_food",
-                price_nok: Number(parsed.price_nok) || 145,
-                rating: Number(parsed.rating) || 9.6,
-                taste_tags: Array.isArray(parsed.taste_tags) ? parsed.taste_tags : ["Must Try", "OsloEats"],
+                dish_name: parsed.dish_name || "Artisanal Chef Specialty",
+                spot_name: parsed.spot_name || "",
+                spot_id: "",
+                category: resolvedCategory,
+                price_nok: Number(parsed.price_nok) || 185,
+                rating: Number(parsed.rating) || 9.5,
+                taste_tags: Array.isArray(parsed.taste_tags) ? parsed.taste_tags : ["OsloEats", "Specialty"],
                 review_text: parsed.review_text || `Curated recommendation by ${author}.`,
-                image_url: thumbnail || FOOD_IMAGE_MAP[parsed.category] || FOOD_IMAGE_MAP.sandwich,
+                image_url: thumbnail || FOOD_IMAGE_MAP[resolvedCategory] || FOOD_IMAGE_MAP.street_food,
                 author_handle: author,
                 original_caption: titleText,
                 source: "gemini_ai",

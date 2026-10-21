@@ -1,7 +1,7 @@
 import type { Venue } from "@/types";
 
 export interface PopupStatus {
-  status: "none" | "upcoming" | "active" | "grace" | "expired";
+  status: "none" | "upcoming" | "active" | "grace" | "expired" | "dormant";
   daysLeft?: number;
   label?: string;
   isPulsingMarker?: boolean;
@@ -13,7 +13,43 @@ export interface PopupStatus {
  * Calculates the real-time operational status for a pop-up residency
  */
 export function getPopupStatus(venue?: Venue | null): PopupStatus {
-  if (!venue || venue.spot_type !== "popup" || !venue.popup_end_date) {
+  if (!venue || venue.spot_type !== "popup") {
+    return { status: "none" };
+  }
+
+  const meta = getPopupMeta(venue);
+  if (meta?.residency_status) {
+    if (meta.residency_status === "between_residencies") {
+      return {
+        status: "dormant",
+        label: "Between Residencies",
+        isPulsingMarker: false,
+        isDimmedCard: false,
+        hideMapPin: true,
+      };
+    }
+    if (meta.residency_status === "next_confirmed") {
+      return {
+        status: "upcoming",
+        label: meta.date_label ? `Next Drop · ${meta.date_label}` : "Next Drop Confirmed",
+        isPulsingMarker: false,
+        isDimmedCard: false,
+        hideMapPin: false,
+      };
+    }
+    if (meta.residency_status === "active") {
+      return {
+        status: "active",
+        daysLeft: 3,
+        label: meta.date_label ? `Live Now · ${meta.date_label}` : "Live Now",
+        isPulsingMarker: true,
+        isDimmedCard: false,
+        hideMapPin: false,
+      };
+    }
+  }
+
+  if (!venue.popup_end_date) {
     return { status: "none" };
   }
 
@@ -85,8 +121,72 @@ export function getPopupStatus(venue?: Venue | null): PopupStatus {
  */
 export function isVisibleInFeed(venue?: Venue | null): boolean {
   if (!venue) return true;
-  if (venue.spot_type !== "popup" || !venue.popup_end_date) return true;
+  if (venue.spot_type !== "popup") return true;
+  const meta = getPopupMeta(venue);
+  if (meta?.residency_status === "between_residencies") return true;
+  if (!venue.popup_end_date && !meta?.residency_status) return true;
   const status = getPopupStatus(venue);
-  // Exclude pop-ups older than end_date + 7 days
   return status.status !== "expired";
 }
+
+import type { PopupResidencyMeta } from "@/types";
+
+export function getPopupMeta(venue?: Venue | null): PopupResidencyMeta | null {
+  if (!venue) return null;
+  if (venue.popup_meta) return venue.popup_meta;
+  const signals = venue.vibe_signals as Record<string, unknown> | undefined;
+  if (signals?.popup_meta && typeof signals.popup_meta === "object") {
+    return signals.popup_meta as PopupResidencyMeta;
+  }
+  return null;
+}
+
+export function getPopupUrgencyLabel(venue?: Venue | null): string {
+  if (!venue) return "Pop-up";
+  const st = getPopupStatus(venue);
+  const meta = getPopupMeta(venue);
+  if (meta?.residency_status === "between_residencies" || st.status === "dormant") {
+    return "BETWEEN RESIDENCIES";
+  }
+  if (meta?.residency_status === "next_confirmed" || st.status === "upcoming") {
+    return meta?.date_label ? `NEXT DROP · ${meta.date_label}` : st.label || "NEXT DROP CONFIRMED";
+  }
+  if (st.status === "active") {
+    if (st.daysLeft !== undefined && st.daysLeft <= 1) {
+      return "🔥 TODAY ONLY";
+    }
+    if (st.daysLeft !== undefined && st.daysLeft <= 3) {
+      return `⚡ ${st.daysLeft} DAYS LEFT`;
+    }
+    if (meta?.date_label) {
+      return `LIVE NOW · ${meta.date_label}`;
+    }
+    return `🔥 ${st.daysLeft || 3} DAYS LEFT`;
+  }
+  if (st.status === "grace") {
+    return "ENDED";
+  }
+  return meta?.date_label || "Pop-up Event";
+}
+
+/**
+ * Returns a numeric urgency sort score (lower = ending sooner = ranks first)
+ */
+export function getPopupUrgencyScore(venue?: Venue | null): number {
+  if (!venue) return 999;
+  const st = getPopupStatus(venue);
+  if (st.status === "active") {
+    return st.daysLeft ?? 5;
+  }
+  if (st.status === "upcoming") {
+    return 100;
+  }
+  if (st.status === "grace") {
+    return 500;
+  }
+  if (st.status === "dormant") {
+    return 700;
+  }
+  return 999;
+}
+

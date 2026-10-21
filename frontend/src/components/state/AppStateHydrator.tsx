@@ -22,6 +22,12 @@ export function AppStateHydrator() {
     if (hydratedRef.current) return;
     hydratedRef.current = true;
 
+    // v1 cached the full user object (including stale admin identities).
+    // Purge it on first load; v2 never stores authorization state.
+    try {
+      localStorage.removeItem("smakr_app_cache_v1");
+    } catch {}
+
     const state = useCityPulseStore.getState();
     const cache = readAppCache();
     if (cache) {
@@ -33,7 +39,8 @@ export function AppStateHydrator() {
         if (cache.foodPosts) state.setFoodPosts(cache.foodPosts);
         if (cache.weeklyPick) state.setWeeklyPick(cache.weeklyPick);
       }
-      if (cache.currentUser) state.setCurrentUser(cache.currentUser);
+      // Never restore the user from disk. The live Supabase session (or the
+      // SSR initialUser) is the only source of truth for identity/role.
     }
 
     try {
@@ -57,7 +64,6 @@ export function AppStateHydrator() {
           venues: s.venues,
           foodPosts: s.foodPosts,
           weeklyPick: s.weeklyPick,
-          currentUser: s.currentUser,
         });
       }, 500);
     });

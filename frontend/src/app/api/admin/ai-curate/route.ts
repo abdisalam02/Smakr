@@ -1,8 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import {
+  PLACES_API_BASE,
+  PLACES_FIELD_MASK,
+  mapGooglePlace,
+  mockPlace,
+  type GooglePlaceNew,
+  type PlaceResult,
+} from "@/lib/places/google";
+import { curatedVenuePhotos } from "@/lib/places/curatedPhotos";
+import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
+
+/**
+ * Only admins and official Smakr editors may spend AI/Places quota here.
+ * Public card rendering uses a deterministic local fallback instead.
+ */
+async function canUseAiCurator(): Promise<boolean> {
+  const supabase = await getSupabaseServerClient();
+  if (!supabase) return false;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return false;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role,is_official")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  return profile?.role === "admin" || profile?.is_official === true;
+}
 
 function resolveGeminiApiKey(): string {
   const fromEnv =
@@ -53,10 +84,21 @@ interface GenerateIgCaptionPayload {
   language?: "en" | "no" | "bilingual";
 }
 
+interface ParsePopupDropPayload {
+  mode: "parse-popup-drop";
+  rawText?: string;
+  imageBase64?: string;
+  mimeType?: string;
+}
+
 type AiCurateRequest =
   | GenerateDishNotePayload
   | ExtractMenuPricesPayload
-  | GenerateIgCaptionPayload;
+  | GenerateIgCaptionPayload
+  | ParsePopupDropPayload;
+
+// In-memory rate limiting map for dish note suggestions (20 per 10 mins per IP)
+const aiRateMap = new Map<string, { count: number; expiresAt: number }>();
 
 function resolveServerNeighborhoodTags(
   neighborhood = "",
@@ -367,36 +409,40 @@ async function callGeminiGenerateContent(
   contents: Array<Record<string, unknown>>,
   temperature = 0.35
 ) {
-  const endpoints = apiKey.startsWith("AQ.")
-    ? [
-        `https://aiplatform.googleapis.com/v1/publishers/google/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
-      ]
-    : [
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
-        `https://aiplatform.googleapis.com/v1/publishers/google/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
-      ];
+  const models = ["gemini-3.8-flash", "gemini-2.5-flash", "gemini-2.0-flash"];
 
-  for (const url of endpoints) {
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents,
-          generationConfig: {
-            temperature,
-            responseMimeType: "application/json",
-          },
-        }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (rawText) return rawText as string;
+  for (const model of models) {
+    const endpoints = apiKey.startsWith("AQ.")
+      ? [
+          `https://aiplatform.googleapis.com/v1/publishers/google/models/${model}:generateContent?key=${apiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        ]
+      : [
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          `https://aiplatform.googleapis.com/v1/publishers/google/models/${model}:generateContent?key=${apiKey}`,
+        ];
+
+    for (const url of endpoints) {
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents,
+            generationConfig: {
+              temperature,
+              responseMimeType: "application/json",
+            },
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (rawText) return rawText as string;
+        }
+      } catch {
+        // try next endpoint
       }
-    } catch {
-      // try next endpoint
     }
   }
   return null;
@@ -404,10 +450,20 @@ async function callGeminiGenerateContent(
 
 export async function POST(req: NextRequest) {
   try {
+    if (!(await canUseAiCurator())) {
+      return NextResponse.json(
+        { error: "Unauthorized. Admin or official account required." },
+        { status: 403 }
+      );
+    }
+
     const body = (await req.json()) as AiCurateRequest;
     const apiKey = resolveGeminiApiKey();
 
     if (body.mode === "generate-dish-note") {
+      const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
+      const now = Date.now();
+      const rateData = aiRateMap.get(ip);
       const dishName = (body.dishName || "Signature Dish").trim();
       const venueName = (body.venueName || "Oslo Spot").trim();
       const category = body.category || "all";
@@ -417,6 +473,20 @@ export async function POST(req: NextRequest) {
         .slice(0, 6);
 
       const fb = fallbackDishNote(dishName, venueName, category, rawReviews);
+
+      if (rateData && rateData.expiresAt > now) {
+        if (rateData.count >= 20) {
+          return NextResponse.json({
+            note: fb.note,
+            tasteNote: fb.note,
+            suggestedPriceNok: fb.suggestedPriceNok,
+          });
+        }
+        rateData.count++;
+      } else {
+        aiRateMap.set(ip, { count: 1, expiresAt: now + 10 * 60 * 1000 });
+      }
+
       if (!apiKey) {
         return NextResponse.json({
           note: fb.note,
@@ -601,6 +671,73 @@ export async function POST(req: NextRequest) {
         .join("\n");
 
 
+function getUpcomingWeekendDates(): { start: string; end: string } {
+  const now = new Date();
+  const day = now.getDay();
+  const daysUntilFriday = (5 - day + 7) % 7;
+  const friday = new Date(now);
+  friday.setDate(now.getDate() + (daysUntilFriday === 0 && now.getHours() >= 22 ? 7 : daysUntilFriday));
+  friday.setHours(17, 0, 0, 0);
+
+  const sunday = new Date(friday);
+  sunday.setDate(friday.getDate() + 2);
+  sunday.setHours(23, 0, 0, 0);
+
+  return {
+    start: friday.toISOString(),
+    end: sunday.toISOString(),
+  };
+}
+
+function fallbackParsePopup(
+  text: string,
+  defaultDates: { start: string; end: string }
+) {
+  const lower = text.toLowerCase();
+  const isBecco = lower.includes("becco");
+  const isTrekanten = lower.includes("trekanten");
+  const isBurger = lower.includes("burger") || lower.includes("nolo");
+  const isRamen = lower.includes("ramen") || lower.includes("hot temper") || isBecco;
+
+  const priceMatch = text.match(/(\d{2,3})\s*(?:kr|nok)/i);
+  const priceNok = priceMatch ? parseInt(priceMatch[1], 10) : isRamen ? 195 : 175;
+
+  const capMatch = text.match(/(\d{2,3})\s*(?:bowls?|portions?|porsjoner|stk)/i);
+  const portionCap = capMatch ? `${capMatch[1]} bowls/night` : "80 bowls/night";
+
+  return {
+    popupName: isRamen
+      ? "Hot Temper Ramen Residency"
+      : isBurger
+      ? "Nolo Smash Burger Pop-up"
+      : "Oslo Kitchen Residency",
+    hostVenueQuery: isBecco
+      ? "Becco"
+      : isTrekanten
+      ? "Trekanten"
+      : lower.includes("fuglen")
+      ? "Fuglen"
+      : "Becco",
+    guestChef: isRamen ? "Hot Temper" : isBurger ? "Nolo Burger Crew" : "Guest Collective",
+    startDate: defaultDates.start,
+    endDate: defaultDates.end,
+    dailyHours: "17:00 – Late (til tomt)",
+    portionCap,
+    entryType: "walk_in" as const,
+    ticketUrl: null,
+    dishName: isRamen
+      ? "Tokyo Duck Shio Ramen"
+      : isBurger
+      ? "Dry-Aged Double Smash Burger"
+      : "Signature Pop-up Special",
+    priceNok,
+    category: isRamen ? "ramen" : isBurger ? "burger" : "street_food",
+    tasteNote: isRamen
+      ? "Rich roasted duck broth with house-made alkaline noodles and fragrant yuzu oil."
+      : "Ultra-crispy lacy edges, double cheddar, and toasted buttered potato bun.",
+  };
+}
+
       const rawText = await callGeminiGenerateContent(
         apiKey,
         [{ role: "user", parts: [{ text: prompt }] }],
@@ -630,6 +767,193 @@ export async function POST(req: NextRequest) {
       } catch {
         return NextResponse.json(fb);
       }
+    }
+
+    if (body.mode === "parse-popup-drop") {
+      const getUpcomingWeekendDates = (): { start: string; end: string } => {
+        const now = new Date();
+        const day = now.getDay();
+        const daysToFri = (5 - day + 7) % 7;
+        const fri = new Date(now);
+        fri.setDate(now.getDate() + daysToFri);
+        const sun = new Date(fri);
+        sun.setDate(fri.getDate() + 2);
+        return {
+          start: fri.toISOString(),
+          end: sun.toISOString(),
+        };
+      };
+
+      const fallbackParsePopup = (text: string, defaultDates: { start: string; end: string }) => {
+        const isHotTemper = /hot temper/i.test(text);
+        const isBecco = /becco/i.test(text);
+        return {
+          popupName: isHotTemper ? "Hot Temper Ramen Residency" : "Oslo Culinary Pop-up",
+          hostVenueQuery: isBecco ? "Becco" : "Becco",
+          guestChef: isHotTemper ? "Hot Temper / Chef Ole" : "Guest Chef",
+          startDate: defaultDates.start,
+          endDate: defaultDates.end,
+          dailyHours: "17:00 – Late (til tomt)",
+          portionCap: "80 bowls/night",
+          entryType: "walk_in" as const,
+          ticketUrl: null,
+          dishName: isHotTemper ? "Tokyo-style Duck Shio Ramen" : "Signature Pop-up Special",
+          priceNok: 195,
+          category: isHotTemper ? "ramen" : "street_food",
+          tasteNote: "Simmered duck broth with hand-crafted noodles and slow-braised chashu.",
+        };
+      };
+
+      const rawText = (body.rawText || "").trim();
+      const imageBase64 = body.imageBase64;
+      const defaultDates = getUpcomingWeekendDates();
+
+      let parsed: {
+        popupName: string;
+        hostVenueQuery: string;
+        guestChef: string;
+        startDate: string;
+        endDate: string;
+        dailyHours: string;
+        portionCap: string;
+        entryType: "walk_in" | "ticketed" | "rsvp";
+        ticketUrl: string | null;
+        dishName: string;
+        priceNok: number;
+        category: string;
+        tasteNote: string;
+      } | null = null;
+
+      if (apiKey) {
+        const parts: Array<Record<string, unknown>> = [];
+        if (imageBase64) {
+          const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
+          parts.push({
+            inlineData: {
+              mimeType: body.mimeType || "image/jpeg",
+              data: cleanBase64,
+            },
+          });
+        }
+        parts.push({
+          text: `You are a culinary curator for Smakr Oslo (@smakr.no).
+Parse the following Oslo culinary pop-up / kitchen residency announcement into strict JSON:
+${rawText ? `ANNOUNCEMENT TEXT:\n"""\n${rawText}\n"""` : ""}
+
+Extract and infer:
+1. popupName: Catchy official name of the pop-up residency (e.g. "Hot Temper Ramen Residency")
+2. hostVenueQuery: The host venue, bar, or restaurant hosting it in Oslo (e.g. "Becco", "Trekanten", "Torggata Botaniske", "Kulturhuset", "Fuglen"). Clean venue name only!
+3. guestChef: Guest chef or pop-up crew name (e.g. "Hot Temper", "Chef Ole")
+4. startDate: ISO 8601 string for start date (default to "${defaultDates.start}" if unspecified)
+5. endDate: ISO 8601 string for closing date (default to "${defaultDates.end}" if unspecified)
+6. dailyHours: Human readable hours (e.g. "17:00 – Late (til tomt)")
+7. portionCap: Batch limit string or portions per night (e.g. "80 bowls/night" or "120 portions")
+8. entryType: "walk_in" | "ticketed" | "rsvp"
+9. ticketUrl: URL if mentioned or null
+10. dishName: Signature featured dish name (e.g. "Tokyo Duck Shio Ramen")
+11. priceNok: Numeric price in NOK (e.g. 195)
+12. category: Food category slug (one of: ramen, burger, pizza, tacos, dumplings, bao, street_food, bakery, coffee, dessert, drinks, indian, kebab, pasta, sushi)
+13. tasteNote: 12-14 word insider verdict focusing on aroma, crispness, broth, or spices.
+
+Return STRICT JSON:
+{
+  "popupName": string,
+  "hostVenueQuery": string,
+  "guestChef": string,
+  "startDate": string,
+  "endDate": string,
+  "dailyHours": string,
+  "portionCap": string,
+  "entryType": "walk_in" | "ticketed" | "rsvp",
+  "ticketUrl": string | null,
+  "dishName": string,
+  "priceNok": number,
+  "category": string,
+  "tasteNote": string
+}`,
+        });
+
+        const rawResult = await callGeminiGenerateContent(
+          apiKey,
+          [{ role: "user", parts }],
+          0.3
+        );
+
+        if (rawResult) {
+          try {
+            parsed = JSON.parse(rawResult);
+          } catch {
+            // fallback
+          }
+        }
+      }
+
+      const nonNullParsed = parsed ?? fallbackParsePopup(rawText, defaultDates);
+      const hostQuery = nonNullParsed.hostVenueQuery || "Becco";
+      const googleKey = process.env.GOOGLE_PLACES_API_KEY;
+      let resolvedPlace: PlaceResult | null = null;
+
+      if (googleKey) {
+        try {
+          const res = await fetch(`${PLACES_API_BASE}/places:searchText`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Goog-Api-Key": googleKey,
+              "X-Goog-FieldMask": PLACES_FIELD_MASK,
+            },
+            body: JSON.stringify({
+              textQuery: `${hostQuery} Oslo Norway`,
+              maxResultCount: 3,
+              languageCode: "en",
+            }),
+            cache: "no-store",
+          });
+          const data = (await res.json()) as {
+            places?: GooglePlaceNew[];
+          };
+          if (data.places && data.places.length > 0) {
+            resolvedPlace = mapGooglePlace(data.places[0], nonNullParsed.category || "drinks");
+          }
+        } catch (err) {
+          console.warn("[ai-curate/parse-popup] Google Places lookup failed:", err);
+        }
+      }
+
+      if (!resolvedPlace) {
+        resolvedPlace = mockPlace(`${hostQuery} Oslo`, nonNullParsed.category || "drinks");
+        if (hostQuery.toLowerCase().includes("becco")) {
+          resolvedPlace.name = "Becco";
+          resolvedPlace.formatted_address = "Kristian Augusts gate 11, 0164 Oslo";
+          resolvedPlace.neighborhood = "sentrum";
+          resolvedPlace.location = { lat: 59.9168, lng: 10.7378 };
+        }
+      }
+
+      const hostPhotos = (resolvedPlace.photos || [])
+        .slice(0, 8)
+        .map((ref) => `/api/places/photos?ref=${encodeURIComponent(ref)}&w=800`);
+
+      const curatedCategoryPhotos = curatedVenuePhotos(nonNullParsed.category, 6);
+
+      return NextResponse.json({
+        success: true,
+        parsed: nonNullParsed,
+        parsedPopup: nonNullParsed,
+        hostPlace: resolvedPlace,
+        hostVenue: {
+          google_place_id: resolvedPlace.place_id,
+          name: resolvedPlace.name,
+          formatted_address: resolvedPlace.formatted_address,
+          neighborhood: resolvedPlace.neighborhood,
+          lat: resolvedPlace.location.lat,
+          lng: resolvedPlace.location.lng,
+        },
+        availablePhotos: {
+          hostPhotos,
+          curatedCategoryPhotos,
+        },
+      });
     }
 
     return NextResponse.json({ error: "Invalid mode" }, { status: 400 });

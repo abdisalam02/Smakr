@@ -3,7 +3,7 @@ import type { MascotConfig } from "./mascot";
 
 export type VibeStatus = "optimal" | "moderate" | "packed";
 
-export type SpotType = "restaurant" | "food_truck" | "popup";
+export type SpotType = "restaurant" | "food_truck" | "popup" | "pop_up" | "standard";
 
 export type FoodCategory =
   | "all"
@@ -24,7 +24,9 @@ export type FoodCategory =
   | "fried_chicken"
   | "kebab"
   | "vietnamese"
-  | "indian";
+  | "indian"
+  | "mandi_rice"
+  | "middle_eastern";
 
 export type DietaryTag = "vegan" | "vegetarian" | "halal" | "gluten_free";
 
@@ -154,6 +156,16 @@ export interface FoodPost {
   price_tier?: string | null;
   is_published?: boolean;
   is_archived?: boolean;
+  kitchen_status?: KitchenLiveStatus | null;
+}
+
+export interface KitchenLiveStatus {
+  status: "normal" | "fresh_batch" | "low_stock" | "sold_out";
+  batch_note?: string; // e.g. "Warm cardamom buns fresh from the oven"
+  dish_highlight?: string;
+  updated_at: string; // ISO timestamp
+  kitchen_token?: string; // e.g. "smk_kitch_..."
+  verified_kitchen?: boolean;
 }
 
 export interface VibeMetrics {
@@ -171,6 +183,32 @@ export interface VibeMetrics {
   decay_factor: number;
   avg_download_mbps: number | null;
   avg_ping_ms: number | null;
+}
+
+export type ResidencyStatus = "active" | "next_confirmed" | "between_residencies";
+
+export interface PopupResidencyMeta {
+  brand_id?: string;                           // Enduring brand slug (e.g. 'hot-temper')
+  residency_status?: ResidencyStatus;          // 'active' | 'next_confirmed' | 'between_residencies'
+  host_venue_name?: string;                   // e.g. "Hosted at Becco Wine Bar"
+  host_venue_id?: string;                     // Foreign key to host venue in database
+  host_address?: string;                      // Physical address of host
+  guest_chef?: string;                        // e.g. "Chef Ole & Linn"
+  batch_limit?: string;                       // e.g. "60 portions/night"
+  portion_cap?: string;                       // e.g. "80 bowls/night"
+  rsvp_type?: "walk_in" | "rsvp" | "ticketed";// default 'walk_in'
+  entry_type?: "walk_in" | "rsvp" | "ticketed" | "guest_list";
+  rsvp_url?: string;
+  ticket_url?: string;
+  daily_hours?: string;                       // e.g. "17:00 – Late"
+  event_hours?: string;                       // e.g. "18:00 – Late"
+  date_label?: string;                        // e.g. "Oct 24 – Oct 27"
+  dates_label?: string;                       // e.g. "Oct 24 – Oct 27"
+  next_drop_date?: string;                    // ISO date for upcoming residency drop
+  bring_back_count?: number;                  // Community crowd-demand counter
+  tiktok_url?: string;                        // Social video source
+  instagram_url?: string;
+  past_host_venues?: string[];                // Portfolio of previous Oslo host spots
 }
 
 export interface Venue {
@@ -222,6 +260,8 @@ export interface Venue {
   current_opening_hours_text?: string | null;
   is_official_pick?: boolean;
   vibe_signals?: Record<string, unknown> | null;
+  kitchen_status?: KitchenLiveStatus | null;
+  popup_meta?: PopupResidencyMeta | null;
 }
 
 export interface LiveCheckin {

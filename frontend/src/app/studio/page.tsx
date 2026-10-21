@@ -138,19 +138,10 @@ const INITIAL_STUDIO_STATE: StudioState = {
 
 export default function StudioPage() {
   const currentUser = useCityPulseStore((s) => s.currentUser);
-  const [authed, setAuthed] = useState(true);
-  const [passcode, setPasscode] = useState('');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const sp = new URLSearchParams(window.location.search);
-      if (
-        sp.get('passcode') === 'smakr-admin' ||
-        sp.get('passcode') === 'oslo2026' ||
-        localStorage.getItem('smakr_studio_auth') === 'true'
-      ) {
-        setAuthed(true);
-      }
       const modeParam = sp.get('mode') as FoundryMode | null;
       if (modeParam) {
         setState((prev) => ({
@@ -494,8 +485,7 @@ export default function StudioPage() {
       : CANVAS_SIZES[state.aspectRatio || '9:16'];
 
   // Admin access gate check
-  const isAllowed =
-    currentUser?.is_official === true || currentUser?.role === 'admin' || authed;
+  const isAllowed = currentUser?.role === "admin" || currentUser?.is_official === true;
 
   if (!isAllowed) {
     return (
@@ -506,26 +496,14 @@ export default function StudioPage() {
           </div>
           <div>
             <h1 className="font-comico text-xl text-[#231F1D]">Smakr Asset Studio</h1>
-            <p className="text-xs text-[#6E655F] mt-1">Admin Sticker & Asset Foundry</p>
+            <p className="text-xs text-[#6E655F] mt-1">Admin access required</p>
           </div>
-          <input
-            type="password"
-            placeholder="Admin Passcode"
-            value={passcode}
-            onChange={(e) => setPasscode(e.target.value)}
-            className="w-full h-11 px-4 rounded-xl border border-[#D8CFC0] bg-[#FAF7F2] text-sm text-[#231F1D] text-center font-mono focus:border-[#e84a27]"
-          />
-          <button
-            type="button"
-            onClick={() => {
-              if (passcode === 'smakr-admin' || passcode === 'oslo2026') {
-                setAuthed(true);
-              }
-            }}
-            className="w-full h-11 rounded-xl bg-[#e84a27] text-white font-bold text-xs uppercase tracking-wider"
+          <Link
+            href="/"
+            className="inline-block w-full h-11 leading-[44px] rounded-xl bg-[#e84a27] text-white font-bold text-xs uppercase tracking-wider text-center"
           >
-            Enter Studio
-          </button>
+            Return to Radar
+          </Link>
         </div>
       </main>
     );

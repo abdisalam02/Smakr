@@ -48,6 +48,8 @@ const CATEGORY_ICON_MAP: Record<FoodCategory, React.ComponentType<{ className?: 
   kebab: KebabIcon,
   vietnamese: PhoIcon,
   indian: CurryIcon,
+  mandi_rice: CurryIcon,
+  middle_eastern: KebabIcon,
 };
 
 export function FoodCategoryBar({ compact = false }: FoodCategoryBarProps) {

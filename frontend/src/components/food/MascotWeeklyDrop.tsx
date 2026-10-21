@@ -40,13 +40,7 @@ export function MascotWeeklyDrop({
     (state) => state.venues.find((v) => v.id === state.weeklyPick.venue_id) ?? null
   );
 
-  const isViewerAdmin = Boolean(
-    currentUser?.role === "admin" ||
-    currentUser?.is_official ||
-    (currentUser?.handle || "").toLowerCase().includes("niwache") ||
-    (currentUser?.handle || "").toLowerCase().includes("smak") ||
-    (currentUser?.email || "").toLowerCase().includes("niwache")
-  );
+  const isViewerAdmin = currentUser?.role === "admin";
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);

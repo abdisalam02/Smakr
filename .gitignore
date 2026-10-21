@@ -58,3 +58,6 @@ frontend/scripts/debugInspect.*
 frontend/Open-peeps-b/
 frontend/open-peeps-b/
 frontend/src/lib/authentic_smile_big*.txt
+frontend/supabase/.temp/
+screenshot_*.png
+test_*.png

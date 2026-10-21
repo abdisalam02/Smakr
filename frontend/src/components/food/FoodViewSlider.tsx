@@ -1,13 +1,15 @@
 "use client";
 
 import React from "react";
-import { Utensils, MapPin, Plus } from "lucide-react";
+import { Utensils, Store, Plus } from "lucide-react";
 import { motion } from "motion/react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
+import { TicketStubIcon } from "@/components/food/FoodIcons";
 
 interface FoodViewSliderProps {
   dishesCount: number;
   spotsCount: number;
+  popupsCount?: number;
   className?: string;
 }
 
@@ -16,6 +18,7 @@ const SPRING = { type: "spring", stiffness: 260, damping: 26, mass: 0.7 } as con
 export function FoodViewSlider({
   dishesCount,
   spotsCount,
+  popupsCount = 0,
   className = "",
 }: FoodViewSliderProps) {
   const feedMode = useCityPulseStore((state) => state.feedMode);
@@ -24,19 +27,17 @@ export function FoodViewSlider({
   const setMobileSheet = useCityPulseStore((state) => state.setMobileSheetState);
   const openCreateDish = useCityPulseStore((state) => state.openCreateDish);
 
-  const handleSelectMode = (mode: "food" | "places") => {
+  const handleSelectMode = (mode: "food" | "places" | "popups") => {
     setFeedMode(mode);
-    // If mobile sheet is in collapsed peek state, smoothly open to half so user can view the list
     if (mobileSheet === "peek") {
       setMobileSheet("half");
     }
   };
 
   const isFeedActive = feedMode === "food";
-  const isRadarActive = feedMode === "places";
+  const isSpotsActive = feedMode === "places";
+  const isPopupsActive = feedMode === "popups";
 
-  // The active tab carries its own solid background (no shared-layout indicator,
-  // which could detach and leave white text on a white nav).
   const tabClass = (active: boolean) =>
     `relative flex items-center justify-center rounded-full text-xs font-semibold cursor-pointer outline-none border-0 select-none transition-colors duration-200 ${
       active
@@ -47,9 +48,9 @@ export function FoodViewSlider({
   return (
     <motion.nav
       layout
-      aria-label="Feed or Radar navigation"
+      aria-label="Feed mode navigation"
       transition={SPRING}
-      className={`pointer-events-auto select-none bg-white/80 dark:bg-stone-900/80 backdrop-blur-md border border-black/10 dark:border-white/10 rounded-full px-2 py-1.5 shadow-xl flex items-center gap-1.5 ${className}`}
+      className={`pointer-events-auto select-none bg-white/85 dark:bg-stone-900/85 backdrop-blur-md border border-black/10 dark:border-white/10 rounded-full px-2 py-1.5 shadow-xl flex items-center gap-1.5 ${className}`}
       style={{
         WebkitTouchCallout: "none",
         WebkitUserSelect: "none",
@@ -57,12 +58,12 @@ export function FoodViewSlider({
         touchAction: "manipulation",
       }}
     >
-      {/* Feed Tab */}
+      {/* 1. Dishes Tab */}
       <motion.button
         layout
         type="button"
         onClick={() => handleSelectMode("food")}
-        aria-label="View Food Feed"
+        aria-label="View Dishes Feed"
         aria-pressed={isFeedActive}
         transition={SPRING}
         className={tabClass(isFeedActive)}
@@ -71,8 +72,8 @@ export function FoodViewSlider({
           <Utensils className="w-3.5 h-3.5 shrink-0" />
           {isFeedActive && (
             <span className="flex items-center gap-1.5 whitespace-nowrap">
-              <span className="tracking-tight">Feed</span>
-              {dishesCount >= 25 && (
+              <span className="tracking-tight">Dishes</span>
+              {dishesCount > 0 && (
                 <span className="text-[10px] tabular-nums font-normal opacity-85">
                   {dishesCount}
                 </span>
@@ -82,13 +83,13 @@ export function FoodViewSlider({
         </span>
       </motion.button>
 
-      {/* Prominent High-Contrast Add (+) Button — joins the layout animation */}
+      {/* Prominent Add (+) Button (Centered) */}
       <motion.button
         layout
         type="button"
         onClick={openCreateDish}
-        title="Log a Dish / Spot"
-        aria-label="Log a Dish or Spot"
+        title="Log a Dish"
+        aria-label="Log a Dish"
         transition={SPRING}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
@@ -97,22 +98,22 @@ export function FoodViewSlider({
         <Plus className="w-4 h-4 stroke-[2.2]" />
       </motion.button>
 
-      {/* Radar / Places Tab */}
+      {/* 2. Spots Tab */}
       <motion.button
         layout
         type="button"
         onClick={() => handleSelectMode("places")}
-        aria-label="View Food Radar"
-        aria-pressed={isRadarActive}
+        aria-label="View Food Spots"
+        aria-pressed={isSpotsActive}
         transition={SPRING}
-        className={tabClass(isRadarActive)}
+        className={tabClass(isSpotsActive)}
       >
         <span className="flex items-center gap-1.5 shrink-0">
-          <MapPin className="w-3.5 h-3.5 shrink-0" />
-          {isRadarActive && (
+          <Store className="w-3.5 h-3.5 shrink-0" />
+          {isSpotsActive && (
             <span className="flex items-center gap-1.5 whitespace-nowrap">
-              <span className="tracking-tight">Radar</span>
-              {spotsCount >= 25 && (
+              <span className="tracking-tight">Spots</span>
+              {spotsCount > 0 && (
                 <span className="text-[10px] tabular-nums font-normal opacity-85">
                   {spotsCount}
                 </span>

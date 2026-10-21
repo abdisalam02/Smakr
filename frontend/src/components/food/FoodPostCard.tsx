@@ -44,6 +44,10 @@ export const FoodPostCard = React.memo(function FoodPostCard({
   const mascotConfig = useCityPulseStore((state) => state.mascotConfig);
 
   const popupStatus = getPopupStatus(linkedVenue);
+  const kStatus = linkedVenue?.kitchen_status || post.kitchen_status;
+  const activeKitchenStatus = kStatus?.status && kStatus.status !== "normal" ? kStatus.status : null;
+  const kitchenBatchNote = kStatus?.batch_note;
+  const isVerifiedKitchen = Boolean(kStatus?.verified_kitchen);
 
   const [showHeart, setShowHeart] = useState(false);
 
@@ -82,9 +86,11 @@ export const FoodPostCard = React.memo(function FoodPostCard({
     return /^Signature .+ prepared fresh at /i.test(txt.trim());
   };
 
-  // Auto-generate real AI taste notes for any dish that was imported without a note
+  // Auto-generate real AI taste notes for the primary hero dish if imported without a note
   React.useEffect(() => {
-    if (!isGenericSignatureText(post.review_text)) return;
+    if (currentUser?.role !== "admin") return;
+    if (!priority || !isGenericSignatureText(post.review_text)) return;
+    if (dinerQuotes.length === 0) return;
     const cacheKey = `smakr_ai_note_v4_${post.id}_${post.dish_name}`;
     if (typeof window !== "undefined") {
       const cached = sessionStorage.getItem(cacheKey);
@@ -120,7 +126,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
     return () => {
       cancelled = true;
     };
-  }, [post.id, post.review_text, post.dish_name, post.spot_name, post.category, dinerQuotes]);
+  }, [priority, post.id, post.review_text, post.dish_name, post.spot_name, post.category, dinerQuotes, currentUser?.role]);
 
   // Dish-specific Smakr Taste Note / Verdict (never generic "Signature X prepared fresh at Y")
   const dishVerdict = React.useMemo(() => {
@@ -180,20 +186,11 @@ export const FoodPostCard = React.memo(function FoodPostCard({
       ? (post.rating > 5 ? (post.rating / 2).toFixed(1) : post.rating.toFixed(1))
       : "4.7";
 
-  const isViewerAdmin = Boolean(
-    currentUser?.role === "admin" ||
-    currentUser?.is_official ||
-    (currentUser?.handle || "").toLowerCase().includes("niwache") ||
-    (currentUser?.handle || "").toLowerCase().includes("smak") ||
-    (currentUser?.email || "").toLowerCase().includes("niwache")
-  );
+  const isViewerAdmin = currentUser?.role === "admin";
 
   const isNiwacheAdmin = Boolean(
     post.is_official_pick ||
-    (post.author?.handle && (
-      post.author.handle.toLowerCase().includes("niwache") ||
-      post.author.handle.toLowerCase().includes("smak")
-    )) ||
+    post.author?.badge === "Verified Foodie" ||
     (currentUser?.role === "admin" && currentUser?.handle === post.author?.handle) ||
     isViewerAdmin
   );
@@ -350,6 +347,26 @@ export const FoodPostCard = React.memo(function FoodPostCard({
               </span>
             ) : null}
 
+            {/* Live Kitchen Batch Badges */}
+            {activeKitchenStatus === "fresh_batch" && (
+              <span className="bg-[#e84a27] text-white font-bold px-2.5 py-1 rounded-full text-[11px] backdrop-blur-md shadow-md flex items-center gap-1 animate-pulse">
+                <span>🔥</span>
+                <span>Fresh Batch</span>
+              </span>
+            )}
+            {activeKitchenStatus === "low_stock" && (
+              <span className="bg-amber-500 text-zinc-950 font-bold px-2.5 py-1 rounded-full text-[11px] backdrop-blur-md shadow-md flex items-center gap-1">
+                <span>⚡</span>
+                <span>Few Left Today</span>
+              </span>
+            )}
+            {activeKitchenStatus === "sold_out" && (
+              <span className="bg-zinc-900/90 text-zinc-300 font-bold px-2.5 py-1 rounded-full text-[11px] backdrop-blur-md border border-white/20 flex items-center gap-1">
+                <span>❌</span>
+                <span>Sold Out Today</span>
+              </span>
+            )}
+
             {/* Pop-up Badges */}
             {popupStatus.status === "active" && (
               <span className="bg-amber-500 text-zinc-950 font-bold px-2.5 py-1 rounded-full text-[11px] backdrop-blur-md shadow-md animate-pulse">
@@ -432,6 +449,15 @@ export const FoodPostCard = React.memo(function FoodPostCard({
           <div className="text-xs font-medium text-zinc-300 drop-shadow-sm mt-0.5 flex items-center gap-1.5 flex-wrap">
             <MapPin className="w-3 h-3 text-[#e84a27] shrink-0" />
             <span className="font-semibold text-white">{post.spot_name}</span>
+            {isVerifiedKitchen && (
+              <span
+                className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-full bg-emerald-500/25 border border-emerald-400/40 text-[9.5px] text-emerald-300 font-bold"
+                title="Verified Kitchen"
+              >
+                <span>✓</span>
+                <span>Verified</span>
+              </span>
+            )}
             <span className="text-zinc-400">·</span>
             <span>{locationInfo.neighborhood}</span>
             {walkingDistance && (
@@ -446,6 +472,16 @@ export const FoodPostCard = React.memo(function FoodPostCard({
               </div>
             )}
           </div>
+
+          {/* Kitchen Live Batch Soundbite */}
+          {kitchenBatchNote && activeKitchenStatus !== null && (
+            <div className="bg-orange-500/20 border border-orange-500/35 backdrop-blur-md rounded-xl px-2.5 py-1.5 my-1.5 max-w-[96%] flex items-center gap-1.5 text-[11px] text-orange-200">
+              <span className="shrink-0">👨‍🍳</span>
+              <span className="font-medium italic leading-snug line-clamp-1">
+                &ldquo;{kitchenBatchNote}&rdquo;
+              </span>
+            </div>
+          )}
 
           {/* Concise Dish-Specific Smakr Verdict (✦ Quote Only — no "Taste Note:" label) */}
           {dishVerdict && (

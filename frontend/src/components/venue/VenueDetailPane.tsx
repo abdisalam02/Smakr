@@ -337,7 +337,7 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
           {/* Pop-up residency callout */}
           {venue.spot_type === "popup" && getPopupStatus(venue).label && (
             <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-amber-900 dark:text-amber-200">
-              <span className="text-xl">🎪</span>
+              <span className="text-xl">🎟️</span>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-bold">{getPopupStatus(venue).label}</p>
                 {venue.popup_end_date && (

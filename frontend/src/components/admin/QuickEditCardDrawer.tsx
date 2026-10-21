@@ -3,12 +3,13 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { X, Check, Trash2, Sparkles, Upload, Calendar, Clock, DollarSign } from "lucide-react";
-import { FoodPost, FoodCategory, SpotType, Venue } from "@/types";
+import { FoodPost, FoodCategory, SpotType, Venue, KitchenLiveStatus } from "@/types";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
-import { updateFoodPost, updateVenue } from "@/lib/supabase/data";
+import { updateFoodPost, updateVenue, uploadDishPhoto } from "@/lib/supabase/data";
 import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
 import { IconPickerModal } from "./IconPickerModal";
 import { getPopupStatus } from "@/lib/popupUtils";
+import { VisualPhotoSwitcher } from "@/components/ui/VisualPhotoSwitcher";
 
 interface QuickEditCardDrawerProps {
   post: FoodPost | null;
@@ -42,6 +43,11 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
   const [locationSchedule, setLocationSchedule] = useState("");
   const [spotIcon, setSpotIcon] = useState("");
 
+  // Feature #1: Kitchen Live Status & Token
+  const [kitchenStatus, setKitchenStatus] = useState<KitchenLiveStatus["status"]>("normal");
+  const [kitchenBatchNote, setKitchenBatchNote] = useState("");
+  const [kitchenToken, setKitchenToken] = useState("");
+
   const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -65,16 +71,25 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
       setPopupEndDate(linkedVenue.popup_end_date ? linkedVenue.popup_end_date.substring(0, 10) : "");
       setLocationSchedule(linkedVenue.location_schedule || "");
       setSpotIcon(linkedVenue.icon || "");
+      setKitchenStatus(linkedVenue.kitchen_status?.status || "normal");
+      setKitchenBatchNote(linkedVenue.kitchen_status?.batch_note || "");
+      setKitchenToken(linkedVenue.kitchen_status?.kitchen_token || "");
     }
   }, [post, linkedVenue]);
 
   if (!post) return null;
 
-  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const url = URL.createObjectURL(file);
-      setImageUrl(url);
+      showToast("Uploading photo...");
+      const res = await uploadDishPhoto(file);
+      if (res.url) {
+        setImageUrl(res.url);
+        showToast("Photo uploaded successfully!");
+      } else {
+        showToast(res.error || "Upload failed.");
+      }
     }
   };
 
@@ -118,7 +133,19 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
 
       if (!post.id.startsWith("synthetic-")) {
         storeUpdatePost(post.id, postUpdates);
-        await updateFoodPost(post.id, postUpdates);
+        await updateFoodPost(post.id, {
+          dishName: dishName.trim(),
+          category,
+          priceNok: parsedPrice != null && !Number.isNaN(parsedPrice) ? parsedPrice : null,
+          priceTier: priceTier || undefined,
+          dishImage: imageUrl,
+          reviewText: trimmedReview,
+          rating,
+          isOfficialPick,
+          isPublished,
+          isArchived,
+          dinerQuotes: postUpdates.diner_quotes,
+        });
       }
 
       // 2. Update Venue in store and Supabase if linked
@@ -128,6 +155,14 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
           ? [curatedReviewItem, ...existingCurated.filter((q) => q.text !== trimmedReview)]
           : existingCurated;
 
+        // Omit kitchen_token from public vibe_signals
+        const updatedKStatus: KitchenLiveStatus = {
+          status: kitchenStatus,
+          batch_note: kitchenBatchNote.trim() || undefined,
+          updated_at: new Date().toISOString(),
+          verified_kitchen: true,
+        };
+
         const venueUpdates: Partial<Venue> = {
           spot_type: spotType,
           popup_start_date: spotType === "popup" && popupStartDate ? popupStartDate : undefined,
@@ -135,14 +170,25 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
           location_schedule: spotType === "food_truck" && locationSchedule ? locationSchedule : undefined,
           icon: spotIcon || linkedVenue.icon,
           curated_reviews: nextCurated,
+          kitchen_status: updatedKStatus,
           vibe_signals: {
             ...linkedVenue.vibe_signals,
             icon: spotIcon || linkedVenue.icon,
+            kitchen_status: updatedKStatus,
           },
         };
 
         storeUpdateVenue(linkedVenue.id, venueUpdates);
-        await updateVenue(linkedVenue.id, venueUpdates);
+        await updateVenue(linkedVenue.id, {
+          spotType,
+          popupStartDate: spotType === "popup" && popupStartDate ? popupStartDate : undefined,
+          popupEndDate: spotType === "popup" && popupEndDate ? popupEndDate : undefined,
+          locationSchedule: spotType === "food_truck" && locationSchedule ? locationSchedule : undefined,
+          icon: spotIcon || linkedVenue.icon,
+          curatedReviews: nextCurated,
+          kitchenStatus: updatedKStatus,
+          imageUrl: imageUrl || linkedVenue.cover_image_url || undefined,
+        });
       }
 
       showToast("Changes saved successfully");
@@ -152,6 +198,33 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
       onClose();
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleCopyKitchenLink = async () => {
+    if (!linkedVenue) return;
+    try {
+      showToast("Fetching kitchen magic link...");
+      const res = await fetch("/api/admin/kitchen-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ venueId: linkedVenue.id }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success || !data.token) {
+        showToast(data.error || "Could not generate kitchen link.");
+        return;
+      }
+      setKitchenToken(data.token);
+      const url = `${window.location.origin}${data.url || `/kitchen/${data.token}`}`;
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+        showToast(`🔗 Copied Kitchen Magic Link for ${linkedVenue.name}!`);
+      } else {
+        prompt("Kitchen Magic Link:", url);
+      }
+    } catch {
+      showToast("Network error getting kitchen link.");
     }
   };
 
@@ -200,40 +273,20 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
 
         {/* Scrollable Form Body */}
         <div className="flex-1 overflow-y-auto p-5 space-y-6 no-scrollbar">
-          {/* Hero Image Section */}
+          {/* Hero Image Section with VisualPhotoSwitcher */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-zinc-300 block">
-              Dish Hero Photo
-            </label>
-            <div className="relative w-full aspect-[16/9] rounded-2xl overflow-hidden bg-zinc-900 border border-white/10 group">
-              {imageUrl && (
-                <Image
-                  src={imageUrl}
-                  alt={dishName || "Hero image"}
-                  fill
-                  unoptimized
-                  className="object-cover"
-                />
-              )}
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                <label className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-zinc-900 text-xs font-bold shadow-md hover:bg-zinc-200 transition-colors">
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>Swap Image</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageFileChange}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-            </div>
-            <input
-              type="text"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="Or paste image URL"
-              className="w-full text-xs px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-zinc-200 focus:outline-hidden focus:border-[#e84a27]"
+            <VisualPhotoSwitcher
+              currentImageUrl={imageUrl}
+              venuePlaceId={linkedVenue?.google_place_id ?? undefined}
+              venueName={linkedVenue?.name ?? post.spot_name}
+              category={category}
+              extraPhotos={
+                linkedVenue?.cover_image_url
+                  ? [linkedVenue.cover_image_url]
+                  : []
+              }
+              onSelectPhoto={(url) => setImageUrl(url)}
+              label="Dish Hero Photo"
             />
           </div>
 
@@ -366,7 +419,7 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
               {[
                 { type: "restaurant" as const, label: "Restaurant", icon: "🍽️" },
                 { type: "food_truck" as const, label: "Food Truck", icon: "🚚" },
-                { type: "popup" as const, label: "Pop-up", icon: "🎪" },
+                { type: "popup" as const, label: "Pop-up", icon: "🎟️" },
               ].map((item) => (
                 <button
                   key={item.type}
@@ -444,6 +497,75 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
             )}
 
           </div>
+
+          {/* Feature #1: Kitchen Live Status & Magic Link */}
+          {linkedVenue && (
+            <div className="space-y-3 p-4 rounded-2xl bg-white/[0.03] border border-white/10">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-base">👨‍🍳</span>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+                    Kitchen Live Status &amp; Magic Link
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopyKitchenLink}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-orange-500/20 hover:bg-orange-500/30 text-[#FF8A6C] border border-orange-500/30 text-[11px] font-bold transition-all cursor-pointer"
+                  title="Copy zero-password mobile link to DM to restaurant"
+                >
+                  <span>🔗</span>
+                  <span>Copy Magic Link</span>
+                </button>
+              </div>
+
+              {/* Status Pills */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                {[
+                  { id: "normal" as const, label: "Normal", icon: "✓" },
+                  { id: "fresh_batch" as const, label: "Fresh Batch", icon: "🔥" },
+                  { id: "low_stock" as const, label: "Few Left", icon: "⚡" },
+                  { id: "sold_out" as const, label: "Sold Out", icon: "❌" },
+                ].map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setKitchenStatus(s.id)}
+                    className={`py-2 px-2 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      kitchenStatus === s.id
+                        ? "bg-[#e84a27] text-white border-[#e84a27] shadow-sm"
+                        : "bg-white/5 text-zinc-400 border-white/10 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    <span>{s.icon}</span>
+                    <span>{s.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Kitchen Note */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] text-zinc-400 block">
+                    Live Batch Note (optional)
+                  </label>
+                  <span className="text-[9px] font-mono text-zinc-500">{kitchenBatchNote.length}/60</span>
+                </div>
+                <input
+                  type="text"
+                  maxLength={60}
+                  value={kitchenBatchNote}
+                  onChange={(e) => setKitchenBatchNote(e.target.value)}
+                  placeholder="e.g. 30 cardamom buns warm from the oven at 12:30"
+                  className="w-full text-xs px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder-zinc-500 focus:outline-hidden focus:border-[#e84a27]"
+                />
+              </div>
+
+              <p className="text-[10px] text-zinc-500 leading-relaxed">
+                Send the Kitchen Magic Link to the restaurant so chefs can toggle fresh batches or sold-out status from their phones without any password.
+              </p>
+            </div>
+          )}
 
           {/* Editorial Review & Rating */}
           <div className="space-y-3 p-4 rounded-2xl bg-white/[0.03] border border-white/10">

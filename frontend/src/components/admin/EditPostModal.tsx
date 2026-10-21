@@ -6,6 +6,7 @@ import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { DietaryTag, FoodCategory, FoodPost, ReviewItem } from "@/types";
 import { updateFoodPost, updateVenue as updateVenueRecord, uploadDishPhoto } from "@/lib/supabase/data";
 import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
+import { VisualPhotoSwitcher } from "@/components/ui/VisualPhotoSwitcher";
 
 /** Google Places photo resource → size-capped proxied URL. */
 const photoProxy = (ref: string, i = 0) =>
@@ -266,11 +267,11 @@ export function EditPostModal({ post, onClose }: EditPostModalProps) {
         style={{ borderColor: "var(--surface-border, #E7E0D4)" }}
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
+          <h3 className="font-comico text-lg font-bold text-[#181615] flex items-center gap-2">
             <Pencil className="w-4 h-4 text-[#e84a27]" />
             Edit Dish
           </h3>
-          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-700" aria-label="Close">
+          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-700 cursor-pointer" aria-label="Close">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -325,130 +326,15 @@ export function EditPostModal({ post, onClose }: EditPostModalProps) {
           />
         </Field>
 
-        <Field label="Photo URL">
-          <div className="flex items-center gap-2">
-            <input
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://…"
-              className={inputCls}
-            />
-            <div className="w-12 h-12 rounded-xl overflow-hidden border border-zinc-200 bg-zinc-100 shrink-0 flex items-center justify-center">
-              {imageUrl.trim() ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={imageUrl}
-                  alt="dish preview"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).style.display = "none";
-                  }}
-                />
-              ) : (
-                <ImageIcon className="w-4 h-4 text-zinc-400" />
-              )}
-            </div>
-          </div>
-        </Field>
-
-        {/* Change photo — upload, or pick a different Google listing shot */}
-        <div className="rounded-2xl border border-zinc-200 bg-zinc-50/60 p-3 space-y-2.5">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-              Change photo
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadingPhoto}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 disabled:opacity-60 text-white text-[10px] font-bold transition-all active:scale-[0.98]"
-              >
-                {uploadingPhoto ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <Upload className="w-3 h-3" />
-                )}
-                <span>{uploadingPhoto ? "Uploading…" : "Upload"}</span>
-              </button>
-              <button
-                type="button"
-                onClick={loadGooglePhotos}
-                disabled={loadingPhotos}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#e84a27] hover:bg-[#d23e1d] disabled:opacity-60 text-white text-[10px] font-bold transition-all active:scale-[0.98]"
-              >
-                {loadingPhotos ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <Sparkles className="w-3 h-3" />
-                )}
-                <span>{loadingPhotos ? "Loading…" : "Google photos"}</span>
-              </button>
-            </div>
-          </div>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void handlePhotoUpload(f);
-              e.target.value = "";
-            }}
-          />
-
-          {googlePhotos.length > 0 ? (
-            <>
-              <div className="grid grid-cols-4 gap-2">
-                {visibleGooglePhotos.map((ref, i) => {
-                  const url = photoProxy(ref, i);
-                  const active = imageUrl === url;
-                  return (
-                    <button
-                      key={`${ref}-${i}`}
-                      type="button"
-                      onClick={() => setImageUrl(url)}
-                      className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all ${
-                        active
-                          ? "border-[#e84a27] ring-2 ring-[#e84a27]/20"
-                          : "border-transparent hover:border-[#e84a27]/40"
-                      }`}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={url}
-                        alt={`Google photo ${i + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                      {active && (
-                        <span className="absolute top-1 right-1 w-5 h-5 rounded-full bg-[#e84a27] text-white flex items-center justify-center">
-                          <Check className="w-3 h-3" />
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-              {googlePhotos.length > 4 && (
-                <button
-                  type="button"
-                  onClick={() => setShowAllPhotos((s) => !s)}
-                  className="w-full py-2 rounded-xl text-[11px] font-bold border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 transition-all"
-                >
-                  {showAllPhotos
-                    ? "Show fewer"
-                    : `Load more photos (${googlePhotos.length - 4} more)`}
-                </button>
-              )}
-            </>
-          ) : (
-            <p className="text-[10px] text-zinc-400">
-              Upload a photo, or load this spot&apos;s Google listing photos and tap the one you want.
-            </p>
-          )}
-        </div>
+        <VisualPhotoSwitcher
+          label="Dish Photo"
+          currentImageUrl={imageUrl}
+          venuePlaceId={selectedVenue?.google_place_id}
+          venueName={selectedVenue?.name || post.spot_name}
+          category={category}
+          extraPhotos={googlePhotos.map((ref, i) => photoProxy(ref, i))}
+          onSelectPhoto={(url) => setImageUrl(url)}
+        />
 
         <div>
           <div className="flex items-center justify-between gap-2 mb-1.5">
@@ -485,10 +371,10 @@ export function EditPostModal({ post, onClose }: EditPostModalProps) {
                   showToast("Could not auto-write note right now.");
                 }
               }}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#e84a27]/10 hover:bg-[#e84a27]/20 text-[#e84a27] text-[11px] font-bold transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e84a27]/10 hover:bg-[#e84a27]/20 text-[#e84a27] text-xs font-bold transition-colors cursor-pointer shrink-0"
             >
-              <Sparkles className="w-3 h-3" />
-              ✨ Auto-Write Note &amp; Price
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>✨ Auto-Write Note &amp; Price</span>
             </button>
           </div>
           <textarea

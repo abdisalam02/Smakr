@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   X,
   Mail,
@@ -8,17 +9,14 @@ import {
   User,
   AtSign,
   Loader2,
-  ShieldCheck,
-  Zap,
-  UserCheck,
   CheckCircle2,
   AlertCircle,
+  ArrowRight,
 } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { SmakrSIcon } from "@/components/ui/SmakrSIcon";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
-const ADMIN_HANDLE = "@smakr_oslo";
 const GOOGLE_DISABLED_MESSAGE =
   "Google sign-in isn't switched on yet. Enable the Google provider in Supabase (Authentication → Providers), or use email sign-in for the beta.";
 
@@ -80,7 +78,6 @@ function friendlyAuthError(message: string): string {
 export function AuthModal() {
   const isAuthModalOpen = useCityPulseStore((state) => state.isAuthModalOpen);
   const setIsAuthModalOpen = useCityPulseStore((state) => state.setIsAuthModalOpen);
-  const setCurrentUser = useCityPulseStore((state) => state.setCurrentUser);
   const showToast = useCityPulseStore((state) => state.showToast);
 
   const [tab, setTab] = useState<AuthTab>("signin");
@@ -103,12 +100,11 @@ export function AuthModal() {
   if (!isAuthModalOpen) return null;
 
   const supabase = getSupabaseBrowserClient();
-  const isDev = process.env.NODE_ENV === "development";
   const callbackUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback`;
 
   const guard = () => {
     if (!supabase) {
-      setError("Supabase isn't configured yet — use Beta Dev Access below.");
+      setError("Sign-in is currently unavailable. Please try again later.");
       return false;
     }
     return true;
@@ -242,29 +238,6 @@ export function AuthModal() {
       return;
     }
     setNotice(`Check your inbox! We sent a magic sign-in link to ${email.trim()}.`);
-  };
-
-  const enterAsAdmin = () => {
-    setCurrentUser({
-      id: "admin-1",
-      handle: ADMIN_HANDLE,
-      role: "admin",
-      is_official: true,
-    });
-    showToast("Welcome back, @smakr_oslo — Admin Portal unlocked 🛡️");
-  };
-
-  const enterAsFoodie = () => {
-    setCurrentUser({
-      id: "user-1",
-      name: "Astrid Lindholm",
-      handle: "@astrid_eats_oslo",
-      role: "foodie",
-      is_official: false,
-      avatar_url:
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80",
-    });
-    showToast("Signed in as @astrid_eats_oslo");
   };
 
   const inputClass =
@@ -469,29 +442,24 @@ export function AuthModal() {
           </p>
         )}
 
-        {/* Dev bypass — development only */}
-        {isDev && (
-          <div className="rounded-2xl border border-dashed border-[#e84a27]/40 bg-orange-50/40 p-3 space-y-2">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[#e84a27] flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              Beta testing (dev only)
-            </p>
-            <button
-              onClick={enterAsAdmin}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs shadow-xs transition-all active:scale-[0.99]"
-            >
-              <Zap className="w-3.5 h-3.5 text-amber-300" />
-              <span>Beta Dev Access: Enter as @smakr Admin</span>
-            </button>
-            <button
-              onClick={enterAsFoodie}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-white hover:bg-zinc-50 text-zinc-600 font-semibold text-[11px] border border-zinc-200 transition-all active:scale-[0.99]"
-            >
-              <UserCheck className="w-3.5 h-3.5" />
-              <span>Enter as a foodie (@astrid_eats_oslo)</span>
-            </button>
+        {/* Restaurant & Kitchen Partner Portal link */}
+        <div className="rounded-2xl border border-zinc-200/80 bg-zinc-50/80 p-3.5 space-y-2 text-center">
+          <div className="flex items-center justify-center gap-1.5 text-xs font-extrabold text-zinc-900">
+            <span>👨‍🍳</span>
+            <span>Own or cook at a restaurant in Oslo?</span>
           </div>
-        )}
+          <p className="text-[11px] text-zinc-500 leading-snug">
+            Claim your spot to upload authentic dish photos, update NOK prices, correct closing times, and broadcast live batches.
+          </p>
+          <Link
+            href="/partner"
+            onClick={() => setIsAuthModalOpen(false)}
+            className="inline-flex items-center justify-center gap-1.5 w-full py-2.5 px-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs transition-all shadow-xs cursor-pointer active:scale-[0.99]"
+          >
+            <span>Smakr Partner Studio</span>
+            <ArrowRight className="w-3.5 h-3.5 text-[#e84a27]" />
+          </Link>
+        </div>
       </div>
     </div>
   );

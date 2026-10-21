@@ -5,11 +5,13 @@ import {
   DEFAULT_WEEKLY_PICK,
   type FoodCategory,
   type FoodPost,
+  type KitchenLiveStatus,
   type OnboardingAvatarConfig,
   type ReviewItem,
   type SpotType,
   type Venue,
   type WeeklyPick,
+  type PopupResidencyMeta,
 } from "@/types";
 import { curatedVenuePhotos } from "@/lib/places/curatedPhotos";
 
@@ -301,9 +303,18 @@ export interface VenueInsertInput {
   googleReviewsCount?: number | null;
   googleMapsUrl?: string | null;
   dietaryTags?: string[];
+  signatureDishes?: string[];
+  description?: string | null;
+  isOfficialPick?: boolean;
+  currentOpeningHoursText?: string | null;
   /** Hand-picked Google reviews persisted to `venues.curated_reviews`. */
   curatedReviews?: ReviewItem[];
   slug?: string;
+  spotType?: SpotType;
+  popupStartDate?: string | null;
+  popupEndDate?: string | null;
+  locationSchedule?: string | null;
+  popupMeta?: PopupResidencyMeta | null;
 }
 
 export type VenueWriteErrorCode =
@@ -371,8 +382,23 @@ export async function insertVenue(input: VenueInsertInput): Promise<VenueInsertR
     curated_reviews: sanitizeReviews(input.curatedReviews),
     google_maps_url: input.googleMapsUrl ?? null,
     dietary_tags: input.dietaryTags ?? [],
-    // The curated emoji lives alongside the vibe signals (no schema migration).
-    vibe_signals: input.icon ? { icon: input.icon } : {},
+    signature_dishes: input.signatureDishes ?? [],
+    description: input.description ?? null,
+    is_official_pick: input.isOfficialPick ?? false,
+    current_opening_hours_text: input.currentOpeningHoursText ?? null,
+    spot_type: input.spotType ?? "restaurant",
+    popup_start_date: input.popupStartDate ?? null,
+    popup_end_date: input.popupEndDate ?? null,
+    location_schedule: input.locationSchedule ?? null,
+    // The curated emoji and popup metadata live alongside the vibe signals (no schema migration).
+    vibe_signals: {
+      ...(input.icon ? { icon: input.icon } : {}),
+      ...(input.spotType ? { spot_type: input.spotType } : {}),
+      ...(input.popupStartDate ? { popup_start_date: input.popupStartDate } : {}),
+      ...(input.popupEndDate ? { popup_end_date: input.popupEndDate } : {}),
+      ...(input.locationSchedule ? { location_schedule: input.locationSchedule } : {}),
+      ...(input.popupMeta ? { popup_meta: input.popupMeta } : {}),
+    },
   });
 
   try {
@@ -469,13 +495,19 @@ export interface VenueUpdateInput {
   priceLevel?: string | null;
   openNow?: boolean;
   dietaryTags?: string[];
+  signatureDishes?: string[];
+  description?: string | null;
+  isOfficialPick?: boolean;
+  currentOpeningHoursText?: string | null;
   googleRating?: number | null;
   googleReviewsCount?: number | null;
   /** Hand-picked Google reviews persisted to `venues.curated_reviews`. */
   curatedReviews?: ReviewItem[];
+  kitchenStatus?: KitchenLiveStatus | null;
+  popupMeta?: PopupResidencyMeta | null;
 }
 
-/** Updates an existing venue (used to refresh Google metrics + curated reviews). */
+/** Updates an existing venue (used to refresh Google metrics + curated reviews + kitchen live status). */
 export async function updateVenue(
   venueId: string,
   input: VenueUpdateInput
@@ -504,6 +536,11 @@ export async function updateVenue(
   if (input.priceLevel !== undefined) patch.price_level = input.priceLevel ?? "$$";
   if (input.openNow !== undefined) patch.open_now = input.openNow;
   if (input.dietaryTags !== undefined) patch.dietary_tags = input.dietaryTags;
+  if (input.signatureDishes !== undefined) patch.signature_dishes = input.signatureDishes;
+  if (input.description !== undefined) patch.description = input.description;
+  if (input.isOfficialPick !== undefined) patch.is_official_pick = input.isOfficialPick;
+  if (input.currentOpeningHoursText !== undefined)
+    patch.current_opening_hours_text = input.currentOpeningHoursText;
   if (input.googleRating !== undefined) patch.google_rating = input.googleRating;
   if (input.googleReviewsCount !== undefined) patch.google_reviews_count = input.googleReviewsCount;
   if (input.curatedReviews !== undefined)
@@ -513,14 +550,31 @@ export async function updateVenue(
     input.spotType !== undefined ||
     input.popupStartDate !== undefined ||
     input.popupEndDate !== undefined ||
-    input.locationSchedule !== undefined
+    input.locationSchedule !== undefined ||
+    input.kitchenStatus !== undefined ||
+    input.popupMeta !== undefined
   ) {
+    let existingSignals: Record<string, unknown> = {};
+    try {
+      const { data: cur } = await supabase
+        .from("venues")
+        .select("vibe_signals")
+        .eq("id", venueId)
+        .maybeSingle();
+      if (cur?.vibe_signals && typeof cur.vibe_signals === "object") {
+        existingSignals = cur.vibe_signals as Record<string, unknown>;
+      }
+    } catch {}
+
     patch.vibe_signals = {
+      ...existingSignals,
       ...(input.icon !== undefined ? { icon: input.icon } : {}),
       ...(input.spotType !== undefined ? { spot_type: input.spotType } : {}),
       ...(input.popupStartDate !== undefined ? { popup_start_date: input.popupStartDate } : {}),
       ...(input.popupEndDate !== undefined ? { popup_end_date: input.popupEndDate } : {}),
       ...(input.locationSchedule !== undefined ? { location_schedule: input.locationSchedule } : {}),
+      ...(input.kitchenStatus !== undefined ? { kitchen_status: input.kitchenStatus } : {}),
+      ...(input.popupMeta !== undefined ? { popup_meta: input.popupMeta } : {}),
     };
   }
   if (Object.keys(patch).length === 0) return { success: true, error: null };
@@ -548,6 +602,38 @@ export async function updateVenue(
   }
 }
 
+/**
+ * Updates a restaurant's live batch status via their kitchen remote token.
+ */
+export async function updateKitchenLiveStatus(
+  venueId: string,
+  kitchenToken: string,
+  payload: {
+    status: "normal" | "fresh_batch" | "low_stock" | "sold_out";
+    batch_note?: string;
+    dish_highlight?: string;
+  }
+): Promise<{ success: boolean; error: string | null }> {
+  try {
+    const res = await fetch("/api/kitchen/status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        venueId,
+        kitchenToken,
+        ...payload,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      return { success: false, error: data.error || "Failed to update kitchen status" };
+    }
+    return { success: true, error: null };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Request failed" };
+  }
+}
+
 /** Quick vibe/taste signal chosen when logging a dish. */
 export type VibeTag = "craving" | "must_try" | "tried";
 
@@ -562,6 +648,10 @@ export interface FoodPostInsertInput {
   rating?: number;
   dietaryTags?: string[];
   isOfficialPick?: boolean;
+  tasteTags?: string[];
+  dropBadge?: string;
+  itemAvailability?: string;
+  priceTier?: string | null;
   /** Quick community vibe → bumps the matching counter column. */
   vibe?: VibeTag;
   /** Customer soundbites persisted to `food_posts.diner_quotes`. */
@@ -608,6 +698,18 @@ export async function insertFoodPost(input: FoodPostInsertInput): Promise<FoodPo
     if (input.category) {
       payload.category = input.category;
     }
+    if (input.tasteTags) {
+      payload.taste_tags = input.tasteTags;
+    }
+    if (input.dropBadge) {
+      payload.drop_badge = input.dropBadge;
+    }
+    if (input.itemAvailability) {
+      payload.item_availability = input.itemAvailability;
+    }
+    if (input.priceTier) {
+      payload.price_tier = input.priceTier;
+    }
 
     let { data, error } = await supabase
       .from("food_posts")
@@ -650,6 +752,10 @@ export interface FoodPostUpdateInput {
   rating?: number | null;
   dietaryTags?: string[];
   isOfficialPick?: boolean;
+  tasteTags?: string[];
+  dropBadge?: string;
+  itemAvailability?: string;
+  priceTier?: string | null;
   isPublished?: boolean;
   isArchived?: boolean;
   /** Customer soundbites persisted to `food_posts.diner_quotes`. */
@@ -683,6 +789,10 @@ export async function updateFoodPost(
   }
   if (input.rating !== undefined) patch.rating = Number(input.rating ?? 0) || 0;
   if (input.dietaryTags !== undefined) patch.dietary_tags = input.dietaryTags;
+  if (input.tasteTags !== undefined) patch.taste_tags = input.tasteTags;
+  if (input.dropBadge !== undefined) patch.drop_badge = input.dropBadge;
+  if (input.itemAvailability !== undefined) patch.item_availability = input.itemAvailability;
+  if (input.priceTier !== undefined) patch.price_tier = input.priceTier;
   if (input.isOfficialPick !== undefined) patch.is_official_pick = input.isOfficialPick;
   if (input.dinerQuotes !== undefined) patch.diner_quotes = sanitizeReviews(input.dinerQuotes);
   if (Object.keys(patch).length === 0) return { error: null };
@@ -730,7 +840,22 @@ export async function broadcastWeeklyPick(
     return { error: "Pick a dish linked to a registered venue." };
   }
   try {
-    // Exactly one active pick at a time.
+    // Attempt atomic RPC if available
+    const { data: rpcId, error: rpcErr } = await supabase.rpc("broadcast_weekly_pick", {
+      p_venue_id: input.venueId,
+      p_dish_name: input.dishName,
+      p_dish_image: input.dishImage || "",
+      p_price_nok: input.priceNok,
+      p_speech_bubble: input.speechBubble,
+      p_week_label: input.weekLabel,
+      p_latitude: input.latitude,
+      p_longitude: input.longitude,
+    });
+    if (!rpcErr && rpcId) {
+      return { error: null };
+    }
+
+    // Fallback: Exactly one active pick at a time.
     await supabase.from("weekly_picks").update({ is_active: false }).eq("is_active", true);
     const { error } = await supabase.from("weekly_picks").insert({
       venue_id: input.venueId,
@@ -747,6 +872,25 @@ export async function broadcastWeeklyPick(
     return { error: error?.message ?? null };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Broadcast failed." };
+  }
+}
+
+/**
+ * Atomically increments the "Bring Back" crowd petition counter on a pop-up venue.
+ */
+export async function incrementBringBack(venueId: string): Promise<number | null> {
+  const supabase = getSupabaseBrowserClient();
+  if (!supabase || !isUuid(venueId)) return null;
+  try {
+    const { data, error } = await supabase.rpc("increment_bring_back", {
+      p_venue_id: venueId,
+    });
+    if (!error && typeof data === "number") {
+      return data;
+    }
+    return null;
+  } catch {
+    return null;
   }
 }
 

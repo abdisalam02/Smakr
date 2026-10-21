@@ -2,7 +2,9 @@ import type {
   DietaryTag,
   FoodCategory,
   FoodPost,
+  KitchenLiveStatus,
   Neighborhood,
+  PopupResidencyMeta,
   ReviewItem,
   SpotType,
   Venue,
@@ -35,6 +37,10 @@ export interface VenueRow {
   price_level?: string | null;
   open_now?: boolean | null;
   opening_hours?: unknown;
+  current_opening_hours_text?: string | null;
+  signature_dishes?: string[] | null;
+  description?: string | null;
+  is_official_pick?: boolean | null;
   vibe_signals?: Record<string, unknown> | null;
   google_place_id?: string | null;
   google_maps_url?: string | null;
@@ -57,6 +63,7 @@ export interface WeeklyPickRow {
   venue_id: string;
   dish_name?: string | null;
   dish_image?: string | null;
+  mascot_avatar_url?: string | null;
   price_nok?: number | null;
   speech_bubble?: string | null;
   week_label?: string | null;
@@ -88,6 +95,10 @@ export interface FoodPostRow {
   diner_quotes?: unknown;
   created_at?: string | null;
   category?: string | null;
+  taste_tags?: string[] | null;
+  drop_badge?: string | null;
+  item_availability?: string | null;
+  price_tier?: string | null;
   venue?: VenueRow | null;
   author?: ProfileLite | null;
   is_published?: boolean | null;
@@ -203,6 +214,35 @@ function mapReviews(raw: unknown): ReviewItem[] {
   return sanitizeReviews(Array.isArray(raw) ? (raw as ReviewItem[]) : []);
 }
 
+export function parseKitchenLiveStatus(raw: unknown): KitchenLiveStatus | null {
+  if (!raw || typeof raw !== "object") return null;
+  const k = raw as Record<string, unknown>;
+  const status = typeof k.status === "string" ? k.status : "normal";
+  if (!["normal", "fresh_batch", "low_stock", "sold_out"].includes(status)) return null;
+  const updatedAt = typeof k.updated_at === "string" ? k.updated_at : new Date().toISOString();
+
+  // Auto-expire non-normal status after 14 hours
+  let activeStatus: "normal" | "fresh_batch" | "low_stock" | "sold_out" = status as any;
+  if (activeStatus !== "normal") {
+    const parsedTime = new Date(updatedAt).getTime();
+    if (Number.isFinite(parsedTime)) {
+      const diff = Date.now() - parsedTime;
+      if (diff > 14 * 60 * 60 * 1000) {
+        activeStatus = "normal";
+      }
+    }
+  }
+
+  return {
+    status: activeStatus,
+    batch_note: typeof k.batch_note === "string" ? k.batch_note : undefined,
+    dish_highlight: typeof k.dish_highlight === "string" ? k.dish_highlight : undefined,
+    updated_at: updatedAt,
+    kitchen_token: typeof k.kitchen_token === "string" ? k.kitchen_token : "",
+    verified_kitchen: Boolean(k.verified_kitchen),
+  };
+}
+
 export function mapVenueRow(row: VenueRow): Venue {
   const signals = (row.vibe_signals ?? {}) as Record<string, unknown>;
   return {
@@ -217,6 +257,15 @@ export function mapVenueRow(row: VenueRow): Venue {
     food_category: mapCategory(row.category),
     icon: typeof signals.icon === "string" && signals.icon ? signals.icon : undefined,
     price_level: mapPriceLevel(row.price_level),
+    signature_dishes: Array.isArray(row.signature_dishes)
+      ? row.signature_dishes
+      : Array.isArray(signals.signature_dishes)
+      ? (signals.signature_dishes as string[])
+      : [],
+    description: row.description ?? null,
+    current_opening_hours_text:
+      row.current_opening_hours_text || (signals.current_opening_hours_text as string) || null,
+    is_official_pick: Boolean(row.is_official_pick),
     live_food_status: undefined,
     google_place_id: row.google_place_id ?? null,
     google_rating: typeof row.google_rating === "number" ? row.google_rating : null,
@@ -225,7 +274,6 @@ export function mapVenueRow(row: VenueRow): Venue {
     curated_reviews: mapReviews(row.curated_reviews),
     opening_hours_json: (row.opening_hours as Record<string, string> | null) ?? null,
     cover_image_url: row.image_url ?? null,
-    description: null,
     has_wifi: false,
     has_outlets: false,
     silent_zone: false,
@@ -247,6 +295,12 @@ export function mapVenueRow(row: VenueRow): Venue {
     website_uri: row.website_uri || (signals.website_uri as string) || null,
     google_maps_uri: row.google_maps_uri || row.google_maps_url || (signals.google_maps_uri as string) || null,
     phone_number: row.phone_number || (signals.phone_number as string) || null,
+    vibe_signals: signals,
+    kitchen_status: parseKitchenLiveStatus(signals.kitchen_status),
+    popup_meta:
+      signals.popup_meta && typeof signals.popup_meta === "object" && !Array.isArray(signals.popup_meta)
+        ? (signals.popup_meta as PopupResidencyMeta)
+        : null,
   };
 }
 
@@ -265,6 +319,16 @@ function relativeTime(iso?: string | null): string {
 function formatHandle(raw?: string | null, fallback = "smakr"): string {
   const base = (raw || fallback).replace(/^[@_\s]+/, "");
   return `@${base || fallback}`;
+}
+
+function mapItemAvailability(raw?: string | null): FoodPost["item_availability"] {
+  if (!raw) return undefined;
+  const lower = raw.toLowerCase().replace(/_/g, " ");
+  if (lower.includes("fresh")) return "Fresh From Oven";
+  if (lower.includes("sold")) return "Sold Out Today";
+  if (lower.includes("weekend")) return "Weekend Only";
+  if (lower.includes("avail")) return "Available Now";
+  return undefined;
 }
 
 export function mapFoodPostRow(row: FoodPostRow): FoodPost {
@@ -293,7 +357,10 @@ export function mapFoodPostRow(row: FoodPostRow): FoodPost {
     image_url: row.dish_image ?? "",
     price_nok: typeof row.price_nok === "number" && row.price_nok > 0 ? row.price_nok : null,
     rating: Number(row.rating ?? 0),
-    taste_tags: [],
+    taste_tags: Array.isArray(row.taste_tags) ? row.taste_tags : [],
+    drop_badge: row.drop_badge ?? undefined,
+    item_availability: mapItemAvailability(row.item_availability),
+    price_tier: row.price_tier ?? null,
     review_text: row.review_text ?? "",
     author: {
       name: author?.name ?? "Smakr Foodie",
@@ -310,5 +377,6 @@ export function mapFoodPostRow(row: FoodPostRow): FoodPost {
     spot_type: ((venue?.spot_type || (venue?.vibe_signals as any)?.spot_type) as SpotType) || "restaurant",
     is_published: row.is_published ?? true,
     is_archived: row.is_archived ?? false,
+    kitchen_status: parseKitchenLiveStatus((venue?.vibe_signals as any)?.kitchen_status),
   };
 }

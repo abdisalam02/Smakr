@@ -23,6 +23,7 @@ import {
   KebabIcon,
   PhoIcon,
   CurryIcon,
+  TicketStubIcon,
 } from "@/components/food/FoodIcons";
 
 const CATEGORY_ICON_MAP: Record<
@@ -48,6 +49,8 @@ const CATEGORY_ICON_MAP: Record<
   kebab: KebabIcon,
   vietnamese: PhoIcon,
   indian: CurryIcon,
+  mandi_rice: CurryIcon,
+  middle_eastern: KebabIcon,
 };
 
 type Pill =
@@ -197,6 +200,24 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
             </span>
           </button>
 
+          {/* First-Class Pop-ups & Residencies Channel Pill */}
+          <button
+            type="button"
+            onClick={() => {
+              if (savedOnly) toggleSavedOnly();
+              setSpotTypeFilter(spotTypeFilter === "popup" ? "all" : "popup");
+            }}
+            aria-pressed={spotTypeFilter === "popup"}
+            className={`snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-all select-none active:scale-[0.97] ${
+              spotTypeFilter === "popup"
+                ? "text-white border-transparent font-bold shadow-xs bg-[#e84a27]"
+                : "bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-300 border-zinc-200/70 dark:border-white/10 hover:bg-white dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-white font-medium"
+            }`}
+          >
+            <TicketStubIcon className={`w-3.5 h-3.5 ${spotTypeFilter === "popup" ? "text-white" : "text-[#e84a27]"}`} />
+            <span className="tracking-tight whitespace-nowrap font-comico text-[11px] tracking-wide">Pop-ups</span>
+          </button>
+
           {PILLS.map((pill) => {
             const isActive =
               !savedOnly &&
@@ -253,7 +274,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                 { id: "all" as const, label: "All Types", icon: "✦" },
                 { id: "restaurant" as const, label: "Sit-down", icon: "🍽️" },
                 { id: "food_truck" as const, label: "Food Trucks", icon: "🚚" },
-                { id: "popup" as const, label: "Pop-ups & Residencies", icon: "🎪" },
+                { id: "popup" as const, label: "Pop-ups & Residencies", icon: "🎟️" },
               ].map((st) => {
                 const isActive = (spotTypeFilter || "all") === st.id;
                 return (

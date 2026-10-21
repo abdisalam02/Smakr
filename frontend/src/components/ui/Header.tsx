@@ -26,7 +26,7 @@ export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
   const storeResolved = useCityPulseStore((state) => state.isAuthResolved);
   // Before client auth resolves, show initialUser from SSR to avoid a logged-out flash.
   // Once auth has resolved on the client, storeUser is authoritative (null means logged out).
-  const currentUser = storeResolved ? storeUser : (storeUser ?? initialUser ?? null);
+  const currentUser = storeResolved ? storeUser : (initialUser ?? storeUser ?? null);
   const isAuthResolved = storeResolved || initialUser !== undefined;
   const setIsAuthModalOpen = useCityPulseStore((state) => state.setIsAuthModalOpen);
   const openAvatarStudio = useCityPulseStore((state) => state.openAvatarStudio);
@@ -70,14 +70,9 @@ export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
     showToast("Signed out of Smakr.");
   };
 
-  const isAdmin = Boolean(
-    currentUser?.role === "admin" ||
-    currentUser?.is_official ||
-    (currentUser?.handle || "").toLowerCase().includes("niwache") ||
-    (currentUser?.handle || "").toLowerCase().includes("smak") ||
-    (currentUser?.email || "").toLowerCase().includes("niwache")
-  );
-  const isNiwacheOrAdmin = isAdmin;
+  // Authorization is a role, never an email/handle heuristic.
+  const isAdmin = currentUser?.role === "admin";
+  const isOfficial = Boolean(currentUser?.is_official || isAdmin);
 
   const initials = currentUser
     ? (currentUser.name || currentUser.handle || "?")
@@ -112,7 +107,7 @@ export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
                 title="Account menu"
               >
                 <span className="w-7 h-7 rounded-full bg-zinc-100 flex items-center justify-center overflow-hidden ring-1 ring-black/5 shrink-0">
-                  {isNiwacheOrAdmin ? (
+                  {isOfficial ? (
                     <OfficialSmakrMascot size={28} />
                   ) : currentUser.avatar_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -197,7 +192,7 @@ export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
                     <span>Social &amp; Mascot Studio</span>
                   </Link>
 
-                  {!isNiwacheOrAdmin && (
+                  {!isOfficial && (
                     <button
                       onClick={() => {
                         setMenuOpen(false);

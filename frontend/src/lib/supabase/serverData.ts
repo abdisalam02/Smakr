@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { unstable_cache } from "next/cache";
 import {
   DEFAULT_WEEKLY_PICK,
   type FoodPost,
@@ -54,76 +55,102 @@ function getServerClient(): SupabaseClient | null {
   return cachedClient;
 }
 
+const getCachedVenues = unstable_cache(
+  async (): Promise<Venue[]> => {
+    const supabase = getServerClient();
+    if (!supabase) return [];
+    try {
+      const { data, error } = await supabase
+        .from("venues")
+        .select(
+          "id, name, address, latitude, longitude, category, image_url, google_place_id, google_rating, google_reviews_count, price_level, neighborhood, spot_type, popup_meta, vibe_signals, is_official_pick, signature_dishes, description, current_opening_hours_text, created_at, updated_at"
+        )
+        .order("name", { ascending: true });
+      if (error || !data || data.length === 0) return [];
+      return (data as VenueRow[])
+        .map(mapVenueRow)
+        .filter((v) => Number.isFinite(v.latitude) && Number.isFinite(v.longitude) && v.latitude !== 0);
+    } catch (err) {
+      console.warn("[serverData] fetchVenuesServer failed — returning []:", err);
+      return [];
+    }
+  },
+  ["venues-server-data"],
+  { revalidate: 60, tags: ["venues"] }
+);
+
 /** Live Oslo venues (server prefetch). Returns `[]` when unavailable. */
 export async function fetchVenuesServer(): Promise<Venue[]> {
-  const supabase = getServerClient();
-  if (!supabase) return [];
-  try {
-    const { data, error } = await supabase
-      .from("venues")
-      .select("*")
-      .order("name", { ascending: true });
-    if (error || !data || data.length === 0) return [];
-    return (data as VenueRow[])
-      .map(mapVenueRow)
-      .filter((v) => Number.isFinite(v.latitude) && Number.isFinite(v.longitude) && v.latitude !== 0);
-  } catch (err) {
-    console.warn("[serverData] fetchVenuesServer failed — returning []:", err);
-    return [];
-  }
+  return getCachedVenues();
 }
+
+const getCachedFoodPosts = unstable_cache(
+  async (): Promise<FoodPost[]> => {
+    const supabase = getServerClient();
+    if (!supabase) return [];
+    try {
+      const { data, error } = await supabase
+        .from("food_posts")
+        .select(
+          "id, venue_id, author_id, dish_name, dish_image, review_text, price_nok, rating, dietary_tags, taste_tags, is_official_pick, likes_count, saves_count, diner_quotes, created_at, category, drop_badge, item_availability, price_tier, is_published, is_archived, venue:venues!food_posts_venue_id_fkey(id, name, address, latitude, longitude, category, image_url, spot_type, popup_meta, vibe_signals), author:profiles!food_posts_author_id_fkey(handle, name, is_official)"
+        )
+        .order("created_at", { ascending: false });
+      if (error || !data || data.length === 0) return [];
+      return (data as unknown as FoodPostRow[]).map(mapFoodPostRow);
+    } catch (err) {
+      console.warn("[serverData] fetchFoodPostsServer failed — returning []:", err);
+      return [];
+    }
+  },
+  ["food-posts-server-data"],
+  { revalidate: 60, tags: ["food_posts"] }
+);
 
 /** Live dish feed (server prefetch). Returns `[]` when unavailable. */
 export async function fetchFoodPostsServer(): Promise<FoodPost[]> {
-  const supabase = getServerClient();
-  if (!supabase) return [];
-  try {
-    const { data, error } = await supabase
-      .from("food_posts")
-      .select(
-        "*, venue:venues!food_posts_venue_id_fkey(*), author:profiles!food_posts_author_id_fkey(handle, name, avatar_url, is_official)"
-      )
-      .order("created_at", { ascending: false });
-    if (error || !data || data.length === 0) return [];
-    return (data as FoodPostRow[]).map(mapFoodPostRow);
-  } catch (err) {
-    console.warn("[serverData] fetchFoodPostsServer failed — returning []:", err);
-    return [];
-  }
+  return getCachedFoodPosts();
 }
+
+const getCachedActiveWeeklyDrop = unstable_cache(
+  async (): Promise<WeeklyPick> => {
+    const supabase = getServerClient();
+    if (!supabase) return DEFAULT_WEEKLY_PICK;
+    try {
+      const { data, error } = await supabase
+        .from("weekly_picks")
+        .select("*")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error || !data) return DEFAULT_WEEKLY_PICK;
+      const row = data as WeeklyPickRow;
+      return {
+        id: row.id,
+        venue_id: row.venue_id,
+        dish_name: row.dish_name ?? DEFAULT_WEEKLY_PICK.dish_name,
+        dish_image: row.dish_image ?? DEFAULT_WEEKLY_PICK.dish_image,
+        speech_bubble: row.speech_bubble ?? DEFAULT_WEEKLY_PICK.speech_bubble,
+        coords: [
+          row.longitude ?? DEFAULT_WEEKLY_PICK.coords[0],
+          row.latitude ?? DEFAULT_WEEKLY_PICK.coords[1],
+        ],
+        price_nok: row.price_nok ?? DEFAULT_WEEKLY_PICK.price_nok,
+        week_label: row.week_label ?? DEFAULT_WEEKLY_PICK.week_label,
+        active: Boolean(row.is_active),
+      };
+    } catch (err) {
+      console.warn("[serverData] fetchActiveWeeklyDropServer failed — default pick:", err);
+      return DEFAULT_WEEKLY_PICK;
+    }
+  },
+  ["weekly-drop-server-data"],
+  { revalidate: 60, tags: ["weekly_picks"] }
+);
 
 /** Active Weekly Drop (server prefetch). Falls back to the default pick. */
 export async function fetchActiveWeeklyDropServer(): Promise<WeeklyPick> {
-  const supabase = getServerClient();
-  if (!supabase) return DEFAULT_WEEKLY_PICK;
-  try {
-    const { data, error } = await supabase
-      .from("weekly_picks")
-      .select("*")
-      .eq("is_active", true)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (error || !data) return DEFAULT_WEEKLY_PICK;
-    const row = data as WeeklyPickRow;
-    return {
-      id: row.id,
-      venue_id: row.venue_id,
-      dish_name: row.dish_name ?? DEFAULT_WEEKLY_PICK.dish_name,
-      dish_image: row.dish_image ?? DEFAULT_WEEKLY_PICK.dish_image,
-      speech_bubble: row.speech_bubble ?? DEFAULT_WEEKLY_PICK.speech_bubble,
-      coords: [
-        row.longitude ?? DEFAULT_WEEKLY_PICK.coords[0],
-        row.latitude ?? DEFAULT_WEEKLY_PICK.coords[1],
-      ],
-      price_nok: row.price_nok ?? DEFAULT_WEEKLY_PICK.price_nok,
-      week_label: row.week_label ?? DEFAULT_WEEKLY_PICK.week_label,
-      active: Boolean(row.is_active),
-    };
-  } catch (err) {
-    console.warn("[serverData] fetchActiveWeeklyDropServer failed — default pick:", err);
-    return DEFAULT_WEEKLY_PICK;
-  }
+  return getCachedActiveWeeklyDrop();
 }
 
 /**

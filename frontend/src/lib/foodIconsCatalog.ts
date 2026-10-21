@@ -117,7 +117,7 @@ export const FOOD_ICONS_CATALOG: FoodIconEntry[] = [
 
   // Spot Badges & Venue Markers
   { id: "food_truck", emoji: "🚚", name: "Street Food Truck / Wagon", tags: ["truck", "food truck", "mobile", "street"], category: "spots" },
-  { id: "popup_circus", emoji: "🎪", name: "Pop-up / Residency Tent", tags: ["popup", "pop-up", "tent", "temporary", "event"], category: "spots" },
+  { id: "popup_ticket", emoji: "🎟️", name: "Pop-up / Residency Ticket", tags: ["popup", "pop-up", "ticket", "residency", "temporary", "event"], category: "spots" },
   { id: "fire_popup", emoji: "🔥", name: "Viral Drop / Wood-Fired", tags: ["fire", "hot", "drop", "trending", "viral"], category: "spots" },
   { id: "restaurant", emoji: "🍽️", name: "Neighborhood Bistro / Dining", tags: ["restaurant", "dining", "bistro", "eatery"], category: "spots" },
   { id: "chef_hat", emoji: "👨‍🍳", name: "Chef's Table / Tasting Menu", tags: ["chef", "tasting", "omakase", "fine dining"], category: "spots" },

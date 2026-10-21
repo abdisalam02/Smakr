@@ -36,6 +36,8 @@
 |---|---|
 | `/` (feed + map) | `frontend/src/app/page.tsx` → `frontend/src/components/home/HomeView.tsx` |
 | `/admin` | `frontend/src/app/admin/page.tsx` |
+| `/partner` (studio) | `frontend/src/app/partner/page.tsx` → `frontend/src/components/partner/SmakrCardStudio.tsx` |
+| `/kitchen/[token]` | `frontend/src/app/kitchen/[token]/page.tsx` |
 | `/mascot-studio` | `frontend/src/app/mascot-studio/page.tsx` |
 | `/auth/*` | `frontend/src/app/auth/**`, `frontend/src/app/auth/callback/route.ts` |
 | `/collections` | `frontend/src/app/collections/**` |

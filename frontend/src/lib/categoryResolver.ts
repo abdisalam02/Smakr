@@ -97,7 +97,40 @@ export function resolveFoodCategoryAndIcon(
     return { category: "fried_chicken", icon: "🍗", label: "Fried Chicken & Korean" };
   }
 
-  // 6c. Kebab, Shawarma & Falafel
+  // 6c. Mandi, Spiced Rice & Yemeni / Somali Specialties
+  if (
+    combined.includes("mandi") ||
+    combined.includes("yemeni") ||
+    combined.includes("yemen") ||
+    combined.includes("kabsa") ||
+    combined.includes("majboos") ||
+    combined.includes("somali") ||
+    combined.includes("bariis") ||
+    combined.includes("spiced rice") ||
+    combined.includes("lamb rice") ||
+    combined.includes("chicken rice")
+  ) {
+    const isYemeni = combined.includes("yemen") || combined.includes("yemeni");
+    const isChicken = combined.includes("chicken");
+    const isLamb = combined.includes("lamb") || combined.includes("kjøtt");
+    const icon = isYemeni ? "🇾🇪" : isLamb ? "🍖" : isChicken ? "🍗" : "🍚";
+    return { category: "mandi_rice", icon, label: "Mandi & Spiced Rice" };
+  }
+
+  // 6d. Middle Eastern, Levant & Persian Specialties
+  if (
+    combined.includes("middle eastern") ||
+    combined.includes("lebanese") ||
+    combined.includes("syrian") ||
+    combined.includes("persian") ||
+    combined.includes("iranian") ||
+    combined.includes("turkish") ||
+    combined.includes("hummus")
+  ) {
+    return { category: "middle_eastern", icon: "🫓", label: "Middle Eastern" };
+  }
+
+  // 6e. Kebab, Shawarma & Falafel
   if (
     combined.includes("kebab") ||
     combined.includes("shawarma") ||
@@ -110,7 +143,7 @@ export function resolveFoodCategoryAndIcon(
     return { category: "kebab", icon: "🥙", label: "Kebab & Shawarma" };
   }
 
-  // 6d. Pho & Vietnamese
+  // 6f. Pho & Vietnamese
   if (
     combined.includes("pho") ||
     combined.includes("phở") ||
@@ -123,7 +156,7 @@ export function resolveFoodCategoryAndIcon(
     return { category: "vietnamese", icon: "🍲", label: "Pho & Vietnamese" };
   }
 
-  // 6e. Indian & Curry
+  // 6g. Indian & Curry
   if (
     combined.includes("curry") ||
     combined.includes("masala") ||

@@ -1,4 +1,4 @@
-import type { FoodPost, UserProfile, Venue, WeeklyPick } from "@/types";
+import type { FoodPost, Venue, WeeklyPick } from "@/types";
 
 /**
  * Tiny client-side cache for the heavy store slices.
@@ -10,14 +10,13 @@ import type { FoodPost, UserProfile, Venue, WeeklyPick } from "@/types";
  * data resolves.
  */
 
-const CACHE_KEY = "smakr_app_cache_v1";
+const CACHE_KEY = "smakr_app_cache_v2";
 const MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
 
 export interface AppCache {
   venues?: Venue[];
   foodPosts?: FoodPost[];
   weeklyPick?: WeeklyPick;
-  currentUser?: UserProfile | null;
   savedAt?: number;
 }
 

@@ -414,7 +414,7 @@ export function VenueBottomSheet() {
               {/* Pop-up residency callout */}
               {selectedVenue.spot_type === "popup" && getPopupStatus(selectedVenue).label && (
                 <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-amber-900">
-                  <span className="text-xl">🎪</span>
+                  <span className="text-xl">🎟️</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold">{getPopupStatus(selectedVenue).label}</p>
                     {selectedVenue.popup_end_date && (

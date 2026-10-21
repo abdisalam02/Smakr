@@ -30,7 +30,7 @@ import {
 import { OFFICIAL_SMAKR_MASCOT_CONFIG } from "@/lib/officialSmakrMascot";
 import { FOOD_PIN_SVG_MAP } from "@/components/food/FoodIcons";
 import { formatDistance } from "@/lib/math";
-import { getPopupStatus } from "@/lib/popupUtils";
+import { getPopupStatus, getPopupUrgencyLabel } from "@/lib/popupUtils";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import {
   buildOpenPeepsSvg,
@@ -77,22 +77,23 @@ function applyPinState(root: HTMLElement, isSelected: boolean) {
   const puck = root.querySelector<HTMLElement>(".smakr-map-puck");
   const iconContainer = root.querySelector<HTMLElement>(".smakr-puck-icon");
   const arrow = root.querySelector<HTMLElement>(".smakr-puck-arrow");
+  const isPopup = root.dataset.isPopup === "1";
   if (puck) {
     if (isSelected) {
-      puck.style.background = "rgba(255, 250, 244, 0.88)";
-      puck.style.border = "2px solid #E84A27";
+      puck.style.background = isPopup ? "#FFFFFF" : "rgba(255, 250, 244, 0.88)";
+      puck.style.border = isPopup ? "2.5px solid #E84A27" : "2px solid #E84A27";
       puck.style.boxShadow = "0 0 0 4px rgba(232, 74, 39, 0.22), 0 6px 16px rgba(232, 74, 39, 0.30)";
     } else {
-      puck.style.background = "rgba(255, 252, 247, 0.74)";
-      puck.style.border = "1.5px solid rgba(255, 255, 255, 0.92)";
-      puck.style.boxShadow = "0 3px 10px rgba(24, 22, 21, 0.14)";
+      puck.style.background = isPopup ? "#FAF7F2" : "rgba(255, 252, 247, 0.74)";
+      puck.style.border = isPopup ? "2px solid #E84A27" : "1.5px solid rgba(255, 255, 255, 0.92)";
+      puck.style.boxShadow = isPopup ? "0 4px 12px rgba(232, 74, 39, 0.22)" : "0 3px 10px rgba(24, 22, 21, 0.14)";
     }
   }
   if (iconContainer) {
     iconContainer.style.filter = "none";
   }
   if (arrow) {
-    arrow.style.borderTopColor = isSelected ? "#E84A27" : "rgba(24, 22, 21, 0.55)";
+    arrow.style.borderTopColor = isSelected ? "#E84A27" : isPopup ? "#E84A27" : "rgba(24, 22, 21, 0.55)";
   }
 }
 
@@ -113,13 +114,13 @@ function buildUserAvatarPuckElement(
   container.style.transformOrigin = "bottom center";
   container.style.willChange = "transform";
 
-  // Free-standing Open Peeps Bust Sticker (NO circular ring — clearly distinct from ✦ Smakr Pick!)
+  // Free-standing Open Peeps Bust Sticker (compact proportions matching 34px map pins)
   const charContainer = document.createElement("div");
   charContainer.className =
-    "relative w-14 h-16 flex items-end justify-center overflow-visible";
+    "relative w-9 h-11 flex items-end justify-center overflow-visible";
   // Crisp white die-cut vinyl sticker outline + soft elevation shadow
   charContainer.style.filter =
-    "drop-shadow(2px 0 0 #FFFFFF) drop-shadow(-2px 0 0 #FFFFFF) drop-shadow(0 2px 0 #FFFFFF) drop-shadow(0 -2px 0 #FFFFFF) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.22))";
+    "drop-shadow(1.5px 0 0 #FFFFFF) drop-shadow(-1.5px 0 0 #FFFFFF) drop-shadow(0 1.5px 0 #FFFFFF) drop-shadow(0 -1.5px 0 #FFFFFF) drop-shadow(0 3px 6px rgba(0, 0, 0, 0.22))";
 
   const renderSvgInto = (svgStr: string, isMascotEngine = false) => {
     const cleaned = svgStr.replace(/<g data-layer="ambience">[\s\S]*?<\/g>/g, "");
@@ -159,8 +160,8 @@ function buildUserAvatarPuckElement(
   // Compact frosted "● YOU" pill anchored at the bottom waist of the bust
   const badge = document.createElement("div");
   badge.className =
-    "puck-badge -mt-2 relative z-20 bg-[#FAF7F2]/92 backdrop-blur-md text-[#181615] font-extrabold text-[8.5px] tracking-wider uppercase leading-none px-2 py-0.5 rounded-full shadow-md border border-emerald-500/45 whitespace-nowrap flex items-center gap-1";
-  badge.innerHTML = `<span style="width:5.5px;height:5.5px;border-radius:9999px;background:#10B981;box-shadow:0 0 6px #10B981;display:inline-block;"></span><span>YOU</span>`;
+    "puck-badge -mt-1.5 relative z-20 bg-[#FAF7F2]/95 backdrop-blur-md text-[#181615] font-extrabold text-[7.5px] tracking-wider uppercase leading-none px-1.5 py-0.5 rounded-full shadow-sm border border-emerald-500/40 whitespace-nowrap flex items-center gap-1";
+  badge.innerHTML = `<span style="width:4.5px;height:4.5px;border-radius:9999px;background:#10B981;box-shadow:0 0 5px #10B981;display:inline-block;"></span><span>YOU</span>`;
 
   // Glowing emerald GPS radar pulse dot directly beneath the bust
   const gpsDotWrapper = document.createElement("div");
@@ -168,12 +169,12 @@ function buildUserAvatarPuckElement(
 
   const ripple = document.createElement("div");
   ripple.className =
-    "absolute w-5 h-5 rounded-full bg-[#10B981]/35 border border-[#10B981]/60 animate-ping pointer-events-none";
+    "absolute w-4 h-4 rounded-full bg-[#10B981]/30 border border-[#10B981]/50 animate-ping pointer-events-none";
   ripple.style.animationDuration = "2s";
 
   const gpsDot = document.createElement("div");
   gpsDot.className =
-    "relative z-10 w-2.5 h-2.5 rounded-full bg-[#10B981] border-2 border-white shadow-[0_0_10px_#10B981]";
+    "relative z-10 w-2 h-2 rounded-full bg-[#10B981] border-2 border-white shadow-[0_0_8px_#10B981]";
 
   gpsDotWrapper.appendChild(ripple);
   gpsDotWrapper.appendChild(gpsDot);
@@ -187,16 +188,16 @@ function buildUserAvatarPuckElement(
 
 /**
  * Calibrated zoom + viewport-responsive scale:
- * - Scales smoothly with map zoom (0.84 at city overview -> 1.04 at neighborhood -> 1.20 at street level)
- * - Adapts to map container width so the avatar remains proportional on mobile split-view and desktop.
+ * - Scaled to match the 34px map pin pucks and 38px Smakr Pick marker.
  */
 function applyPuckZoomScale(rootEl: HTMLElement, zoom: number, containerWidth?: number) {
   const scaleEl = rootEl.querySelector<HTMLElement>(".puck-scale") ?? rootEl;
-  const zoomScale = Math.max(0.84, Math.min(1.22, 0.84 + Math.max(0, zoom - 11.5) * 0.085));
+  // Scaled from 0.72 (zoomed out) to 0.94 (zoomed in street level)
+  const zoomScale = Math.max(0.70, Math.min(0.94, 0.70 + Math.max(0, zoom - 12) * 0.055));
   const width =
     containerWidth ??
     (typeof window !== "undefined" ? window.innerWidth : 400);
-  const viewportFactor = width < 420 ? 0.95 : width > 960 ? 1.06 : 1.0;
+  const viewportFactor = width < 420 ? 0.92 : width > 960 ? 1.0 : 0.96;
   const finalScale = zoomScale * viewportFactor;
   scaleEl.style.transform = `scale(${finalScale.toFixed(3)})`;
 }
@@ -218,8 +219,16 @@ function createAquarellePinElement(
   root.style.cursor = "pointer";
   root.style.userSelect = "none";
 
+  const isPopup = venue.spot_type === "popup";
+  root.dataset.isPopup = isPopup ? "1" : "0";
+
   const popupStatus = getPopupStatus(venue);
-  const categoryKey = venue.food_category || (venue.place_type === "cafe" ? "coffee" : "all");
+  const kitchenStatus = venue.kitchen_status?.status;
+  const isFreshBatch = kitchenStatus === "fresh_batch";
+  const isLowStock = kitchenStatus === "low_stock";
+  const isSoldOut = kitchenStatus === "sold_out";
+
+  const categoryKey = venue.food_category || "all";
   const iconSvg = FOOD_PIN_SVG_MAP[categoryKey] || FOOD_PIN_SVG_MAP.all;
   // A curated emoji (set by the admin importer) overrides the default SVG pin.
   const curatedIcon = venue.icon
@@ -244,47 +253,119 @@ function createAquarellePinElement(
   inner.style.transformOrigin = "bottom center";
   inner.style.transition = "transform 0.18s cubic-bezier(0.16, 1, 0.3, 1)";
 
-  const haloHtml = popupStatus.isPulsingMarker
+  const haloHtml = isPopup
+    ? `<div style="position:absolute;top:-6px;left:-6px;width:50px;height:50px;border-radius:16px;border:2px solid #E84A27;background:rgba(232,74,39,0.22);animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;pointer-events:none;"></div>`
+    : isFreshBatch
+    ? `<div style="position:absolute;top:-6px;left:-6px;width:46px;height:46px;border-radius:9999px;border:2px solid #e84a27;background:rgba(232,74,39,0.25);animation:ping 1.4s cubic-bezier(0,0,0.2,1) infinite;pointer-events:none;"></div>`
+    : popupStatus.isPulsingMarker
     ? `<div style="position:absolute;top:-5px;left:-5px;width:44px;height:44px;border-radius:9999px;border:2px solid #f59e0b;background:rgba(245,158,11,0.2);animation:ping 1.6s cubic-bezier(0,0,0.2,1) infinite;pointer-events:none;"></div>`
     : "";
 
-  inner.innerHTML = `
-    <!-- Warm Translucent Glass Map Puck (34x34px, centered glyph, no muddy grey shadow) -->
-    ${haloHtml}
-    <div class="smakr-map-puck" style="
-      width: 34px;
-      height: 34px;
-      border-radius: 9999px;
-      background: rgba(255, 252, 247, 0.74);
-      backdrop-filter: blur(8px) saturate(140%);
-      -webkit-backdrop-filter: blur(8px) saturate(140%);
-      border: 1.5px solid rgba(255, 255, 255, 0.92);
-      box-shadow: 0 3px 10px rgba(24, 22, 21, 0.14);
-      display: grid;
-      place-items: center;
-      padding: 0;
-      position: relative;
-      transition: transform 150ms cubic-bezier(0.22, 1, 0.36, 1), background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-      cursor: pointer;
-    ">
-      <div class="smakr-puck-icon" style="width:22px;height:22px;display:grid;place-items:center;line-height:1;margin:0;padding:0;">
-        ${pinGlyph}
+  let kitchenBadgeHtml = "";
+  if (isFreshBatch) {
+    kitchenBadgeHtml = `<div title="Fresh Batch Live" style="position:absolute;top:-5px;right:-5px;width:16px;height:16px;border-radius:9999px;background:#e84a27;color:white;font-size:10px;display:grid;place-items:center;box-shadow:0 1px 4px rgba(0,0,0,0.3);border:1.5px solid #fff;line-height:1;z-index:2;">🔥</div>`;
+  } else if (isLowStock) {
+    kitchenBadgeHtml = `<div title="Few Left Today" style="position:absolute;top:-5px;right:-5px;width:16px;height:16px;border-radius:9999px;background:#d97706;color:white;font-size:10px;display:grid;place-items:center;box-shadow:0 1px 4px rgba(0,0,0,0.3);border:1.5px solid #fff;line-height:1;z-index:2;">⚡</div>`;
+  } else if (isSoldOut) {
+    kitchenBadgeHtml = `<div title="Sold Out" style="position:absolute;top:-5px;right:-5px;width:16px;height:16px;border-radius:9999px;background:#57534e;color:white;font-size:9px;display:grid;place-items:center;box-shadow:0 1px 4px rgba(0,0,0,0.3);border:1.5px solid #fff;line-height:1;z-index:2;">✕</div>`;
+  }
+
+  if (isPopup) {
+    inner.innerHTML = `
+      <!-- Distinct Pop-up Ticket Badge (38x38px rounded-xl, #FAF7F2, #E84A27 border) -->
+      ${haloHtml}
+      <div class="smakr-map-puck" style="
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        background: #FAF7F2;
+        border: 2px solid #E84A27;
+        box-shadow: 0 4px 12px rgba(232, 74, 39, 0.22);
+        display: grid;
+        place-items: center;
+        padding: 0;
+        position: relative;
+        transition: transform 150ms cubic-bezier(0.22, 1, 0.36, 1), background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        cursor: pointer;
+      ">
+        <!-- Floating Micro-Pill: 🔥 POP-UP -->
+        <div style="
+          position: absolute;
+          top: -12px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #E84A27;
+          color: #FFFFFF;
+          font-family: var(--font-comico, sans-serif);
+          font-size: 7.5px;
+          font-weight: 900;
+          letter-spacing: 0.04em;
+          padding: 1px 5.5px;
+          border-radius: 9999px;
+          white-space: nowrap;
+          box-shadow: 0 2px 6px rgba(232, 74, 39, 0.35);
+          pointer-events: none;
+          z-index: 10;
+        ">🔥 POP-UP</div>
+        ${kitchenBadgeHtml}
+        <div class="smakr-puck-icon" style="width:22px;height:22px;display:grid;place-items:center;line-height:1;margin:0;padding:0;">
+          ${pinGlyph}
+        </div>
+        <!-- Pointer triangle -->
+        <div class="smakr-puck-arrow" style="
+          position: absolute;
+          bottom: -4.5px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 0;
+          height: 0;
+          border-left: 4px solid transparent;
+          border-right: 4px solid transparent;
+          border-top: 4.5px solid #E84A27;
+          transition: border-top-color 0.2s ease;
+        "></div>
       </div>
-      <!-- Subtle pointer triangle -->
-      <div class="smakr-puck-arrow" style="
-        position: absolute;
-        bottom: -4.5px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 0;
-        height: 0;
-        border-left: 4px solid transparent;
-        border-right: 4px solid transparent;
-        border-top: 4.5px solid rgba(24, 22, 21, 0.55);
-        transition: border-top-color 0.2s ease;
-      "></div>
-    </div>
-  `;
+    `;
+  } else {
+    inner.innerHTML = `
+      <!-- Warm Translucent Glass Map Puck (34x34px, centered glyph, no muddy grey shadow) -->
+      ${haloHtml}
+      <div class="smakr-map-puck" style="
+        width: 34px;
+        height: 34px;
+        border-radius: 9999px;
+        background: rgba(255, 252, 247, 0.74);
+        backdrop-filter: blur(8px) saturate(140%);
+        -webkit-backdrop-filter: blur(8px) saturate(140%);
+        border: 1.5px solid rgba(255, 255, 255, 0.92);
+        box-shadow: 0 3px 10px rgba(24, 22, 21, 0.14);
+        display: grid;
+        place-items: center;
+        padding: 0;
+        position: relative;
+        transition: transform 150ms cubic-bezier(0.22, 1, 0.36, 1), background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        cursor: pointer;
+      ">
+        ${kitchenBadgeHtml}
+        <div class="smakr-puck-icon" style="width:22px;height:22px;display:grid;place-items:center;line-height:1;margin:0;padding:0;">
+          ${pinGlyph}
+        </div>
+        <!-- Subtle pointer triangle -->
+        <div class="smakr-puck-arrow" style="
+          position: absolute;
+          bottom: -4.5px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 0;
+          height: 0;
+          border-left: 4px solid transparent;
+          border-right: 4px solid transparent;
+          border-top: 4.5px solid rgba(24, 22, 21, 0.55);
+          transition: border-top-color 0.2s ease;
+        "></div>
+      </div>
+    `;
+  }
 
   const puckEl = inner.querySelector<HTMLElement>(".smakr-map-puck");
   if (puckEl) {
@@ -327,7 +408,6 @@ export function MapRadarView() {
 
   // Fast, responsive Streets v2 default
   const [activeTheme, setActiveTheme] = useState<"streets" | "dataviz" | "aquarelle">("streets");
-  const [currentZoom, setCurrentZoom] = useState(13.8);
   const venues = useCityPulseStore((state) => state.venues);
   const selectedVenue = useCityPulseStore((state) => state.selectedVenue);
   const setSelectedVenue = useCityPulseStore((state) => state.setSelectedVenue);
@@ -463,10 +543,7 @@ export function MapRadarView() {
       if (popupStatus.hideMapPin) return false;
 
       if (currentMapCategory !== "all") {
-        const categoryMatch =
-          venue.food_category === currentMapCategory ||
-          (currentMapCategory === "coffee" && venue.place_type === "cafe");
-        if (!categoryMatch) return false;
+        if (venue.food_category !== currentMapCategory) return false;
       }
       if (
         currentNeighborhood !== "all" &&
@@ -492,7 +569,8 @@ export function MapRadarView() {
     visibleVenues.forEach((venue) => {
       const isSelected = currentSelected?.id === venue.id;
       const popupStatus = getPopupStatus(venue);
-      const pinKey = `${venue.icon ?? ""}|${venue.spot_type ?? ""}|${popupStatus.status}|${venue.food_category}|${venue.name}`;
+      const kitchenStatus = venue.kitchen_status?.status ?? "normal";
+      const pinKey = `${venue.icon ?? ""}|${venue.spot_type ?? ""}|${popupStatus.status}|${kitchenStatus}|${venue.food_category}|${venue.name}`;
 
       let existing = markersMap.current.get(venue.id);
       if (existing && existing.getElement().dataset.pinKey !== pinKey) {
@@ -817,7 +895,6 @@ export function MapRadarView() {
       const z = map.getZoom();
       const zoomingOut = z < lastZoom;
       lastZoom = z;
-      setCurrentZoom(z);
       if (z < 13.8 && zoomingOut && !isProgrammaticFlightRef.current) {
         const state = useCityPulseStore.getState();
         if (state.selectedVenue) {
@@ -835,12 +912,14 @@ export function MapRadarView() {
     // `moveend`, which recurses/loops and can leave the canvas half-rendered.
     map.on("moveend", () => {
       map.triggerRepaint();
-      const c = map.getCenter();
-      console.info("[locate] camera settled", {
-        instanceId,
-        center: `${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}`,
-        zoom: +map.getZoom().toFixed(2),
-      });
+      if (process.env.NODE_ENV !== "production") {
+        const c = map.getCenter();
+        console.info("[locate] camera settled", {
+          instanceId,
+          center: `${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}`,
+          zoom: +map.getZoom().toFixed(2),
+        });
+      }
     });
 
     // Single click on empty map: deselects venue card and minimizes feed to peek if expanded
@@ -917,10 +996,7 @@ export function MapRadarView() {
       return;
     }
 
-    const matching = venues.filter((v) => {
-      if (mapCategory === "coffee" && v.place_type === "cafe") return true;
-      return v.food_category === mapCategory;
-    });
+    const matching = venues.filter((v) => v.food_category === mapCategory);
 
     const validSpots = matching.filter(
       (v) =>
@@ -1015,11 +1091,8 @@ export function MapRadarView() {
 
     const { lat, lon } = userLocation;
 
-    const isNiwacheOrAdmin =
-      currentUser?.role === "admin" ||
-      Boolean(currentUser?.is_official) ||
-      (currentUser?.handle || "").toLowerCase().includes("niwache") ||
-      (currentUser?.handle || "").toLowerCase().includes("smak");
+    const isOfficial =
+      currentUser?.role === "admin" || Boolean(currentUser?.is_official);
     const avatarSig = `${currentUser?.avatar_url || ""}:${currentUser?.role || ""}:${JSON.stringify(currentUser?.avatar_config || {})}:${JSON.stringify(mascotConfig || {})}`;
 
     // If marker already exists and avatar identity has not changed, just update position smoothly
@@ -1038,7 +1111,7 @@ export function MapRadarView() {
       currentUser?.avatar_url,
       currentUser?.avatar_config,
       mascotConfig,
-      Boolean(isNiwacheOrAdmin)
+      Boolean(isOfficial)
     );
     applyPuckZoomScale(el, map.getZoom());
 

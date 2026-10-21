@@ -115,7 +115,7 @@ interface PulseStoreState {
   toastMessage: string | null;
   mapCategory: FoodCategory;
   feedCategory: FoodCategory;
-  feedMode: "food" | "places";
+  feedMode: "food" | "places" | "popups";
   selectedAvatar: AvatarOption;
   mapNeighborhood: Neighborhood;
   selectedDietary: DietaryTag[];
@@ -142,7 +142,7 @@ interface PulseStoreState {
   openBetaFeedback: () => void;
   setIsBetaFeedbackOpen: (open: boolean) => void;
   setSelectedAvatar: (avatar: AvatarOption) => void;
-  showToast: (message: string, durationMs?: number) => void;
+  showToast: (message: string, durationMsOrType?: number | string) => void;
   clearToast: () => void;
   setVenues: (venues: Venue[]) => void;
   setFoodPosts: (posts: FoodPost[]) => void;
@@ -156,7 +156,7 @@ interface PulseStoreState {
   resetMascotConfig: () => void;
   /** Hydrate the mascot from the server profile without scheduling a write-back. */
   hydrateMascotConfig: (config: MascotConfig) => void;
-  setFeedMode: (mode: "food" | "places") => void;
+  setFeedMode: (mode: "food" | "places" | "popups") => void;
   setMobileSheetState: (state: "peek" | "half" | "full") => void;
   setIsAuthModalOpen: (open: boolean) => void;
   login: (user?: UserProfile) => void;
@@ -312,13 +312,14 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
 
   setSelectedAvatar: (selectedAvatar: AvatarOption) => set({ selectedAvatar }),
 
-  showToast: (message: string, durationMs = 4500) => {
+  showToast: (message: string, durationMsOrType: number | string = 4500) => {
+    const duration = typeof durationMsOrType === "number" ? durationMsOrType : 4500;
     set({ toastMessage: message });
     setTimeout(() => {
       if (get().toastMessage === message) {
         set({ toastMessage: null });
       }
-    }, durationMs);
+    }, duration);
   },
 
   clearToast: () => set({ toastMessage: null }),
@@ -490,6 +491,7 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
     if (typeof window !== "undefined") {
       try {
         localStorage.removeItem("smakr_app_cache_v1");
+        localStorage.removeItem("smakr_app_cache_v2");
       } catch {}
     }
     set({

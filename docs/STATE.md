@@ -1,4 +1,57 @@
 # Project State
+- Pushed commit 11edcdd to remote repository at https://github.com/abdisalam02/Sadija.git.
+- Removed look-2, streamlined stage progression to 3 looks (Linen, Denim, Noir Trench) with dedicated breathing spacer.
+- Eliminated mobile scroll jitter and address-bar resize bounce across mobile browsers via svh viewport units.
+- Replaced pixel offsets with responsive svh coordinates, flushing elbow to left edge on Look 1 and centering Look 3 face.
+- Scaled down native glass Spotify song card to compact footprint (max-w-[230px], rounded-2xl).
+- Verified responsive layout leaving full visual room for Look 3 denim stage.
+- Successfully pushed main branch to remote repository at https://github.com/abdisalam02/Sadija.git.
+- Secured kitchen tokens off public JSONB, routing auth through private venue_kitchen_tokens table.
+- Restored 1-tap Google Places photo pipeline with toPhotoUrl mapper, w=200 thumbnails, and Places details dish fallback.
+- Slashed Next.js SSR latency with public API middleware bypass, selective column serverData reads, and MapLibre zoom unhook.
+- Built partner multi-dish CRUD pipeline (/api/partner/dishes, PartnerDishEditorSheet, and live studio menu management).
+- Aligned partner and kitchen API routes to canonical database columns and isolated kitchen tokens.
+- Fixed VisualPhotoSwitcher thumbnail blowout with explicit 60px bounds and patched coffee filter bypass.
+- Wired atomic incrementBringBack RPC and broadcastWeeklyPick transaction in Supabase data layer.
+- Tuned FoodSpotCard with 112px square photos, 4 clean lines, and verified pb-36 feed clearance.
+- Upgraded Admin edit modals and Pop-up Wizard with visual switchers, clean dish cards, and hidden GPS.
+- Hardened TikTok extractor route with redirect follow for mobile links and server image proxying.
+- Re-architected /admin: tactile Live Dispatch Card with 3-step modal, collapsible accordion sections, and 16:9 photo cards with slide-up edit sheet.
+- Replaced moderation queue table with responsive visual food cards supporting direct edits and 1-tap Smakr Pick toggle.
+- Fixed TikTok extraction bug in route.ts by removing hardcoded Sandwich & Stuff fallback and adding keyword inference.
+- Added AI details formatter and 4-slot image chooser to AdminPopupWizardModal.
+- Redesigned /partner with dual-path onboarding cards (Permanent Spot vs Pop-up Residency) and streamlined copy.
+- Deployed unified 4-step partner wizard sheet on /partner for restaurants and pop-up residencies.
+- Upgraded /admin with tactile Nordic bento layout, collapsible weekly dispatch coordinates, and responsive mobile cards.
+- Added step-measured Admin Pop-up Wizard with TikTok scraper and AI flyer parser; verified zero TypeScript errors.
+- Rebuilt FoodSpotCard for mobile density (116px height, 1:1 photo, 4 clean lines) with pb-36 bottom clearance.
+- Updated Smakr Admin header to single-row mobile bar with horizontal scrollable segmented tab bar.
+- Replaced circus tent with die-cut notched ticket stub (🎟️) across icons, map markers, and feed cards.
+- Deployed 3-way bottom feed slider (Dishes, Spots, Pop-ups) with Going/Bring-back micro-reactions.
+- Added AI + Google Places zero-typing Pop-up Ingestion Engine and 3-source visual picker in CreateFoodPostModal.
+- Upgraded /ad-reel partner promo card to tactile Nordic street print with warm oat canvas, tilted diff stack, and 2x retina PNG export.
+- Enhanced /partner studio with 36px micro-stepper checkmarks, porcelain search, mobile sheet auto-docking, rubber stamp, and floating edit pills.
+- Added first-class Pop-ups data architecture with PopupResidencyMeta schema, live urgency scoring, and residency editor sheet.
+- Deployed distinct pop-up ticket map marker with floating 🔥 POP-UP micro-pill and pulse beacon halo in MapRadarView.
+- Integrated [🎪 Pop-ups] feed channel, PopupEventCard component, and Oslo residency seeds for Hot Temper and Nolo Burger.
+- Streamlined /partner: micro-stepper header, direct '+ Add unlisted spot' in search, and full mobile bottom sheet drawer preview.
+- Enabled custom spot registration with automatic database stub creation during partner claim submission.
+- Rebuilt /ad-reel into multi-format Ad Studio with switcher between Motion Video Reel and Partner Announcement Ad.
+- Added PartnerPromoAdCard with 4:5 Feed and 9:16 Story modes, hook angles (Google Maps, Delivery, Remote), and 2x PNG export.
+- Implemented modular slide-up drawers in PartnerSheets for cover photo, hours/format, signature dishes, and verification claims.
+- Partners can select existing dishes to modify or add new ones directly from the live restaurant preview.
+- Added image URL validation and binary magic-byte checks to partner propose and upload APIs.
+- Added 4-step partner workflow guide and FAQ to /partner; removed fake 4.8 rating and verified fallbacks from previews.
+- Keyed partner studio drafts per venue in localStorage to prevent cross-venue draft leaks.
+- Cleaned up stale Beta Dev Access error copy in AuthModal and ignored temp test artifacts in .gitignore.
+- Built Smakr Partner studio (/partner) supporting both Signature Dish (4:3) and Restaurant Spot Card modes.
+- Added mobile live preview drawer with instant diff toggle between Proposed Changes and Current Live card.
+- Upgraded bulk enricher to Gemini 3.8 Flash with clean venue name normalization and Mandi & Rice/Middle Eastern categories.
+- Launched /for-restaurants partner portal for photo corrections, NOK prices, hours, and zero-password remote access.
+- Bulk Seeder updated with multi-dash/find-meal auto-inference, strict Oslo Places geo-bias, and interactive app card staging modal.
+- Bulk Staging Seeder deployed to /admin with 3 Oslo corridor packs, 6-photo picker, and Gemini enrichment.
+- Verified Kitchen Live Batch Status implemented via vibe_signals.kitchen_status and /kitchen/[token] mobile remote.
+- Dynamic flame/lightning puck halos and verified status soundbites active across map and food cards.
 - Brand visual refactor complete: Comico typography and Burnt Paprika (#e84a27) deployed.
 - Navigation chrome streamlined to Smakr logo, theme toggle, and profile menu.
 - Feed cards tuned to 280-310px height with 3-line editorial meta and snap filters.
@@ -224,3 +277,9 @@
 - Replaced `/ad-reel` catchphrase reveal mask with a monotonically progressive cursive curve (strokeWidth=48) eliminating pauses between words and end-letter lag.
 - Calibrated `/ad-reel` outro pacing (31.5s total): added 1.4s Apple-smooth easeOutQuint phone exit, smooth mascot center glide, menu dish scrolling, and an extended 7.5s outro hold.
 - Preserved `/ad-reel` Weekly Drop expanded state and feed position while phone slides off in Act 3, eliminating screen reset flash.
+- Completed architectural audit for Smakr Partner (`/partner`) with Live Card Studio UX, verification claim gates, and Admin Review Queue.
+- Hardened `/api/kitchen/partner-update` & `/status` with timingSafeEqual token verification and zero auto-issue.
+- Launched `/partner` Studio with live 4:3 `PartnerCardPreview`, Places photo picker, AI taste notes, and `ClaimForm`.
+- Deployed Partner Claims moderation queue in `/admin` with side-by-side card diffs, 1-click approval, and mailto links.
+- Added migration `20261018_partner_claims.sql`, deleted `/for-restaurants`, and deployed permanent 308 redirect.
+- Fixed `/partner` scroll container (`overflow-y-auto`) and redesigned Studio with native Warm Oat theme tokens.

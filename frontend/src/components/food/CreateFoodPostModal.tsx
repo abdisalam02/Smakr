@@ -23,8 +23,9 @@ import {
   type VibeTag,
   type VenueInsertInput,
 } from "@/lib/supabase/data";
+import { StorefrontIcon, FoodTruckIcon, TikTokVideoIcon } from "@/components/food/FoodIcons";
 import { getCulinaryImageForDish } from "@/lib/culinaryImages";
-import type { FoodCategory, FoodPost, Venue } from "@/types";
+import type { FoodCategory, FoodPost, Venue, SpotType } from "@/types";
 import type { PlaceResult } from "@/lib/places/google";
 import { resolveFoodCategoryAndIcon } from "@/lib/categoryResolver";
 
@@ -243,6 +244,13 @@ export function CreateFoodPostModal() {
   const selectedVenue = useCityPulseStore((state) => state.selectedVenue);
   const venues = useCityPulseStore((state) => state.venues);
 
+  // ── Format selector ──
+  const [formatType, setFormatType] = useState<"restaurant" | "food_truck">("restaurant");
+
+  // ── TikTok / Social Video auto-fill state ──
+  const [tiktokUrl, setTiktokUrl] = useState("");
+  const [isExtractingTikTok, setIsExtractingTikTok] = useState(false);
+
   // ── Flow ──
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
@@ -309,6 +317,9 @@ export function CreateFoodPostModal() {
               detectCategoryKey(fromVenue.name)
           : CATEGORY_ICONS[0].key
       );
+      setFormatType("restaurant");
+      setTiktokUrl("");
+      setIsExtractingTikTok(false);
       setQuery("");
       setResults([]);
       setDishName(fromVenue?.signature_dishes?.[0] ?? "");
@@ -331,6 +342,68 @@ export function CreateFoodPostModal() {
     }
     wasOpenRef.current = isOpen;
   }, [isOpen, selectedVenue]);
+
+  /* ---- TikTok / Video Link Extraction Handler ---- */
+  const handleExtractTikTok = async () => {
+    const url = tiktokUrl.trim();
+    if (!url) {
+      showToast("Paste a video link first.");
+      return;
+    }
+    setIsExtractingTikTok(true);
+    try {
+      const res = await fetch("/api/ai/extract-food-post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const result = await res.json();
+      if (!res.ok || !result.success || !result.data) {
+        showToast(result.error || "Could not extract food post from this link.");
+        return;
+      }
+      const d = result.data;
+      if (d.dish_name) setDishName(d.dish_name);
+      if (d.price_nok) setPriceNok(String(d.price_nok));
+      if (d.review_text) setReviewText(d.review_text);
+      if (d.category) {
+        const match = CATEGORY_ICONS.find(
+          (c) => c.category === d.category || c.key === d.category
+        );
+        if (match) setCategoryKey(match.key);
+      }
+      if (d.image_url) {
+        setExtraPhotos((prev) => [d.image_url, ...prev.filter((p) => p !== d.image_url)]);
+        setFallbackPhoto(d.image_url);
+      }
+      if (d.spot_name) {
+        setQuery(d.spot_name);
+        try {
+          const searchRes = await fetch(`/api/places/search?q=${encodeURIComponent(d.spot_name + " Oslo")}`);
+          if (searchRes.ok) {
+            const searchData = await searchRes.json();
+            const list = searchData.results ?? (searchData.place ? [searchData.place] : []);
+            if (list.length > 0) {
+              setResults(list);
+              setGoogle(list[0]);
+              setVenueId(null);
+              if (list[0].photos && list[0].photos.length > 0) {
+                setListingPhotos(list[0].photos);
+              }
+            }
+          }
+        } catch (searchErr) {
+          console.warn("[TikTok] Spot search error:", searchErr);
+        }
+      }
+      showToast("✨ Extracted dish & photo from TikTok — review steps below");
+    } catch (err) {
+      console.error("[TikTokExtraction] error:", err);
+      showToast("Failed to process video link.");
+    } finally {
+      setIsExtractingTikTok(false);
+    }
+  };
 
   /* ---- debounced Google Places search ---- */
   useEffect(() => {
@@ -520,6 +593,7 @@ export function CreateFoodPostModal() {
 
       // 1) Resolve the venue (inserting a new Google spot when needed).
       let finalVenue: Venue | null = existingVenue;
+
       if (google) {
         const venueCatKey = detectCategoryKey(google.name);
         const venueCatDef = CATEGORY_ICONS.find((c) => c.key === venueCatKey) ?? activeCategory;
@@ -673,8 +747,9 @@ export function CreateFoodPostModal() {
         likes_count: 0,
         saves_count: 0,
         created_at_relative: "Just now",
-        is_official_pick: false,
+        is_official_pick: true,
         dietary_tags: [],
+        spot_type: formatType,
       };
 
       addFoodPost(optimistic);
@@ -682,7 +757,7 @@ export function CreateFoodPostModal() {
       // at its top) visible.
       setMapCenter([finalVenue.longitude, finalVenue.latitude], 15);
       setIsOpen(false);
-      showToast("🎉 Dish logged! Oslo foodies thank you.");
+      showToast("Dish logged. Oslo foodies thank you.");
     } catch (err) {
       console.error("[CreateFoodPostModal] submit failed:", err);
       showToast("Something went wrong saving your dish. Please try again.");
@@ -693,7 +768,11 @@ export function CreateFoodPostModal() {
 
   /* ---- misc ---- */
   const canAdvance =
-    step === 1 ? hasSelection : step === 2 ? dishName.trim().length > 0 : true;
+    step === 1
+      ? hasSelection
+      : step === 2
+      ? dishName.trim().length > 0
+      : true;
 
   if (!isOpen) return null;
 
@@ -804,6 +883,90 @@ export function CreateFoodPostModal() {
           {/* ================= STEP 1 — VENUE ================= */}
           {step === 1 && (
             <div className="space-y-4">
+              {/* Format Switcher */}
+              {/* Format Switcher */}
+              <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-[#EDE7DD] border border-[#181615]/10">
+                <button
+                  type="button"
+                  onClick={() => setFormatType("restaurant")}
+                  className={`flex items-center justify-center gap-1.5 py-2 px-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    formatType === "restaurant"
+                      ? "bg-white text-[#181615] shadow-xs"
+                      : "text-[#6B6459] hover:text-[#181615]"
+                  }`}
+                >
+                  <StorefrontIcon className="w-4 h-4 text-[#e84a27]" />
+                  <span className="truncate">Permanent Spot</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormatType("food_truck")}
+                  className={`flex items-center justify-center gap-1.5 py-2 px-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    formatType === "food_truck"
+                      ? "bg-white text-[#181615] shadow-xs"
+                      : "text-[#6B6459] hover:text-[#181615]"
+                  }`}
+                >
+                  <FoodTruckIcon className="w-4 h-4 text-[#e84a27]" />
+                  <span className="truncate">Food Truck</span>
+                </button>
+              </div>
+
+              {/* Top TikTok / Video Link Auto-Fill Bar */}
+              <div className="p-3 rounded-2xl bg-[#F5EFE4] border border-[#181615]/10 shadow-xs space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold text-[#181615] flex items-center gap-1.5">
+                    <TikTokVideoIcon className="w-4 h-4 text-[#181615]" />
+                    <span>Paste a TikTok or IG link to auto-fill</span>
+                  </span>
+                  <span className="text-[10px] text-[#8a8073]">Auto-fill dish & photo</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="url"
+                      value={tiktokUrl}
+                      onChange={(e) => setTiktokUrl(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          void handleExtractTikTok();
+                        }
+                      }}
+                      placeholder="Paste TikTok link..."
+                      className="w-full pl-3 pr-8 py-2 rounded-xl bg-white border border-[#181615]/10 text-xs text-[#181615] placeholder-[#9a9083] focus:outline-none focus:border-[#e84a27] transition-all"
+                    />
+                    {tiktokUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setTiktokUrl("")}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[#9a9083] hover:text-[#181615] p-1"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void handleExtractTikTok()}
+                    disabled={isExtractingTikTok || !tiktokUrl.trim()}
+                    className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#181615] hover:bg-[#2b1810] disabled:opacity-50 text-[#FAF7F2] text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-xs"
+                  >
+                    {isExtractingTikTok ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#e84a27]" />
+                        <span>Extracting…</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5 text-[#e84a27]" />
+                        <span>Auto-Fill</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
               {!hasSelection ? (
                 <>
                   <div className="relative">
@@ -813,7 +976,7 @@ export function CreateFoodPostModal() {
                       type="text"
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
-                      placeholder="Search a venue in Oslo (e.g. Koie, Fuglen)..."
+                      placeholder="Search Oslo spot (e.g. Koie, Fuglen)..."
                       className="w-full pl-9 pr-9 py-3 rounded-2xl bg-white border border-[#e2d8c8] text-sm text-[#221e19] placeholder-[#a89d8c] focus:outline-none focus:border-[#e84a27] focus:ring-1 focus:ring-[#e84a27]/30 transition-all"
                     />
                     {searching && (
@@ -1018,12 +1181,12 @@ export function CreateFoodPostModal() {
           {/* ================= STEP 3 — PHOTO ================= */}
           {step === 3 && (
             <div className="space-y-4">
-              {/* Instant local preview */}
-              {localPreview || uploadedUrl ? (
+              {/* Instant local/chosen preview */}
+              {localPreview || uploadedUrl || fallbackPhoto ? (
                 <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden border border-[#e2d8c8] bg-[#efe7da]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={uploadedUrl || localPreview || ""}
+                    src={uploadedUrl || localPreview || fallbackPhoto || ""}
                     alt="Dish preview"
                     className="w-full h-full object-cover"
                   />
@@ -1037,15 +1200,18 @@ export function CreateFoodPostModal() {
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="px-2.5 py-1.5 rounded-full bg-white/90 backdrop-blur text-[11px] font-bold text-[#221e19] shadow-sm hover:bg-white"
+                      className="px-2.5 py-1.5 rounded-full bg-white/90 backdrop-blur text-[11px] font-bold text-[#221e19] shadow-sm hover:bg-white cursor-pointer"
                     >
                       Replace
                     </button>
                     <button
                       type="button"
-                      onClick={clearPhoto}
+                      onClick={() => {
+                        clearPhoto();
+                        setFallbackPhoto(null);
+                      }}
                       aria-label="Remove photo"
-                      className="p-1.5 rounded-full bg-white/90 backdrop-blur text-[#6b6459] shadow-sm hover:bg-white"
+                      className="p-1.5 rounded-full bg-white/90 backdrop-blur text-[#6b6459] shadow-sm hover:bg-white cursor-pointer"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -1055,7 +1221,7 @@ export function CreateFoodPostModal() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full py-9 px-4 rounded-2xl border-2 border-dashed border-[#e0d5c3] hover:border-[#e84a27] bg-white/70 hover:bg-[#e84a27]/[0.04] flex flex-col items-center justify-center gap-2.5 transition-colors"
+                  className="w-full py-9 px-4 rounded-2xl border-2 border-dashed border-[#e0d5c3] hover:border-[#e84a27] bg-white/70 hover:bg-[#e84a27]/[0.04] flex flex-col items-center justify-center gap-2.5 transition-colors cursor-pointer"
                 >
                   <span className="p-3.5 rounded-full bg-[#e84a27]/10 text-[#e84a27]">
                     <Upload className="w-5 h-5" />
@@ -1089,7 +1255,7 @@ export function CreateFoodPostModal() {
                 </p>
               )}
 
-              {/* Google listing photo fallback */}
+              {/* Standard Google listing / TikTok extracted photo fallback */}
               {!localPreview && !uploadedUrl && (fallbackOptions.length > 0 || google) && (
                 <div className="space-y-2.5">
                   <button

@@ -7,6 +7,7 @@ import { FoodPostCard } from "@/components/food/FoodPostCard";
 import { FeedEmptyState } from "@/components/food/FeedEmptyState";
 import { FoodPostCardSkeleton, FoodSpotCardSkeleton } from "@/components/food/CardSkeletons";
 import { FoodSpotCard } from "@/components/food/FoodSpotCard";
+import { PopupEventCard } from "@/components/food/PopupEventCard";
 import { FoodViewSlider } from "@/components/food/FoodViewSlider";
 import dynamic from "next/dynamic";
 import { VenueBottomSheet } from "@/components/venue/VenueBottomSheet";
@@ -21,7 +22,7 @@ import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
 import { SmakrSIcon } from "@/components/ui/SmakrSIcon";
 import { UtensilsCrossed, Plus, Map as MapIcon, LayoutGrid } from "lucide-react";
 import type { FoodPost, Venue, WeeklyPick } from "@/types";
-import { isVisibleInFeed } from "@/lib/popupUtils";
+import { isVisibleInFeed, getPopupUrgencyScore } from "@/lib/popupUtils";
 
 /**
  * MapLibre is a large dependency — load it lazily (client-only) so it never
@@ -145,7 +146,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
 
   // Memoized food posts filtering to prevent unnecessary re-renders during mobile drag
   const filteredPosts = useMemo(() => {
-    return foodPosts.filter((post) => {
+    const filtered = foodPosts.filter((post) => {
       // Unpublished / archived filter (admins see drafts)
       if (currentUser?.role !== "admin") {
         if (post.is_published === false || post.is_archived === true) return false;
@@ -214,6 +215,16 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
 
       return true;
     });
+
+    if (spotTypeFilter === "popup") {
+      return [...filtered].sort((a, b) => {
+        const venueA = venues.find((v) => v.id === a.spot_id);
+        const venueB = venues.find((v) => v.id === b.spot_id);
+        return getPopupUrgencyScore(venueA) - getPopupUrgencyScore(venueB);
+      });
+    }
+
+    return filtered;
   }, [
     foodPosts,
     currentCategory,
@@ -253,9 +264,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
         if (staffPicksOnly && !venue.is_official_pick) return false;
 
         if (currentCategory !== "all") {
-          if (currentCategory === "coffee" && venue.place_type === "cafe") {
-            // match coffee
-          } else if (venue.food_category !== currentCategory) {
+          if (venue.food_category !== currentCategory) {
             return false;
           }
         }
@@ -290,7 +299,12 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
 
         return true;
       })
-      .sort((a, b) => (a.distance_meters || 9999) - (b.distance_meters || 9999));
+      .sort((a, b) => {
+        if (spotTypeFilter === "popup") {
+          return getPopupUrgencyScore(a) - getPopupUrgencyScore(b);
+        }
+        return (a.distance_meters || 9999) - (b.distance_meters || 9999);
+      });
   }, [
     venues,
     currentCategory,
@@ -304,6 +318,12 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
     savedOnly,
     savedPostIds,
   ]);
+
+  const popupVenues = useMemo(() => {
+    return venues
+      .filter((v) => (v.spot_type === "popup" || v.id.startsWith("popup-")) && isVisibleInFeed(v))
+      .sort((a, b) => getPopupUrgencyScore(a) - getPopupUrgencyScore(b));
+  }, [venues]);
 
   const activeCategoryDef = FOOD_CATEGORIES.find((c) => c.id === currentCategory) || FOOD_CATEGORIES[0];
 
@@ -576,8 +596,31 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                 <MascotWeeklyDrop feedCount={filteredPosts.length} />
                 <FeedFilterBar />
               </div>
-              <div data-feed-scroll className="flex-1 overflow-y-auto p-5 space-y-4 no-scrollbar pb-28">
-            {feedMode === "food" ? (
+              <div data-feed-scroll className="flex-1 overflow-y-auto p-5 space-y-4 no-scrollbar pb-36">
+            {feedMode === "popups" ? (
+              popupVenues.length === 0 ? (
+                <div className="py-16 text-center text-xs text-zinc-500 space-y-2 max-w-sm mx-auto">
+                  <p className="font-semibold text-sm text-[#181615] dark:text-zinc-200">No active pop-ups right now</p>
+                  <p>Check back soon for limited Oslo kitchen residencies and guest drops.</p>
+                </div>
+              ) : (
+                <div
+                  className={`grid ${
+                    viewMode === "feed"
+                      ? "grid-cols-2 xl:grid-cols-3"
+                      : "grid-cols-1 xl:grid-cols-2"
+                  } gap-4`}
+                >
+                  {popupVenues.map((venue, index) => (
+                    <PopupEventCard
+                      key={venue.id}
+                      venue={venue}
+                      priority={isDesktop && index === 0}
+                    />
+                  ))}
+                </div>
+              )
+            ) : feedMode === "food" ? (
               foodPosts.length === 0 && isHydratingData ? (
                 <div
                   className={`grid ${
@@ -600,9 +643,23 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                       : "grid-cols-1 xl:grid-cols-2"
                   } gap-4`}
                 >
-                  {filteredPosts.map((post, index) => (
-                    <FoodPostCard key={post.id} post={post} priority={isDesktop && index === 0} />
-                  ))}
+                  {filteredPosts.map((post, index) => {
+                    const linkedVenue = venues.find((v) => v.id === post.spot_id);
+                    const isPopup = linkedVenue?.spot_type === "popup" || post.spot_type === "popup" || spotTypeFilter === "popup";
+                    if (isPopup && linkedVenue) {
+                      return (
+                        <PopupEventCard
+                          key={post.id}
+                          post={post}
+                          venue={linkedVenue}
+                          priority={isDesktop && index === 0}
+                        />
+                      );
+                    }
+                    return (
+                      <FoodPostCard key={post.id} post={post} priority={isDesktop && index === 0} />
+                    );
+                  })}
                 </div>
               )
             ) : (
@@ -630,9 +687,20 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                       : "grid-cols-1 xl:grid-cols-2"
                   } gap-4`}
                 >
-                  {filteredVenues.map((venue, index) => (
-                    <FoodSpotCard key={venue.id} venue={venue} priority={isDesktop && index === 0} />
-                  ))}
+                  {filteredVenues.map((venue, index) => {
+                    if (venue.spot_type === "popup") {
+                      return (
+                        <PopupEventCard
+                          key={venue.id}
+                          venue={venue}
+                          priority={isDesktop && index === 0}
+                        />
+                      );
+                    }
+                    return (
+                      <FoodSpotCard key={venue.id} venue={venue} priority={isDesktop && index === 0} />
+                    );
+                  })}
                 </div>
               )
             )}
@@ -643,6 +711,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
             <FoodViewSlider
               dishesCount={filteredPosts.length}
               spotsCount={filteredVenues.length}
+              popupsCount={popupVenues.length}
             />
           </div>
             </>
@@ -730,13 +799,34 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                 setMobileSheet("half");
               }
             }}
-            className={`flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar overscroll-contain pb-28 ${
+            className={`flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar overscroll-contain pb-36 ${
               mobileSheet === "peek"
                 ? "cursor-pointer active:opacity-90 transition-opacity touch-none"
                 : ""
             }`}
           >
-            {feedMode === "food" ? (
+            {feedMode === "popups" ? (
+              popupVenues.length === 0 ? (
+                <div className="py-14 text-center text-xs text-zinc-500 space-y-2 max-w-sm mx-auto">
+                  <p className="font-semibold text-sm text-[#181615] dark:text-zinc-200">No active pop-ups right now</p>
+                  <p>Check back soon for limited Oslo kitchen residencies and guest drops.</p>
+                </div>
+              ) : (
+                <div
+                  className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${
+                    mobileSheet === "peek" ? "pointer-events-none" : ""
+                  }`}
+                >
+                  {popupVenues.map((venue, index) => (
+                    <PopupEventCard
+                      key={venue.id}
+                      venue={venue}
+                      priority={!isDesktop && index === 0}
+                    />
+                  ))}
+                </div>
+              )
+            ) : feedMode === "food" ? (
               foodPosts.length === 0 && isHydratingData ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {Array.from({ length: 3 }).map((_, i) => (
@@ -751,9 +841,23 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                     mobileSheet === "peek" ? "pointer-events-none" : ""
                   }`}
                 >
-                  {filteredPosts.map((post, index) => (
-                    <FoodPostCard key={post.id} post={post} priority={!isDesktop && index === 0} />
-                  ))}
+                  {filteredPosts.map((post, index) => {
+                    const linkedVenue = venues.find((v) => v.id === post.spot_id);
+                    const isPopup = linkedVenue?.spot_type === "popup" || post.spot_type === "popup" || spotTypeFilter === "popup";
+                    if (isPopup && linkedVenue) {
+                      return (
+                        <PopupEventCard
+                          key={post.id}
+                          post={post}
+                          venue={linkedVenue}
+                          priority={!isDesktop && index === 0}
+                        />
+                      );
+                    }
+                    return (
+                      <FoodPostCard key={post.id} post={post} priority={!isDesktop && index === 0} />
+                    );
+                  })}
                 </div>
               )
             ) : (
@@ -779,9 +883,20 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                     mobileSheet === "peek" ? "pointer-events-none" : ""
                   }`}
                 >
-                  {filteredVenues.map((venue, index) => (
-                    <FoodSpotCard key={venue.id} venue={venue} priority={!isDesktop && index === 0} />
-                  ))}
+                  {filteredVenues.map((venue, index) => {
+                    if (venue.spot_type === "popup") {
+                      return (
+                        <PopupEventCard
+                          key={venue.id}
+                          venue={venue}
+                          priority={!isDesktop && index === 0}
+                        />
+                      );
+                    }
+                    return (
+                      <FoodSpotCard key={venue.id} venue={venue} priority={!isDesktop && index === 0} />
+                    );
+                  })}
                 </div>
               )
             )}
@@ -805,6 +920,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
         <FoodViewSlider
           dishesCount={filteredPosts.length}
           spotsCount={filteredVenues.length}
+          popupsCount={popupVenues.length}
         />
       </div>
 
