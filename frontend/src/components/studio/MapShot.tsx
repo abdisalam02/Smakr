@@ -4,7 +4,12 @@ import React, { forwardRef, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { MAP_STYLE_URLS, type MapShotState, type StudioVenueItem } from '@/types/studio';
+import {
+  MAP_STYLE_URLS,
+  type MapShotState,
+  type StudioVenueItem,
+  type RoundupBannerBg,
+} from '@/types/studio';
 
 if (typeof window !== 'undefined') {
   maplibregl.setWorkerUrl('/maplibre/maplibre-gl-worker.mjs');
@@ -37,12 +42,55 @@ const THEMES = {
   },
 } as const;
 
+export const ROUNDUP_BANNER_STYLES: Record<
+  RoundupBannerBg,
+  { bg: string; text: string; border: string; dot: string; countBg: string; countText: string; label: string }
+> = {
+  dark: {
+    bg: 'bg-[#181615]',
+    text: 'text-white',
+    border: 'border-white/15',
+    dot: 'bg-[#e84a27]',
+    countBg: 'bg-white/15',
+    countText: 'text-white',
+    label: 'Dark Espresso',
+  },
+  oat: {
+    bg: 'bg-[#FAF7F2]',
+    text: 'text-[#2B1810]',
+    border: 'border-black/10',
+    dot: 'bg-[#e84a27]',
+    countBg: 'bg-black/10',
+    countText: 'text-[#2B1810]',
+    label: 'Warm Oat',
+  },
+  paprika: {
+    bg: 'bg-[#e84a27]',
+    text: 'text-white',
+    border: 'border-white/20',
+    dot: 'bg-white',
+    countBg: 'bg-black/25',
+    countText: 'text-white',
+    label: 'Oslo Paprika',
+  },
+  glass: {
+    bg: 'bg-white/90 backdrop-blur-xl',
+    text: 'text-[#181615]',
+    border: 'border-black/10',
+    dot: 'bg-[#e84a27]',
+    countBg: 'bg-black/10',
+    countText: 'text-[#181615]',
+    label: 'Frosted Glass',
+  },
+};
+
 interface MapShotProps {
   s: MapShotState;
   w: number;
   h: number;
   interactive?: boolean;
   onMapChange?: (coords: [number, number], zoom: number, pitch: number) => void;
+  onUpdateVenueOffset?: (venueIdOrIndex: string | number, x: number, y: number) => void;
 }
 
 /**
@@ -97,12 +145,14 @@ function MultiVenueCard({
   s,
   t,
   totalSpots,
+  onUpdateVenueOffset,
 }: {
   venue: StudioVenueItem;
   index: number;
   s: MapShotState;
   t: (typeof THEMES)[keyof typeof THEMES];
   totalSpots: number;
+  onUpdateVenueOffset?: (venueIdOrIndex: string | number, x: number, y: number) => void;
 }) {
   const isCompact = s.layoutMode === 'multi_compact';
   const scale = s.cardScale || 1;
@@ -113,27 +163,92 @@ function MultiVenueCard({
   // Alternating slight lateral offset so adjacent pins don't completely stack cards directly on top of each other
   const staggerX = totalSpots > 1 ? (index % 2 === 0 ? -14 : 14) : 0;
 
+  const [dragDelta, setDragDelta] = useState<{ x: number; y: number } | null>(null);
+  const isDraggingRef = useRef(false);
+  const startPosRef = useRef({ x: 0, y: 0 });
+  const startOffsetRef = useRef({ x: 0, y: 0 });
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    e.stopPropagation();
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
+    isDraggingRef.current = true;
+    startPosRef.current = { x: e.clientX, y: e.clientY };
+    startOffsetRef.current = { x: venue.x || 0, y: venue.y || 0 };
+    setDragDelta({ x: 0, y: 0 });
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current) return;
+    e.stopPropagation();
+    const canvasEl =
+      e.currentTarget.closest('[data-asset-builder]') ||
+      e.currentTarget.closest('.smakr-canvas-stage') ||
+      document.querySelector('[data-asset-builder="venue-map-full"]');
+    const scaleFactor = canvasEl ? canvasEl.getBoundingClientRect().width / 1080 : 1;
+    const dx = (e.clientX - startPosRef.current.x) / (scaleFactor || 1);
+    const dy = (e.clientY - startPosRef.current.y) / (scaleFactor || 1);
+    setDragDelta({ x: dx, y: dy });
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {}
+    const finalX = Math.round(startOffsetRef.current.x + (dragDelta?.x || 0));
+    const finalY = Math.round(startOffsetRef.current.y + (dragDelta?.y || 0));
+    setDragDelta(null);
+    onUpdateVenueOffset?.(venue.id || index, finalX, finalY);
+  };
+
+  const currentX = (venue.x != null ? venue.x : staggerX) + (dragDelta?.x || 0);
+  const currentY = (venue.y || 0) + (dragDelta?.y || 0);
+  const isCustomMoved = venue.x != null || venue.y != null;
+
   return (
     <div
-      className="transition-transform select-none pointer-events-auto"
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      className="select-none pointer-events-auto touch-none"
       style={{
         marginTop: 48 + (s.cardOffsetY || 0),
         width: cardWidth,
-        transform: `translate3d(${staggerX}px, 0, 0) scale(${scale})`,
+        transform: `translate3d(${currentX}px, ${currentY}px, 0) scale(${scale})`,
         transformOrigin: 'top center',
+        cursor: dragDelta ? 'grabbing' : 'grab',
       }}
     >
       <section
-        className="shadow-2xl border transition-all hover:scale-[1.02]"
+        className="shadow-2xl border transition-shadow"
         style={{
           background: t.card,
           color: t.ink,
           borderRadius: Math.round((s.cardRadius || 44) * 0.65),
           border: `2px solid ${t.border}`,
-          boxShadow: '0 20px 48px -10px rgba(0, 0, 0, 0.35)',
-          padding: totalSpots >= 4 ? '12px 14px' : '16px 18px',
+          boxShadow: dragDelta
+            ? '0 30px 60px -8px rgba(0, 0, 0, 0.5), 0 0 0 2px #e84a27'
+            : '0 20px 48px -10px rgba(0, 0, 0, 0.35)',
+          padding: totalSpots >= 4 ? '10px 12px' : '14px 16px',
         }}
       >
+        {/* Subtle drag handle header */}
+        <div className="flex items-center justify-between pb-1 text-[9px] font-bold opacity-60 hover:opacity-100 transition-opacity">
+          <span className="flex items-center gap-1 cursor-grab">
+            <span className="text-[11px] leading-none">⠿</span>
+            <span>DRAG TO REPOSITION</span>
+          </span>
+          {isCustomMoved && (
+            <span className="text-[8px] font-mono text-[#e84a27] font-extrabold uppercase">
+              Moved
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-3 sm:gap-3.5">
           {s.showPhoto && venue.photo && (
             <div
@@ -237,13 +352,15 @@ function MultiVenueCard({
 }
 
 export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot(
-  { s, w, h, interactive = true, onMapChange },
+  { s, w, h, interactive = true, onMapChange, onUpdateVenueOffset },
   forwardedRef
 ) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
   const styleRef = useRef(s.style);
+  const prevVenuesKeyRef = useRef<string>('');
+  const isProgrammaticMoveRef = useRef<boolean>(false);
   const [portalTargets, setPortalTargets] = useState<
     { pinEl: HTMLDivElement; cardEl: HTMLDivElement; venue: StudioVenueItem; index: number }[]
   >([]);
@@ -282,6 +399,10 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
 
     const handleMoveEnd = () => {
       if (!map) return;
+      if (isProgrammaticMoveRef.current) {
+        isProgrammaticMoveRef.current = false;
+        return;
+      }
       const c = map.getCenter();
       onMapChange?.([c.lng, c.lat], map.getZoom(), map.getPitch());
     };
@@ -347,7 +468,6 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
 
     if (isMulti && venuesList.length > 0) {
       // Add multi-venue markers: Pin Marker (anchor: center, zIndex: 50) + Card Marker (anchor: top, zIndex: 20 + idx)
-      // Pin is on zIndex 50 so it is NEVER hidden by any card on the map.
       const bounds = new maplibregl.LngLatBounds();
       const newTargets: { pinEl: HTMLDivElement; cardEl: HTMLDivElement; venue: StudioVenueItem; index: number }[] = [];
 
@@ -367,7 +487,6 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
           .setLngLat([v.lng, v.lat])
           .addTo(map);
 
-        // Ensure MapLibre marker root element has highest stacking context
         pinMarker.getElement().style.zIndex = '100';
         markersRef.current.push(pinMarker);
 
@@ -384,7 +503,6 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
           .setLngLat([v.lng, v.lat])
           .addTo(map);
 
-        // Ensure card marker root element stays below all pins
         cardMarker.getElement().style.zIndex = String(20 + idx);
         markersRef.current.push(cardMarker);
 
@@ -393,17 +511,41 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
 
       setPortalTargets(newTargets);
 
-      if (s.autoFitCamera !== false && !bounds.isEmpty()) {
+      // Check if venues composition changed or if fit was explicitly triggered
+      const venuesKey = venuesList.map((v) => `${v.id}_${v.lat}_${v.lng}`).join('|');
+      const venuesChanged = prevVenuesKeyRef.current !== venuesKey;
+      const shouldFit = venuesChanged || s.autoFitCamera === true;
+
+      if (shouldFit && !bounds.isEmpty()) {
+        const isSquare = Math.abs(w - h) < 100;
+        const isStory = h > 1600;
+        const fitPadding = isSquare
+          ? { top: 110, bottom: 120, left: 120, right: 120 }
+          : isStory
+          ? { top: 180, bottom: 220, left: 160, right: 160 }
+          : { top: 130, bottom: 160, left: 140, right: 140 };
+
+        isProgrammaticMoveRef.current = true;
         map.fitBounds(bounds, {
-          padding: {
-            top: 220,
-            bottom: 340,
-            left: 340,
-            right: 340,
-          },
-          maxZoom: 14.8,
+          padding: fitPadding,
+          maxZoom: 16.8,
           duration: 0,
         });
+        prevVenuesKeyRef.current = venuesKey;
+      } else {
+        // Manual camera adjustment (zoom in/out or pan from controls)
+        const curCenter = map.getCenter();
+        const curZoom = map.getZoom();
+        const dist = Math.abs(curCenter.lng - s.lng) + Math.abs(curCenter.lat - s.lat);
+        const zoomDiff = Math.abs(curZoom - s.zoom);
+        if (zoomDiff > 0.05 || dist > 0.001) {
+          isProgrammaticMoveRef.current = true;
+          map.jumpTo({
+            center: [s.lng, s.lat],
+            zoom: s.zoom,
+            pitch: s.pitch,
+          });
+        }
       }
     } else {
       setPortalTargets([]);
@@ -588,6 +730,10 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
     </section>
   );
 
+  const bannerTheme = ROUNDUP_BANNER_STYLES[s.roundupBannerBg || 'dark'] || ROUNDUP_BANNER_STYLES.dark;
+  const showBanner = s.showRoundupBanner !== false && Boolean(s.roundupTitle);
+  const showDot = s.showRoundupDot !== false;
+
   // Multi-Venue Floating Cards Element for Transparent Card-Only Export (Canva / IG Stories)
   const renderMultiCards = (standalone = false) => {
     return (
@@ -600,13 +746,13 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
           transformOrigin: 'top center',
         }}
       >
-        {s.roundupTitle && (
-          <div className="flex items-center gap-3 px-6 py-2.5 rounded-full bg-[#181615] text-white shadow-xl border border-white/15">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#e84a27] animate-pulse" />
+        {showBanner && (
+          <div className={`flex items-center gap-3 px-6 py-2.5 rounded-full ${bannerTheme.bg} ${bannerTheme.text} shadow-xl border ${bannerTheme.border}`}>
+            {showDot && <span className={`w-2.5 h-2.5 rounded-full ${bannerTheme.dot} animate-pulse`} />}
             <span className="font-comico text-2xl uppercase tracking-wider">
               {s.roundupTitle}
             </span>
-            <span className="px-2.5 py-0.5 rounded-full bg-white/15 text-xs font-bold text-white uppercase tracking-wider font-mono">
+            <span className={`px-2.5 py-0.5 rounded-full ${bannerTheme.countBg} text-xs font-bold ${bannerTheme.countText} uppercase tracking-wider font-mono`}>
               {venuesList.length} SPOTS
             </span>
           </div>
@@ -746,13 +892,19 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
       />
 
       {/* Floating Round-up Title Banner (Multi-Spot Mode Only) */}
-      {isMulti && s.roundupTitle && (
-        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 px-6 py-2.5 rounded-full bg-[#181615] text-white shadow-2xl border border-white/15 backdrop-blur-md pointer-events-none">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#e84a27] animate-pulse" />
+      {isMulti && showBanner && (
+        <div
+          className={`absolute top-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 px-6 py-2.5 rounded-full ${bannerTheme.bg} ${bannerTheme.text} shadow-2xl border ${bannerTheme.border} backdrop-blur-md pointer-events-none select-none`}
+        >
+          {showDot && (
+            <span className={`w-2.5 h-2.5 rounded-full ${bannerTheme.dot} animate-pulse`} />
+          )}
           <span className="font-comico text-2xl uppercase tracking-wider">
             {s.roundupTitle}
           </span>
-          <span className="px-2.5 py-0.5 rounded-full bg-white/15 text-xs font-bold text-white uppercase tracking-wider font-mono">
+          <span
+            className={`px-2.5 py-0.5 rounded-full ${bannerTheme.countBg} text-xs font-bold ${bannerTheme.countText} uppercase tracking-wider font-mono`}
+          >
             {venuesList.length} SPOTS
           </span>
         </div>
@@ -782,6 +934,7 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
                 s={s}
                 t={t}
                 totalSpots={venuesList.length}
+                onUpdateVenueOffset={onUpdateVenueOffset}
               />,
               cardEl
             )}

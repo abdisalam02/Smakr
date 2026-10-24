@@ -40,6 +40,7 @@ import {
   DEFAULT_MASCOT_CONFIG,
   DEFAULT_DISH_TITLE_STATE,
   STUDIO_STICKER_SWATCHES,
+  ASPECT_RATIO_PRESETS,
   PALETTES,
   SKIN_TONE_SWATCHES,
   CLOTHING_SWATCHES,
@@ -1531,21 +1532,106 @@ export function StudioControls({
                   </span>
                 </div>
 
-                {/* Round-up Title Input */}
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-[#231F1D] flex items-center justify-between">
-                    <span>Round-up Headline</span>
-                    <span className="text-[10px] text-[#8C827A] font-normal">
-                      Shown at top of multi-card
-                    </span>
-                  </label>
-                  <input
-                    type="text"
-                    value={state.map.roundupTitle || ''}
-                    onChange={(e) => onUpdateMap({ roundupTitle: e.target.value })}
-                    placeholder="e.g. Oslo Sourdough Crawl, Top 3 Matcha..."
-                    className="w-full h-10 px-3.5 rounded-xl border border-[#D8CFC0] bg-white text-xs font-bold text-[#231F1D] focus:border-[#e84a27] outline-hidden placeholder:text-[#8C827A]"
-                  />
+                {/* Top Banner Pill Customization */}
+                <div className="p-3 bg-white rounded-2xl border border-[#E6DEC8] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="block text-xs font-bold text-[#231F1D]">TOP BANNER PILL</span>
+                      <span className="block text-[10px] text-[#8C827A]">
+                        Customize or toggle the headline card
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onUpdateMap({
+                          showRoundupBanner: state.map.showRoundupBanner === false ? true : false,
+                        })
+                      }
+                      className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        state.map.showRoundupBanner !== false
+                          ? 'bg-[#231F1D] text-white shadow-xs'
+                          : 'bg-[#EFEAE1] text-[#8C827A]'
+                      }`}
+                    >
+                      {state.map.showRoundupBanner !== false ? '✓ Visible' : 'Hidden'}
+                    </button>
+                  </div>
+
+                  {state.map.showRoundupBanner !== false && (
+                    <>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-[#6E655F] uppercase tracking-wider">
+                          Banner Headline Text
+                        </label>
+                        <input
+                          type="text"
+                          value={state.map.roundupTitle || ''}
+                          onChange={(e) => onUpdateMap({ roundupTitle: e.target.value })}
+                          placeholder="e.g. Oslo Sourdough Crawl"
+                          className="w-full h-9 px-3 rounded-xl border border-[#D8CFC0] bg-[#FAF7F2] text-xs font-bold text-[#231F1D] focus:border-[#e84a27] outline-hidden"
+                        />
+                      </div>
+
+                      {/* Aesthetic / Card Background */}
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-[#6E655F] uppercase tracking-wider">
+                          Banner Aesthetic & Color
+                        </label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                          {[
+                            { id: 'dark', label: 'Dark Espresso', bg: '#181615', fg: '#FAF7F2' },
+                            { id: 'oat', label: 'Warm Oat', bg: '#FAF7F2', fg: '#2B1810', border: 'border border-black/15' },
+                            { id: 'paprika', label: 'Oslo Paprika', bg: '#e84a27', fg: '#ffffff' },
+                            { id: 'glass', label: 'Frosted Glass', bg: '#f4efe6', fg: '#181615' },
+                          ].map((theme) => {
+                            const isSelected = (state.map.roundupBannerBg || 'dark') === theme.id;
+                            return (
+                              <button
+                                key={theme.id}
+                                type="button"
+                                onClick={() => onUpdateMap({ roundupBannerBg: theme.id as any })}
+                                className={`py-1.5 px-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                                  isSelected
+                                    ? 'ring-2 ring-[#e84a27] shadow-sm'
+                                    : 'opacity-80 hover:opacity-100'
+                                }`}
+                                style={{
+                                  backgroundColor: theme.bg,
+                                  color: theme.fg,
+                                }}
+                              >
+                                {isSelected && <span>✓</span>}
+                                <span>{theme.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Toggle Pulsing Dot */}
+                      <div className="flex items-center justify-between pt-1 border-t border-[#E6DEC8]">
+                        <span className="text-[11px] font-semibold text-[#5C534E]">
+                          Pulsing Action Dot (•)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onUpdateMap({
+                              showRoundupDot: state.map.showRoundupDot === false ? true : false,
+                            })
+                          }
+                          className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            state.map.showRoundupDot !== false
+                              ? 'bg-[#e84a27] text-white shadow-xs'
+                              : 'bg-[#EFEAE1] text-[#8C827A]'
+                          }`}
+                        >
+                          {state.map.showRoundupDot !== false ? '• With Dot' : 'No Dot'}
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Active Spots Chip List */}
@@ -1623,6 +1709,53 @@ export function StudioControls({
                   </div>
                 </div>
 
+                {/* Multi-Spot Camera Zoom Controls */}
+                <div className="p-3 bg-white rounded-2xl border border-[#E6DEC8] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[#231F1D]">MAP CAMERA ZOOM</span>
+                    <span className="text-xs font-mono font-bold text-[#e84a27]">
+                      Zoom {(state.map.zoom || 15).toFixed(1)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onUpdateMap({
+                          zoom: Math.max(10, Math.round(((state.map.zoom || 15) - 0.5) * 10) / 10),
+                          autoFitCamera: false,
+                        })
+                      }
+                      className="w-9 h-9 rounded-xl bg-[#FAF7F2] border border-[#D8CFC0] hover:bg-[#EFEAE1] font-bold text-[#231F1D] text-base flex items-center justify-center cursor-pointer transition-all"
+                      title="Zoom out camera"
+                    >
+                      -
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onUpdateMap({ autoFitCamera: true })}
+                      className="flex-1 py-2 px-3 rounded-xl bg-[#FAF7F2] border border-[#D8CFC0] hover:bg-[#EFEAE1] text-xs font-bold text-[#5C534E] flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+                      title="Re-center and fit all spots automatically"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-[#e84a27]" />
+                      <span>Auto-Fit All Spots</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onUpdateMap({
+                          zoom: Math.min(18.5, Math.round(((state.map.zoom || 15) + 0.5) * 10) / 10),
+                          autoFitCamera: false,
+                        })
+                      }
+                      className="w-9 h-9 rounded-xl bg-[#FAF7F2] border border-[#D8CFC0] hover:bg-[#EFEAE1] font-bold text-[#231F1D] text-base flex items-center justify-center cursor-pointer transition-all"
+                      title="Zoom in camera"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
                 {/* Multi Card Sizing & Scale (Icon remains static at GPS coordinate) */}
                 <div className="p-3 bg-white rounded-2xl border border-[#E6DEC8] space-y-2">
                   <div className="flex items-center justify-between">
@@ -1648,6 +1781,7 @@ export function StudioControls({
                       { label: '85% (Compact)', val: 0.85 },
                       { label: '100% (Standard)', val: 1.0 },
                       { label: '115% (Hero)', val: 1.15 },
+                      { label: '135% (Large)', val: 1.35 },
                     ].map((preset) => (
                       <button
                         key={preset.label}
@@ -1666,7 +1800,7 @@ export function StudioControls({
                       type="button"
                       onClick={() =>
                         onUpdateMap({
-                          cardScale: Math.min(1.35, Math.round(((state.map.cardScale || 1) + 0.05) * 100) / 100),
+                          cardScale: Math.min(1.6, Math.round(((state.map.cardScale || 1) + 0.05) * 100) / 100),
                         })
                       }
                       className="w-8 h-8 rounded-lg bg-[#EFEAE1] hover:bg-[#E6DEC8] font-bold text-[#231F1D] text-sm flex items-center justify-center transition-all cursor-pointer"
@@ -1677,15 +1811,34 @@ export function StudioControls({
                   </div>
                 </div>
 
-                {/* Card Vertical Position Relative to Pin */}
+                {/* Mouse Dragging Card Position Controls & Reset */}
                 <div className="p-3 bg-white rounded-2xl border border-[#E6DEC8] space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-[#231F1D]">CARD VERTICAL OFFSET</span>
-                    <span className="text-xs font-mono font-bold text-[#e84a27]">
-                      {(state.map.cardOffsetY || 0) > 0 ? `+${state.map.cardOffsetY}px` : `${state.map.cardOffsetY || 0}px`}
-                    </span>
+                    <div>
+                      <span className="block text-xs font-bold text-[#231F1D]">🖱️ CARD POSITIONS</span>
+                      <span className="block text-[10px] text-[#8C827A]">
+                        Drag cards directly with your mouse on preview
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const resetVenues = (state.map.venues || []).map((v) => ({
+                          ...v,
+                          x: 0,
+                          y: 0,
+                        }));
+                        onUpdateMap({ venues: resetVenues, cardOffsetY: 0 });
+                      }}
+                      className="py-1 px-2.5 rounded-xl text-xs font-bold bg-[#FAF7F2] text-[#231F1D] border border-[#D8CFC0] hover:bg-[#EFEAE1] transition-all cursor-pointer flex items-center gap-1"
+                      title="Reset all cards to default positions"
+                    >
+                      <RotateCcw className="w-3 h-3 text-[#e84a27]" />
+                      <span>Reset Positions</span>
+                    </button>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+
+                  <div className="grid grid-cols-3 gap-2 pt-1">
                     <button
                       type="button"
                       onClick={() =>
@@ -1702,7 +1855,7 @@ export function StudioControls({
                       onClick={() => onUpdateMap({ cardOffsetY: 0 })}
                       className="py-1.5 rounded-xl text-xs font-bold bg-[#FAF7F2] text-[#5C534E] border border-[#E6DEC8] hover:bg-[#EFEAE1] transition-all cursor-pointer"
                     >
-                      Reset
+                      Centered
                     </button>
                     <button
                       type="button"
@@ -1997,32 +2150,26 @@ export function StudioControls({
                   </div>
                 </div>
 
-                {/* Aspect Ratio Switcher */}
-                <div>
-                  <span className="block text-xs font-bold text-[#5C534E] uppercase tracking-wider mb-2">
-                    Aspect Ratio
-                  </span>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(
-                      [
-                        ['4:5', '4:5 Post'],
-                        ['1:1', '1:1 Square'],
-                        ['9:16', '9:16 Story'],
-                      ] as const
-                    ).map(([r, label]) => (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => onUpdateAspectRatio(r)}
-                        className={`py-2 rounded-xl text-xs font-bold border transition-all ${
-                          state.aspectRatio === r
-                            ? 'bg-[#231F1D] text-white border-[#231F1D] shadow-xs'
-                            : 'bg-white border-[#E6DEC8] text-[#231F1D] hover:bg-[#FAF7F2]'
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    ))}
+                {/* Social Media Aspect Ratio Switcher */}
+                <div className="p-3 bg-white rounded-2xl border border-[#E6DEC8] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[#231F1D]">SOCIAL MEDIA SIZE & RATIO</span>
+                    <span className="text-[10px] font-mono text-[#8C827A] font-bold uppercase">
+                      {state.aspectRatio}
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <select
+                      value={state.aspectRatio}
+                      onChange={(e) => onUpdateAspectRatio(e.target.value as any)}
+                      className="w-full h-11 px-3.5 pr-8 rounded-xl border border-[#D8CFC0] bg-[#FAF7F2] text-xs font-bold text-[#231F1D] focus:border-[#e84a27] outline-hidden cursor-pointer"
+                    >
+                      {ASPECT_RATIO_PRESETS.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.fullLabel}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 

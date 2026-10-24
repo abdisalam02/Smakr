@@ -1,6 +1,20 @@
 export type FoundryMode = 'mascot' | 'venue-map' | 'dish-title' | 'wallpaper';
 
 export type AspectRatio = '9:16' | '4:5' | '1:1';
+
+export interface AspectRatioPreset {
+  id: AspectRatio;
+  ratio: string;
+  label: string;
+  sublabel: string;
+  fullLabel: string;
+}
+
+export const ASPECT_RATIO_PRESETS: AspectRatioPreset[] = [
+  { id: '4:5', ratio: '4:5', label: '4:5 · Instagram Post', sublabel: 'Portrait', fullLabel: '📸 4:5 · Instagram Post (Portrait)' },
+  { id: '9:16', ratio: '9:16', label: '9:16 · Reel, Story & TikTok', sublabel: 'Vertical', fullLabel: '📱 9:16 · Reel, Story & TikTok (Vertical)' },
+  { id: '1:1', ratio: '1:1', label: '1:1 · Square Post', sublabel: 'Feed', fullLabel: '⏹️ 1:1 · Square Post (Feed)' },
+];
 export type SlideId = 'wallpaper' | 'map' | 'photo';
 export type MapStyleKey = 'streets' | 'dataviz' | 'aquarelle';
 export type CardTheme = 'cream' | 'dark' | 'paprika';
@@ -476,6 +490,8 @@ export interface StudioVenueItem {
   scale?: number;
 }
 
+export type RoundupBannerBg = 'dark' | 'oat' | 'paprika' | 'glass';
+
 export interface MapShotState {
   venueId: string | null;
   name: string;
@@ -495,6 +511,9 @@ export interface MapShotState {
   multiPlacementMode?: 'auto_stack' | 'bento' | 'free_drag';
   autoFitCamera?: boolean;
   roundupTitle?: string;
+  showRoundupBanner?: boolean;
+  showRoundupDot?: boolean;
+  roundupBannerBg?: RoundupBannerBg;
   /** Vertical pin position as a fraction of canvas height (0.1 to 0.9). */
   pinY: number;
   showPin: boolean;

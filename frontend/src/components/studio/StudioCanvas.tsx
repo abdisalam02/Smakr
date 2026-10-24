@@ -44,6 +44,7 @@ interface Props {
   onSelect?: (id: string | null) => void;
   onMove?: (id: string, x: number, y: number) => void;
   onMapChange?: (coords: [number, number], zoom: number, pitch: number) => void;
+  onUpdateVenueOffset?: (venueIdOrIndex: string | number, x: number, y: number) => void;
   onUploadClick?: () => void;
 }
 
@@ -171,7 +172,7 @@ function SafeZoneOverlay() {
 }
 
 export const StudioCanvas = forwardRef<HTMLDivElement, Props>(function StudioCanvas(
-  { state, onMapChange, interactive = true },
+  { state, onMapChange, onUpdateVenueOffset, interactive = true },
   ref
 ) {
   const mode = state.mode || 'mascot';
@@ -249,6 +250,7 @@ export const StudioCanvas = forwardRef<HTMLDivElement, Props>(function StudioCan
             h={exportTarget === 'card-only' ? 680 : 400}
             interactive={interactive}
             onMapChange={onMapChange}
+            onUpdateVenueOffset={onUpdateVenueOffset}
           />
         </div>
       );
@@ -267,6 +269,7 @@ export const StudioCanvas = forwardRef<HTMLDivElement, Props>(function StudioCan
           h={h}
           interactive={interactive}
           onMapChange={onMapChange}
+          onUpdateVenueOffset={onUpdateVenueOffset}
         />
         {state.showSafeZones && <SafeZoneOverlay />}
       </div>

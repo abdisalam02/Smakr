@@ -1,4 +1,12 @@
 # Project State
+- Studio: replaced aspect ratio buttons with social format dropdown (4:5 Instagram, 9:16 Story/Reel/TikTok, 1:1 Square).
+- Studio Multi-Spot: resolved fitBounds infinite loop and flickering with programmatic move guards and adaptive padding.
+- Studio Multi-Spot: added direct mouse dragging to reposition cards, custom offsets, and a reset positions button.
+- Studio Multi-Spot: added map camera zoom controls up to 16.8+ and customizable top banner (toggle, dot, 4 aesthetics).
+- Fetched authentic Spotify show metadata, official cover art, and audio preview for sadija.s podcast (1AKPeARcw0ehY0NkFzJnLq).
+- Locked Option 2 Episodes stream view in SpotifyPlayer with interactive audio preview, episode metadata, and direct show link.
+- Implemented Spotify podcast card with interactive 2-mode switcher: Option 1 (Latest Episode) and Option 2 (Episode Stream).
+- Configured Sadija's podcast schema in clientConfig with episode archive and direct Spotify show link.
 - Converted Spotify card to single track: "I Wonder" by Kanye West with Graduation album art and no open link.
 - Unified stage scale and eye-line across looks with inset-0 fixed backdrop, eliminating mobile address-bar scroll resize and jumping.
 - Pushed commit 0d26233 to remote repository at https://github.com/abdisalam02/Smakr.git on branch main.

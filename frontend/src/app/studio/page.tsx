@@ -29,6 +29,7 @@ import {
   CANVAS_SIZES,
   DEFAULT_MASCOT_CONFIG,
   DEFAULT_DISH_TITLE_STATE,
+  ASPECT_RATIO_PRESETS,
   OPEN_PEEPS_BODY_POSES,
   OPEN_PEEPS_FACES,
   OPEN_PEEPS_HEADS,
@@ -364,6 +365,28 @@ export default function StudioPage() {
       map: { ...prev.map, ...patch },
     }));
   }, []);
+
+  const handleUpdateVenueOffset = useCallback(
+    (venueIdOrIndex: string | number, x: number, y: number) => {
+      setState((prev) => {
+        const currentVenues = prev.map.venues || [];
+        const updatedVenues = currentVenues.map((v, i) => {
+          if (v.id === venueIdOrIndex || i === venueIdOrIndex) {
+            return { ...v, x, y };
+          }
+          return v;
+        });
+        return {
+          ...prev,
+          map: {
+            ...prev.map,
+            venues: updatedVenues,
+          },
+        };
+      });
+    },
+    []
+  );
 
   const updateDishTitle = useCallback((patch: Partial<DishTitleState>) => {
     setState((prev) => ({
@@ -758,6 +781,7 @@ export default function StudioPage() {
                     onMapChange={(coords, zoom, pitch) => {
                       updateMap({ lng: coords[0], lat: coords[1], zoom, pitch });
                     }}
+                    onUpdateVenueOffset={handleUpdateVenueOffset}
                   />
                 </div>
               </div>
@@ -765,7 +789,14 @@ export default function StudioPage() {
           })()
         ) : (
           <div className="relative max-w-full max-h-full p-4 sm:p-8 rounded-3xl border border-[#D8CFC0]/60 shadow-xl overflow-hidden flex items-center justify-center bg-[conic-gradient(#e5e0d5_25%,#faf7f2_0_50%,#e5e0d5_0_75%,#faf7f2_0)] [background-size:20px_20px]">
-            <StudioCanvas state={state} ref={assetRef} />
+            <StudioCanvas
+              state={state}
+              ref={assetRef}
+              onMapChange={(coords, zoom, pitch) => {
+                updateMap({ lng: coords[0], lat: coords[1], zoom, pitch });
+              }}
+              onUpdateVenueOffset={handleUpdateVenueOffset}
+            />
           </div>
         )}
 
@@ -816,26 +847,27 @@ export default function StudioPage() {
 
           {activeMode === 'venue-map' && (
             <>
-              {(
-                [
-                  ['4:5', '4:5 Post'],
-                  ['1:1', '1:1 Square'],
-                  ['9:16', '9:16 Story'],
-                ] as const
-              ).map(([ratio, label]) => (
-                <button
-                  key={ratio}
-                  type="button"
-                  onClick={() => setState((prev) => ({ ...prev, aspectRatio: ratio }))}
-                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    state.aspectRatio === ratio
-                      ? 'bg-[#231F1D] text-white shadow-xs'
-                      : 'bg-[#EFEAE1] text-[#5C534E] hover:text-[#231F1D]'
-                  }`}
+              {/* Social Media Aspect Ratio Dropdown */}
+              <div className="relative shrink-0 flex items-center">
+                <select
+                  aria-label="Social Size Format"
+                  value={state.aspectRatio}
+                  onChange={(e) => setState((prev) => ({ ...prev, aspectRatio: e.target.value as AspectRatio }))}
+                  className="h-8 pl-2.5 pr-7 rounded-xl bg-[#231F1D] text-white text-xs font-bold border-0 cursor-pointer shadow-xs focus:ring-2 focus:ring-[#e84a27] outline-hidden appearance-none"
+                  style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 6px center',
+                    backgroundSize: '14px',
+                  }}
                 >
-                  {label}
-                </button>
-              ))}
+                  {ASPECT_RATIO_PRESETS.map((p) => (
+                    <option key={p.id} value={p.id} className="bg-[#181615] text-white">
+                      {p.fullLabel}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div className="w-[1px] h-4 bg-[#D8CFC0] mx-0.5" />
               {(
                 [
@@ -902,20 +934,26 @@ export default function StudioPage() {
 
           {activeMode === 'wallpaper' && (
             <>
-              {(['9:16', '4:5', '1:1'] as AspectRatio[]).map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => setState((prev) => ({ ...prev, aspectRatio: r }))}
-                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    state.aspectRatio === r
-                      ? 'bg-[#231F1D] text-white'
-                      : 'bg-[#EFEAE1] text-[#5C534E]'
-                  }`}
+              <div className="relative shrink-0 flex items-center">
+                <select
+                  aria-label="Wallpaper Format"
+                  value={state.aspectRatio}
+                  onChange={(e) => setState((prev) => ({ ...prev, aspectRatio: e.target.value as AspectRatio }))}
+                  className="h-8 pl-2.5 pr-7 rounded-xl bg-[#231F1D] text-white text-xs font-bold border-0 cursor-pointer shadow-xs focus:ring-2 focus:ring-[#e84a27] outline-hidden appearance-none"
+                  style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 6px center',
+                    backgroundSize: '14px',
+                  }}
                 >
-                  {r}
-                </button>
-              ))}
+                  {ASPECT_RATIO_PRESETS.map((p) => (
+                    <option key={p.id} value={p.id} className="bg-[#181615] text-white">
+                      {p.fullLabel}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <button
                 type="button"
                 onClick={() => setState((prev) => ({ ...prev, transparentBg: !prev.transparentBg }))}
