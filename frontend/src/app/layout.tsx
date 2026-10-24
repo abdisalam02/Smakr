@@ -48,7 +48,7 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://smakr.vercel.app"),
+  metadataBase: new URL("https://smakr.no"),
   title: "Smakr — Oslo Food Discovery & Live Foodie Radar",
   description:
     "Discover trending meals, authentic Vietnamese coconut coffee, cardamom buns, artisan ramen, and real-time food spots across Oslo.",

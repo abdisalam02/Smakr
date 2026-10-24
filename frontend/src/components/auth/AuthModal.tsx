@@ -20,8 +20,8 @@ import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/c
 const GOOGLE_DISABLED_MESSAGE =
   "Google sign-in isn't switched on yet. Enable the Google provider in Supabase (Authentication → Providers), or use email sign-in for the beta.";
 
-type AuthTab = "signin" | "signup";
-type BusyState = null | "google" | "signin" | "signup";
+type AuthTab = "signin" | "signup" | "reset";
+type BusyState = null | "google" | "signin" | "signup" | "reset";
 
 /** Official multi-colour Google "G" vector. */
 function GoogleIcon({ className }: { className?: string }) {
@@ -94,13 +94,16 @@ export function AuthModal() {
     if (isAuthModalOpen) {
       setError(null);
       setNotice(null);
+      setTab((current) => (current === "reset" ? "signin" : current));
     }
   }, [isAuthModalOpen]);
 
   if (!isAuthModalOpen) return null;
 
   const supabase = getSupabaseBrowserClient();
-  const callbackUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback`;
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const callbackUrl = `${origin}/auth/callback`;
+  const resetRedirectUrl = `${origin}/auth/callback?next=/reset-password`;
 
   const guard = () => {
     if (!supabase) {
@@ -164,6 +167,28 @@ export function AuthModal() {
     }
     setIsAuthModalOpen(false);
     showToast("Welcome back!");
+  };
+
+  const handleForgotPassword = async () => {
+    setError(null);
+    setNotice(null);
+    if (!guard()) return;
+    if (!email.trim()) {
+      setError("Enter the email address for your Smakr account.");
+      return;
+    }
+    setBusy("reset");
+    const { error } = await supabase!.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: resetRedirectUrl,
+    });
+    setBusy(null);
+    if (error) {
+      setError(friendlyAuthError(error.message));
+      return;
+    }
+    setNotice(
+      `If an account exists for ${email.trim()}, a password reset link is on its way. Check your inbox and spam folder.`
+    );
   };
 
   const handleCreateAccount = async () => {
@@ -238,57 +263,69 @@ export function AuthModal() {
             <SmakrSIcon className="w-9 h-9" />
           </div>
           <h2 className="text-base font-extrabold text-zinc-900 tracking-tight">
-            {tab === "signin" ? "Welcome back to Smakr" : "Join the Smakr table"}
+            {tab === "signin"
+              ? "Welcome back to Smakr"
+              : tab === "signup"
+              ? "Join the Smakr table"
+              : "Reset your password"}
           </h2>
           <p className="text-xs text-zinc-500 max-w-xs mx-auto leading-relaxed">
             {tab === "signin"
               ? "Sign in to log dishes, save spots and unlock admin tools."
-              : "Create an account to start logging your Oslo food finds."}
+              : tab === "signup"
+              ? "Create an account to start logging your Oslo food finds."
+              : "Enter your account email and we'll send you a secure reset link."}
           </p>
         </div>
 
         {/* Tabs */}
-        <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-zinc-100">
-          {(["signin", "signup"] as const).map((t) => (
+        {tab !== "reset" && (
+          <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-zinc-100">
+            {(["signin", "signup"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => {
+                  setTab(t);
+                  setError(null);
+                  setNotice(null);
+                }}
+                className={`py-2 rounded-xl text-xs font-bold transition-all ${
+                  tab === t
+                    ? "bg-white text-zinc-900 shadow-xs"
+                    : "text-zinc-500 hover:text-zinc-700"
+                }`}
+              >
+                {t === "signin" ? "Sign In" : "Create Account"}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {tab !== "reset" && (
+          <>
+            {/* Google */}
             <button
-              key={t}
-              onClick={() => {
-                setTab(t);
-                setError(null);
-                setNotice(null);
-              }}
-              className={`py-2 rounded-xl text-xs font-bold transition-all ${
-                tab === t
-                  ? "bg-white text-zinc-900 shadow-xs"
-                  : "text-zinc-500 hover:text-zinc-700"
-              }`}
+              onClick={handleGoogle}
+              disabled={busy !== null}
+              className="w-full flex items-center justify-center gap-2.5 p-3 rounded-2xl bg-white hover:bg-zinc-50 disabled:opacity-60 text-zinc-800 font-semibold text-xs border border-zinc-200 shadow-xs transition-all active:scale-[0.99]"
             >
-              {t === "signin" ? "Sign In" : "Create Account"}
+              {busy === "google" ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <GoogleIcon className="w-4 h-4" />
+              )}
+              <span>Continue with Google</span>
             </button>
-          ))}
-        </div>
 
-        {/* Google */}
-        <button
-          onClick={handleGoogle}
-          disabled={busy !== null}
-          className="w-full flex items-center justify-center gap-2.5 p-3 rounded-2xl bg-white hover:bg-zinc-50 disabled:opacity-60 text-zinc-800 font-semibold text-xs border border-zinc-200 shadow-xs transition-all active:scale-[0.99]"
-        >
-          {busy === "google" ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <GoogleIcon className="w-4 h-4" />
-          )}
-          <span>Continue with Google</span>
-        </button>
-
-        <div className="flex items-center gap-3">
-          <span className="h-px flex-1 bg-zinc-200" />
-          <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
-            or email
-          </span>
-          <span className="h-px flex-1 bg-zinc-200" />
-        </div>
+            <div className="flex items-center gap-3">
+              <span className="h-px flex-1 bg-zinc-200" />
+              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
+                or email
+              </span>
+              <span className="h-px flex-1 bg-zinc-200" />
+            </div>
+          </>
+        )}
 
         {/* Feedback banners */}
         {error && (
@@ -304,7 +341,44 @@ export function AuthModal() {
           </div>
         )}
 
-        {tab === "signin" ? (
+        {tab === "reset" ? (
+          /* ---------- Reset Password ---------- */
+          <div className="space-y-2">
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
+              <input
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@smakr.no"
+                className={inputClass}
+              />
+            </div>
+            <button
+              onClick={handleForgotPassword}
+              disabled={busy !== null}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] disabled:opacity-60 text-white font-bold text-xs shadow-md shadow-[#e84a27]/25 transition-all active:scale-[0.99]"
+            >
+              {busy === "reset" ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <span>Send Reset Link →</span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setTab("signin");
+                setError(null);
+                setNotice(null);
+              }}
+              className="w-full text-center text-[11px] font-semibold text-zinc-500 hover:text-[#e84a27] transition-colors py-1"
+            >
+              Back to sign in
+            </button>
+          </div>
+        ) : tab === "signin" ? (
           /* ---------- Sign In ---------- */
           <div className="space-y-2">
             <div className="relative">
@@ -339,6 +413,17 @@ export function AuthModal() {
               ) : (
                 <span>Sign In →</span>
               )}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setTab("reset");
+                setError(null);
+                setNotice(null);
+              }}
+              className="w-full text-center text-[11px] font-semibold text-zinc-500 hover:text-[#e84a27] transition-colors py-1"
+            >
+              Forgot password?
             </button>
 
           </div>
