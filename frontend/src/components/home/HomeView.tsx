@@ -24,6 +24,9 @@ import { UtensilsCrossed, Plus, Map as MapIcon, LayoutGrid } from "lucide-react"
 import type { FoodPost, Venue, WeeklyPick } from "@/types";
 import { isVisibleInFeed, getPopupUrgencyScore, isPopupVenue } from "@/lib/popupUtils";
 
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
+
 /**
  * MapLibre is a large dependency — load it lazily (client-only) so it never
  * blocks the first paint / store hydration. The feed & user render immediately
@@ -87,7 +90,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   // initialized two maps on every load — doubling map/marker work and stalling
   // hydration. Gate them on the actual breakpoint.
   const [isDesktop, setIsDesktop] = useState(false);
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (typeof window === "undefined") return;
     const mq = window.matchMedia("(min-width: 1024px)");
     const update = () => setIsDesktop(mq.matches);
@@ -97,6 +100,12 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   }, []);
 
   const venues = useCityPulseStore((state) => state.venues);
+  // O(1) venue lookups for the feed filters — `venues.find` inside a filter
+  // loop was O(posts × venues) and made every filter tap feel sluggish.
+  const venueById = useMemo(
+    () => new Map(venues.map((venue) => [venue.id, venue])),
+    [venues]
+  );
   const selectedVenue = useCityPulseStore((state) => state.selectedVenue);
   const setSelectedVenue = useCityPulseStore((state) => state.setSelectedVenue);
   const viewMode = useCityPulseStore((state) => state.viewMode);
@@ -163,7 +172,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
         if (!matchName && !matchSpot && !matchTags) return false;
       }
 
-      const linkedVenue = venues.find((v) => v.id === post.spot_id);
+      const linkedVenue = venueById.get(post.spot_id);
 
       // Exclude expired pop-ups (>7 days after closing)
       if (!isVisibleInFeed(linkedVenue)) return false;
@@ -218,8 +227,8 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
 
     if (spotTypeFilter === "popup") {
       return [...filtered].sort((a, b) => {
-        const venueA = venues.find((v) => v.id === a.spot_id);
-        const venueB = venues.find((v) => v.id === b.spot_id);
+        const venueA = venueById.get(a.spot_id);
+        const venueB = venueById.get(b.spot_id);
         return getPopupUrgencyScore(venueA) - getPopupUrgencyScore(venueB);
       });
     }
@@ -232,7 +241,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
     selectedDietary,
     mapNeighborhood,
     openNow,
-    venues,
+    venueById,
     spotTypeFilter,
     priceTierFilter,
     staffPicksOnly,
@@ -369,7 +378,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   useEffect(() => {
     if (sheetRef.current && !isDraggingRef.current) {
       const targetY = getSnapTranslateY(mobileSheet);
-      sheetRef.current.style.transition = "transform 0.38s cubic-bezier(0.16, 1, 0.3, 1)";
+      sheetRef.current.style.transition = "transform 0.28s cubic-bezier(0.16, 1, 0.3, 1)";
       sheetRef.current.style.transform = `translate3d(0, ${targetY}px, 0)`;
       currentYRef.current = targetY;
     }
@@ -574,6 +583,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
       {/* ========================================================================= */}
       {/* DESKTOP FEED STREAM (Visible on lg screens)                              */}
       {/* ========================================================================= */}
+      {isDesktop && (
       <div
         className={`hidden lg:flex ${
           selectedVenue
@@ -592,7 +602,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
             />
           ) : (
             <>
-              <div className="sticky top-0 z-20 bg-[#FAF7F2]/65 dark:bg-[#181615]/65 backdrop-blur-xl border-b border-black/[0.06]">
+              <div className="sticky top-0 z-20 bg-[#FAF7F2]/95 dark:bg-[#181615]/95 border-b border-black/[0.06]">
                 <MascotWeeklyDrop feedCount={filteredPosts.length} />
                 <FeedFilterBar />
               </div>
@@ -703,6 +713,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
             </>
           )}
         </div>
+      )}
 
       {/* ========================================================================= */}
       {/* SINGLE PERSISTENT MAP INSTANCE                                            */}
@@ -731,17 +742,18 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
       {/* ========================================================================= */}
       {/* MOBILE AIRBNB-STYLE SLIDE-UP FEED SHEET (< lg screens)                   */}
       {/* ========================================================================= */}
+      {!isDesktop && (
       <div
         ref={sheetRef}
         style={{
           height: `calc(100dvh - 57px + 140px)`,
           transform: `translate3d(0, ${getSnapTranslateY(mobileSheet)}px, 0)`,
-          transition: "transform 0.38s cubic-bezier(0.16, 1, 0.3, 1)",
+          transition: "transform 0.28s cubic-bezier(0.16, 1, 0.3, 1)",
         }}
-        className="lg:hidden absolute left-0 right-0 top-[57px] z-20 bg-[#FAF7F2]/80 dark:bg-[#181615]/80 backdrop-blur-2xl rounded-t-3xl border-t border-white/60 dark:border-white/10 shadow-2xl flex flex-col will-change-transform pb-[140px]"
+        className="lg:hidden absolute left-0 right-0 top-[57px] z-20 bg-[#FAF7F2]/95 dark:bg-[#181615]/95 rounded-t-3xl border-t border-white/60 dark:border-white/10 shadow-2xl flex flex-col will-change-transform pb-[140px]"
       >
           {/* Sticky Sheet Header: Grab Handle + Mascot Drop Pill + Category Filter Bar */}
-          <div className="sticky top-0 z-20 bg-[#FAF7F2]/80 dark:bg-[#181615]/80 backdrop-blur-xl border-b border-black/[0.06] dark:border-white/[0.06] rounded-t-3xl shrink-0">
+          <div className="sticky top-0 z-20 bg-[#FAF7F2]/95 dark:bg-[#181615]/95 border-b border-black/[0.06] dark:border-white/[0.06] rounded-t-3xl shrink-0">
             <div
               onTouchStart={handleHeaderTouchStart}
               onTouchMove={handleHeaderTouchMove}
@@ -874,6 +886,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
             )}
           </div>
         </div>
+      )}
 
       {/* ========================================================================= */}
       {/* MOBILE FLOATING GLASSMORPHIC FOOD VS LOCATIONS TOGGLE                    */}

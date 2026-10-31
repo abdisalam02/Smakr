@@ -8,6 +8,29 @@ import { MascotCharacter } from "@/components/avatar/MascotCharacter";
 import { OFFICIAL_SMAKR_MASCOT_CONFIG } from "@/lib/officialSmakrMascot";
 import { SmakrMascotRig } from "@/components/studio/SmakrMascotRig";
 import { EditWeeklyDropModal } from "@/components/admin/EditWeeklyDropModal";
+import { FEED_BLUR_DARK } from "@/lib/feedImages";
+
+const MemoizedMascotBust = React.memo(function MemoizedMascotBust() {
+  return (
+    <div className="w-[96px] h-[104px] flex items-end justify-center translate-y-1">
+      <SmakrMascotRig
+        frameMode="bust-only"
+        bodyPose="pointing-up"
+        head={OFFICIAL_SMAKR_MASCOT_CONFIG.peepsHead}
+        face={OFFICIAL_SMAKR_MASCOT_CONFIG.peepsFace}
+        accessories="glasses-2"
+        facialHair="none"
+        skinColor={OFFICIAL_SMAKR_MASCOT_CONFIG.skinColor}
+        clothingColor={OFFICIAL_SMAKR_MASCOT_CONFIG.topColor}
+        innerClothingColor={OFFICIAL_SMAKR_MASCOT_CONFIG.bottomColor}
+        hatColor={OFFICIAL_SMAKR_MASCOT_CONFIG.hatColor}
+        headContrastColor={OFFICIAL_SMAKR_MASCOT_CONFIG.hairColor}
+        stickerOutline={true}
+        size={92}
+      />
+    </div>
+  );
+});
 
 /**
  * "✦ This Week's Drop" — a compact, expandable mascot capsule replacing the old
@@ -72,13 +95,14 @@ export function MascotWeeklyDrop({
     const containers = Array.from(
       document.querySelectorAll<HTMLElement>("[data-feed-scroll]")
     );
+    let scrolled = false;
     const cleanups = containers.map((el) => {
       const onScroll = () => {
-        if (el.scrollTop > 35) {
-          setIsScrolledDown(true);
-          setIsExpanded(false);
-        } else if (el.scrollTop <= 10) {
-          setIsScrolledDown(false);
+        const isDown = el.scrollTop > 35;
+        if (isDown !== scrolled) {
+          scrolled = isDown;
+          setIsScrolledDown(isDown);
+          if (isDown) setIsExpanded(false);
         }
       };
       el.addEventListener("scroll", onScroll, { passive: true });
@@ -243,7 +267,7 @@ export function MascotWeeklyDrop({
 
       {/* ── Expanded spotlight card underneath ── */}
       <div
-        className={`grid transition-all duration-300 ease-out ${
+        className={`grid transition-[grid-template-rows,opacity] duration-200 ease-out will-change-[grid-template-rows,opacity] ${
           isExpanded ? "grid-rows-[1fr] opacity-100 mt-2.5" : "grid-rows-[0fr] opacity-0"
         }`}
       >
@@ -269,23 +293,7 @@ export function MascotWeeklyDrop({
                     className="w-full h-full object-cover object-top block rounded-xl"
                   />
                 ) : (
-                  <div className="w-[96px] h-[104px] flex items-end justify-center translate-y-1">
-                    <SmakrMascotRig
-                      frameMode="bust-only"
-                      bodyPose="pointing-up"
-                      head={OFFICIAL_SMAKR_MASCOT_CONFIG.peepsHead}
-                      face={OFFICIAL_SMAKR_MASCOT_CONFIG.peepsFace}
-                      accessories="glasses-2"
-                      facialHair="none"
-                      skinColor={OFFICIAL_SMAKR_MASCOT_CONFIG.skinColor}
-                      clothingColor={OFFICIAL_SMAKR_MASCOT_CONFIG.topColor}
-                      innerClothingColor={OFFICIAL_SMAKR_MASCOT_CONFIG.bottomColor}
-                      hatColor={OFFICIAL_SMAKR_MASCOT_CONFIG.hatColor}
-                      headContrastColor={OFFICIAL_SMAKR_MASCOT_CONFIG.hairColor}
-                      stickerOutline={true}
-                      size={92}
-                    />
-                  </div>
+                  <MemoizedMascotBust />
                 )}
               </div>
 
@@ -342,6 +350,8 @@ export function MascotWeeklyDrop({
                   alt={weeklyPick.dish_name}
                   fill
                   unoptimized
+                  placeholder="blur"
+                  blurDataURL={FEED_BLUR_DARK}
                   className="object-cover"
                   sizes="76px"
                 />

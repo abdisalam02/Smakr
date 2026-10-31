@@ -11,6 +11,7 @@ import { OfficialSmakrMascot } from "@/lib/officialSmakrMascot";
 import { getPopupStatus, getPopupMeta } from "@/lib/popupUtils";
 import { formatOsloLocation } from "@/lib/location";
 import { getDistanceInMeters, formatDistance } from "@/lib/math";
+import { FEED_BLUR_DARK } from "@/lib/feedImages";
 
 interface FoodPostCardProps {
   post: FoodPost;
@@ -365,6 +366,8 @@ export const FoodPostCard = React.memo(function FoodPostCard({
           priority={priority}
           loading={priority ? undefined : "lazy"}
           decoding="async"
+          placeholder="blur"
+          blurDataURL={FEED_BLUR_DARK}
           className="object-cover w-full opacity-90 transition-transform duration-700 ease-out group-hover:scale-105"
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 600px"
         />

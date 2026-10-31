@@ -473,14 +473,6 @@ export default function AdminControlCenterPage() {
               <Sparkles className="w-3.5 h-3.5 text-[#e84a27]" />
               <span>Mascot</span>
             </Link>
-            <Link
-              href="/ad-reel"
-              className="hidden md:flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:text-[#e84a27] border border-black/10 dark:border-white/10 shadow-xs text-xs font-bold transition-all active:scale-95"
-              title="Open Ad Studio"
-            >
-              <Palette className="w-3.5 h-3.5 text-[#e84a27]" />
-              <span>Ads</span>
-            </Link>
           </div>
         </div>
 

@@ -93,7 +93,8 @@ export function getAuthEmailHtml(
   const mapLight = asset("map-light.jpg");
   const mapDark = asset("map-dark.jpg");
   const spot = asset("spot-ramen.jpg");
-  const avatar = asset("mascot-avatar-circle.png");
+  const avatarLight = asset("mascot-avatar-light.png");
+  const avatarDark = asset("mascot-avatar-dark.png");
   const font = `${assetBase}/fonts/Comico-Regular.otf`;
   const initialMap = theme === "dark" ? mapDark : mapLight;
 
@@ -163,15 +164,18 @@ export function getAuthEmailHtml(
     :root { color-scheme: light dark; supported-color-schemes: light dark; }
   </style>
   <style>
-    @media only screen and (max-width: 520px) {
+    @media only screen and (max-width: 600px) {
       .email-shell { width: 100% !important; max-width: 100% !important; border-radius: 0 !important; }
-      .email-header { padding-left: 14px !important; padding-right: 14px !important; }
-      .email-px { padding-left: 10px !important; padding-right: 10px !important; }
+      .email-header { padding-left: 16px !important; padding-right: 16px !important; }
+      .email-px { padding-left: 0 !important; padding-right: 0 !important; }
+      .email-card { border-radius: 0 !important; border-left: none !important; border-right: none !important; }
+      .email-quote { border-radius: 0 !important; border-left: none !important; border-right: none !important; }
+      .email-note { border-radius: 0 !important; border-left: none !important; border-right: none !important; }
       .email-card-pad { padding-left: 18px !important; padding-right: 18px !important; }
-      .email-step { padding: 0 3px !important; }
+      .email-step { padding: 0 4px !important; }
       .email-step-title { font-size: 11px !important; line-height: 14px !important; }
-      .email-headline { font-size: 38px !important; line-height: 38px !important; }
-      .email-h2 { font-size: 24px !important; line-height: 27px !important; }
+      .email-headline { font-size: 34px !important; line-height: 36px !important; }
+      .email-h2 { font-size: 22px !important; line-height: 25px !important; }
       .email-cta { display: block !important; text-align: center !important; }
       .email-hide-mobile { display: none !important; }
     }
@@ -187,11 +191,12 @@ export function getAuthEmailHtml(
       <td align="center" style="padding:0;">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="${CANVAS}" background="${initialMap}" class="email-shell" style="width:100%;max-width:600px;background-color:${CANVAS};background-repeat:repeat-y;background-position:top center;">
           <tr>
-            <td class="email-header" style="padding:18px 26px 14px 26px;">
+            <td class="email-header" style="padding:18px 24px 14px 24px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td width="44" valign="middle" style="width:44px;">
-                    <img src="${avatar}" width="40" height="40" alt="Smakr" style="display:block;width:40px;height:40px;border:0;border-radius:50%;background-color:${PAPER};box-shadow:0 2px 6px rgba(24,22,21,0.18);">
+                    <img class="img-light" src="${avatarLight}" width="40" height="40" alt="Smakr" style="display:block;width:40px;height:40px;border:0;border-radius:50%;box-shadow:0 2px 6px rgba(24,22,21,0.18);">
+                    <img class="img-dark" src="${avatarDark}" width="40" height="40" alt="Smakr" style="display:none;width:40px;height:40px;border:0;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.4);mso-hide:all;">
                   </td>
                   <td style="padding-left:10px;font-family:'Comico','Arial Black',Arial,sans-serif;font-size:20px;line-height:20px;letter-spacing:.5px;" class="email-ink">
                     <span class="email-ink" style="color:${INK};">SMAKR</span><span class="email-accent" style="color:${ACCENT};">.</span>
@@ -209,10 +214,10 @@ export function getAuthEmailHtml(
             </td>
           </tr>
           <tr>
-            <td class="email-px" style="padding:22px 18px 0 18px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${PAPER}" class="email-card" style="background-color:rgba(255,253,248,0.86);border:1px solid rgba(230,217,198,0.9);border-radius:22px;">
+            <td class="email-px" style="padding:0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${PAPER}" class="email-card" style="background-color:rgba(255,253,248,0.92);border-top:1px solid rgba(230,217,198,0.9);border-bottom:1px solid rgba(230,217,198,0.9);border-left:none;border-right:none;">
                 <tr>
-                  <td class="email-card-pad" style="padding:26px 26px 24px 26px;">
+                  <td class="email-card-pad" style="padding:28px 24px 26px 24px;">
                     <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 13px 0;">
                       <tr>
                         <td width="9" height="9" bgcolor="${ACCENT}" style="width:9px;height:9px;background-color:${ACCENT};border-radius:50%;"></td>
@@ -235,8 +240,8 @@ export function getAuthEmailHtml(
             </td>
           </tr>
           <tr>
-            <td class="email-px" style="padding:22px 18px 0 18px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${PAPER}" class="email-card" style="background-color:rgba(255,253,248,0.86);border:1px solid rgba(230,217,198,0.9);border-radius:22px;">
+            <td class="email-px" style="padding:14px 0 0 0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${PAPER}" class="email-card" style="background-color:rgba(255,253,248,0.92);border-top:1px solid rgba(230,217,198,0.9);border-bottom:1px solid rgba(230,217,198,0.9);border-left:none;border-right:none;">
                 <tr>
                   <td class="email-card-pad" style="padding:24px 24px 22px 24px;">
                     <p class="email-accent" style="margin:0 0 7px 0;font-family:Arial,Helvetica,sans-serif;font-size:9px;line-height:11px;letter-spacing:2.4px;font-weight:700;color:${ACCENT};text-transform:uppercase;">How Smakr works</p>
@@ -253,17 +258,17 @@ export function getAuthEmailHtml(
             </td>
           </tr>
           <tr>
-            <td class="email-px" style="padding:22px 18px 0 18px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${PAPER}" class="email-card" style="background-color:rgba(255,253,248,0.9);border:1px solid rgba(230,217,198,0.9);border-radius:22px;">
+            <td class="email-px" style="padding:14px 0 0 0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${PAPER}" class="email-card" style="background-color:rgba(255,253,248,0.94);border-top:1px solid rgba(230,217,198,0.9);border-bottom:1px solid rgba(230,217,198,0.9);border-left:none;border-right:none;">
                 <tr>
-                  <td class="email-card-pad" style="padding:22px 24px 6px 24px;">
+                  <td class="email-card-pad" style="padding:22px 24px 10px 24px;">
                     <p class="email-accent" style="margin:0 0 6px 0;font-family:Arial,Helvetica,sans-serif;font-size:9px;line-height:11px;letter-spacing:2.4px;font-weight:700;color:${ACCENT};text-transform:uppercase;">Tonight's radar pick</p>
                     <p class="email-h2 email-ink" style="margin:0 0 16px 0;font-family:'Comico','Arial Black',Arial,sans-serif;font-size:26px;line-height:29px;letter-spacing:-.5px;color:${INK};">On the radar tonight.</p>
                   </td>
                 </tr>
                 <tr>
-                  <td style="padding:0 12px;line-height:0;font-size:0;">
-                    <img src="${spot}" width="540" alt="Tonkotsu ramen at Miso Ramen, Sentrum" style="display:block;width:100%;max-width:540px;height:auto;border:0;border-radius:16px;">
+                  <td style="padding:0;line-height:0;font-size:0;">
+                    <img src="${spot}" width="600" alt="Tonkotsu ramen at Miso Ramen, Sentrum" style="display:block;width:100%;max-width:600px;height:auto;border:0;">
                   </td>
                 </tr>
                 <tr>
@@ -290,8 +295,8 @@ export function getAuthEmailHtml(
             </td>
           </tr>
           <tr>
-            <td class="email-px" style="padding:20px 18px 0 18px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${PAPER}" class="email-quote" style="background-color:rgba(255,253,248,0.7);border:1px dashed rgba(232,74,39,0.38);border-radius:16px;">
+            <td class="email-px" style="padding:14px 0 0 0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${PAPER}" class="email-quote" style="background-color:rgba(255,253,248,0.7);border-top:1px dashed rgba(232,74,39,0.38);border-bottom:1px dashed rgba(232,74,39,0.38);border-left:none;border-right:none;">
                 <tr>
                   <td style="padding:8px 12px 6px 12px;">
                     <img class="img-light" src="${asset("tagline-light.png")}" width="536" alt="for the big backs — foodies" style="display:block;width:100%;max-width:536px;height:auto;border:0;margin:0 auto;">
@@ -302,8 +307,8 @@ export function getAuthEmailHtml(
             </td>
           </tr>
           <tr>
-            <td class="email-px" style="padding:16px 18px 24px 18px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${PAPER}" class="email-note" style="background-color:rgba(255,253,248,0.62);border:1px solid rgba(230,217,198,0.7);border-radius:12px;">
+            <td class="email-px" style="padding:14px 0 24px 0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${PAPER}" class="email-note" style="background-color:rgba(255,253,248,0.62);border-top:1px solid rgba(230,217,198,0.7);border-bottom:1px solid rgba(230,217,198,0.7);border-left:none;border-right:none;">
                 <tr>
                   <td style="padding:11px 14px;">
                     <p class="email-muted" style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:10px;line-height:16px;color:${MUTED};">${note}</p>

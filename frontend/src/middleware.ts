@@ -60,7 +60,6 @@ export async function middleware(request: NextRequest) {
   const isAdminRoute =
     request.nextUrl.pathname.startsWith("/admin") ||
     request.nextUrl.pathname.startsWith("/studio") ||
-    request.nextUrl.pathname.startsWith("/ad-reel") ||
     request.nextUrl.pathname.startsWith("/mascot-studio");
 
   if (isAdminRoute && !user) {

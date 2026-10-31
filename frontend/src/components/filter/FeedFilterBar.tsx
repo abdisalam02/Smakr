@@ -149,7 +149,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
   };
 
   return (
-    <div className="w-full bg-[#fbf9f5]/90 dark:bg-[#181615]/90 backdrop-blur-md border-b border-black/[0.06] dark:border-white/[0.08] transition-all">
+    <div className="w-full bg-[#FAF7F2] dark:bg-[#181615] border-b border-black/[0.06] dark:border-white/[0.08]">
       {/* Horizontal Pill Row with Inline Trigger */}
       <div
         className={`w-full overflow-x-auto no-scrollbar px-3 snap-x snap-mandatory flex items-center gap-1.5 ${
@@ -188,7 +188,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
             type="button"
             onClick={toggleSavedOnly}
             aria-pressed={Boolean(savedOnly)}
-            className={`snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-all select-none active:scale-[0.97] ${
+            className={`snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-colors duration-100 select-none active:scale-95 ${
               savedOnly
                 ? "text-white border-transparent font-semibold shadow-xs bg-[#e84a27]"
                 : "bg-white/80 dark:bg-white/5 text-zinc-600 dark:text-zinc-300 border-zinc-200/70 dark:border-white/10 hover:bg-white dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-white font-medium"
@@ -208,7 +208,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
               setSpotTypeFilter(spotTypeFilter === "popup" ? "all" : "popup");
             }}
             aria-pressed={spotTypeFilter === "popup"}
-            className={`snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-all select-none active:scale-[0.97] ${
+            className={`snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-colors duration-100 select-none active:scale-95 ${
               spotTypeFilter === "popup"
                 ? "text-white border-transparent font-bold shadow-xs bg-[#e84a27]"
                 : "bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-300 border-zinc-200/70 dark:border-white/10 hover:bg-white dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-white font-medium"
@@ -243,7 +243,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                   }
                 }}
                 aria-pressed={isActive}
-                className={`snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-all select-none active:scale-[0.97] ${
+                className={`snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-colors duration-100 select-none active:scale-95 ${
                   isActive
                     ? "text-white border-transparent font-semibold shadow-xs"
                     : "bg-white/80 dark:bg-white/5 text-zinc-600 dark:text-zinc-300 border-zinc-200/70 dark:border-white/10 hover:bg-white dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-white font-medium"

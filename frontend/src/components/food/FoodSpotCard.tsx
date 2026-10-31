@@ -10,6 +10,7 @@ import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
 import { getPopupStatus } from "@/lib/popupUtils";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import { formatOsloLocation } from "@/lib/location";
+import { FEED_BLUR_DARK } from "@/lib/feedImages";
 
 interface FoodSpotCardProps {
   venue: Venue;
@@ -153,7 +154,7 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
   return (
     <div
       onClick={handleClick}
-      className={`group relative flex items-center gap-3.5 p-3 rounded-3xl bg-[#FAF7F2]/80 dark:bg-[#181615]/80 backdrop-blur-xl border border-white/70 dark:border-white/10 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)] hover:shadow-md transition-all duration-200 cursor-pointer active:scale-[0.99] select-none overflow-hidden min-h-[116px] max-h-[136px] ${
+      className={`group relative flex items-center gap-3.5 p-3 rounded-3xl bg-[#FAF7F2] dark:bg-[#181615] border border-black/[0.06] dark:border-white/10 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)] hover:shadow-md transition-all duration-200 cursor-pointer active:scale-[0.99] select-none overflow-hidden min-h-[116px] max-h-[136px] ${
         popupStatus.isDimmedCard ? "opacity-50 grayscale-[20%]" : ""
       }`}
     >
@@ -206,6 +207,8 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
             fill
             priority={priority}
             loading={priority ? undefined : "lazy"}
+            placeholder="blur"
+            blurDataURL={FEED_BLUR_DARK}
             className="object-cover group-hover:scale-105 transition-transform duration-300"
             sizes="112px"
           />
