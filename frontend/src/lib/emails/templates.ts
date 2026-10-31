@@ -150,7 +150,7 @@ export function getAuthEmailHtml(
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="x-apple-disable-message-reformatting">
   <meta name="color-scheme" content="light only">
-  <meta name="supported-color-schemes" content="light only">
+  <meta name="supported-color-schemes" content="light dark">
   <title>${meta.subject}</title>
   <style>
     @font-face {
