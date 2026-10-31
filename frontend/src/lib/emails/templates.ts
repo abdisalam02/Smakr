@@ -93,7 +93,7 @@ export function getAuthEmailHtml(
   const mapLight = asset("map-light.jpg");
   const mapDark = asset("map-dark.jpg");
   const spot = asset("spot-ramen.jpg");
-  const avatar = asset("mascot-avatar.png");
+  const avatar = asset("mascot-avatar-circle.png");
   const font = `${assetBase}/fonts/Comico-Regular.otf`;
   const initialMap = theme === "dark" ? mapDark : mapLight;
 
@@ -161,9 +161,12 @@ export function getAuthEmailHtml(
       font-display: swap;
     }
     :root { color-scheme: light dark; supported-color-schemes: light dark; }
+  </style>
+  <style>
     @media only screen and (max-width: 520px) {
-      .email-shell { width: 100% !important; border-radius: 0 !important; }
-      .email-px { padding-left: 12px !important; padding-right: 12px !important; }
+      .email-shell { width: 100% !important; max-width: 100% !important; border-radius: 0 !important; }
+      .email-header { padding-left: 14px !important; padding-right: 14px !important; }
+      .email-px { padding-left: 10px !important; padding-right: 10px !important; }
       .email-card-pad { padding-left: 18px !important; padding-right: 18px !important; }
       .email-step { padding: 0 3px !important; }
       .email-step-title { font-size: 11px !important; line-height: 14px !important; }
@@ -172,6 +175,8 @@ export function getAuthEmailHtml(
       .email-cta { display: block !important; text-align: center !important; }
       .email-hide-mobile { display: none !important; }
     }
+  </style>
+  <style>
     ${darkCss}
   </style>
 </head>
@@ -180,13 +185,13 @@ export function getAuthEmailHtml(
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${CANVAS}" class="email-canvas" style="background-color:${CANVAS};">
     <tr>
       <td align="center" style="padding:0;">
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="${CANVAS}" background="${initialMap}" class="email-shell" style="width:600px;max-width:600px;background-color:${CANVAS};background-image:url('${initialMap}');background-repeat:repeat-y;background-position:top center;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="${CANVAS}" background="${initialMap}" class="email-shell" style="width:100%;max-width:600px;background-color:${CANVAS};background-repeat:repeat-y;background-position:top center;">
           <tr>
-            <td style="padding:18px 26px 14px 26px;">
+            <td class="email-header" style="padding:18px 26px 14px 26px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
-                  <td width="42" valign="middle" style="width:42px;">
-                    <img src="${avatar}" width="38" height="38" alt="Smakr" style="display:block;width:38px;height:38px;border-radius:50%;border:2px solid ${PAPER};box-shadow:0 2px 6px rgba(24,22,21,0.18);">
+                  <td width="44" valign="middle" style="width:44px;">
+                    <img src="${avatar}" width="40" height="40" alt="Smakr" style="display:block;width:40px;height:40px;border:0;border-radius:50%;background-color:${PAPER};box-shadow:0 2px 6px rgba(24,22,21,0.18);">
                   </td>
                   <td style="padding-left:10px;font-family:'Comico','Arial Black',Arial,sans-serif;font-size:20px;line-height:20px;letter-spacing:.5px;" class="email-ink">
                     <span class="email-ink" style="color:${INK};">SMAKR</span><span class="email-accent" style="color:${ACCENT};">.</span>
