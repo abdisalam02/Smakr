@@ -246,6 +246,26 @@ export default function EmailPreviewPage() {
                 Uses <code>{"{{ .TokenHash }}"}</code> links (works on any device) and hosted{" "}
                 <code>www.smakr.no</code> image URLs.
               </p>
+              <p className="mt-2 text-center text-[10px] leading-relaxed text-[#A79B8C]">
+                Raw copies:{" "}
+                <a
+                  className="font-semibold text-[#E84A27] underline"
+                  href="/email/templates/confirm-signup.txt"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Confirm signup
+                </a>{" "}
+                ·{" "}
+                <a
+                  className="font-semibold text-[#E84A27] underline"
+                  href="/email/templates/reset-password.txt"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Reset password
+                </a>
+              </p>
             </div>
 
             <div className="rounded-3xl border border-[#E4D9C8] bg-[#F8F2E8] p-5 text-xs leading-relaxed text-[#6B6459]">
