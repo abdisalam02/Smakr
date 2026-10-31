@@ -40,7 +40,14 @@ export default function EmailPreviewPage() {
     [kind, assetBase, theme]
   );
   const productionHtml = useMemo(
-    () => getAuthEmailHtml(kind, "{{ .ConfirmationURL }}", "https://smakr.no"),
+    () =>
+      getAuthEmailHtml(
+        kind,
+        kind === "reset"
+          ? "{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password"
+          : "{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next=/",
+        "https://www.smakr.no"
+      ),
     [kind]
   );
 
@@ -236,8 +243,8 @@ export default function EmailPreviewPage() {
                 <span>{copied ? "HTML copied" : "Copy HTML for Supabase"}</span>
               </button>
               <p className="mt-2 text-center text-[10px] leading-relaxed text-[#A79B8C]">
-                Uses <code>{"{{ .ConfirmationURL }}"}</code> and hosted <code>smakr.no</code> image
-                URLs.
+                Uses <code>{"{{ .TokenHash }}"}</code> links (works on any device) and hosted{" "}
+                <code>www.smakr.no</code> image URLs.
               </p>
             </div>
 
@@ -250,7 +257,8 @@ export default function EmailPreviewPage() {
                 <li>Deploy first so <code>/email/*.jpg</code> and the Comico font resolve.</li>
                 <li>Authentication → Emails → Templates.</li>
                 <li>Choose <strong>Confirm signup</strong> or <strong>Reset password</strong>.</li>
-                <li>Paste the copied HTML and keep <code>{"{{ .ConfirmationURL }}"}</code>.</li>
+                <li>Paste the copied HTML — it already contains the <code>{"{{ .TokenHash }}"}</code> link.</li>
+                <li>Set <strong>Site URL</strong> to <code>https://www.smakr.no</code> and allow both <code>smakr.no/**</code> and <code>www.smakr.no/**</code>.</li>
                 <li>Use the subject shown here for the matching template.</li>
               </ol>
             </div>

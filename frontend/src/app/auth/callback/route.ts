@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   const code = searchParams.get("code");
   // Only allow internal redirects — never bounce to an attacker-supplied host.
   const rawNext = searchParams.get("next") ?? "/";
-  const next = rawNext.startsWith("/") ? rawNext : "/";
+  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/";
 
   if (code) {
     const cookieStore = await cookies();
