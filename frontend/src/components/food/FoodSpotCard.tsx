@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import { MapPin, Star, ChevronRight, Pencil, Clock, Compass } from "lucide-react";
 import { Venue } from "@/types";
@@ -162,6 +162,7 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
   };
 
   const spotCoverUrl = primaryDishPhoto !== undefined ? primaryDishPhoto : venue.cover_image_url;
+  const [thumbReady, setThumbReady] = useState(false);
 
   return (
     <div
@@ -220,6 +221,7 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
             priority={priority || (typeof index === "number" && index < 4)}
             loading={priority || (typeof index === "number" && index < 4) ? undefined : "lazy"}
             decoding="async"
+            onLoad={() => setThumbReady(true)}
             placeholder="blur"
             blurDataURL={FEED_BLUR_DARK}
             className="object-cover group-hover:scale-105 transition-transform duration-300"
@@ -230,6 +232,7 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
             {categoryInfo.emoji || "🍽️"}
           </div>
         )}
+        {spotCoverUrl && (<div aria-hidden="true" className={`smakr-shimmer-light absolute inset-0 pointer-events-none transition-opacity duration-500 ${thumbReady ? "opacity-0" : "opacity-100"}`} />)}
 
         {/* Soft bleed gradient overlay on image edge */}
         <div className="absolute inset-y-0 right-0 w-6 bg-gradient-to-r from-transparent to-black/20 pointer-events-none z-[2]" />

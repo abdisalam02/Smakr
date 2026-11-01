@@ -114,6 +114,19 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
     }
   };
 
+  // Collapse the drawer once the feed scrolls, same behaviour as the Smakr Pick capsule.
+  React.useEffect(() => {
+    if (!isExpanded) return;
+    const onScroll = (e: Event) => {
+      const t = e.target as HTMLElement | null;
+      if (t && t.hasAttribute && t.hasAttribute("data-feed-scroll") && t.scrollTop > 40) {
+        setIsExpanded(false);
+      }
+    };
+    document.addEventListener("scroll", onScroll, { capture: true, passive: true });
+    return () => document.removeEventListener("scroll", onScroll, { capture: true });
+  }, [isExpanded]);
+
   const currentCategory = useCityPulseStore((state) => state.feedCategory);
   const setFeedCategory = useCityPulseStore((state) => state.setFeedCategory);
   const selectedDietary = useCityPulseStore((state) => state.selectedDietary);

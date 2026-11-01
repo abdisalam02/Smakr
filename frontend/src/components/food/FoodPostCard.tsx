@@ -103,6 +103,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
   const isVerifiedKitchen = Boolean(kStatus?.verified_kitchen);
 
   const [showHeart, setShowHeart] = useState(false);
+  const [imgReady, setImgReady] = useState(false);
 
   const locationInfo = formatOsloLocation(
     post.spot_address || linkedVenue?.address,
@@ -389,10 +390,18 @@ export const FoodPostCard = React.memo(function FoodPostCard({
           priority={priority || (typeof index === "number" && index < 4)}
           loading={priority || (typeof index === "number" && index < 4) ? undefined : "lazy"}
           decoding="async"
+          onLoad={() => setImgReady(true)}
           placeholder="blur"
           blurDataURL={FEED_BLUR_DARK}
           className="object-cover w-full opacity-90 transition-transform duration-700 ease-out group-hover:scale-105"
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 600px"
+        />
+
+        <div
+          aria-hidden="true"
+          className={`smakr-shimmer absolute inset-0 pointer-events-none transition-opacity duration-500 ${
+            imgReady ? "opacity-0" : "opacity-100"
+          }`}
         />
 
         {/* Seamless Dark Gradient Overlay covering the bottom 60% */}

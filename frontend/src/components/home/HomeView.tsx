@@ -342,6 +342,16 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
     savedPostIds,
   ]);
 
+  // Remounts the grid when the filtered result set changes so cards re-enter with a stagger.
+  const postsKey = useMemo(
+    () => `p${filteredPosts.length}:${filteredPosts.slice(0, 3).map((p) => p.id).join(",")}`,
+    [filteredPosts]
+  );
+  const venuesKey = useMemo(
+    () => `v${filteredVenues.length}:${filteredVenues.slice(0, 3).map((v) => v.id).join(",")}`,
+    [filteredVenues]
+  );
+
   const popupVenues = useMemo(() => {
     return venues
       .filter((v) => isPopupVenue(v) && isVisibleInFeed(v))
@@ -720,8 +730,8 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                   ) : filteredPosts.length === 0 ? (
                     <FeedEmptyState />
                   ) : (
-                    <div
-                      className={`grid ${
+                    <div key={postsKey}
+                      className={`smakr-stagger grid ${
                         viewMode === "feed"
                           ? "grid-cols-2 xl:grid-cols-3"
                           : "grid-cols-1 xl:grid-cols-2"
@@ -759,8 +769,8 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                       No spots found in this category.
                     </div>
                   ) : (
-                    <div
-                      className={`grid ${
+                    <div key={venuesKey}
+                      className={`smakr-stagger grid ${
                         viewMode === "feed"
                           ? "grid-cols-2 xl:grid-cols-3"
                           : "grid-cols-1 xl:grid-cols-2"
@@ -939,8 +949,8 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                   ) : filteredPosts.length === 0 ? (
                     <FeedEmptyState />
                   ) : (
-                    <div
-                      className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${
+                    <div key={postsKey}
+                      className={`smakr-stagger grid grid-cols-1 sm:grid-cols-2 gap-4 ${
                         mobileSheet === "peek" ? "pointer-events-none" : ""
                       }`}
                     >
@@ -976,8 +986,8 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                       </button>
                     </div>
                   ) : (
-                    <div
-                      className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${
+                    <div key={venuesKey}
+                      className={`smakr-stagger grid grid-cols-1 sm:grid-cols-2 gap-4 ${
                         mobileSheet === "peek" ? "pointer-events-none" : ""
                       }`}
                     >

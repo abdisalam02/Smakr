@@ -12,7 +12,7 @@ interface FoodViewSliderProps {
   className?: string;
 }
 
-const SPRING = { type: "spring", stiffness: 440, damping: 30, mass: 0.6 } as const;
+const SPRING = { type: "spring", stiffness: 380, damping: 34, mass: 0.7 } as const;
 
 export function FoodViewSlider({
   dishesCount,
@@ -39,10 +39,10 @@ export function FoodViewSlider({
   const isSpotsActive = feedMode === "places";
 
   const tabClass = (active: boolean) =>
-    `relative z-10 flex items-center justify-center rounded-full text-xs font-bold cursor-pointer outline-none border-0 select-none transition-colors duration-200 h-8 ${
+    `relative z-10 flex items-center justify-center rounded-full text-[13px] font-bold cursor-pointer outline-none border-0 select-none transition-colors duration-200 h-10 ${
       active
-        ? "text-white px-3"
-        : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white w-8 px-0"
+        ? "text-white px-4"
+        : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white w-10 px-0"
     }`;
 
   return (
@@ -50,7 +50,7 @@ export function FoodViewSlider({
       layout
       aria-label="Feed mode navigation"
       transition={SPRING}
-      className={`pointer-events-auto select-none bg-[#FAF7F2] dark:bg-[#181615] border border-[#181615]/15 dark:border-white/15 rounded-full p-1 shadow-xl shadow-black/10 flex items-center gap-1 ${className}`}
+      className={`pointer-events-auto select-none bg-[#FAF7F2] dark:bg-[#181615] border border-[#181615]/15 dark:border-white/15 rounded-full p-1.5 shadow-xl shadow-black/10 flex items-center gap-1 ${className}`}
       style={{
         WebkitTouchCallout: "none",
         WebkitUserSelect: "none",
@@ -73,18 +73,18 @@ export function FoodViewSlider({
           <motion.div
             layoutId="activeFeedTabPill"
             className="absolute inset-0 bg-[#e84a27] rounded-full shadow-xs -z-10 pointer-events-none"
-            transition={{ type: "spring", stiffness: 450, damping: 32 }}
+            transition={{ type: "spring", stiffness: 340, damping: 30, mass: 0.8 }}
           />
         )}
         <motion.span layout className="flex items-center gap-1.5 shrink-0">
-          <Utensils className="w-3.5 h-3.5 shrink-0" />
+          <Utensils className="w-4 h-4 shrink-0" />
           <AnimatePresence initial={false}>
             {isFeedActive && (
               <motion.span
                 initial={{ opacity: 0, width: 0 }}
                 animate={{ opacity: 1, width: "auto" }}
                 exit={{ opacity: 0, width: 0 }}
-                transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ width: { type: "spring", stiffness: 380, damping: 34 }, opacity: { duration: 0.16, delay: 0.04 } }}
                 className="flex items-center gap-1.5 whitespace-nowrap overflow-hidden"
               >
                 <span className="tracking-tight">Dishes</span>
@@ -109,9 +109,9 @@ export function FoodViewSlider({
         transition={SPRING}
         whileHover={{ scale: 1.06 }}
         whileTap={{ scale: 0.92 }}
-        className="relative z-20 w-8 h-8 rounded-full bg-[#181615] dark:bg-white text-white dark:text-[#181615] flex items-center justify-center shadow-md cursor-pointer shrink-0 outline-none border-0"
+        className="relative z-20 w-10 h-10 rounded-full bg-[#181615] dark:bg-white text-white dark:text-[#181615] flex items-center justify-center shadow-md cursor-pointer shrink-0 outline-none border-0"
       >
-        <Plus className="w-3.5 h-3.5 stroke-[2.4]" />
+        <Plus className="w-4 h-4 stroke-[2.4]" />
       </motion.button>
 
       {/* 2. Spots Tab */}
@@ -129,18 +129,18 @@ export function FoodViewSlider({
           <motion.div
             layoutId="activeFeedTabPill"
             className="absolute inset-0 bg-[#e84a27] rounded-full shadow-xs -z-10 pointer-events-none"
-            transition={{ type: "spring", stiffness: 450, damping: 32 }}
+            transition={{ type: "spring", stiffness: 340, damping: 30, mass: 0.8 }}
           />
         )}
         <motion.span layout className="flex items-center gap-1.5 shrink-0">
-          <Store className="w-3.5 h-3.5 shrink-0" />
+          <Store className="w-4 h-4 shrink-0" />
           <AnimatePresence initial={false}>
             {isSpotsActive && (
               <motion.span
                 initial={{ opacity: 0, width: 0 }}
                 animate={{ opacity: 1, width: "auto" }}
                 exit={{ opacity: 0, width: 0 }}
-                transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ width: { type: "spring", stiffness: 380, damping: 34 }, opacity: { duration: 0.16, delay: 0.04 } }}
                 className="flex items-center gap-1.5 whitespace-nowrap overflow-hidden"
               >
                 <span className="tracking-tight">Spots</span>
