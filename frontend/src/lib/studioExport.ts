@@ -13,6 +13,12 @@ export async function exportElementAsPngBlob(
     }
   }
 
+  // Stabilize WebGL canvas, layout, and React Portal markers before snapshotting
+  if (typeof window !== 'undefined') {
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    await new Promise((r) => setTimeout(r, 120));
+  }
+
   const canvas = await toCanvas(element, {
     pixelRatio: options?.pixelRatio ?? 3,
     cacheBust: true,
@@ -23,7 +29,11 @@ export async function exportElementAsPngBlob(
           background: 'transparent',
           backgroundColor: 'transparent',
         },
-    filter: (n) => !(n instanceof HTMLElement && n.dataset.exportIgnore !== undefined),
+    filter: (n) =>
+      !(
+        n instanceof HTMLElement &&
+        (n.dataset.exportIgnore !== undefined || n.dataset.exportIgnore === 'true')
+      ),
   });
 
   const blob = await new Promise<Blob | null>((res) =>
@@ -95,7 +105,11 @@ export async function renderSlide(
     width: targetW,
     height: targetH,
     backgroundColor: transparentBg ? undefined : '#181615',
-    filter: (n) => !(n instanceof HTMLElement && n.dataset.exportIgnore !== undefined),
+    filter: (n) =>
+      !(
+        n instanceof HTMLElement &&
+        (n.dataset.exportIgnore !== undefined || n.dataset.exportIgnore === 'true')
+      ),
     style: {
       transform: 'none',
       width: `${targetW}px`,
@@ -128,7 +142,11 @@ export async function exportMascotStickerPng(
     pixelRatio: 3,
     backgroundColor: undefined,
     cacheBust: true,
-    filter: (n) => !(n instanceof HTMLElement && n.dataset.exportIgnore !== undefined),
+    filter: (n) =>
+      !(
+        n instanceof HTMLElement &&
+        (n.dataset.exportIgnore !== undefined || n.dataset.exportIgnore === 'true')
+      ),
   });
 
   const a = document.createElement('a');

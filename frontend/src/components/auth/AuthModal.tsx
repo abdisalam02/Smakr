@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { AnimatePresence, motion } from "motion/react";
 import {
   X,
   Mail,
@@ -12,6 +13,7 @@ import {
   CheckCircle2,
   AlertCircle,
   ArrowRight,
+  ArrowLeft,
 } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { SmakrSIcon } from "@/components/ui/SmakrSIcon";
@@ -88,12 +90,14 @@ export function AuthModal() {
   const [busy, setBusy] = useState<BusyState>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [signupConfirmedEmail, setSignupConfirmedEmail] = useState<string | null>(null);
 
   // Clear stale messages each time the modal is (re)opened.
   useEffect(() => {
     if (isAuthModalOpen) {
       setError(null);
       setNotice(null);
+      setSignupConfirmedEmail(null);
       setTab((current) => (current === "reset" ? "signin" : current));
     }
   }, [isAuthModalOpen]);
@@ -238,254 +242,352 @@ export function AuthModal() {
       return;
     }
 
-    // Confirmation required — guide the user, don't hang.
-    setNotice(
-      `Account created! We sent a confirmation link to ${cleanEmail}. Open it to confirm, then sign in to build your foodie avatar. (Check spam if it's not there in a minute.)`
-    );
+    // Confirmation required — transition out inputs and show centered confirmation card.
+    setSignupConfirmedEmail(cleanEmail);
   };
 
   const inputClass =
     "w-full pl-9 pr-3 py-2.5 text-xs rounded-xl bg-white border border-zinc-200 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-[#e84a27] focus:ring-1 focus:ring-[#e84a27] transition-all";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="relative w-full max-w-sm bg-white rounded-3xl border border-zinc-200 shadow-2xl p-6 flex flex-col space-y-4 max-h-[92vh] overflow-y-auto no-scrollbar">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/45 backdrop-blur-xs animate-in fade-in duration-150">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+        className="relative w-full max-w-sm bg-[#FAF7F2] rounded-3xl border border-[#181615]/10 shadow-2xl p-6 flex flex-col space-y-4 max-h-[92vh] overflow-y-auto no-scrollbar"
+      >
         <button
           onClick={() => setIsAuthModalOpen(false)}
-          className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-700 p-1.5 rounded-full hover:bg-zinc-100 transition-colors"
+          className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-700 p-1.5 rounded-full hover:bg-black/5 transition-colors"
           aria-label="Close"
         >
           <X className="w-4 h-4" />
         </button>
 
-        <div className="space-y-1.5 text-center pt-2">
-          <div className="flex items-center justify-center mx-auto mb-1">
-            <SmakrSIcon className="w-9 h-9" />
-          </div>
-          <h2 className="text-base font-extrabold text-zinc-900 tracking-tight">
-            {tab === "signin"
-              ? "Welcome back to Smakr"
-              : tab === "signup"
-              ? "Join the Smakr table"
-              : "Reset your password"}
-          </h2>
-          <p className="text-xs text-zinc-500 max-w-xs mx-auto leading-relaxed">
-            {tab === "signin"
-              ? "Sign in to log dishes, save spots and unlock admin tools."
-              : tab === "signup"
-              ? "Create an account to start logging your Oslo food finds."
-              : "Enter your account email and we'll send you a secure reset link."}
-          </p>
-        </div>
-
-        {/* Tabs */}
-        {tab !== "reset" && (
-          <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-zinc-100">
-            {(["signin", "signup"] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => {
-                  setTab(t);
-                  setError(null);
-                  setNotice(null);
-                }}
-                className={`py-2 rounded-xl text-xs font-bold transition-all ${
-                  tab === t
-                    ? "bg-white text-zinc-900 shadow-xs"
-                    : "text-zinc-500 hover:text-zinc-700"
-                }`}
+        <AnimatePresence mode="wait">
+          {signupConfirmedEmail ? (
+            /* ---------- Centered Account Created / Confirmation View ---------- */
+            <motion.div
+              key="signup-confirmed"
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -8 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="py-5 px-1 flex flex-col items-center text-center space-y-4"
+            >
+              <motion.div
+                initial={{ scale: 0.6, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 420, damping: 22, delay: 0.05 }}
+                className="w-16 h-16 rounded-full bg-[#e84a27]/12 border border-[#e84a27]/25 flex items-center justify-center shadow-xs"
               >
-                {t === "signin" ? "Sign In" : "Create Account"}
-              </button>
-            ))}
-          </div>
-        )}
+                <CheckCircle2 className="w-8 h-8 text-[#e84a27]" />
+              </motion.div>
 
-        {tab !== "reset" && (
-          <>
-            {/* Google */}
-            <button
-              onClick={handleGoogle}
-              disabled={busy !== null}
-              className="w-full flex items-center justify-center gap-2.5 p-3 rounded-2xl bg-white hover:bg-zinc-50 disabled:opacity-60 text-zinc-800 font-semibold text-xs border border-zinc-200 shadow-xs transition-all active:scale-[0.99]"
+              <div className="space-y-1.5">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 text-[10px] font-bold uppercase tracking-wider">
+                  ✦ Account Created
+                </span>
+                <h2 className="font-comico text-xl text-[#181615] tracking-tight">
+                  CHECK YOUR INBOX
+                </h2>
+                <p className="text-xs text-[#6E655F] max-w-[260px] mx-auto leading-relaxed">
+                  We sent a confirmation link to:
+                </p>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-black/10 text-xs font-bold text-[#181615] shadow-2xs">
+                  <Mail className="w-3.5 h-3.5 text-[#e84a27]" />
+                  <span className="truncate max-w-[210px]">{signupConfirmedEmail}</span>
+                </div>
+                <p className="text-[11px] text-zinc-500 max-w-[260px] mx-auto leading-relaxed pt-1">
+                  Tap the link in your email to verify, then sign in to customize your foodie mascot. (Check spam if it takes a minute.)
+                </p>
+              </div>
+
+              <div className="w-full space-y-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSignupConfirmedEmail(null);
+                    setTab("signin");
+                    setError(null);
+                    setNotice(null);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] text-white font-bold text-xs shadow-md shadow-[#e84a27]/25 transition-all active:scale-[0.98]"
+                >
+                  <span>Go to Sign In</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSignupConfirmedEmail(null);
+                    setError(null);
+                  }}
+                  className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-2xl bg-white hover:bg-zinc-50 border border-black/10 text-zinc-700 font-semibold text-xs transition-all active:scale-[0.98]"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Back to details</span>
+                </button>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key={`auth-form-${tab}`}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.16 }}
+              className="flex flex-col space-y-4"
             >
-              {busy === "google" ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <GoogleIcon className="w-4 h-4" />
+              <div className="space-y-1.5 text-center pt-2">
+                <div className="flex items-center justify-center mx-auto mb-1">
+                  <SmakrSIcon className="w-9 h-9" />
+                </div>
+                <h2 className="font-comico text-lg text-[#181615] tracking-tight">
+                  {tab === "signin"
+                    ? "WELCOME BACK"
+                    : tab === "signup"
+                    ? "JOIN THE SMAKR TABLE"
+                    : "RESET PASSWORD"}
+                </h2>
+                <p className="text-xs text-zinc-500 max-w-xs mx-auto leading-relaxed">
+                  {tab === "signin"
+                    ? "Sign in to log dishes, save spots and unlock your foodie radar."
+                    : tab === "signup"
+                    ? "Create an account to start logging your Oslo food finds."
+                    : "Enter your account email and we'll send you a secure reset link."}
+                </p>
+              </div>
+
+              {/* Tabs with shared spring pill */}
+              {tab !== "reset" && (
+                <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-[#EDE7DD] border border-black/[0.06]">
+                  {(["signin", "signup"] as const).map((t) => {
+                    const active = tab === t;
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => {
+                          setTab(t);
+                          setError(null);
+                          setNotice(null);
+                        }}
+                        className={`relative py-2 rounded-xl text-xs font-bold transition-colors ${
+                          active ? "text-[#181615]" : "text-zinc-500 hover:text-zinc-800"
+                        }`}
+                      >
+                        {active && (
+                          <motion.span
+                            layoutId="authModalTabPill"
+                            transition={{ type: "spring", stiffness: 460, damping: 34 }}
+                            className="absolute inset-0 rounded-xl bg-white shadow-xs"
+                          />
+                        )}
+                        <span className="relative z-10">
+                          {t === "signin" ? "Sign In" : "Create Account"}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               )}
-              <span>Continue with Google</span>
-            </button>
 
-            <div className="flex items-center gap-3">
-              <span className="h-px flex-1 bg-zinc-200" />
-              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
-                or email
-              </span>
-              <span className="h-px flex-1 bg-zinc-200" />
-            </div>
-          </>
-        )}
+              {tab !== "reset" && (
+                <>
+                  {/* Google */}
+                  <button
+                    onClick={handleGoogle}
+                    disabled={busy !== null}
+                    className="w-full flex items-center justify-center gap-2.5 p-3 rounded-2xl bg-white hover:bg-zinc-50 disabled:opacity-60 text-zinc-800 font-semibold text-xs border border-zinc-200 shadow-xs transition-all active:scale-[0.98]"
+                  >
+                    {busy === "google" ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <GoogleIcon className="w-4 h-4" />
+                    )}
+                    <span>Continue with Google</span>
+                  </button>
 
-        {/* Feedback banners */}
-        {error && (
-          <div className="flex items-start gap-2 rounded-xl bg-red-50 text-red-700 border border-red-200 px-3 py-2.5">
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-            <p className="text-[11px] leading-relaxed">{error}</p>
-          </div>
-        )}
-        {notice && (
-          <div className="flex items-start gap-2 rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2.5">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-            <p className="text-[11px] leading-relaxed text-emerald-800">{notice}</p>
-          </div>
-        )}
-
-        {tab === "reset" ? (
-          /* ---------- Reset Password ---------- */
-          <div className="space-y-2">
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-              <input
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@smakr.no"
-                className={inputClass}
-              />
-            </div>
-            <button
-              onClick={handleForgotPassword}
-              disabled={busy !== null}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] disabled:opacity-60 text-white font-bold text-xs shadow-md shadow-[#e84a27]/25 transition-all active:scale-[0.99]"
-            >
-              {busy === "reset" ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <span>Send Reset Link →</span>
+                  <div className="flex items-center gap-3">
+                    <span className="h-px flex-1 bg-zinc-200" />
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
+                      or email
+                    </span>
+                    <span className="h-px flex-1 bg-zinc-200" />
+                  </div>
+                </>
               )}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setTab("signin");
-                setError(null);
-                setNotice(null);
-              }}
-              className="w-full text-center text-[11px] font-semibold text-zinc-500 hover:text-[#e84a27] transition-colors py-1"
-            >
-              Back to sign in
-            </button>
-          </div>
-        ) : tab === "signin" ? (
-          /* ---------- Sign In ---------- */
-          <div className="space-y-2">
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-              <input
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@smakr.no"
-                className={inputClass}
-              />
-            </div>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-              <input
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
-                className={inputClass}
-              />
-            </div>
-            <button
-              onClick={handleSignIn}
-              disabled={busy !== null}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] disabled:opacity-60 text-white font-bold text-xs shadow-md shadow-[#e84a27]/25 transition-all active:scale-[0.99]"
-            >
-              {busy === "signin" ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <span>Sign In →</span>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setTab("reset");
-                setError(null);
-                setNotice(null);
-              }}
-              className="w-full text-center text-[11px] font-semibold text-zinc-500 hover:text-[#e84a27] transition-colors py-1"
-            >
-              Forgot password?
-            </button>
 
-          </div>
-        ) : (
-          /* ---------- Create Account ---------- */
-          <div className="space-y-2">
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-              <input
-                type="text"
-                autoComplete="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Full name"
-                className={inputClass}
-              />
-            </div>
-            <div className="relative">
-              <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-              <input
-                type="text"
-                value={handle}
-                onChange={(e) => setHandle(e.target.value)}
-                placeholder="Handle (e.g. astrid_eats_oslo)"
-                className={inputClass}
-              />
-            </div>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-              <input
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@smakr.no"
-                className={inputClass}
-              />
-            </div>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-              <input
-                type="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password (min. 6 characters)"
-                className={inputClass}
-              />
-            </div>
-            <button
-              onClick={handleCreateAccount}
-              disabled={busy !== null}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] disabled:opacity-60 text-white font-bold text-xs shadow-md shadow-[#e84a27]/25 transition-all active:scale-[0.99]"
-            >
-              {busy === "signup" ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <span>Create Account &amp; Start Tasting →</span>
+              {/* Feedback banners */}
+              {error && (
+                <div className="flex items-start gap-2 rounded-xl bg-red-50 text-red-700 border border-red-200 px-3 py-2.5 animate-in fade-in duration-150">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <p className="text-[11px] leading-relaxed">{error}</p>
+                </div>
               )}
-            </button>
-          </div>
-        )}
+              {notice && (
+                <div className="flex items-start gap-2 rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2.5 animate-in fade-in duration-150">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <p className="text-[11px] leading-relaxed text-emerald-800">{notice}</p>
+                </div>
+              )}
+
+              {tab === "reset" ? (
+                /* ---------- Reset Password ---------- */
+                <div className="space-y-2.5">
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
+                    <input
+                      type="email"
+                      autoComplete="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@smakr.no"
+                      className={inputClass}
+                    />
+                  </div>
+                  <button
+                    onClick={handleForgotPassword}
+                    disabled={busy !== null}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] disabled:opacity-60 text-white font-bold text-xs shadow-md shadow-[#e84a27]/25 transition-all active:scale-[0.98]"
+                  >
+                    {busy === "reset" ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <span>Send Reset Link →</span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTab("signin");
+                      setError(null);
+                      setNotice(null);
+                    }}
+                    className="w-full text-center text-[11px] font-semibold text-zinc-500 hover:text-[#e84a27] transition-colors py-1"
+                  >
+                    ← Back to sign in
+                  </button>
+                </div>
+              ) : tab === "signin" ? (
+                /* ---------- Sign In ---------- */
+                <div className="space-y-2.5">
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
+                    <input
+                      type="email"
+                      autoComplete="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@smakr.no"
+                      className={inputClass}
+                    />
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
+                    <input
+                      type="password"
+                      autoComplete="current-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") void handleSignIn();
+                      }}
+                      placeholder="Password"
+                      className={inputClass}
+                    />
+                  </div>
+                  <button
+                    onClick={handleSignIn}
+                    disabled={busy !== null}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] disabled:opacity-60 text-white font-bold text-xs shadow-md shadow-[#e84a27]/25 transition-all active:scale-[0.98]"
+                  >
+                    {busy === "signin" ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <span>Sign In →</span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTab("reset");
+                      setError(null);
+                      setNotice(null);
+                    }}
+                    className="w-full text-center text-[11px] font-semibold text-zinc-500 hover:text-[#e84a27] transition-colors py-1"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+              ) : (
+                /* ---------- Create Account ---------- */
+                <div className="space-y-2.5">
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
+                    <input
+                      type="text"
+                      autoComplete="name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Full name"
+                      className={inputClass}
+                    />
+                  </div>
+                  <div className="relative">
+                    <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
+                    <input
+                      type="text"
+                      value={handle}
+                      onChange={(e) => setHandle(e.target.value)}
+                      placeholder="Handle (e.g. astrid_eats_oslo)"
+                      className={inputClass}
+                    />
+                  </div>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
+                    <input
+                      type="email"
+                      autoComplete="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@smakr.no"
+                      className={inputClass}
+                    />
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") void handleCreateAccount();
+                      }}
+                      placeholder="Password (min. 6 characters)"
+                      className={inputClass}
+                    />
+                  </div>
+                  <button
+                    onClick={handleCreateAccount}
+                    disabled={busy !== null}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] disabled:opacity-60 text-white font-bold text-xs shadow-md shadow-[#e84a27]/25 transition-all active:scale-[0.98]"
+                  >
+                    {busy === "signup" ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <span>Create Account &amp; Start Tasting →</span>
+                    )}
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {!isSupabaseConfigured && (
           <p className="text-[10px] text-center text-amber-600 bg-amber-50 border border-amber-200/70 rounded-lg px-2 py-1.5">
@@ -511,7 +613,7 @@ export function AuthModal() {
             <ArrowRight className="w-3.5 h-3.5 text-[#e84a27]" />
           </Link>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

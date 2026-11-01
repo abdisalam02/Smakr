@@ -5,28 +5,43 @@ import Image from "next/image";
 import { MapPin, ArrowUpRight, X, ChevronDown, Pencil } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { MascotCharacter } from "@/components/avatar/MascotCharacter";
-import { OFFICIAL_SMAKR_MASCOT_CONFIG } from "@/lib/officialSmakrMascot";
+import {
+  OFFICIAL_SMAKR_MASCOT_CONFIG,
+  getOfficialSmakrMascotConfig,
+} from "@/lib/officialSmakrMascot";
 import { SmakrMascotRig } from "@/components/studio/SmakrMascotRig";
 import { EditWeeklyDropModal } from "@/components/admin/EditWeeklyDropModal";
 import { FEED_BLUR_DARK } from "@/lib/feedImages";
+import type { MascotConfig } from "@/types/mascot";
 
-const MemoizedMascotBust = React.memo(function MemoizedMascotBust() {
+const MemoizedMascotBust = React.memo(function MemoizedMascotBust({
+  config,
+}: {
+  config: MascotConfig;
+}) {
+  const accessories =
+    !config.peepsAccessories || config.peepsAccessories === "none"
+      ? "none"
+      : config.peepsAccessories === "glasses"
+      ? "glasses-2"
+      : config.peepsAccessories;
   return (
-    <div className="w-[96px] h-[104px] flex items-end justify-center translate-y-1">
+    <div className="w-full h-full flex items-end justify-center">
       <SmakrMascotRig
         frameMode="bust-only"
-        bodyPose="pointing-up"
-        head={OFFICIAL_SMAKR_MASCOT_CONFIG.peepsHead}
-        face={OFFICIAL_SMAKR_MASCOT_CONFIG.peepsFace}
-        accessories="glasses-2"
-        facialHair="none"
-        skinColor={OFFICIAL_SMAKR_MASCOT_CONFIG.skinColor}
-        clothingColor={OFFICIAL_SMAKR_MASCOT_CONFIG.topColor}
-        innerClothingColor={OFFICIAL_SMAKR_MASCOT_CONFIG.bottomColor}
-        hatColor={OFFICIAL_SMAKR_MASCOT_CONFIG.hatColor}
-        headContrastColor={OFFICIAL_SMAKR_MASCOT_CONFIG.hairColor}
-        stickerOutline={true}
-        size={92}
+        bodyPose={config.peepsBody || "pointing-up"}
+        head={config.peepsHead || OFFICIAL_SMAKR_MASCOT_CONFIG.peepsHead}
+        face={config.peepsFace || OFFICIAL_SMAKR_MASCOT_CONFIG.peepsFace}
+        accessories={accessories}
+        facialHair={config.peepsFacialHair || "none"}
+        skinColor={`#${(config.skinColor || OFFICIAL_SMAKR_MASCOT_CONFIG.skinColor).replace(/^#/, "")}`}
+        clothingColor={`#${(config.topColor || OFFICIAL_SMAKR_MASCOT_CONFIG.topColor).replace(/^#/, "")}`}
+        innerClothingColor={`#${(config.bottomColor || OFFICIAL_SMAKR_MASCOT_CONFIG.bottomColor).replace(/^#/, "")}`}
+        hatColor={`#${(config.hatColor || OFFICIAL_SMAKR_MASCOT_CONFIG.hatColor).replace(/^#/, "")}`}
+        headContrastColor={`#${(config.hairColor || OFFICIAL_SMAKR_MASCOT_CONFIG.hairColor).replace(/^#/, "")}`}
+        stickerOutline={false}
+        size={86}
+        className="origin-bottom"
       />
     </div>
   );
@@ -65,9 +80,22 @@ export function MascotWeeklyDrop({
 
   const isViewerAdmin = currentUser?.role === "admin";
 
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [brandMascot, setBrandMascot] = useState<MascotConfig>(
+    () => OFFICIAL_SMAKR_MASCOT_CONFIG
+  );
   const rootRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    setBrandMascot(getOfficialSmakrMascotConfig());
+    const onUpdate = (e: Event) => {
+      const detail = (e as CustomEvent<MascotConfig>).detail;
+      setBrandMascot(detail ?? getOfficialSmakrMascotConfig());
+    };
+    window.addEventListener("smakr:brand-mascot-updated", onUpdate);
+    return () => window.removeEventListener("smakr:brand-mascot-updated", onUpdate);
+  }, []);
 
   const venueName = venue?.name ?? "This week's spot";
   // Trim parentheticals ("Koie Ramen (Torggata)" → "Koie Ramen").
@@ -132,7 +160,7 @@ export function MascotWeeklyDrop({
   return (
     <section
       ref={rootRef}
-      className={`w-full px-4 shrink-0 transition-all duration-200 ${
+      className={`w-full max-w-full px-3 sm:px-4 shrink-0 transition-all duration-200 ${
         isScrolledDown ? "pt-0 pb-0" : compact ? "pt-1 pb-1" : "pt-2 pb-1"
       }`}
     >
@@ -179,7 +207,7 @@ export function MascotWeeklyDrop({
                 />
               ) : (
                 <MascotCharacter
-                  config={OFFICIAL_SMAKR_MASCOT_CONFIG}
+                  config={brandMascot}
                   size={isScrolledDown ? 20 : 28}
                   animated={isExpanded}
                 />
@@ -187,7 +215,7 @@ export function MascotWeeklyDrop({
             </div>
 
             {/* Capsule Text & Chevron */}
-            <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate max-w-[165px] sm:max-w-[210px]">
+            <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate max-w-[160px] sm:max-w-[220px]">
               <span className="text-[#e84a27] font-bold">✦ Smakr Pick</span>
               <span className="text-zinc-400 font-normal mx-1">·</span>
               <span>{shortVenue}</span>
@@ -231,7 +259,7 @@ export function MascotWeeklyDrop({
                 />
               ) : (
                 <MascotCharacter
-                  config={OFFICIAL_SMAKR_MASCOT_CONFIG}
+                  config={brandMascot}
                   size={isScrolledDown ? 20 : 28}
                   animated={isExpanded}
                 />
@@ -273,52 +301,41 @@ export function MascotWeeklyDrop({
       >
         <div className="overflow-hidden">
           <div
-            className="rounded-3xl border p-3.5 space-y-3 shadow-[0_10px_28px_rgba(24,22,21,0.08)]"
-            style={{
-              background: "var(--surface, #FAF7F2)",
-              borderColor: "var(--surface-border, #E5DEC9)",
-            }}
+            className="w-full max-w-full mx-auto relative overflow-hidden rounded-3xl bg-[#FAF7F2] dark:bg-[#181615] border border-[#181615]/10 dark:border-white/10 shadow-xl p-3 sm:p-3.5 space-y-2.5 mt-1"
           >
-            {/* Top Stage: Half-Body Bust Mascot on Left + Editorial Speech Bubble on Right */}
-            <div className="flex items-stretch gap-3">
-              <div className="relative shrink-0 w-[104px] sm:w-[114px] min-h-[112px] rounded-2xl bg-[#F5EFE3] border border-[#E6DDD0] pt-2 px-1 flex items-end justify-center overflow-hidden">
-                <span className="absolute top-1.5 left-2 text-[8px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-white/90 text-[#E84A27] border border-[#E84A27]/20 z-10">
-                  ✦ Smakr Pick
-                </span>
-                {weeklyPick.mascot_avatar_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={weeklyPick.mascot_avatar_url}
-                    alt="Smakr Mascot"
-                    className="w-full h-full object-cover object-top block rounded-xl"
-                  />
-                ) : (
-                  <MemoizedMascotBust />
-                )}
+            {/* ROW 1: Mascot on Left + Clean Speech Bubble with ✦ SMAKR PICK on Right */}
+            <div className="flex gap-2.5 sm:gap-3 items-stretch">
+              {/* Mascot Anchor Box (Warm Pedestal Box, Unclipped Afro) */}
+              <div className="w-[86px] sm:w-[96px] h-[96px] sm:h-[102px] shrink-0 rounded-2xl bg-[#F5EFE3] dark:bg-[#25201C] border border-[#E6DDD0] dark:border-white/10 overflow-hidden flex items-end justify-center select-none pt-2">
+                <div className="w-full h-full flex items-end justify-center">
+                  {weeklyPick.mascot_avatar_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={weeklyPick.mascot_avatar_url}
+                      alt="Smakr Mascot"
+                      className="w-full h-full object-contain object-bottom block"
+                    />
+                  ) : (
+                    <MemoizedMascotBust config={brandMascot} />
+                  )}
+                </div>
               </div>
 
-              {/* Speech bubble with tail pointing to the half-body bust */}
-              <div
-                className="relative flex-1 rounded-2xl border px-3.5 py-3 shadow-xs flex flex-col justify-between bg-white border-[#E6DDD0]"
-              >
-                {/* Speech bubble arrow/tail pointing left towards the mascot bust */}
-                <span
-                  aria-hidden
-                  className="absolute top-8 -left-1.5 w-3 h-3 rotate-45 border-l border-b bg-white border-[#E6DDD0]"
-                />
-                <div className="flex items-center justify-between gap-1.5">
-                  <span className="inline-flex items-center gap-1 text-[9.5px] font-extrabold uppercase tracking-wider text-[#e84a27]">
-                    ✦ Smakr Critic Verdict
+              {/* Speech Bubble (✦ SMAKR PICK Header with Pointer Tail) */}
+              <div className="flex-1 min-w-0 bg-white dark:bg-[#221B17] rounded-2xl p-2.5 sm:p-3 border border-[#181615]/10 dark:border-white/10 shadow-sm relative before:content-[''] before:absolute before:-left-1.5 before:bottom-4 before:w-3 before:h-3 before:rotate-45 before:border-l before:border-b before:bg-white dark:before:bg-[#221B17] before:border-[#181615]/10 dark:border-white/10 flex flex-col justify-between">
+                <div className="flex items-center justify-between gap-1 mb-0.5">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#E84A27] font-comico">
+                    ✦ SMAKR PICK
                   </span>
-                  <div className="flex items-center gap-1 relative z-20">
+                  <div className="flex items-center gap-1 shrink-0">
                     {isViewerAdmin && (
                       <button
                         type="button"
                         onClick={() => setIsEditModalOpen(true)}
-                        className="h-6 px-2 rounded-lg bg-[#FAF7F2] border border-[#E6DDD0] text-[10px] font-bold text-[#e84a27] hover:bg-amber-50 transition-all flex items-center gap-1"
+                        className="inline-flex items-center gap-1 text-[9.5px] font-bold text-[#6E655F] dark:text-zinc-400 border border-[#181615]/10 dark:border-white/10 px-1.5 py-0.5 rounded-md hover:bg-[#F5EFE4] transition-all cursor-pointer"
                         title="Edit Weekly Drop"
                       >
-                        <Pencil className="w-2.5 h-2.5" />
+                        <Pencil className="w-2.5 h-2.5 text-[#e84a27]" />
                         <span>Edit</span>
                       </button>
                     )}
@@ -326,25 +343,39 @@ export function MascotWeeklyDrop({
                       type="button"
                       onClick={() => setIsExpanded(false)}
                       aria-label="Collapse weekly drop"
-                      className="w-6 h-6 flex items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-black/[0.04] transition-colors"
+                      className="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors cursor-pointer"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
-                <p className="text-[13.5px] sm:text-[14px] font-bold leading-snug text-stone-800 my-auto py-1 relative z-10">
+
+                <p className="text-xs sm:text-[13px] font-semibold text-[#181615]/90 dark:text-[#FAF7F2]/90 leading-snug italic my-auto py-0.5">
                   &ldquo;{weeklyPick.speech_bubble}&rdquo;
                 </p>
-                <div className="flex items-center gap-1.5 text-[10px] font-semibold text-stone-500">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#e84a27]" />
+
+                <div className="flex items-center gap-1 text-[10px] font-medium text-stone-400 dark:text-stone-500 mt-0.5">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#E84A27]" />
                   <span>Handpicked weekly drop in Oslo</span>
                 </div>
               </div>
             </div>
 
-            {/* Warm Editorial Featured Dish Spotlight Banner (No Black) */}
-            <div className="flex items-center gap-3 p-2.5 rounded-2xl bg-[#FFF6F2] border border-[#F3D7CA] shadow-xs">
-              <div className="relative w-[68px] h-[68px] sm:w-[74px] sm:h-[74px] rounded-xl overflow-hidden border border-[#E84A27]/15 shrink-0 bg-[#F5EFE3]">
+            {/* ROW 2: Featured Dish Hero Card (Clickable, Prominent Image, No Fat Buttons) */}
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={handleMenu}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleMenu();
+                }
+              }}
+              className="group/dish flex items-center gap-3 p-3 rounded-2xl bg-white dark:bg-[#221B17] border border-[#181615]/10 dark:border-white/10 hover:border-[#E84A27]/40 shadow-xs hover:shadow-sm transition-all duration-200 active:scale-[0.99] cursor-pointer"
+            >
+              {/* Enlarged Prominent Food Image (80x80px) */}
+              <div className="relative w-20 h-20 sm:w-[86px] sm:h-[86px] rounded-xl overflow-hidden border border-[#181615]/10 shrink-0 bg-[#F5EFE4] shadow-xs group-hover/dish:scale-[1.03] transition-transform duration-200">
                 <Image
                   src={weeklyPick.dish_image}
                   alt={weeklyPick.dish_name}
@@ -353,46 +384,34 @@ export function MascotWeeklyDrop({
                   placeholder="blur"
                   blurDataURL={FEED_BLUR_DARK}
                   className="object-cover"
-                  sizes="76px"
+                  sizes="90px"
                 />
               </div>
+
+              {/* Title, Venue, Price & Tactile Action */}
               <div className="min-w-0 flex-1 space-y-1">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[9px] font-extrabold uppercase tracking-widest text-[#E84A27]">
+                <div className="flex items-center justify-between gap-1.5">
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#E84A27] font-comico">
                     ✦ Featured Dish
                   </span>
-                  <span className="shrink-0 text-[11px] font-mono font-extrabold px-2.5 py-0.5 rounded-full bg-[#E84A27] text-white shadow-xs">
+                  <span className="shrink-0 text-xs sm:text-sm font-comico font-bold px-2.5 py-0.5 rounded-lg bg-[#E84A27] text-white shadow-xs rotate-[-1deg]">
                     {weeklyPick.price_nok} kr
                   </span>
                 </div>
-                <p className="text-sm sm:text-[15px] font-comico font-bold text-stone-900 truncate">
+                <h4 className="font-comico font-bold text-base sm:text-lg text-[#181615] dark:text-white truncate leading-tight group-hover/dish:text-[#e84a27] transition-colors">
                   {weeklyPick.dish_name}
-                </p>
-                <p className="text-[11px] text-stone-600 truncate flex items-center gap-1">
-                  <MapPin className="w-3 h-3 text-[#E84A27] shrink-0" />
-                  <span className="font-semibold">{venueName}</span>
-                </p>
+                </h4>
+                <div className="flex items-center justify-between gap-2 pt-0.5">
+                  <p className="text-xs text-stone-500 dark:text-stone-400 truncate flex items-center gap-1 font-sans">
+                    <MapPin className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
+                    <span className="font-semibold truncate text-[#181615] dark:text-white/90">{venueName}</span>
+                  </p>
+                  <span className="shrink-0 inline-flex items-center gap-1 text-[11px] font-bold text-[#E84A27] group-hover/dish:translate-x-0.5 transition-transform">
+                    <span>Menu &amp; Vibes</span>
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  </span>
+                </div>
               </div>
-            </div>
-
-            {/* Responsive 2-Button Grid Action Bar */}
-            <div className="grid grid-cols-2 gap-2.5">
-              <button
-                type="button"
-                onClick={handleSpot}
-                className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-[#E84A27] hover:bg-[#d23e1d] text-white text-xs font-bold shadow-sm shadow-[#e84a27]/20 transition-all active:scale-[0.98] cursor-pointer"
-              >
-                <MapPin className="w-3.5 h-3.5 shrink-0" />
-                <span>Spot on Map</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleMenu}
-                className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-white text-stone-800 border border-[#E6DDD0] hover:bg-[#F5EFE3] text-xs font-bold transition-all active:scale-[0.98] cursor-pointer"
-              >
-                <span>Spot &amp; Menu</span>
-                <ArrowUpRight className="w-3.5 h-3.5 shrink-0 text-[#e84a27]" />
-              </button>
             </div>
           </div>
         </div>

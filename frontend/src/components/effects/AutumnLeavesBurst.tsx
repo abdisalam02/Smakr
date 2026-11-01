@@ -30,6 +30,11 @@ export function AutumnLeavesBurst() {
   const [isActive, setIsActive] = useState(false);
 
   useEffect(() => {
+    // Check prefers-reduced-motion
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return;
+    }
+
     try {
       const shownInSession = sessionStorage.getItem(LEAVES_SESSION_KEY);
       const lastShownRaw = localStorage.getItem(LEAVES_LAST_TS_KEY);
@@ -47,12 +52,21 @@ export function AutumnLeavesBurst() {
       return;
     }
 
-    // Unmount after all 4 waves (6 leaves total) complete their descent past the bottom
-    const timer = setTimeout(() => {
+    // Auto-unmount on first touch or scroll interaction, or after 8000ms max
+    const dismiss = () => {
       setIsActive(false);
-    }, 22000);
+    };
 
-    return () => clearTimeout(timer);
+    window.addEventListener('touchstart', dismiss, { once: true, passive: true });
+    window.addEventListener('wheel', dismiss, { once: true, passive: true });
+
+    const timer = setTimeout(dismiss, 8000);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('touchstart', dismiss);
+      window.removeEventListener('wheel', dismiss);
+    };
   }, []);
 
   if (!isActive) return null;
@@ -60,7 +74,10 @@ export function AutumnLeavesBurst() {
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none fixed inset-0 z-40 overflow-hidden select-none [perspective:1200px]"
+      style={{
+        contain: 'layout style paint',
+      }}
+      className="pointer-events-none fixed inset-0 z-40 overflow-hidden select-none [perspective:1200px] will-change-transform"
     >
       <style>{`
         /* Vertical descent from above screen (-80px) to past bottom (118vh) */

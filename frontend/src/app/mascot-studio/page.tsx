@@ -245,7 +245,9 @@ export default function MascotStudioPage() {
   const resetMascotConfig = useCityPulseStore((state) => state.resetMascotConfig);
   const showToast = useCityPulseStore((state) => state.showToast);
   const currentUser = useCityPulseStore((state) => state.currentUser);
+  const isAuthResolved = useCityPulseStore((state) => state.isAuthResolved);
   const setCurrentUser = useCityPulseStore((state) => state.setCurrentUser);
+  const isAdmin = currentUser?.role === "admin";
 
   const [stage, setStage] = useState<StageBg>("oat");
   const [tab, setTab] = useState<TabId>("anatomy");
@@ -368,6 +370,29 @@ export default function MascotStudioPage() {
       </button>
     </div>
   );
+
+  const isAllowed = isAdmin || currentUser?.is_official === true;
+  if (isAuthResolved && !isAllowed) {
+    return (
+      <main className="min-h-dvh flex items-center justify-center p-4 bg-[#FAF7F2] text-[#231F1D]">
+        <div className="w-full max-w-sm p-6 bg-white rounded-3xl border border-[#E6DEC8] shadow-xl text-center space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-[#e84a27]/10 text-[#e84a27] font-comico text-2xl flex items-center justify-center mx-auto">
+            ✦
+          </div>
+          <div>
+            <h1 className="font-comico text-xl text-[#231F1D]">Smakr Mascot Studio</h1>
+            <p className="text-xs text-[#6E655F] mt-1">Admin access required</p>
+          </div>
+          <Link
+            href="/"
+            className="inline-block w-full h-11 leading-[44px] rounded-xl bg-[#e84a27] text-white font-bold text-xs uppercase tracking-wider text-center"
+          >
+            Return to Radar
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <div className="w-full h-full overflow-y-auto no-scrollbar bg-[var(--background)]">

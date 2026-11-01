@@ -673,6 +673,7 @@ function recolorHeadHair(svg: string, hair: string): string {
 }
 
 function injectBustTorso(svg: string, shirtHex: string, skinHex: string): string {
+  if (svg.includes('data-layer="open-peeps-bust"')) return svg;
   const closeIdx = svg.lastIndexOf("</svg>");
   if (closeIdx < 0) return svg;
   const bustMarkup = `
@@ -682,7 +683,7 @@ function injectBustTorso(svg: string, shirtHex: string, skinHex: string): string
       <path d="M254 624 L254 720 M450 624 L450 720" stroke="#181615" stroke-width="8" stroke-linecap="round" opacity="0.55"/>
     </g>
   `;
-  const firstGroupIdx = svg.indexOf("<g ");
+  const firstGroupIdx = svg.search(/<g[\s>]/);
   if (firstGroupIdx > 0) {
     return (
       svg.slice(0, firstGroupIdx).replace('viewBox="0 0 704 704"', 'viewBox="80 36 544 688"') +
@@ -691,6 +692,31 @@ function injectBustTorso(svg: string, shirtHex: string, skinHex: string): string
     );
   }
   return svg;
+}
+
+/**
+ * Guarantees that any SVG string or `data:image/svg+xml` URI renders as a full
+ * bust (head + neck + sweater torso) with the bust viewBox, upgrading legacy
+ * head-only avatars on the fly.
+ */
+export function ensureBustAvatarSvg(
+  svgOrDataUri: string,
+  shirtHex = "e84a27",
+  skinHex = "ffdbb4"
+): string {
+  let raw = svgOrDataUri.trim();
+  if (raw.startsWith("data:image/svg+xml")) {
+    const commaIdx = raw.indexOf(",");
+    if (commaIdx > 0) {
+      const payload = raw.slice(commaIdx + 1);
+      try {
+        raw = raw.includes(";base64,") ? atob(payload) : decodeURIComponent(payload);
+      } catch {
+        // Keep raw if decoding fails
+      }
+    }
+  }
+  return injectBustTorso(raw, normHex(shirtHex, "e84a27"), normHex(skinHex, "ffdbb4"));
 }
 
 /** Self-contained DiceBear Open Peeps Bust `<svg>` string (head + face + glasses + shirt). */

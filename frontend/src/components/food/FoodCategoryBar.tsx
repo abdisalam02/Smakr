@@ -22,6 +22,13 @@ import {
   KebabIcon,
   PhoIcon,
   CurryIcon,
+  SourdoughIcon,
+  NaturalWineIcon,
+  BobaIcon,
+  NordicSeafoodIcon,
+  KbbqIcon,
+  BrunchIcon,
+  GelatoIcon,
 } from "./FoodIcons";
 
 interface FoodCategoryBarProps {
@@ -50,6 +57,13 @@ const CATEGORY_ICON_MAP: Record<FoodCategory, React.ComponentType<{ className?: 
   indian: CurryIcon,
   mandi_rice: CurryIcon,
   middle_eastern: KebabIcon,
+  sourdough: SourdoughIcon,
+  natural_wine: NaturalWineIcon,
+  boba: BobaIcon,
+  nordic_seafood: NordicSeafoodIcon,
+  kbbq: KbbqIcon,
+  brunch: BrunchIcon,
+  gelato: GelatoIcon,
 };
 
 export function FoodCategoryBar({ compact = false }: FoodCategoryBarProps) {

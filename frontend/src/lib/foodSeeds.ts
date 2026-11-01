@@ -20,8 +20,15 @@ export const FOOD_CATEGORIES: FoodCategoryDef[] = [
   { id: "tacos", label: "Tacos", emoji: "🌮", shortDesc: "Birria, carnitas & street tacos" },
   { id: "bao", label: "Bao Buns", emoji: "🥠", shortDesc: "Steamed fluffy bao & buns" },
   { id: "sushi", label: "Seafood & Sushi", emoji: "🍣", shortDesc: "Fresh Arctic fish & raw bar" },
-  { id: "dessert", label: "Sweets", emoji: "🍦", shortDesc: "Artisan gelato & treats" },
-  { id: "drinks", label: "Bars", emoji: "🍸", shortDesc: "Cocktails & natural wine" },
+  { id: "nordic_seafood", label: "Nordic Seafood", emoji: "🐟", shortDesc: "Wild Norwegian salmon, cod & fresh catch" },
+  { id: "sourdough", label: "Artisan Sourdough", emoji: "🍞", shortDesc: "Rustic slow-fermented Oslo loaves" },
+  { id: "boba", label: "Boba & Bubble Tea", emoji: "🧋", shortDesc: "Tapioca milk tea & fruit brews" },
+  { id: "kbbq", label: "Korean BBQ", emoji: "🥓", shortDesc: "Sizzling table grill & banchan" },
+  { id: "brunch", label: "Brunch & Toast", emoji: "🥑", shortDesc: "Avocado toast, poached eggs & morning plates" },
+  { id: "gelato", label: "Artisan Gelato", emoji: "🍨", shortDesc: "Fresh churned gelato & seasonal sorbets" },
+  { id: "dessert", label: "Sweets", emoji: "🍦", shortDesc: "Artisan pastry & sweet treats" },
+  { id: "drinks", label: "Bars", emoji: "🍸", shortDesc: "Cocktails & craft drinks" },
+  { id: "natural_wine", label: "Natural Wine", emoji: "🍷", shortDesc: "Low-intervention wines & pet-nats" },
 ];
 
 export const INITIAL_FOOD_SPOTS: Venue[] = [

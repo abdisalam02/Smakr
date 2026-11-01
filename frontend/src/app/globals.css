@@ -724,5 +724,17 @@ body, input, textarea, button, select, p, span, h1, h2, h3, h4, h5, h6, a, div {
   border-top-color: #fbf9f5 !important;
 }
 
+/* ========================================================================= */
+/* COMPOSITOR LAYER PROMOTION & CONTAINMENT FOR BOTTOM SHEET                 */
+/* ========================================================================= */
+
+.smakr-bottom-sheet {
+  contain: layout style;
+  will-change: transform;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+
 
 

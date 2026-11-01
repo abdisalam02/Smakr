@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import {
   X,
   Search,
@@ -12,6 +13,7 @@ import {
   ChevronLeft,
   Sparkles,
   ImageIcon,
+  ChevronDown,
 } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -247,15 +249,12 @@ export function CreateFoodPostModal() {
   // ── Format selector ──
   const [formatType, setFormatType] = useState<"restaurant" | "food_truck">("restaurant");
 
-  // ── TikTok / Social Video auto-fill state ──
-  const [tiktokUrl, setTiktokUrl] = useState("");
-  const [isExtractingTikTok, setIsExtractingTikTok] = useState(false);
-
   // ── Flow ──
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
   // ── Step 1: venue ──
   const [query, setQuery] = useState("");
+  const [showSmakrSpots, setShowSmakrSpots] = useState(false);
   const [results, setResults] = useState<PlaceResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [venueId, setVenueId] = useState<string | null>(null);
@@ -318,9 +317,8 @@ export function CreateFoodPostModal() {
           : CATEGORY_ICONS[0].key
       );
       setFormatType(fromVenue?.spot_type === "food_truck" ? "food_truck" : "restaurant");
-      setTiktokUrl("");
-      setIsExtractingTikTok(false);
       setQuery("");
+      setShowSmakrSpots(false);
       setResults([]);
       setDishName(fromVenue?.signature_dishes?.[0] ?? "");
       setPriceNok("");
@@ -342,68 +340,6 @@ export function CreateFoodPostModal() {
     }
     wasOpenRef.current = isOpen;
   }, [isOpen, selectedVenue]);
-
-  /* ---- TikTok / Video Link Extraction Handler ---- */
-  const handleExtractTikTok = async () => {
-    const url = tiktokUrl.trim();
-    if (!url) {
-      showToast("Paste a video link first.");
-      return;
-    }
-    setIsExtractingTikTok(true);
-    try {
-      const res = await fetch("/api/ai/extract-food-post", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
-      });
-      const result = await res.json();
-      if (!res.ok || !result.success || !result.data) {
-        showToast(result.error || "Could not extract food post from this link.");
-        return;
-      }
-      const d = result.data;
-      if (d.dish_name) setDishName(d.dish_name);
-      if (d.price_nok) setPriceNok(String(d.price_nok));
-      if (d.review_text) setReviewText(d.review_text);
-      if (d.category) {
-        const match = CATEGORY_ICONS.find(
-          (c) => c.category === d.category || c.key === d.category
-        );
-        if (match) setCategoryKey(match.key);
-      }
-      if (d.image_url) {
-        setExtraPhotos((prev) => [d.image_url, ...prev.filter((p) => p !== d.image_url)]);
-        setFallbackPhoto(d.image_url);
-      }
-      if (d.spot_name) {
-        setQuery(d.spot_name);
-        try {
-          const searchRes = await fetch(`/api/places/search?q=${encodeURIComponent(d.spot_name + " Oslo")}`);
-          if (searchRes.ok) {
-            const searchData = await searchRes.json();
-            const list = searchData.results ?? (searchData.place ? [searchData.place] : []);
-            if (list.length > 0) {
-              setResults(list);
-              setGoogle(list[0]);
-              setVenueId(null);
-              if (list[0].photos && list[0].photos.length > 0) {
-                setListingPhotos(list[0].photos);
-              }
-            }
-          }
-        } catch (searchErr) {
-          console.warn("[TikTok] Spot search error:", searchErr);
-        }
-      }
-      showToast("✨ Extracted dish & photo from TikTok — review steps below");
-    } catch (err) {
-      console.error("[TikTokExtraction] error:", err);
-      showToast("Failed to process video link.");
-    } finally {
-      setIsExtractingTikTok(false);
-    }
-  };
 
   /* ---- debounced Google Places search ---- */
   useEffect(() => {
@@ -466,14 +402,16 @@ export function CreateFoodPostModal() {
   /* ---- local (DB) matches, deduped against Google results ---- */
   const localMatches = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const base = q
-      ? venues.filter(
+    if (q) {
+      return venues
+        .filter(
           (v) =>
             v.name.toLowerCase().includes(q) || v.address.toLowerCase().includes(q)
         )
-      : venues;
-    return base.slice(0, 6);
-  }, [venues, query]);
+        .slice(0, 8);
+    }
+    return showSmakrSpots ? venues : [];
+  }, [venues, query, showSmakrSpots]);
 
   const googleMatches = useMemo(() => {
     const knownPlaceIds = new Set(
@@ -774,8 +712,6 @@ export function CreateFoodPostModal() {
       ? dishName.trim().length > 0
       : true;
 
-  if (!isOpen) return null;
-
   const venueDishPhotos = existingVenue
     ? useCityPulseStore
         .getState()
@@ -799,7 +735,6 @@ export function CreateFoodPostModal() {
     ])
   ).slice(0, 12);
 
-  // Show up to 8 real photos immediately; "Load all Google photos" reveals all 10+
   const visibleFallbackOptions = showAllPhotos ? fallbackOptions : fallbackOptions.slice(0, 8);
   const hasMorePhotos = fallbackOptions.length > visibleFallbackOptions.length;
 
@@ -812,10 +747,33 @@ export function CreateFoodPostModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/45 backdrop-blur-xs animate-in fade-in duration-150 sm:p-4">
-      <div className="relative w-full sm:max-w-lg bg-[#FAF7F2] rounded-t-3xl sm:rounded-3xl border border-[#e8e0d4] shadow-2xl overflow-hidden flex flex-col max-h-[94vh] sm:max-h-[92vh]">
-        {/* ── Header ── */}
-        <div className="px-5 pt-4 pb-3 border-b border-[#efe7da] bg-white/70 backdrop-blur-sm">
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          key="create-dish-backdrop"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
+          onClick={() => setIsOpen(false)}
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-xs sm:p-4"
+        >
+          <motion.div
+            key="create-dish-sheet"
+            initial={{ y: "100%", opacity: 0.7 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: "100%", opacity: 0 }}
+            transition={{ duration: 0.36, ease: [0.16, 1, 0.3, 1] }}
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full sm:max-w-lg bg-[#FAF7F2] rounded-t-3xl sm:rounded-3xl border border-[#e8e0d4] shadow-2xl overflow-hidden flex flex-col max-h-[88dvh] sm:max-h-[90vh]"
+          >
+            {/* Mobile Drag Handle Pill */}
+            <div className="sm:hidden pt-2.5 pb-0.5 flex justify-center bg-white/70">
+              <span className="w-10 h-1 rounded-full bg-stone-300" />
+            </div>
+
+            {/* ── Header ── */}
+            <div className="px-5 pt-3 sm:pt-4 pb-3 border-b border-[#efe7da] bg-white/70 backdrop-blur-sm">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h2 className="font-comico text-lg leading-tight text-[#221e19]">
@@ -912,85 +870,64 @@ export function CreateFoodPostModal() {
                 </button>
               </div>
 
-              {/* Top TikTok / Video Link Auto-Fill Bar */}
-              <div className="p-3 rounded-2xl bg-[#F5EFE4] border border-[#181615]/10 shadow-xs space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-bold text-[#181615] flex items-center gap-1.5">
-                    <TikTokVideoIcon className="w-4 h-4 text-[#181615]" />
-                    <span>Paste a TikTok or IG link to auto-fill</span>
-                  </span>
-                  <span className="text-[10px] text-[#8a8073]">Auto-fill dish & photo</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <input
-                      type="url"
-                      value={tiktokUrl}
-                      onChange={(e) => setTiktokUrl(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          void handleExtractTikTok();
-                        }
-                      }}
-                      placeholder="Paste TikTok link..."
-                      className="w-full pl-3 pr-8 py-2 rounded-xl bg-white border border-[#181615]/10 text-xs text-[#181615] placeholder-[#9a9083] focus:outline-none focus:border-[#e84a27] transition-all"
-                    />
-                    {tiktokUrl && (
-                      <button
-                        type="button"
-                        onClick={() => setTiktokUrl("")}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[#9a9083] hover:text-[#181615] p-1"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => void handleExtractTikTok()}
-                    disabled={isExtractingTikTok || !tiktokUrl.trim()}
-                    className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#181615] hover:bg-[#2b1810] disabled:opacity-50 text-[#FAF7F2] text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-xs"
-                  >
-                    {isExtractingTikTok ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#e84a27]" />
-                        <span>Extracting…</span>
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-3.5 h-3.5 text-[#e84a27]" />
-                        <span>Auto-Fill</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
               {!hasSelection ? (
                 <>
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a89d8c]" />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a89d8c]" />
                     <input
                       autoFocus
                       type="text"
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
-                      placeholder="Search Oslo spot (e.g. Koie, Fuglen)..."
-                      className="w-full pl-9 pr-9 py-3 rounded-2xl bg-white border border-[#e2d8c8] text-sm text-[#221e19] placeholder-[#a89d8c] focus:outline-none focus:border-[#e84a27] focus:ring-1 focus:ring-[#e84a27]/30 transition-all"
+                      placeholder="Search any Oslo spot (e.g. Koie, Fuglen, Kveitemjøl)..."
+                      className="w-full pl-10 pr-9 py-3 rounded-2xl bg-white border border-[#e2d8c8] text-sm text-[#221e19] placeholder-[#a89d8c] focus:outline-none focus:border-[#e84a27] focus:ring-1 focus:ring-[#e84a27]/30 transition-all shadow-2xs"
                     />
-                    {searching && (
-                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#e84a27] animate-spin" />
-                    )}
+                    {searching ? (
+                      <Loader2 className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#e84a27] animate-spin" />
+                    ) : query ? (
+                      <button
+                        type="button"
+                        onClick={() => setQuery("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#a89d8c] hover:text-[#221e19] p-1"
+                        aria-label="Clear search"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    ) : null}
                   </div>
+
+                  {/* Compact Toggle to Browse Curated Smakr Spots on Demand */}
+                  {query.trim().length === 0 && venues.length > 0 && (
+                    <div className="flex items-center justify-between gap-2 pt-0.5">
+                      <span className="text-[11px] text-[#8a8073]">
+                        Type above to search Oslo or pick a curated spot:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowSmakrSpots((v) => !v)}
+                        className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all active:scale-95 cursor-pointer ${
+                          showSmakrSpots
+                            ? "bg-[#e84a27] text-white border-[#e84a27] shadow-xs"
+                            : "bg-white text-[#221e19] border-[#e2d8c8] hover:border-[#e84a27]/50"
+                        }`}
+                      >
+                        <span>✦ Smakr Spots ({venues.length})</span>
+                        <ChevronDown
+                          className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                            showSmakrSpots ? "rotate-180" : ""
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  )}
 
                   {/* Local DB matches */}
                   {localMatches.length > 0 && (
-                    <div>
+                    <div className="animate-in fade-in slide-in-from-top-1 duration-150">
                       <p className="px-1 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-[#a89d8c]">
-                        On Smakr
+                        On Smakr ({localMatches.length})
                       </p>
-                      <div className="space-y-1.5">
+                      <div className="space-y-1.5 max-h-[210px] overflow-y-auto pr-1">
                         {localMatches.map((v) => (
                           <VenueRowButton
                             key={v.id}
@@ -1392,8 +1329,10 @@ export function CreateFoodPostModal() {
             )}
           </button>
         </div>
-      </div>
-    </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 

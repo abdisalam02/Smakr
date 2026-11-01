@@ -21,6 +21,7 @@ import { useSyncAppData } from "@/hooks/useSyncAppData";
 import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
 import { SmakrSIcon } from "@/components/ui/SmakrSIcon";
 import { UtensilsCrossed, Plus, Map as MapIcon, LayoutGrid } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 import type { FoodPost, Venue, WeeklyPick } from "@/types";
 import { isVisibleInFeed, getPopupUrgencyScore, isPopupVenue } from "@/lib/popupUtils";
 
@@ -110,6 +111,19 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   const setSelectedVenue = useCityPulseStore((state) => state.setSelectedVenue);
   const viewMode = useCityPulseStore((state) => state.viewMode);
   const foodPosts = useCityPulseStore((state) => state.foodPosts);
+  // O(1) top curated dish post lookup per venue for instant card rendering
+  const topPostByVenueId = useMemo(() => {
+    const map = new Map<string, { photo?: string; dishName?: string }>();
+    for (const post of foodPosts) {
+      if (post.spot_id && post.image_url && !post.is_archived && !map.has(post.spot_id)) {
+        map.set(post.spot_id, {
+          photo: post.image_url,
+          dishName: post.dish_name,
+        });
+      }
+    }
+    return map;
+  }, [foodPosts]);
   const isHydratingData = useCityPulseStore((state) => state.isHydratingData);
   const currentCategory = useCityPulseStore((state) => state.feedCategory);
   const feedMode = useCityPulseStore((state) => state.feedMode);
@@ -366,6 +380,8 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   const lastTouchTimeRef = useRef<number>(0);
   const currentVelocityRef = useRef<number>(0);
   const currentYRef = useRef<number>(0);
+  const rafIdRef = useRef<number>(0);
+  const latestTouchYRef = useRef<number>(0);
 
   // Content scroll container ref & pull-to-minimize tracker
   const feedScrollRef = useRef<HTMLDivElement>(null);
@@ -373,6 +389,16 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   const isContentPulling = useRef<boolean>(false);
   // When the sheet is in "peek", a touch anywhere on the content drags the sheet.
   const contentDelegatedDrag = useRef<boolean>(false);
+
+  // Clean up any pending animation frame on unmount
+  useEffect(() => {
+    return () => {
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = 0;
+      }
+    };
+  }, []);
 
   // Synchronize external sheet changes (buttons, pin clicks) to the DOM ref
   useEffect(() => {
@@ -384,14 +410,19 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
     }
   }, [mobileSheet, sheetHeight]);
 
-  // 1. Header Grab Bar Handlers (Direct GPU transform with zero thread blocking)
+  // 1. Header Grab Bar Handlers (rAF-coalesced GPU transform with zero thread blocking)
   const handleHeaderTouchStart = (e: React.TouchEvent) => {
+    if (rafIdRef.current) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = 0;
+    }
     const startY = e.touches[0].clientY;
     const currentTranslateY = getSnapTranslateY(mobileSheet);
     isDraggingRef.current = true;
     hasDraggedRef.current = false;
     dragStartYRef.current = startY;
     dragStartTranslateYRef.current = currentTranslateY;
+    latestTouchYRef.current = startY;
     lastTouchYRef.current = startY;
     lastTouchTimeRef.current = Date.now();
     currentVelocityRef.current = 0;
@@ -405,11 +436,12 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   const handleHeaderTouchMove = (e: React.TouchEvent) => {
     if (!isDraggingRef.current) return;
     const currentTouchY = e.touches[0].clientY;
+    latestTouchYRef.current = currentTouchY;
+
     const delta = currentTouchY - dragStartYRef.current;
     if (Math.abs(delta) > 4) {
       hasDraggedRef.current = true;
     }
-    let nextY = dragStartTranslateYRef.current + delta;
 
     const now = Date.now();
     const timeDelta = Math.max(1, now - lastTouchTimeRef.current);
@@ -417,22 +449,34 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
     lastTouchYRef.current = currentTouchY;
     lastTouchTimeRef.current = now;
 
-    const peekY = Math.round(sheetHeight * 0.65);
-    // Apply smooth rubber-band resistance beyond limits
-    if (nextY < 0) {
-      nextY = nextY * 0.22;
-    } else if (nextY > peekY) {
-      const overflow = nextY - peekY;
-      nextY = peekY + overflow * 0.22;
-    }
+    if (!rafIdRef.current) {
+      rafIdRef.current = requestAnimationFrame(() => {
+        rafIdRef.current = 0;
+        if (!sheetRef.current || !isDraggingRef.current) return;
 
-    currentYRef.current = nextY;
-    if (sheetRef.current) {
-      sheetRef.current.style.transform = `translate3d(0, ${nextY}px, 0)`;
+        const liveDelta = latestTouchYRef.current - dragStartYRef.current;
+        let nextY = dragStartTranslateYRef.current + liveDelta;
+
+        const peekY = Math.round(sheetHeight * 0.65);
+        // Apply smooth rubber-band resistance beyond limits
+        if (nextY < 0) {
+          nextY = nextY * 0.22;
+        } else if (nextY > peekY) {
+          const overflow = nextY - peekY;
+          nextY = peekY + overflow * 0.22;
+        }
+
+        currentYRef.current = nextY;
+        sheetRef.current.style.transform = `translate3d(0, ${nextY}px, 0)`;
+      });
     }
   };
 
   const handleHeaderTouchEnd = () => {
+    if (rafIdRef.current) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = 0;
+    }
     if (!isDraggingRef.current) return;
     isDraggingRef.current = false;
 
@@ -485,6 +529,10 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
 
   // 2. Scrollable Content Pull-down to minimize when at top
   const handleContentTouchStart = (e: React.TouchEvent) => {
+    if (rafIdRef.current) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = 0;
+    }
     // In "peek" the feed is barely visible — a touch anywhere should drag the
     // sheet (up to open, down to dismiss), mirroring the header grab handle.
     if (mobileSheet === "peek") {
@@ -510,6 +558,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
     }
     if (contentTouchStartY.current === null) return;
     const currentY = e.touches[0].clientY;
+    latestTouchYRef.current = currentY;
     const scrollTop = feedScrollRef.current ? feedScrollRef.current.scrollTop : 0;
 
     if (scrollTop <= 1) {
@@ -520,22 +569,36 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
         if (sheetRef.current) {
           sheetRef.current.style.transition = "none";
         }
-        const peekY = Math.round(sheetHeight * 0.65);
-        const nextY = Math.min(peekY + 20, dragStartTranslateYRef.current + pullDown * 0.85);
-        currentYRef.current = nextY;
-        if (sheetRef.current) {
-          sheetRef.current.style.transform = `translate3d(0, ${nextY}px, 0)`;
+        if (!rafIdRef.current) {
+          rafIdRef.current = requestAnimationFrame(() => {
+            rafIdRef.current = 0;
+            if (!sheetRef.current || !isDraggingRef.current) return;
+
+            const livePullDown = latestTouchYRef.current - (contentTouchStartY.current ?? latestTouchYRef.current);
+            const peekY = Math.round(sheetHeight * 0.65);
+            const nextY = Math.min(peekY + 20, dragStartTranslateYRef.current + livePullDown * 0.85);
+            currentYRef.current = nextY;
+            sheetRef.current.style.transform = `translate3d(0, ${nextY}px, 0)`;
+          });
         }
       }
     } else {
       if (isContentPulling.current) {
         isContentPulling.current = false;
         isDraggingRef.current = false;
+        if (rafIdRef.current) {
+          cancelAnimationFrame(rafIdRef.current);
+          rafIdRef.current = 0;
+        }
       }
     }
   };
 
   const handleContentTouchEnd = (e: React.TouchEvent) => {
+    if (rafIdRef.current) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = 0;
+    }
     if (contentDelegatedDrag.current) {
       contentDelegatedDrag.current = false;
       handleHeaderTouchEnd();
@@ -607,99 +670,143 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                 <FeedFilterBar />
               </div>
               <div data-feed-scroll className="flex-1 overflow-y-auto p-5 space-y-4 no-scrollbar pb-36">
-            {feedMode === "popups" ? (
-              popupVenues.length === 0 ? (
-                <div className="py-16 text-center text-xs text-zinc-500 space-y-2 max-w-sm mx-auto">
-                  <p className="font-semibold text-sm text-[#181615] dark:text-zinc-200">No active pop-ups right now</p>
-                  <p>Check back soon for limited Oslo kitchen residencies and guest drops.</p>
-                </div>
-              ) : (
-                <div
-                  className={`grid ${
-                    viewMode === "feed"
-                      ? "grid-cols-2 xl:grid-cols-3"
-                      : "grid-cols-1 xl:grid-cols-2"
-                  } gap-4`}
+            <AnimatePresence mode="wait" initial={false}>
+              {feedMode === "popups" && (
+                <motion.div
+                  key="desktop-popups"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.16, ease: "easeOut" }}
                 >
-                  {popupVenues.map((venue, index) => (
-                    <PopupEventCard
-                      key={venue.id}
-                      venue={venue}
-                      priority={isDesktop && index === 0}
-                    />
-                  ))}
-                </div>
-              )
-            ) : feedMode === "food" ? (
-              foodPosts.length === 0 && isHydratingData ? (
-                <div
-                  className={`grid ${
-                    viewMode === "feed"
-                      ? "grid-cols-2 xl:grid-cols-3"
-                      : "grid-cols-1 xl:grid-cols-2"
-                  } gap-4`}
-                >
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <FoodPostCardSkeleton key={`post-skeleton-${i}`} />
-                  ))}
-                </div>
-              ) : filteredPosts.length === 0 ? (
-                <FeedEmptyState />
-              ) : (
-                <div
-                  className={`grid ${
-                    viewMode === "feed"
-                      ? "grid-cols-2 xl:grid-cols-3"
-                      : "grid-cols-1 xl:grid-cols-2"
-                  } gap-4`}
-                >
-                  {filteredPosts.map((post, index) => (
-                    <FoodPostCard key={post.id} post={post} priority={isDesktop && index === 0} />
-                  ))}
-                </div>
-              )
-            ) : (
-              venues.length === 0 && isHydratingData ? (
-                <div
-                  className={`grid ${
-                    viewMode === "feed"
-                      ? "grid-cols-2 xl:grid-cols-3"
-                      : "grid-cols-1 xl:grid-cols-2"
-                  } gap-4`}
-                >
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <FoodSpotCardSkeleton key={`spot-skeleton-${i}`} />
-                  ))}
-                </div>
-              ) : filteredVenues.length === 0 ? (
-                <div className="py-16 text-center text-xs text-zinc-500">
-                  No spots found in this category.
-                </div>
-              ) : (
-                <div
-                  className={`grid ${
-                    viewMode === "feed"
-                      ? "grid-cols-2 xl:grid-cols-3"
-                      : "grid-cols-1 xl:grid-cols-2"
-                  } gap-4`}
-                >
-                  {filteredVenues.map((venue, index) => {
-                    if (venue.spot_type === "popup") {
-                      return (
+                  {popupVenues.length === 0 ? (
+                    <div className="py-16 text-center text-xs text-zinc-500 space-y-2 max-w-sm mx-auto">
+                      <p className="font-semibold text-sm text-[#181615] dark:text-zinc-200">No active pop-ups right now</p>
+                      <p>Check back soon for limited Oslo kitchen residencies and guest drops.</p>
+                    </div>
+                  ) : (
+                    <div
+                      className={`grid ${
+                        viewMode === "feed"
+                          ? "grid-cols-2 xl:grid-cols-3"
+                          : "grid-cols-1 xl:grid-cols-2"
+                      } gap-4`}
+                    >
+                      {popupVenues.map((venue, index) => (
                         <PopupEventCard
                           key={venue.id}
                           venue={venue}
                           priority={isDesktop && index === 0}
                         />
-                      );
-                    }
-                    return (
-                      <FoodSpotCard key={venue.id} venue={venue} priority={isDesktop && index === 0} />
-                    );
-                  })}
-                </div>
-              )
-            )}
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              {feedMode === "food" && (
+                <motion.div
+                  key="desktop-food"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.16, ease: "easeOut" }}
+                >
+                  {foodPosts.length === 0 && isHydratingData ? (
+                    <div
+                      className={`grid ${
+                        viewMode === "feed"
+                          ? "grid-cols-2 xl:grid-cols-3"
+                          : "grid-cols-1 xl:grid-cols-2"
+                      } gap-4`}
+                    >
+                      {Array.from({ length: 4 }).map((_, i) => (
+                        <FoodPostCardSkeleton key={`post-skeleton-${i}`} />
+                      ))}
+                    </div>
+                  ) : filteredPosts.length === 0 ? (
+                    <FeedEmptyState />
+                  ) : (
+                    <div
+                      className={`grid ${
+                        viewMode === "feed"
+                          ? "grid-cols-2 xl:grid-cols-3"
+                          : "grid-cols-1 xl:grid-cols-2"
+                      } gap-4`}
+                    >
+                      {filteredPosts.map((post, index) => (
+                        <FoodPostCard
+                          key={post.id}
+                          post={post}
+                          index={index}
+                          linkedVenue={venueById.get(post.spot_id) ?? null}
+                          priority={isDesktop && index === 0}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              {feedMode === "places" && (
+                <motion.div
+                  key="desktop-places"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.16, ease: "easeOut" }}
+                >
+                  {venues.length === 0 && isHydratingData ? (
+                    <div
+                      className={`grid ${
+                        viewMode === "feed"
+                          ? "grid-cols-2 xl:grid-cols-3"
+                          : "grid-cols-1 xl:grid-cols-2"
+                      } gap-4`}
+                    >
+                      {Array.from({ length: 4 }).map((_, i) => (
+                        <FoodSpotCardSkeleton key={`spot-skeleton-${i}`} />
+                      ))}
+                    </div>
+                  ) : filteredVenues.length === 0 ? (
+                    <div className="py-16 text-center text-xs text-zinc-500">
+                      No spots found in this category.
+                    </div>
+                  ) : (
+                    <div
+                      className={`grid ${
+                        viewMode === "feed"
+                          ? "grid-cols-2 xl:grid-cols-3"
+                          : "grid-cols-1 xl:grid-cols-2"
+                      } gap-4`}
+                    >
+                      {filteredVenues.map((venue, index) => {
+                        if (venue.spot_type === "popup") {
+                          return (
+                            <PopupEventCard
+                              key={venue.id}
+                              venue={venue}
+                              priority={isDesktop && index === 0}
+                            />
+                          );
+                        }
+                        const topPost = topPostByVenueId.get(venue.id);
+                        return (
+                          <FoodSpotCard
+                            key={venue.id}
+                            venue={venue}
+                            index={index}
+                            primaryDishPhoto={topPost?.photo}
+                            topDishName={topPost?.dishName}
+                            priority={isDesktop && index === 0}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Floating Glassmorphism Slider Toggle at bottom of feed */}
@@ -722,7 +829,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
       {/* ========================================================================= */}
       <div
         className={`
-          absolute inset-0 w-full h-full z-0
+          absolute inset-0 w-full h-full z-0 isolate
           lg:static lg:h-full lg:z-0
           ${
             selectedVenue
@@ -748,18 +855,19 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
         style={{
           height: `calc(100dvh - 57px + 140px)`,
           transform: `translate3d(0, ${getSnapTranslateY(mobileSheet)}px, 0)`,
-          transition: "transform 0.28s cubic-bezier(0.16, 1, 0.3, 1)",
+          transition: isDraggingRef.current ? "none" : "transform 0.28s cubic-bezier(0.16, 1, 0.3, 1)",
+          contain: "layout style",
         }}
-        className="lg:hidden absolute left-0 right-0 top-[57px] z-20 bg-[#FAF7F2]/95 dark:bg-[#181615]/95 rounded-t-3xl border-t border-white/60 dark:border-white/10 shadow-2xl flex flex-col will-change-transform pb-[140px]"
+        className="lg:hidden absolute left-0 right-0 top-[57px] z-30 bg-[#FAF7F2] dark:bg-[#181615] rounded-t-3xl border-t border-[#181615]/10 dark:border-white/10 shadow-2xl flex flex-col will-change-transform pb-[140px] w-full max-w-[100vw] overflow-x-hidden smakr-bottom-sheet"
       >
           {/* Sticky Sheet Header: Grab Handle + Mascot Drop Pill + Category Filter Bar */}
-          <div className="sticky top-0 z-20 bg-[#FAF7F2]/95 dark:bg-[#181615]/95 border-b border-black/[0.06] dark:border-white/[0.06] rounded-t-3xl shrink-0">
+          <div className="sticky top-0 z-20 bg-[#FAF7F2] dark:bg-[#181615] border-b border-[#181615]/10 dark:border-white/10 rounded-t-3xl shrink-0 w-full max-w-full overflow-hidden">
             <div
               onTouchStart={handleHeaderTouchStart}
               onTouchMove={handleHeaderTouchMove}
               onTouchEnd={handleHeaderTouchEnd}
               onClick={toggleSheetState}
-              className="w-full pt-2 pb-1 cursor-pointer select-none rounded-t-3xl active:bg-black/[0.02] transition-colors touch-none"
+              className="w-full max-w-full min-w-0 pt-2 pb-1 cursor-pointer select-none rounded-t-3xl active:bg-black/[0.02] transition-colors touch-none"
             >
               {/* Grab pill */}
               <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-zinc-600 mx-auto mb-1 hover:bg-zinc-400 transition-colors" />
@@ -803,87 +911,131 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                 : ""
             }`}
           >
-            {feedMode === "popups" ? (
-              popupVenues.length === 0 ? (
-                <div className="py-14 text-center text-xs text-zinc-500 space-y-2 max-w-sm mx-auto">
-                  <p className="font-semibold text-sm text-[#181615] dark:text-zinc-200">No active pop-ups right now</p>
-                  <p>Check back soon for limited Oslo kitchen residencies and guest drops.</p>
-                </div>
-              ) : (
-                <div
-                  className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${
-                    mobileSheet === "peek" ? "pointer-events-none" : ""
-                  }`}
+            <AnimatePresence mode="wait" initial={false}>
+              {feedMode === "popups" && (
+                <motion.div
+                  key="mobile-popups"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.16, ease: "easeOut" }}
                 >
-                  {popupVenues.map((venue, index) => (
-                    <PopupEventCard
-                      key={venue.id}
-                      venue={venue}
-                      priority={!isDesktop && index === 0}
-                    />
-                  ))}
-                </div>
-              )
-            ) : feedMode === "food" ? (
-              foodPosts.length === 0 && isHydratingData ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <FoodPostCardSkeleton key={`m-post-skeleton-${i}`} />
-                  ))}
-                </div>
-              ) : filteredPosts.length === 0 ? (
-                <FeedEmptyState />
-              ) : (
-                <div
-                  className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${
-                    mobileSheet === "peek" ? "pointer-events-none" : ""
-                  }`}
-                >
-                  {filteredPosts.map((post, index) => (
-                    <FoodPostCard key={post.id} post={post} priority={!isDesktop && index === 0} />
-                  ))}
-                </div>
-              )
-            ) : (
-              venues.length === 0 && isHydratingData ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <FoodSpotCardSkeleton key={`m-spot-skeleton-${i}`} />
-                  ))}
-                </div>
-              ) : filteredVenues.length === 0 ? (
-                <div className="py-12 text-center text-xs text-zinc-500 space-y-2">
-                  <p>No food spots found for this category.</p>
-                  <button
-                    onClick={() => setFeedCategory("all")}
-                    className="px-3 py-1 rounded-lg bg-zinc-100 text-zinc-800 text-xs font-medium"
-                  >
-                    Show all
-                  </button>
-                </div>
-              ) : (
-                <div
-                  className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${
-                    mobileSheet === "peek" ? "pointer-events-none" : ""
-                  }`}
-                >
-                  {filteredVenues.map((venue, index) => {
-                    if (venue.spot_type === "popup") {
-                      return (
+                  {popupVenues.length === 0 ? (
+                    <div className="py-14 text-center text-xs text-zinc-500 space-y-2 max-w-sm mx-auto">
+                      <p className="font-semibold text-sm text-[#181615] dark:text-zinc-200">No active pop-ups right now</p>
+                      <p>Check back soon for limited Oslo kitchen residencies and guest drops.</p>
+                    </div>
+                  ) : (
+                    <div
+                      className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${
+                        mobileSheet === "peek" ? "pointer-events-none" : ""
+                      }`}
+                    >
+                      {popupVenues.map((venue, index) => (
                         <PopupEventCard
                           key={venue.id}
                           venue={venue}
                           priority={!isDesktop && index === 0}
                         />
-                      );
-                    }
-                    return (
-                      <FoodSpotCard key={venue.id} venue={venue} priority={!isDesktop && index === 0} />
-                    );
-                  })}
-                </div>
-              )
-            )}
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              {feedMode === "food" && (
+                <motion.div
+                  key="mobile-food"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.16, ease: "easeOut" }}
+                >
+                  {foodPosts.length === 0 && isHydratingData ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {Array.from({ length: 3 }).map((_, i) => (
+                        <FoodPostCardSkeleton key={`m-post-skeleton-${i}`} />
+                      ))}
+                    </div>
+                  ) : filteredPosts.length === 0 ? (
+                    <FeedEmptyState />
+                  ) : (
+                    <div
+                      className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${
+                        mobileSheet === "peek" ? "pointer-events-none" : ""
+                      }`}
+                    >
+                      {filteredPosts.map((post, index) => (
+                        <FoodPostCard
+                          key={post.id}
+                          post={post}
+                          index={index}
+                          linkedVenue={venueById.get(post.spot_id) ?? null}
+                          priority={!isDesktop && index === 0}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              {feedMode === "places" && (
+                <motion.div
+                  key="mobile-places"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.16, ease: "easeOut" }}
+                >
+                  {venues.length === 0 && isHydratingData ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {Array.from({ length: 3 }).map((_, i) => (
+                        <FoodSpotCardSkeleton key={`m-spot-skeleton-${i}`} />
+                      ))}
+                    </div>
+                  ) : filteredVenues.length === 0 ? (
+                    <div className="py-12 text-center text-xs text-zinc-500 space-y-2">
+                      <p>No food spots found for this category.</p>
+                      <button
+                        onClick={() => setFeedCategory("all")}
+                        className="px-3 py-1 rounded-lg bg-zinc-100 text-zinc-800 text-xs font-medium"
+                      >
+                        Show all
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${
+                        mobileSheet === "peek" ? "pointer-events-none" : ""
+                      }`}
+                    >
+                      {filteredVenues.map((venue, index) => {
+                        if (venue.spot_type === "popup") {
+                          return (
+                            <PopupEventCard
+                              key={venue.id}
+                              venue={venue}
+                              priority={!isDesktop && index === 0}
+                            />
+                          );
+                        }
+                        const topPost = topPostByVenueId.get(venue.id);
+                        return (
+                          <FoodSpotCard
+                            key={venue.id}
+                            venue={venue}
+                            index={index}
+                            primaryDishPhoto={topPost?.photo}
+                            topDishName={topPost?.dishName}
+                            priority={!isDesktop && index === 0}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       )}

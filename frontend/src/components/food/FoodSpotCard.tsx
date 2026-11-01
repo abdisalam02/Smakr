@@ -2,7 +2,7 @@
 
 import React from "react";
 import Image from "next/image";
-import { MapPin, Star, ChevronRight, Pencil } from "lucide-react";
+import { MapPin, Star, ChevronRight, Pencil, Clock, Compass } from "lucide-react";
 import { Venue } from "@/types";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { formatDistance } from "@/lib/math";
@@ -11,11 +11,15 @@ import { getPopupStatus } from "@/lib/popupUtils";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import { formatOsloLocation } from "@/lib/location";
 import { FEED_BLUR_DARK } from "@/lib/feedImages";
+import { SmakrFoodIcon } from "@/components/food/FoodIcons";
 
 interface FoodSpotCardProps {
   venue: Venue;
   /** True only for the first above-the-fold card so its photo is preloaded. */
   priority?: boolean;
+  index?: number;
+  primaryDishPhoto?: string | null;
+  topDishName?: string | null;
 }
 
 function resolveFoodCategoryAndIcon(venue: Venue, topDish?: string | null): {
@@ -84,21 +88,32 @@ function resolveFoodCategoryAndIcon(venue: Venue, topDish?: string | null): {
 export const FoodSpotCard = React.memo(function FoodSpotCard({
   venue,
   priority = false,
+  index,
+  primaryDishPhoto,
+  topDishName,
 }: FoodSpotCardProps) {
   const flyToSpot = useCityPulseStore((state) => state.flyToSpot);
   const selectVenueById = useCityPulseStore((state) => state.selectVenueById);
-  const currentUser = useCityPulseStore((state) => state.currentUser);
   const setQuickEditPost = useCityPulseStore((state) => state.setQuickEditPost);
-  const foodPosts = useCityPulseStore((state) => state.foodPosts);
+
+  // Primitive boolean selector so only this card re-renders when its selection status flips
+  const isSelected = useCityPulseStore(
+    React.useCallback((s) => s.selectedVenue?.id === venue.id, [venue.id])
+  );
+  // Primitive boolean selector for admin/official status
+  const isViewerAdmin = useCityPulseStore(
+    React.useCallback((s) => Boolean(s.currentUser && (s.currentUser.role === "admin" || s.currentUser.is_official)), [])
+  );
+
   const popupStatus = getPopupStatus(venue);
   const liveOpenStatus = getVenueLiveOpenStatus(venue);
   const locationInfo = formatOsloLocation(venue.address, venue.city);
 
-  const isViewerAdmin = currentUser?.role === "admin";
-
   const handleAdminEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const existingPost = foodPosts.find((p) => p.spot_id === venue.id);
+    const storeState = useCityPulseStore.getState();
+    const existingPost = storeState.foodPosts.find((p) => p.spot_id === venue.id);
+    const currentUser = storeState.currentUser;
     if (existingPost) {
       setQuickEditPost(existingPost);
     } else {
@@ -134,7 +149,7 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
   const categoryDef = FOOD_CATEGORIES.find((c) => c.id === venue.food_category);
   const signature = venue.signature_dishes && venue.signature_dishes.length > 0 ? venue.signature_dishes[0] : null;
 
-  const categoryInfo = resolveFoodCategoryAndIcon(venue, signature);
+  const categoryInfo = resolveFoodCategoryAndIcon(venue, topDishName || signature);
   const hasGoogleRating = typeof venue.google_rating === "number" && venue.google_rating > 0;
 
   const handleClick = () => {
@@ -146,21 +161,48 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
     flyToSpot([venue.longitude, venue.latitude], venue.id);
   };
 
-  const curatedDishPhoto = foodPosts.find(
-    (p) => p.spot_id === venue.id && p.image_url && !p.is_archived
-  )?.image_url;
-  const spotCoverUrl = curatedDishPhoto || venue.cover_image_url;
+  const spotCoverUrl = primaryDishPhoto !== undefined ? primaryDishPhoto : venue.cover_image_url;
 
   return (
     <div
       onClick={handleClick}
-      className={`group relative flex items-center gap-3.5 p-3 rounded-3xl bg-[#FAF7F2] dark:bg-[#181615] border border-black/[0.06] dark:border-white/10 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)] hover:shadow-md transition-all duration-200 cursor-pointer active:scale-[0.99] select-none overflow-hidden min-h-[116px] max-h-[136px] ${
-        popupStatus.isDimmedCard ? "opacity-50 grayscale-[20%]" : ""
-      }`}
+      className={`group relative flex items-center gap-3 sm:gap-3.5 p-3 sm:p-3.5 rounded-2xl sm:rounded-3xl bg-[#FAF7F2] dark:bg-[#181615] border border-[#181615]/10 dark:border-white/10 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer active:scale-[0.985] select-none overflow-hidden min-h-[126px] sm:min-h-[136px] ${
+        isSelected ? "ring-2 ring-[#E84A27]" : ""
+      } ${popupStatus.isDimmedCard ? "opacity-50 grayscale-[20%]" : ""}`}
     >
+      {/* Ambient Blurred Photo Color Bleed (Route A) — Hardware-contained static GPU rasterization */}
+      {spotCoverUrl && (
+        <div
+          aria-hidden="true"
+          style={{
+            contain: "paint layout",
+            transform: "translateZ(0)",
+            WebkitTransform: "translateZ(0)",
+            backfaceVisibility: "hidden",
+            WebkitBackfaceVisibility: "hidden",
+          }}
+          className="pointer-events-none select-none z-0 absolute inset-0 overflow-hidden will-change-transform"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={spotCoverUrl}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="w-4/5 h-full object-cover scale-[1.35] blur-[30px] saturate-[1.4] opacity-[0.26] dark:opacity-[0.20]"
+            style={{
+              WebkitMaskImage:
+                "linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,0.5) 55%, transparent 88%)",
+              maskImage:
+                "linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,0.5) 55%, transparent 88%)",
+            }}
+          />
+        </div>
+      )}
+
       {/* Repeating SMAKR Monogram Watermark Pattern */}
       <svg
-        className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.03] dark:opacity-[0.05] select-none text-zinc-950 dark:text-white"
+        className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.03] dark:opacity-[0.05] select-none text-zinc-950 dark:text-white z-0"
         aria-hidden="true"
       >
         <defs>
@@ -198,32 +240,33 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
         <rect width="100%" height="100%" fill={`url(#smakr-spot-pattern-${venue.id})`} />
       </svg>
 
-      {/* Left Column — Fixed 1:1 Square Thumbnail (112x112px) */}
-      <div className="relative w-[112px] h-[112px] min-w-[112px] min-h-[112px] max-w-[112px] max-h-[112px] rounded-2xl overflow-hidden shrink-0 bg-[#EAE6DF] ring-1 ring-black/5">
+      {/* Left Column — 1:1 Square Thumbnail (114x114px on mobile, 128x128px on tablet/desktop) */}
+      <div className="relative z-10 w-[114px] h-[114px] min-w-[114px] min-h-[114px] sm:w-[128px] sm:h-[128px] sm:min-w-[128px] sm:min-h-[128px] rounded-2xl overflow-hidden shrink-0 bg-[#EAE6DF] shadow-sm ring-1 ring-black/10">
         {spotCoverUrl ? (
           <Image
             src={spotCoverUrl}
             alt={venue.name}
             fill
-            priority={priority}
-            loading={priority ? undefined : "lazy"}
+            priority={priority || (typeof index === "number" && index < 4)}
+            loading={priority || (typeof index === "number" && index < 4) ? undefined : "lazy"}
+            decoding="async"
             placeholder="blur"
             blurDataURL={FEED_BLUR_DARK}
             className="object-cover group-hover:scale-105 transition-transform duration-300"
-            sizes="112px"
+            sizes="(max-width: 640px) 114px, 128px"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-3xl">
+          <div className="w-full h-full flex items-center justify-center text-4xl">
             {categoryInfo.emoji || "🍽️"}
           </div>
         )}
 
-        {/* Soft bleed / translucency gradient towards text */}
-        <div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-r from-transparent via-[#FAF7F2]/40 to-[#FAF7F2]/90 dark:via-[#181615]/40 dark:to-[#181615]/90 pointer-events-none z-[2]" />
+        {/* Soft bleed gradient overlay on image edge */}
+        <div className="absolute inset-y-0 right-0 w-6 bg-gradient-to-r from-transparent to-black/20 pointer-events-none z-[2]" />
 
         {/* Google Rating Badge bottom-left */}
         {hasGoogleRating && (
-          <div className="absolute bottom-2 left-2 z-[3] flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/75 backdrop-blur-md text-white text-[10px] font-bold shadow-xs">
+          <div className="absolute bottom-2 left-2 z-[3] flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/75 backdrop-blur-md text-white text-[10px] font-bold shadow-xs">
             <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
             <span className="font-sans font-bold tracking-tight text-white">{venue.google_rating!.toFixed(1)}</span>
           </div>
@@ -242,48 +285,63 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
         )}
       </div>
 
-      {/* Right Column — Strictly 4 Clean Lines (flex-1 min-w-0) */}
-      <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5 h-[112px]">
-        {/* Line 1: Category Icon & Name */}
-        <div className="flex items-center justify-between gap-2">
+      {/* Right Column — 4 Clean Lines (h-[114px] sm:h-[128px]) */}
+      <div className="relative z-10 flex-1 min-w-0 flex flex-col justify-between py-0.5 h-[114px] sm:h-[128px]">
+        {/* Line 1: Category Icon/Name + Refined Status Pill */}
+        <div className="flex items-center justify-between gap-1.5 min-w-0">
           <span className="text-[11px] font-semibold text-[#e84a27] uppercase tracking-wider flex items-center gap-1 font-comico truncate">
-            <span>{categoryInfo.emoji}</span>
+            <SmakrFoodIcon name={venue.food_category || "all"} className="w-3.5 h-3.5 shrink-0" />
             <span className="truncate">{categoryInfo.label}</span>
           </span>
 
-          {venue.spot_type === "popup" && (
-            <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-[#e84a27] text-white font-comico shrink-0 tracking-wide">
-              Pop-up
-            </span>
-          )}
+          <div className="flex items-center gap-1 shrink-0">
+            {venue.spot_type === "popup" && (
+              <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-[#e84a27] text-white font-comico shrink-0 tracking-wide">
+                Pop-up
+              </span>
+            )}
+
+            {/* Refined Status Pill (Oslo Matcha / Slate — No plain green dot) */}
+            {liveOpenStatus.isOpen ? (
+              <span className="bg-[#4E8752]/10 text-[#4E8752] dark:text-[#6AB56F] border border-[#4E8752]/20 px-2 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1 shadow-2xs">
+                <Clock className="w-2.5 h-2.5 shrink-0" />
+                <span className="truncate max-w-[65px] sm:max-w-none">{liveOpenStatus.badgeText}</span>
+              </span>
+            ) : (
+              <span className="bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border border-zinc-500/20 px-2 py-0.5 rounded-full text-[10px] font-medium inline-flex items-center gap-1">
+                <Clock className="w-2.5 h-2.5 shrink-0" />
+                <span className="truncate max-w-[65px] sm:max-w-none">{liveOpenStatus.badgeText}</span>
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Line 2: Venue Title + Price Tier */}
-        <div className="flex items-center justify-between gap-1.5">
-          <h3 className="font-comico text-base text-[#181615] dark:text-white group-hover:text-[#e84a27] transition-colors truncate">
+        <div className="flex items-center justify-between gap-1.5 min-w-0">
+          <h3 className="font-comico text-base sm:text-lg text-[#181615] dark:text-white group-hover:text-[#e84a27] transition-colors leading-tight truncate">
             {venue.name}
           </h3>
           {venue.price_level && (
-            <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 bg-black/5 dark:bg-white/10 px-1.5 py-0.2 rounded-md shrink-0">
+            <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded-md shrink-0">
               {venue.price_level}
             </span>
           )}
         </div>
 
         {/* Line 3: Neighborhood + Walking Distance */}
-        <p className="text-xs text-[#6E655F] dark:text-zinc-400 flex items-center gap-1 truncate">
-          <MapPin className="w-3 h-3 text-[#6E655F]/70 shrink-0" />
+        <p className="text-xs font-medium text-[#6E655F] dark:text-zinc-400 flex items-center gap-1 truncate">
+          <MapPin className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
           <span className="truncate">{locationInfo.neighborhood}</span>
           {venue.distance_meters && (
-            <span className="shrink-0 font-semibold text-emerald-600 dark:text-emerald-400 text-[10px] ml-0.5">
+            <span className="shrink-0 font-semibold text-[#4E8752] dark:text-[#6AB56F] text-[10.5px] ml-0.5">
               · {formatDistance(venue.distance_meters)}
             </span>
           )}
         </p>
 
-        {/* Line 4: Opening Hours (Theme-matched, no green) / Batch Note + Map Action */}
-        <div className="border-t border-[#181615]/8 dark:border-white/10 pt-1.5 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 text-xs truncate min-w-0">
+        {/* Line 4: Signature Dish / Fresh Batch + Tactile Map Pill */}
+        <div className="border-t border-[#181615]/8 dark:border-white/10 pt-1.5 flex items-center justify-between gap-2 min-w-0">
+          <div className="flex items-center gap-1 text-xs truncate min-w-0">
             {venue.kitchen_status && venue.kitchen_status.status === "fresh_batch" ? (
               <span className="text-[10px] font-bold text-[#e84a27] flex items-center gap-1 truncate animate-pulse">
                 <span>🔥</span>
@@ -295,9 +353,9 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
                 <span className="truncate">Few left today</span>
               </span>
             ) : (
-              <span className="text-xs font-medium text-[#6E655F] dark:text-zinc-400 truncate flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#6E655F]/60 dark:bg-zinc-400/60 shrink-0" />
-                <span className="truncate">{liveOpenStatus.badgeText}</span>
+              <span className="text-xs font-bold text-[#181615] dark:text-zinc-200 truncate flex items-center gap-1">
+                <span className="text-[#e84a27]">✦</span>
+                <span className="truncate">{signature || categoryInfo.label}</span>
               </span>
             )}
           </div>
@@ -305,10 +363,10 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
           <button
             type="button"
             onClick={handleSpotOnMap}
-            className="px-2.5 py-1 rounded-full bg-[#181615] hover:bg-[#2B1810] text-[#FAF7F2] text-[11px] font-bold shrink-0 flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-xs"
+            className="px-2.5 py-1 rounded-xl bg-white dark:bg-stone-800 hover:bg-[#E84A27] hover:text-white dark:hover:bg-[#E84A27] text-[#181615] dark:text-white border border-[#181615]/10 dark:border-white/10 text-[11px] font-bold shrink-0 flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-2xs group/btn"
           >
+            <Compass className="w-3 h-3 text-[#E84A27] group-hover/btn:text-white transition-colors" />
             <span>Map</span>
-            <ChevronRight className="w-3 h-3" />
           </button>
         </div>
       </div>

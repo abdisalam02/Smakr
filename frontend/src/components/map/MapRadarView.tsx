@@ -27,13 +27,17 @@ import {
   MASCOT_VIEWBOX_WIDTH,
   MASCOT_VIEWBOX_HEIGHT,
 } from "@/components/avatar/MascotCharacter";
-import { OFFICIAL_SMAKR_MASCOT_CONFIG } from "@/lib/officialSmakrMascot";
+import {
+  OFFICIAL_SMAKR_MASCOT_CONFIG,
+  getOfficialSmakrMascotConfig,
+} from "@/lib/officialSmakrMascot";
 import { FOOD_PIN_SVG_MAP } from "@/components/food/FoodIcons";
 import { formatDistance } from "@/lib/math";
 import { getPopupStatus, getPopupUrgencyLabel } from "@/lib/popupUtils";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import {
   buildOpenPeepsSvg,
+  ensureBustAvatarSvg,
   getOrCreateGuestOpenPeepsConfig,
   type OpenPeepsConfig,
 } from "@/lib/onboardingAvatar";
@@ -142,17 +146,18 @@ function buildUserAvatarPuckElement(
 
   if (useMascot) {
     renderSvgInto(
-      buildMascotSVGString(mascotConfig ?? OFFICIAL_SMAKR_MASCOT_CONFIG, false, 56, 64),
+      buildMascotSVGString(
+        mascotConfig ?? getOfficialSmakrMascotConfig(),
+        false,
+        56,
+        64
+      ),
       true
     );
   } else if (avatarConfig) {
     renderSvgInto(buildOpenPeepsSvg(avatarConfig), false);
   } else if (avatarUrl && avatarUrl.startsWith("data:image/svg+xml")) {
-    const img = document.createElement("img");
-    img.src = avatarUrl;
-    img.alt = "You";
-    img.className = "w-full h-full object-contain object-bottom block pointer-events-none";
-    charContainer.appendChild(img);
+    renderSvgInto(ensureBustAvatarSvg(avatarUrl), false);
   } else {
     renderSvgInto(buildOpenPeepsSvg(getOrCreateGuestOpenPeepsConfig()), false);
   }
@@ -400,7 +405,8 @@ function createAquarellePinElement(
 export function MapRadarView() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<maplibregl.Map | null>(null);
-  const markersMap = useRef<Map<string, maplibregl.Marker>>(new Map());
+  const markerPoolRef = useRef<Map<string, { marker: maplibregl.Marker; rootEl: HTMLElement }>>(new Map());
+  const prevSelectedVenueIdRef = useRef<string | null>(null);
   const weeklyMarkerRef = useRef<maplibregl.Marker | null>(null);
   const venuePopupRef = useRef<maplibregl.Popup | null>(null);
   const isMapReadyRef = useRef(false);
@@ -520,13 +526,13 @@ export function MapRadarView() {
     };
   }, [mobileSheetState]);
 
-  // Synchronize markers to MapLibre
+  // Synchronize markers to MapLibre via reusable DOM Marker Pool
   const renderMarkers = useCallback(() => {
     const map = mapInstance.current;
     if (!map || !isMapReadyRef.current) return;
 
     const currentVenues = useCityPulseStore.getState().venues;
-    const currentSelected = useCityPulseStore.getState().selectedVenue;
+    const currentSelectedId = useCityPulseStore.getState().selectedVenue?.id;
     const currentMapCategory = useCityPulseStore.getState().mapCategory;
     const currentNeighborhood = useCityPulseStore.getState().mapNeighborhood;
     const currentOpenNow = useCityPulseStore.getState().filters.open_now;
@@ -555,32 +561,39 @@ export function MapRadarView() {
       return true;
     });
 
-    // Remove markers that are no longer visible (rare) — never rebuild the rest.
     const visibleIds = new Set(visibleVenues.map((v) => v.id));
-    markersMap.current.forEach((marker, id) => {
-      if (!visibleIds.has(id)) {
-        marker.remove();
-        markersMap.current.delete(id);
+    const allStoreVenueIds = new Set(currentVenues.map((v) => v.id));
+
+    // 1. Maintain pool: hide filtered markers (zero DOM destruction!), prune deleted venues
+    markerPoolRef.current.forEach((entry, id) => {
+      if (!allStoreVenueIds.has(id)) {
+        entry.marker.remove();
+        markerPoolRef.current.delete(id);
+      } else if (!visibleIds.has(id)) {
+        // Zero-allocation hide: pin remains anchored on map canvas without repainting
+        entry.rootEl.style.display = "none";
+      } else {
+        entry.rootEl.style.display = "";
       }
     });
 
-    // Create only new markers; update existing ones in place (position + state).
-    // A pin is only rebuilt when its visual identity (icon/category/name) changes.
+    // 2. Reconcile or create markers for visible venues
     visibleVenues.forEach((venue) => {
-      const isSelected = currentSelected?.id === venue.id;
+      const isSelected = currentSelectedId === venue.id;
       const popupStatus = getPopupStatus(venue);
       const kitchenStatus = venue.kitchen_status?.status ?? "normal";
-      const pinKey = `${venue.icon ?? ""}|${venue.spot_type ?? ""}|${popupStatus.status}|${kitchenStatus}|${venue.food_category}|${venue.name}`;
+      const pinKey = `${venue.icon ?? ""}|${venue.spot_type ?? ""}|${popupStatus.status}|${kitchenStatus}|${venue.food_category}|${venue.name}|${venue.popup_end_date ?? ""}`;
 
-      let existing = markersMap.current.get(venue.id);
-      if (existing && existing.getElement().dataset.pinKey !== pinKey) {
-        existing.remove();
-        markersMap.current.delete(venue.id);
+      let existing = markerPoolRef.current.get(venue.id);
+      if (existing && existing.rootEl.dataset.pinKey !== pinKey) {
+        existing.marker.remove();
+        markerPoolRef.current.delete(venue.id);
         existing = undefined;
       }
       if (existing) {
-        existing.setLngLat([venue.longitude, venue.latitude]);
-        applyPinState(existing.getElement(), isSelected);
+        existing.marker.setLngLat([venue.longitude, venue.latitude]);
+        existing.rootEl.style.display = "";
+        applyPinState(existing.rootEl, isSelected);
         return;
       }
 
@@ -612,7 +625,7 @@ export function MapRadarView() {
         .setLngLat([venue.longitude, venue.latitude])
         .addTo(map);
 
-      markersMap.current.set(venue.id, marker);
+      markerPoolRef.current.set(venue.id, { marker, rootEl: el });
     });
   }, [setSelectedVenue, flyToTarget]);
 
@@ -955,8 +968,8 @@ export function MapRadarView() {
     return () => {
       window.removeEventListener("resize", handleResize);
       resizeObserver.disconnect();
-      markersMap.current.forEach((m) => m.remove());
-      markersMap.current.clear();
+      markerPoolRef.current.forEach(({ marker }) => marker.remove());
+      markerPoolRef.current.clear();
       if (weeklyMarkerRef.current) weeklyMarkerRef.current.remove();
       if (userLocationMarkerRef.current) {
         userLocationMarkerRef.current.remove();
@@ -969,10 +982,31 @@ export function MapRadarView() {
     };
   }, []);
 
-  // 2. Re-render markers when venues, selection, or filters change
+  // 2. Re-render / filter markers when venues or filters change (selection decoupled)
   useEffect(() => {
     renderMarkers();
-  }, [venues, selectedVenue, mapCategory, mapNeighborhood, openNow, weeklyPick.venue_id, renderMarkers]);
+  }, [venues, mapCategory, mapNeighborhood, openNow, weeklyPick.venue_id, renderMarkers]);
+
+  // 2.1 Decoupled O(1) selection highlight update — never loops or rebuilds markers
+  useEffect(() => {
+    const currentId = selectedVenue?.id ?? null;
+    const prevId = prevSelectedVenueIdRef.current;
+    if (prevId === currentId) return;
+
+    if (prevId) {
+      const prevEntry = markerPoolRef.current.get(prevId);
+      if (prevEntry) {
+        applyPinState(prevEntry.rootEl, false);
+      }
+    }
+    if (currentId) {
+      const nextEntry = markerPoolRef.current.get(currentId);
+      if (nextEntry) {
+        applyPinState(nextEntry.rootEl, true);
+      }
+    }
+    prevSelectedVenueIdRef.current = currentId;
+  }, [selectedVenue]);
 
   // 2.5 Auto-fit map camera ONLY when the user actively changes the category filter.
   // Never fire on mount, and never fire on venue list updates or geolocation fixes.

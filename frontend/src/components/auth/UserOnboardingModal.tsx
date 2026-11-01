@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import {
   X,
   Shuffle,
@@ -10,6 +11,7 @@ import {
   ArrowLeft,
   Check,
   CheckCircle2,
+  RotateCcw,
 } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import {
@@ -34,7 +36,26 @@ import {
   type OpenPeepsPresetId,
   type WomensHairCategoryKey,
 } from "@/lib/onboardingAvatar";
-import { persistOnboarding } from "@/lib/supabase/data";
+import {
+  OFFICIAL_SMAKR_MASCOT_CONFIG,
+  getOfficialSmakrMascotConfig,
+  resetOfficialSmakrMascotConfig,
+  saveOfficialSmakrMascotConfig,
+} from "@/lib/officialSmakrMascot";
+import { MascotCharacter } from "@/components/avatar/MascotCharacter";
+import { SmakrMascotRig } from "@/components/studio/SmakrMascotRig";
+import {
+  PEEPS_ACCESSORY_OPTIONS,
+  PEEPS_FACE_OPTIONS,
+  PEEPS_FACIAL_HAIR_OPTIONS,
+  PEEPS_HEAD_OPTIONS,
+  SKIN_TONE_SWATCHES,
+  TOP_COLOR_SWATCHES,
+  HAIR_COLOR_SWATCHES,
+  BOTTOM_COLOR_SWATCHES,
+  type MascotConfig,
+} from "@/types/mascot";
+import { persistOnboarding, persistMascotConfig } from "@/lib/supabase/data";
 
 /**
  * Open Peeps avatar builder — a **staged wizard** so users are never confronted
@@ -109,8 +130,23 @@ export function UserOnboardingModal() {
   const seededFor = useRef<string | null>(null);
 
   const isEditMode = isStudioOpen;
+  const isAdmin = Boolean(currentUser?.role === "admin" || currentUser?.is_official);
   const isMasculine = config.genderPreset.startsWith("male");
   const isLastStep = step === STEPS.length - 1;
+
+  // Admin Brand Mascot Customizer state
+  const updateStoreMascotConfig = useCityPulseStore((state) => state.updateMascotConfig);
+  const [brandConfig, setBrandConfig] = useState<MascotConfig>(() =>
+    getOfficialSmakrMascotConfig()
+  );
+  const [brandTab, setBrandTab] = useState<"pose" | "hair" | "face" | "colors">("pose");
+
+  useEffect(() => {
+    if (isStudioOpen && isAdmin) {
+      setBrandConfig(getOfficialSmakrMascotConfig());
+      setBrandTab("pose");
+    }
+  }, [isStudioOpen, isAdmin]);
 
   // Seed levers from the signed-in user the first time we see them.
   useEffect(() => {
@@ -526,9 +562,347 @@ export function UserOnboardingModal() {
     );
   }
 
+  // ---------------------------------------------------------------------
+  // Admin Brand Mascot Studio Modal — customizes both the General Site
+  // Mascot AND the Weekly Pick Dropdown Mascot live across Smakr.
+  // ---------------------------------------------------------------------
+  if (isEditMode && isAdmin) {
+    const updateBrand = (patch: Partial<MascotConfig>) => {
+      setBrandConfig((prev) => ({ ...prev, ...patch }));
+    };
+
+    const handleSaveBrandMascot = async () => {
+      setSaving(true);
+      const savedCfg = saveOfficialSmakrMascotConfig(brandConfig);
+      updateStoreMascotConfig(savedCfg);
+      if (currentUser?.id) {
+        await persistMascotConfig(currentUser.id, savedCfg);
+      }
+      setSaving(false);
+      setIsStudioOpen(false);
+      showToast("✦ Official Smakr Mascot & Weekly Pick updated across the site.");
+    };
+
+    const handleResetBrandMascot = () => {
+      const resetCfg = resetOfficialSmakrMascotConfig();
+      setBrandConfig(resetCfg);
+      updateStoreMascotConfig(resetCfg);
+      showToast("Reset to the classic @smak brand mascot.");
+    };
+
+    const WEEKLY_POSES = [
+      { id: "pointing-up", label: "Pointing Up", hint: "Classic Critic Pick" },
+      { id: "jacket-2", label: "Street Jacket", hint: "Oslo Bomber" },
+      { id: "coffee", label: "Coffee Cup", hint: "Morning Brew" },
+      { id: "shrug", label: "Shrug Pose", hint: "Playful Vibe" },
+      { id: "striped-pocket-tee", label: "Pocket Tee", hint: "Casual Tee" },
+      { id: "hoodie", label: "Cozy Hoodie", hint: "Nordic Layer" },
+    ];
+
+    const rigAccessories =
+      !brandConfig.peepsAccessories || brandConfig.peepsAccessories === "none"
+        ? "none"
+        : brandConfig.peepsAccessories === "glasses"
+        ? "glasses-2"
+        : brandConfig.peepsAccessories;
+
+    return (
+      <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 bg-black/55 backdrop-blur-xs animate-in fade-in duration-150">
+        <motion.div
+          initial={{ y: 24, opacity: 0, scale: 0.98 }}
+          animate={{ y: 0, opacity: 1, scale: 1 }}
+          transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+          className="relative w-full sm:max-w-lg bg-[#FAF7F2] rounded-t-3xl sm:rounded-3xl border border-[#181615]/10 shadow-2xl overflow-hidden flex flex-col max-h-[92dvh]"
+        >
+          <button
+            onClick={close}
+            aria-label="Close Brand Mascot Studio"
+            className="absolute top-3.5 right-3.5 z-10 text-zinc-400 hover:text-zinc-800 p-1.5 rounded-full hover:bg-black/5 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+
+          {/* Header */}
+          <div className="px-5 pt-4 pb-2.5 pr-12 border-b border-black/[0.06] bg-white/70">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#e84a27]/12 text-[#e84a27] text-[10px] font-bold uppercase tracking-wider mb-1">
+              <span>✦ Global Brand Mascot Studio</span>
+            </div>
+            <h2 className="font-comico text-lg leading-tight text-[#181615]">
+              CUSTOMIZE SMAKR MASCOT
+            </h2>
+            <p className="text-[11px] text-[#6E655F] mt-0.5">
+              Changes apply live to the Header badge, Map puck, and ✦ Smakr Pick Weekly Dropdown.
+            </p>
+          </div>
+
+          {/* Dual Live Preview Stage: General Mascot + Weekly Pick Mascot */}
+          <div className="px-5 pt-3 pb-2.5 bg-[#F5EFE3]/70 border-b border-black/[0.06]">
+            <div className="grid grid-cols-2 gap-3">
+              {/* Preview 1: General Site & Map Mascot */}
+              <div className="rounded-2xl bg-white border border-black/[0.08] p-2.5 flex items-center gap-2.5 shadow-2xs">
+                <div className="w-14 h-16 rounded-xl bg-[#FAF7F2] border border-black/10 flex items-end justify-center overflow-hidden shrink-0 pt-1">
+                  <MascotCharacter config={brandConfig} size={52} />
+                </div>
+                <div className="min-w-0">
+                  <span className="inline-block text-[9px] font-extrabold uppercase tracking-wider text-[#e84a27]">
+                    1. General &amp; Map
+                  </span>
+                  <p className="text-xs font-bold text-[#181615] leading-tight mt-0.5">
+                    Header &amp; Map Pin
+                  </p>
+                  <p className="text-[10px] text-zinc-500 leading-tight mt-0.5">
+                    Bust avatar across Smakr
+                  </p>
+                </div>
+              </div>
+
+              {/* Preview 2: Weekly Pick Dropdown Mascot */}
+              <div className="rounded-2xl bg-white border border-black/[0.08] p-2.5 flex items-center gap-2.5 shadow-2xs">
+                <div className="w-14 h-16 rounded-xl bg-[#F5EFE3] border border-[#E6DDD0] flex items-end justify-center overflow-hidden shrink-0 pt-1">
+                  <SmakrMascotRig
+                    frameMode="bust-only"
+                    bodyPose={brandConfig.peepsBody || "pointing-up"}
+                    head={brandConfig.peepsHead || OFFICIAL_SMAKR_MASCOT_CONFIG.peepsHead}
+                    face={brandConfig.peepsFace || OFFICIAL_SMAKR_MASCOT_CONFIG.peepsFace}
+                    accessories={rigAccessories}
+                    facialHair={brandConfig.peepsFacialHair || "none"}
+                    skinColor={`#${(brandConfig.skinColor || "d08b5b").replace(/^#/, "")}`}
+                    clothingColor={`#${(brandConfig.topColor || "e84a27").replace(/^#/, "")}`}
+                    innerClothingColor={`#${(brandConfig.bottomColor || "181615").replace(/^#/, "")}`}
+                    hatColor={`#${(brandConfig.hatColor || "e84a27").replace(/^#/, "")}`}
+                    headContrastColor={`#${(brandConfig.hairColor || "181615").replace(/^#/, "")}`}
+                    stickerOutline={false}
+                    size={54}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <span className="inline-block text-[9px] font-extrabold uppercase tracking-wider text-[#e84a27]">
+                    2. Smakr Pick Drop
+                  </span>
+                  <p className="text-xs font-bold text-[#181615] leading-tight mt-0.5">
+                    Weekly Spotlight
+                  </p>
+                  <p className="text-[10px] text-zinc-500 leading-tight mt-0.5">
+                    Pose: {brandConfig.peepsBody || "pointing-up"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Category Tabs */}
+            <div className="grid grid-cols-4 gap-1 p-1 mt-2.5 rounded-xl bg-[#E8E0D2]/70">
+              {(
+                [
+                  { id: "pose", label: "Pose & Vibe" },
+                  { id: "hair", label: "Hair & Hat" },
+                  { id: "face", label: "Face & Specs" },
+                  { id: "colors", label: "Colours" },
+                ] as const
+              ).map((t) => {
+                const active = brandTab === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setBrandTab(t.id)}
+                    className={`relative py-1.5 rounded-lg text-[11px] font-bold transition-colors ${
+                      active ? "text-[#181615]" : "text-zinc-600 hover:text-zinc-900"
+                    }`}
+                  >
+                    {active && (
+                      <motion.span
+                        layoutId="adminBrandMascotTab"
+                        transition={{ type: "spring", stiffness: 460, damping: 34 }}
+                        className="absolute inset-0 rounded-lg bg-white shadow-2xs"
+                      />
+                    )}
+                    <span className="relative z-10">{t.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Scrollable Tab Controls */}
+          <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-5 py-3.5 space-y-4">
+            {brandTab === "pose" && (
+              <>
+                <Section title="Weekly Pick Dropdown Pose">
+                  <div className="grid grid-cols-2 gap-2">
+                    {WEEKLY_POSES.map((p) => {
+                      const active = (brandConfig.peepsBody || "pointing-up") === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => updateBrand({ peepsBody: p.id })}
+                          className={`p-2.5 rounded-xl border text-left transition-all active:scale-[0.98] ${
+                            active
+                              ? "border-[#e84a27] bg-[#e84a27]/10 ring-1 ring-[#e84a27]/30"
+                              : "border-black/10 bg-white hover:bg-zinc-50"
+                          }`}
+                        >
+                          <span className="block text-xs font-bold text-[#181615]">{p.label}</span>
+                          <span className="block text-[10px] text-zinc-500">{p.hint}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </Section>
+
+                <Section title="Facial Expression">
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {PEEPS_FACE_OPTIONS.map((opt) => (
+                      <Pill
+                        key={opt.id}
+                        active={brandConfig.peepsFace === opt.id}
+                        onClick={() => updateBrand({ peepsFace: opt.id })}
+                      >
+                        {opt.emoji} {opt.label}
+                      </Pill>
+                    ))}
+                  </div>
+                </Section>
+              </>
+            )}
+
+            {brandTab === "hair" && (
+              <Section title="Hairstyle, Afro & Headwear">
+                <div className="grid grid-cols-3 gap-1.5">
+                  {PEEPS_HEAD_OPTIONS.map((opt) => (
+                    <Pill
+                      key={opt.id}
+                      active={brandConfig.peepsHead === opt.id}
+                      onClick={() => updateBrand({ peepsHead: opt.id })}
+                    >
+                      {opt.emoji} {opt.label}
+                    </Pill>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {brandTab === "face" && (
+              <>
+                <Section title="Eyewear & Glasses">
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {PEEPS_ACCESSORY_OPTIONS.map((opt) => (
+                      <Pill
+                        key={opt.id}
+                        active={brandConfig.peepsAccessories === opt.id}
+                        onClick={() => updateBrand({ peepsAccessories: opt.id })}
+                      >
+                        {opt.emoji} {opt.label}
+                      </Pill>
+                    ))}
+                  </div>
+                </Section>
+
+                <Section title="Facial Hair">
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {PEEPS_FACIAL_HAIR_OPTIONS.map((opt) => (
+                      <Pill
+                        key={opt.id}
+                        active={brandConfig.peepsFacialHair === opt.id}
+                        onClick={() => updateBrand({ peepsFacialHair: opt.id })}
+                      >
+                        {opt.emoji} {opt.label}
+                      </Pill>
+                    ))}
+                  </div>
+                </Section>
+              </>
+            )}
+
+            {brandTab === "colors" && (
+              <>
+                <Section title="Sweater / Top Colour">
+                  <SwatchRow
+                    options={TOP_COLOR_SWATCHES.map((s) => ({
+                      label: s.label,
+                      value: s.id,
+                      hex: `#${s.id}`,
+                    }))}
+                    active={brandConfig.topColor}
+                    onSelect={(val) => updateBrand({ topColor: val })}
+                  />
+                </Section>
+
+                <Section title="Skin Tone">
+                  <SwatchRow
+                    options={SKIN_TONE_SWATCHES.map((s) => ({
+                      label: s.label,
+                      value: s.id,
+                      hex: `#${s.id}`,
+                    }))}
+                    active={brandConfig.skinColor}
+                    onSelect={(val) => updateBrand({ skinColor: val })}
+                  />
+                </Section>
+
+                <Section title="Hair & Outline Colour">
+                  <SwatchRow
+                    options={HAIR_COLOR_SWATCHES.map((s) => ({
+                      label: s.label,
+                      value: s.id,
+                      hex: `#${s.id}`,
+                    }))}
+                    active={brandConfig.hairColor}
+                    onSelect={(val) => updateBrand({ hairColor: val })}
+                  />
+                </Section>
+
+                <Section title="Sweater Pattern / Inner Detail">
+                  <SwatchRow
+                    options={BOTTOM_COLOR_SWATCHES.map((s) => ({
+                      label: s.label,
+                      value: s.id,
+                      hex: `#${s.id}`,
+                    }))}
+                    active={brandConfig.bottomColor}
+                    onSelect={(val) => updateBrand({ bottomColor: val })}
+                  />
+                </Section>
+              </>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="px-5 py-3.5 border-t border-black/[0.06] bg-white/80 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleResetBrandMascot}
+              className="flex items-center justify-center gap-1.5 px-3.5 py-3 rounded-2xl border border-black/10 bg-white text-zinc-700 text-xs font-bold hover:bg-zinc-50 transition-all active:scale-95"
+              title="Reset to default @smak look"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSaveBrandMascot}
+              disabled={saving}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] disabled:opacity-60 text-white font-bold text-xs shadow-md shadow-[#e84a27]/25 transition-all active:scale-[0.98]"
+            >
+              {saving ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  <span>Save Smakr Brand Mascot</span>
+                </>
+              )}
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-black/55 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md bg-white rounded-3xl border border-zinc-200 shadow-2xl overflow-hidden flex flex-col max-h-[94vh]">
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 bg-black/55 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="relative w-full sm:max-w-md bg-[#FAF7F2] rounded-t-3xl sm:rounded-3xl border border-zinc-200 shadow-2xl overflow-hidden flex flex-col max-h-[92dvh]">
         <button
           onClick={close}
           aria-label={isEditMode ? "Close" : "Skip onboarding"}
@@ -538,24 +912,19 @@ export function UserOnboardingModal() {
         </button>
 
         {/* Title (compact) */}
-        <div className="px-5 sm:px-6 pt-5 pb-2 pr-12">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-50 text-[#e84a27] border border-orange-200/60 text-[10px] font-bold uppercase tracking-wider mb-2">
-            <span>{isEditMode ? "Edit mode" : "✦ OSLO BETA CONTRIBUTOR"}</span>
+        <div className="px-5 sm:px-6 pt-4 pb-2 pr-12">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-orange-50 text-[#e84a27] border border-orange-200/60 text-[10px] font-bold uppercase tracking-wider mb-1">
+            <span>{isEditMode ? "✦ Avatar Studio" : "✦ OSLO BETA CONTRIBUTOR"}</span>
           </div>
-          <h2 className="font-comico text-xl leading-tight text-zinc-900">
-            {isEditMode ? "Customize your profile" : "WELCOME TO THE SMAKR BETA!"}
+          <h2 className="font-comico text-lg leading-tight text-zinc-900">
+            {isEditMode ? "CUSTOMIZE YOUR MASCOT" : "BUILD YOUR FOODIE MASCOT"}
           </h2>
-          <p className="text-xs text-zinc-500 mt-1.5">
-            {isEditMode
-              ? "Change your avatar anytime — your saved dishes stay untouched."
-              : "Create your foodie persona, claim your handle, and help us map Oslo's best dishes."}
-          </p>
         </div>
 
-        {/* Pinned Bust Open Peeps preview + progress — ALWAYS visible */}
-        <div className="px-5 sm:px-6 pb-3.5">
-          <div className="flex items-center gap-3.5 rounded-2xl border border-zinc-100 bg-zinc-50/50 p-3">
-            <div className="relative w-[88px] h-[98px] shrink-0 rounded-2xl overflow-hidden ring-2 ring-[#e84a27]/70 border-2 border-white bg-[#FAF7F2] shadow-sm pt-1 flex items-end justify-center">
+        {/* Pinned Bust Open Peeps preview + Direct Category Pill Tabs */}
+        <div className="px-5 sm:px-6 pb-2.5 space-y-2.5">
+          <div className="flex items-center gap-3.5 rounded-2xl border border-black/[0.08] bg-white p-2.5 shadow-2xs">
+            <div className="relative w-[78px] h-[88px] shrink-0 rounded-2xl overflow-hidden ring-2 ring-[#e84a27]/70 border-2 border-white bg-[#FAF7F2] shadow-sm pt-1 flex items-end justify-center">
               <div
                 className="w-full h-full flex items-end justify-center [&_svg]:w-full [&_svg]:h-full"
                 dangerouslySetInnerHTML={{ __html: previewSvg }}
@@ -565,33 +934,45 @@ export function UserOnboardingModal() {
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#e84a27]">
-                  Step {step + 1} of {STEPS.length}
+                  Live Map Bust
                 </span>
                 <button
                   onClick={surprise}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-[10px] font-bold transition-all active:scale-95"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#181615] hover:bg-zinc-800 text-white text-[10px] font-bold transition-all active:scale-95"
                 >
                   <Shuffle className="w-3 h-3" />
                   <span>Surprise</span>
                 </button>
               </div>
-              <p className="text-sm font-bold text-zinc-900 mt-1 truncate">{STEPS[step].title}</p>
+              <p className="text-sm font-bold text-zinc-900 mt-0.5 truncate">{STEPS[step].title}</p>
               <p className="text-[10px] text-zinc-500 truncate">{STEPS[step].hint}</p>
-
-              <div className="flex items-center gap-1 mt-2">
-                {STEPS.map((s, i) => (
-                  <button
-                    key={s.key}
-                    onClick={() => setStep(i)}
-                    title={s.title}
-                    aria-label={`Go to step ${i + 1}: ${s.title}`}
-                    className={`h-1.5 flex-1 rounded-full transition-colors ${
-                      i <= step ? "bg-[#e84a27]" : "bg-zinc-200 hover:bg-zinc-300"
-                    }`}
-                  />
-                ))}
-              </div>
             </div>
+          </div>
+
+          {/* 1-Tap Category Pill Tabs (No forced sequential Next clicks) */}
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar p-1 rounded-xl bg-[#EDE7DD]">
+            {STEPS.map((s, i) => {
+              const active = step === i;
+              return (
+                <button
+                  key={s.key}
+                  type="button"
+                  onClick={() => setStep(i)}
+                  className={`relative shrink-0 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-colors ${
+                    active ? "text-[#181615]" : "text-zinc-600 hover:text-zinc-900"
+                  }`}
+                >
+                  {active && (
+                    <motion.span
+                      layoutId="userAvatarTabPill"
+                      transition={{ type: "spring", stiffness: 460, damping: 34 }}
+                      className="absolute inset-0 rounded-lg bg-white shadow-2xs"
+                    />
+                  )}
+                  <span className="relative z-10">{s.title}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -600,42 +981,42 @@ export function UserOnboardingModal() {
           {renderStep(STEPS[step].key)}
         </div>
 
-        {/* Footer: Back + Next/Save */}
-        <div className="px-5 sm:px-6 py-4 border-t border-zinc-100 bg-zinc-50/60 flex items-center gap-2.5">
-          {step > 0 && (
+        {/* Footer: Save Anytime + Next/Back */}
+        <div className="px-5 sm:px-6 py-3.5 border-t border-black/[0.06] bg-white/80 flex items-center gap-2">
+          {step > 0 && !isEditMode && (
             <button
               onClick={() => setStep((s) => Math.max(0, s - 1))}
-              className="flex items-center justify-center gap-1.5 px-4 py-3.5 rounded-2xl border border-zinc-200 bg-white text-zinc-600 text-sm font-bold hover:bg-zinc-50 transition-all active:scale-[0.98]"
+              className="flex items-center justify-center gap-1 px-3.5 py-3 rounded-2xl border border-zinc-200 bg-white text-zinc-600 text-xs font-bold hover:bg-zinc-50 transition-all active:scale-[0.98]"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back</span>
             </button>
           )}
 
-          {isLastStep ? (
-            <button
-              onClick={handleComplete}
-              disabled={saving}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] disabled:opacity-60 text-white font-bold text-sm shadow-md shadow-[#e84a27]/25 transition-all active:scale-[0.99]"
-            >
-              {saving ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  <span>{isEditMode ? "Save profile" : "Start Exploring Oslo"}</span>
-                </>
-              )}
-            </button>
-          ) : (
+          {!isEditMode && !isLastStep && (
             <button
               onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] text-white font-bold text-sm shadow-md shadow-[#e84a27]/25 transition-all active:scale-[0.99]"
+              className="flex items-center justify-center gap-1 px-3.5 py-3 rounded-2xl border border-zinc-200 bg-white text-zinc-800 text-xs font-bold hover:bg-zinc-50 transition-all active:scale-[0.98]"
             >
               <span>Next</span>
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
           )}
+
+          <button
+            onClick={handleComplete}
+            disabled={saving}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] disabled:opacity-60 text-white font-bold text-xs shadow-md shadow-[#e84a27]/25 transition-all active:scale-[0.98]"
+          >
+            {saving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                <span>{isEditMode ? "Save Mascot" : "Save & Explore Oslo"}</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>

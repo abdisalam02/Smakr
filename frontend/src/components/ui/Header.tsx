@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
+import { AnimatePresence, motion } from "motion/react";
 import {
   Plus,
   LogOut,
@@ -86,7 +87,7 @@ export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
     : "";
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-30 bg-transparent pt-safe pt-3 px-3.5 sm:px-6 transition-colors pointer-events-none">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-transparent pt-safe pt-3 px-3.5 sm:px-6 transition-colors pointer-events-none">
       <div className="w-full max-w-7xl mx-auto flex items-center justify-between gap-3">
         {/* Top-Left Pill: Frosted glass capsule */}
         <div className="flex items-center gap-3 pointer-events-auto shrink-0">
@@ -103,7 +104,7 @@ export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
                 onClick={() => setMenuOpen((v) => !v)}
                 aria-haspopup="menu"
                 aria-expanded={menuOpen}
-                className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full bg-white/45 dark:bg-stone-900/45 backdrop-blur-md shadow-sm border border-white/40 dark:border-white/10 hover:bg-white/60 dark:hover:bg-stone-900/60 transition-all active:scale-95"
+                className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full bg-white/75 dark:bg-stone-900/75 backdrop-blur-md shadow-sm border border-black/10 dark:border-white/10 hover:bg-white/90 dark:hover:bg-stone-900/90 transition-all active:scale-95"
                 title="Account menu"
               >
                 <span className="w-7 h-7 rounded-full bg-zinc-100 flex items-center justify-center overflow-hidden ring-1 ring-black/5 shrink-0">
@@ -122,112 +123,132 @@ export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
                     </span>
                   )}
                 </span>
-                <span className="text-xs font-semibold text-zinc-800 max-w-[100px] truncate">
+                <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-100 max-w-[100px] truncate">
                   {currentUser.handle}
                 </span>
                 <ChevronDown
-                  className={`w-3.5 h-3.5 text-zinc-400 transition-transform ${menuOpen ? "rotate-180" : ""}`}
+                  className={`w-3.5 h-3.5 text-zinc-400 transition-transform duration-200 ${menuOpen ? "rotate-180" : ""}`}
                 />
               </button>
 
-              {menuOpen && (
-                <div
-                  role="menu"
-                  className="absolute right-0 top-full mt-2 w-60 rounded-2xl border border-zinc-200/90 bg-white shadow-xl p-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150"
-                >
-                  <div className="px-3 py-2.5 border-b border-zinc-100">
-                    <p className="text-xs font-bold text-zinc-900 truncate">
-                      {currentUser.name || currentUser.handle}
-                    </p>
-                    <p className="text-[10px] text-zinc-400 truncate">
-                      {currentUser.email || currentUser.handle}
-                    </p>
-                    <div className="flex items-center gap-1.5 mt-1.5">
-                      <span
-                        className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          isAdmin
-                            ? "bg-[#e84a27]/10 text-[#e84a27]"
-                            : "bg-zinc-100 text-zinc-500"
-                        }`}
-                      >
-                        {isAdmin ? "✦ Admin" : "Foodie"}
-                      </span>
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#e84a27]/10 text-[#e84a27] border border-[#e84a27]/20">
-                        ✦ Beta Tester
-                      </span>
+              <AnimatePresence>
+                {menuOpen && (
+                  <motion.div
+                    role="menu"
+                    initial={{ opacity: 0, scale: 0.95, y: -6 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -6 }}
+                    transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute right-0 top-full mt-2 w-64 rounded-2xl border border-zinc-200/90 bg-[#FAF7F2] shadow-2xl p-1.5 z-50 origin-top-right"
+                  >
+                    <div className="px-3 py-2.5 border-b border-black/[0.06]">
+                      <p className="text-xs font-bold text-zinc-900 truncate">
+                        {currentUser.name || currentUser.handle}
+                      </p>
+                      <p className="text-[10px] text-zinc-500 truncate">
+                        {currentUser.email || currentUser.handle}
+                      </p>
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        <span
+                          className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            isAdmin
+                              ? "bg-[#e84a27]/15 text-[#e84a27]"
+                              : "bg-zinc-200/70 text-zinc-600"
+                          }`}
+                        >
+                          {isAdmin ? "✦ Admin" : "Foodie"}
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#e84a27]/10 text-[#e84a27] border border-[#e84a27]/20">
+                          ✦ Beta Tester
+                        </span>
+                      </div>
                     </div>
-                  </div>
 
-                  <button
-                    onClick={() => {
-                      setMenuOpen(false);
-                      openCreateDish();
-                    }}
-                    role="menuitem"
-                    className="w-full flex items-center gap-2 px-3 py-2 mt-1 rounded-xl text-xs font-semibold text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950 transition-colors text-left"
-                  >
-                    <Plus className="w-3.5 h-3.5 text-[#e84a27]" />
-                    <span>Add Dish</span>
-                  </button>
-
-                  {isAdmin && (
-                    <Link
-                      href="/admin"
-                      role="menuitem"
-                      onClick={() => setMenuOpen(false)}
-                      className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-zinc-700 hover:bg-amber-50 hover:text-amber-900 transition-colors"
-                    >
-                      <ShieldCheck className="w-3.5 h-3.5 text-[#e84a27]" />
-                      <span>Control Center</span>
-                    </Link>
-                  )}
-
-                  <Link
-                    href="/studio"
-                    role="menuitem"
-                    onClick={() => setMenuOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-zinc-700 hover:bg-amber-50 hover:text-amber-900 transition-colors"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-[#e84a27]" />
-                    <span>Social &amp; Mascot Studio</span>
-                  </Link>
-
-                  {!isOfficial && (
                     <button
                       onClick={() => {
                         setMenuOpen(false);
-                        openAvatarStudio();
+                        openCreateDish();
                       }}
                       role="menuitem"
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950 transition-colors text-left"
+                      className="w-full flex items-center gap-2 px-3 py-2 mt-1 rounded-xl text-xs font-semibold text-zinc-700 hover:bg-black/5 hover:text-zinc-950 transition-colors text-left"
                     >
-                      <Palette className="w-3.5 h-3.5 text-[#e84a27]" />
-                      <span>Customize Profile</span>
+                      <Plus className="w-3.5 h-3.5 text-[#e84a27]" />
+                      <span>Add Dish</span>
                     </button>
-                  )}
 
-                  <button
-                    onClick={() => {
-                      setMenuOpen(false);
-                      openBetaFeedback();
-                    }}
-                    role="menuitem"
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950 transition-colors text-left"
-                  >
-                    <span className="text-[13px] leading-none">💬</span>
-                    <span>Send Beta Feedback</span>
-                  </button>
+                    {isAdmin && (
+                      <>
+                        <Link
+                          href="/admin"
+                          role="menuitem"
+                          onClick={() => setMenuOpen(false)}
+                          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-zinc-700 hover:bg-amber-50 hover:text-amber-900 transition-colors"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5 text-[#e84a27]" />
+                          <span>Control Center</span>
+                        </Link>
 
-                  <button
-                    onClick={handleSignOut}
-                    role="menuitem"
-                    className="w-full flex items-center gap-2 px-3 py-2 mt-1 rounded-xl text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors text-left"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    <span>Sign Out</span>
-                  </button>
-                </div>
-              )}
+                        <Link
+                          href="/studio"
+                          role="menuitem"
+                          onClick={() => setMenuOpen(false)}
+                          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-zinc-700 hover:bg-amber-50 hover:text-amber-900 transition-colors"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-[#e84a27]" />
+                          <span>Social &amp; Mascot Studio</span>
+                        </Link>
+
+                        <button
+                          onClick={() => {
+                            setMenuOpen(false);
+                            openAvatarStudio();
+                          }}
+                          role="menuitem"
+                          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-[#e84a27] bg-[#e84a27]/8 hover:bg-[#e84a27]/15 transition-colors text-left"
+                        >
+                          <Palette className="w-3.5 h-3.5 text-[#e84a27]" />
+                          <span>✦ Customize Smakr Mascot</span>
+                        </button>
+                      </>
+                    )}
+
+                    {!isOfficial && (
+                      <button
+                        onClick={() => {
+                          setMenuOpen(false);
+                          openAvatarStudio();
+                        }}
+                        role="menuitem"
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-zinc-700 hover:bg-black/5 hover:text-zinc-950 transition-colors text-left"
+                      >
+                        <Palette className="w-3.5 h-3.5 text-[#e84a27]" />
+                        <span>Customize Profile Mascot</span>
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        openBetaFeedback();
+                      }}
+                      role="menuitem"
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-zinc-700 hover:bg-black/5 hover:text-zinc-950 transition-colors text-left"
+                    >
+                      <span className="text-[13px] leading-none">💬</span>
+                      <span>Send Beta Feedback</span>
+                    </button>
+
+                    <button
+                      onClick={handleSignOut}
+                      role="menuitem"
+                      className="w-full flex items-center gap-2 px-3 py-2 mt-1 rounded-xl text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors text-left"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>Sign Out</span>
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           ) : !isAuthResolved ? (
             <div

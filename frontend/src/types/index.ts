@@ -26,9 +26,16 @@ export type FoodCategory =
   | "vietnamese"
   | "indian"
   | "mandi_rice"
-  | "middle_eastern";
+  | "middle_eastern"
+  | "sourdough"
+  | "natural_wine"
+  | "boba"
+  | "nordic_seafood"
+  | "kbbq"
+  | "brunch"
+  | "gelato";
 
-export type DietaryTag = "vegan" | "vegetarian" | "halal" | "gluten_free";
+export type DietaryTag = "vegan" | "vegetarian" | "halal" | "gluten_free" | "spicy";
 
 export type Neighborhood =
   | "all"

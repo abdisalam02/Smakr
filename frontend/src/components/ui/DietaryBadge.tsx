@@ -11,6 +11,7 @@ export const DIETARY_META: Record<
   vegetarian: { label: "Vegetarian", emoji: "🌱", display: "🌱 Veg" },
   halal: { label: "Halal", emoji: "حلال", display: "حلال Halal" },
   gluten_free: { label: "Gluten-Free", emoji: "🌾", display: "🌾 Gluten-Free" },
+  spicy: { label: "Spicy", emoji: "🌶️", display: "🌶️ Spicy" },
 };
 
 interface DietaryBadgeProps {

@@ -1,61 +1,20 @@
 "use client";
 
 import React, { useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { DietaryTag, FoodCategory, SpotType } from "@/types";
 import { ChevronDown, ChevronUp, SlidersHorizontal, RotateCcw, Bookmark } from "lucide-react";
 import {
-  AllFoodIcon,
-  BakeryIcon,
-  CoffeeIcon,
-  RamenIcon,
-  BurgerIcon,
-  PizzaIcon,
-  TacoIcon,
-  SushiIcon,
-  DessertIcon,
-  DrinksIcon,
-  MatchaIcon,
-  PastaIcon,
-  DumplingIcon,
-  StreetFoodIcon,
-  FriedChickenIcon,
-  KebabIcon,
-  PhoIcon,
-  CurryIcon,
+  SmakrFoodIcon,
   TicketStubIcon,
+  StorefrontIcon,
+  FoodTruckIcon,
 } from "@/components/food/FoodIcons";
-
-const CATEGORY_ICON_MAP: Record<
-  FoodCategory,
-  React.ComponentType<{ className?: string }>
-> = {
-  all: AllFoodIcon,
-  coffee: CoffeeIcon,
-  bakery: BakeryIcon,
-  ramen: RamenIcon,
-  burger: BurgerIcon,
-  pizza: PizzaIcon,
-  street_food: StreetFoodIcon,
-  sushi: SushiIcon,
-  dessert: DessertIcon,
-  drinks: DrinksIcon,
-  matcha: MatchaIcon,
-  pasta: PastaIcon,
-  dumplings: DumplingIcon,
-  tacos: TacoIcon,
-  bao: DumplingIcon,
-  fried_chicken: FriedChickenIcon,
-  kebab: KebabIcon,
-  vietnamese: PhoIcon,
-  indian: CurryIcon,
-  mandi_rice: CurryIcon,
-  middle_eastern: KebabIcon,
-};
 
 type Pill =
   | { kind: "category"; id: FoodCategory; label: string }
-  | { kind: "dietary"; id: DietaryTag; label: string; emoji: string };
+  | { kind: "dietary"; id: DietaryTag; label: string };
 
 const PILLS: Pill[] = [
   { kind: "category", id: "all", label: "All" },
@@ -63,41 +22,56 @@ const PILLS: Pill[] = [
   { kind: "category", id: "coffee", label: "Coffee & Drinks" },
   { kind: "category", id: "matcha", label: "Matcha" },
   { kind: "category", id: "bakery", label: "Bakeries" },
+  { kind: "category", id: "sourdough", label: "Sourdough" },
   { kind: "category", id: "ramen", label: "Ramen" },
   { kind: "category", id: "tacos", label: "Tacos" },
+  { kind: "category", id: "boba", label: "Boba" },
   { kind: "category", id: "pasta", label: "Pasta" },
   { kind: "category", id: "burger", label: "Burgers" },
   { kind: "category", id: "fried_chicken", label: "Fried Chicken" },
+  { kind: "category", id: "kbbq", label: "Korean BBQ" },
   { kind: "category", id: "kebab", label: "Kebab" },
   { kind: "category", id: "vietnamese", label: "Vietnamese" },
   { kind: "category", id: "indian", label: "Indian" },
-  { kind: "dietary", id: "vegan", label: "Vegan", emoji: "🌱" },
-  { kind: "dietary", id: "halal", label: "Halal", emoji: "" },
+  { kind: "dietary", id: "vegan", label: "Vegan" },
+  { kind: "dietary", id: "halal", label: "Halal" },
+  { kind: "dietary", id: "gluten_free", label: "Gluten-Free" },
   { kind: "category", id: "pizza", label: "Pizza" },
+  { kind: "category", id: "nordic_seafood", label: "Nordic Seafood" },
   { kind: "category", id: "street_food", label: "Street Food" },
   { kind: "category", id: "sushi", label: "Sushi" },
+  { kind: "category", id: "brunch", label: "Brunch" },
+  { kind: "category", id: "gelato", label: "Gelato" },
   { kind: "category", id: "dessert", label: "Sweets" },
   { kind: "category", id: "drinks", label: "Bars" },
+  { kind: "category", id: "natural_wine", label: "Natural Wine" },
 ];
 
-const CUISINES: { id: FoodCategory; label: string; emoji: string }[] = [
-  { id: "dumplings", label: "Dumplings", emoji: "🥟" },
-  { id: "bao", label: "Bao", emoji: "🥟" },
-  { id: "ramen", label: "Ramen", emoji: "🍜" },
-  { id: "tacos", label: "Tacos", emoji: "🌮" },
-  { id: "pizza", label: "Pizza", emoji: "🍕" },
-  { id: "burger", label: "Burgers", emoji: "🍔" },
-  { id: "fried_chicken", label: "Fried Chicken", emoji: "🍗" },
-  { id: "kebab", label: "Kebab", emoji: "🥙" },
-  { id: "vietnamese", label: "Vietnamese", emoji: "🍲" },
-  { id: "indian", label: "Indian", emoji: "🍛" },
-  { id: "bakery", label: "Bakery", emoji: "🥐" },
-  { id: "coffee", label: "Coffee", emoji: "☕" },
-  { id: "matcha", label: "Matcha", emoji: "🍵" },
-  { id: "sushi", label: "Sushi", emoji: "🍣" },
-  { id: "pasta", label: "Pasta", emoji: "🍝" },
-  { id: "dessert", label: "Dessert", emoji: "🍰" },
-  { id: "drinks", label: "Bars", emoji: "🍸" },
+const CUISINES: { id: FoodCategory; label: string }[] = [
+  { id: "dumplings", label: "Dumplings" },
+  { id: "bao", label: "Bao" },
+  { id: "ramen", label: "Ramen" },
+  { id: "tacos", label: "Tacos" },
+  { id: "pizza", label: "Pizza" },
+  { id: "burger", label: "Burgers" },
+  { id: "fried_chicken", label: "Fried Chicken" },
+  { id: "kbbq", label: "Korean BBQ" },
+  { id: "kebab", label: "Kebab" },
+  { id: "vietnamese", label: "Vietnamese" },
+  { id: "indian", label: "Indian" },
+  { id: "bakery", label: "Bakery" },
+  { id: "sourdough", label: "Sourdough" },
+  { id: "coffee", label: "Coffee" },
+  { id: "matcha", label: "Matcha" },
+  { id: "boba", label: "Boba" },
+  { id: "sushi", label: "Sushi" },
+  { id: "nordic_seafood", label: "Nordic Seafood" },
+  { id: "pasta", label: "Pasta" },
+  { id: "brunch", label: "Brunch" },
+  { id: "gelato", label: "Gelato" },
+  { id: "dessert", label: "Dessert" },
+  { id: "drinks", label: "Bars" },
+  { id: "natural_wine", label: "Natural Wine" },
 ];
 
 interface FeedFilterBarProps {
@@ -106,6 +80,39 @@ interface FeedFilterBarProps {
 
 export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const filterScrollRef = React.useRef<HTMLDivElement>(null);
+  const isUserTouchingRef = React.useRef<boolean>(false);
+  const touchStartXRef = React.useRef<number>(0);
+  const touchStartYRef = React.useRef<number>(0);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    isUserTouchingRef.current = true;
+    touchStartXRef.current = e.touches[0].clientX;
+    touchStartYRef.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = () => {
+    isUserTouchingRef.current = false;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const el = filterScrollRef.current;
+    if (!el) return;
+    const deltaX = e.touches[0].clientX - touchStartXRef.current;
+    const deltaY = Math.abs(e.touches[0].clientY - touchStartYRef.current);
+    // User pulls/flings to the right while at the left boundary -> open filters accordion
+    if (el.scrollLeft <= 5 && deltaX > 30 && deltaY < 30) {
+      if (!isExpanded) setIsExpanded(true);
+    }
+  };
+
+  const handleFilterScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (isUserTouchingRef.current && el.scrollLeft <= 4 && !isExpanded) {
+      setIsExpanded(true);
+    }
+  };
 
   const currentCategory = useCityPulseStore((state) => state.feedCategory);
   const setFeedCategory = useCityPulseStore((state) => state.setFeedCategory);
@@ -149,19 +156,24 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
   };
 
   return (
-    <div className="w-full bg-[#FAF7F2] dark:bg-[#181615] border-b border-black/[0.06] dark:border-white/[0.08]">
+    <div className="w-full max-w-full min-w-0 bg-transparent border-b border-black/[0.06] dark:border-white/[0.08]">
       {/* Horizontal Pill Row with Inline Trigger */}
       <div
-        className={`w-full overflow-x-auto no-scrollbar px-3 snap-x snap-mandatory flex items-center gap-1.5 ${
+        ref={filterScrollRef}
+        onScroll={handleFilterScroll}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        className={`w-full max-w-full overflow-x-auto no-scrollbar px-3 snap-x snap-mandatory flex items-center gap-1.5 ${
           compact ? "py-1.5" : "py-2"
         }`}
       >
-        {/* [ ⚡ Filters ▾ ] Accordion Toggle Pill */}
+        {/* [ ⚡ Filters ▾ ] Accordion Toggle Pill with snap-start */}
         <button
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}
           aria-expanded={isExpanded}
-          className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all select-none active:scale-95 ${
+          className={`snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all select-none active:scale-95 ${
             isExpanded || activeExtraFiltersCount > 0
               ? "bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 border-zinc-950 dark:border-white shadow-xs"
               : "bg-white dark:bg-white/10 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-white/15 hover:bg-zinc-100 dark:hover:bg-white/15"
@@ -186,7 +198,10 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
           {/* Functional Saved (N) Hit-List Filter Pill */}
           <button
             type="button"
-            onClick={toggleSavedOnly}
+            onClick={() => {
+              if (spotTypeFilter === "popup") setSpotTypeFilter("all");
+              toggleSavedOnly();
+            }}
             aria-pressed={Boolean(savedOnly)}
             className={`snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-colors duration-100 select-none active:scale-95 ${
               savedOnly
@@ -205,7 +220,13 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
             type="button"
             onClick={() => {
               if (savedOnly) toggleSavedOnly();
-              setSpotTypeFilter(spotTypeFilter === "popup" ? "all" : "popup");
+              if (spotTypeFilter === "popup") {
+                setSpotTypeFilter("all");
+              } else {
+                // Clear any specific category when turning Pop-ups on
+                setFeedCategory("all");
+                setSpotTypeFilter("popup");
+              }
             }}
             aria-pressed={spotTypeFilter === "popup"}
             className={`snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-colors duration-100 select-none active:scale-95 ${
@@ -225,13 +246,15 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                 ? currentCategory === pill.id
                 : selectedDietary.includes(pill.id));
 
-            const Icon = pill.kind === "category" ? CATEGORY_ICON_MAP[pill.id] : null;
-
             return (
               <button
                 key={`${pill.kind}-${pill.id}`}
                 onClick={() => {
                   if (savedOnly) toggleSavedOnly();
+                  // When clicking any category, clear the popup filter
+                  if (spotTypeFilter === "popup") {
+                    setSpotTypeFilter("all");
+                  }
                   if (pill.kind === "category") {
                     if (pill.id === "all") {
                       setFeedCategory("all");
@@ -250,12 +273,11 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                 }`}
                 style={isActive ? { backgroundColor: "#e84a27" } : undefined}
               >
-                {Icon ? (
-                  <Icon className={`w-3.5 h-3.5 ${isActive ? "text-white" : "text-zinc-500"}`} />
-                ) : (
-                  pill.kind === "dietary" &&
-                  pill.emoji && <span aria-hidden>{pill.emoji}</span>
-                )}
+                <SmakrFoodIcon
+                  name={pill.id}
+                  className="w-3.5 h-3.5 shrink-0"
+                  monochrome={isActive}
+                />
                 <span className="tracking-tight whitespace-nowrap">{pill.label}</span>
               </button>
             );
@@ -263,170 +285,144 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
         </div>
       </div>
 
-      {/* Inline Accordion (shifts feed cards down naturally, no modal) */}
-      {isExpanded && (
-        <div className="w-full border-t border-black/[0.06] dark:border-white/[0.08] bg-[#f7f4ed]/95 dark:bg-[#151413]/95 px-4 py-3.5 space-y-3.5 animate-in slide-in-from-top-2 duration-200">
-          {/* Dimension 1: Spot Type */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                Spot Type
-              </span>
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {[
-                { id: "all" as const, label: "All Types", icon: "✦" },
-                { id: "restaurant" as const, label: "Sit-down", icon: "🍽️" },
-                { id: "food_truck" as const, label: "Food Trucks", icon: "🚚" },
-                { id: "popup" as const, label: "Pop-ups & Residencies", icon: "🎟️" },
-              ].map((st) => {
-                const isActive = (spotTypeFilter || "all") === st.id;
-                return (
+      {/* Compact Animated Inline Filter Drawer (<155px height, never hidden by bottom nav) */}
+      <AnimatePresence initial={false}>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            className="w-full overflow-hidden border-t border-black/[0.06] dark:border-white/[0.08] bg-[#f7f4ed]/98 dark:bg-[#151413]/98"
+          >
+            <div className="px-3.5 py-2.5 space-y-2">
+              {/* Row 1: Quick Status & Price Tier + Reset */}
+              <div className="flex flex-wrap items-center justify-between gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <button
-                    key={st.id}
                     type="button"
-                    onClick={() => setSpotTypeFilter(isActive && st.id !== "all" ? "all" : st.id)}
-                    className={`px-3 py-1 rounded-full text-xs font-medium border flex items-center gap-1.5 transition-all active:scale-95 ${
-                      isActive
+                    onClick={() => setFilters({ open_now: !openNow })}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border flex items-center gap-1 transition-all active:scale-95 ${
+                      openNow
+                        ? "bg-[#4E8752] text-white border-[#4E8752] font-bold shadow-xs"
+                        : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-white/10"
+                    }`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                    <span>Open Now</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={toggleStaffPicksOnly}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border flex items-center gap-1 transition-all active:scale-95 ${
+                      staffPicksOnly
                         ? "bg-[#e84a27] text-white border-[#e84a27] font-bold shadow-xs"
-                        : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-white/10 hover:bg-zinc-100"
+                        : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-white/10"
                     }`}
                   >
-                    <span>{st.icon}</span>
-                    <span>{st.label}</span>
+                    <span>✦</span>
+                    <span>Smakr Picks</span>
                   </button>
-                );
-              })}
-            </div>
-          </div>
 
-          {/* Dimension 2: Cuisines & Specialities */}
-          <div className="space-y-1.5">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-              Cuisines & Craving
-            </span>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {CUISINES.map((c) => {
-                const isActive = currentCategory === c.id;
-                return (
+                  {/* Price Tier Segmented Pill */}
+                  <div className="flex items-center gap-0.5 bg-white dark:bg-white/5 p-0.5 rounded-full border border-zinc-200 dark:border-white/10">
+                    {(["$", "$$", "$$$"] as const).map((tier) => {
+                      const isActive = priceTierFilter === tier;
+                      return (
+                        <button
+                          key={tier}
+                          type="button"
+                          onClick={() => setPriceTierFilter(isActive ? null : tier)}
+                          className={`px-2 py-0.5 rounded-full text-[11px] font-mono font-bold transition-all ${
+                            isActive
+                              ? "bg-[#181615] dark:bg-white text-white dark:text-zinc-950 shadow-xs"
+                              : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+                          }`}
+                          title={`Price range ${tier}`}
+                        >
+                          {tier}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {hasAnyActiveFilter && (
                   <button
-                    key={c.id}
                     type="button"
-                    onClick={() => setFeedCategory(isActive ? "all" : c.id)}
-                    className={`px-2.5 py-1 rounded-full text-xs font-medium border flex items-center gap-1 transition-all active:scale-95 ${
-                      isActive
-                        ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold border-transparent shadow-xs"
-                        : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-white/10 hover:bg-zinc-100"
-                    }`}
+                    onClick={handleResetAll}
+                    className="flex items-center gap-1 text-[11px] text-[#e84a27] hover:underline font-bold transition-colors"
                   >
-                    <span>{c.emoji}</span>
-                    <span>{c.label}</span>
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Reset</span>
                   </button>
-                );
-              })}
-            </div>
-          </div>
+                )}
+              </div>
 
-          {/* Dimension 3: Dietary Tags */}
-          <div className="space-y-1.5">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-              Dietary Preferences
-            </span>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {[
-                { id: "vegan" as const, label: "Vegan", emoji: "🌱" },
-                { id: "vegetarian" as const, label: "Vegetarian-Friendly", emoji: "🌿" },
-                { id: "halal" as const, label: "Halal", emoji: "✦" },
-                { id: "gluten_free" as const, label: "Gluten-Free", emoji: "🌾" },
-              ].map((d) => {
-                const isActive = selectedDietary.includes(d.id);
-                return (
-                  <button
-                    key={d.id}
-                    type="button"
-                    onClick={() => toggleDietary(d.id)}
-                    className={`px-2.5 py-1 rounded-full text-xs font-medium border flex items-center gap-1 transition-all active:scale-95 ${
-                      isActive
-                        ? "bg-emerald-600 text-white border-emerald-600 font-bold shadow-xs"
-                        : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-white/10 hover:bg-zinc-100"
-                    }`}
-                  >
-                    <span>{d.emoji}</span>
-                    <span>{d.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Dimension 4: Vibe, Status & Price Tier */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-black/[0.05] dark:border-white/[0.06]">
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Open Now toggle */}
-              <button
-                type="button"
-                onClick={() => setFilters({ open_now: !openNow })}
-                className={`px-3 py-1 rounded-full text-xs font-medium border flex items-center gap-1.5 transition-all ${
-                  openNow
-                    ? "bg-emerald-600 text-white border-emerald-600 font-bold shadow-xs"
-                    : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-white/10 hover:bg-zinc-100"
-                }`}
-              >
-                <span>🟢</span>
-                <span>Open Now</span>
-              </button>
-
-              {/* Staff Picks toggle */}
-              <button
-                type="button"
-                onClick={toggleStaffPicksOnly}
-                className={`px-3 py-1 rounded-full text-xs font-medium border flex items-center gap-1.5 transition-all ${
-                  staffPicksOnly
-                    ? "bg-[#e84a27] text-white border-[#e84a27] font-bold shadow-xs"
-                    : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-white/10 hover:bg-zinc-100"
-                }`}
-              >
-                <span>✦</span>
-                <span>Staff Picks</span>
-              </button>
-
-              {/* Price Tier Segmented Pill */}
-              <div className="flex items-center gap-0.5 bg-white dark:bg-white/5 p-0.5 rounded-full border border-zinc-200 dark:border-white/10">
-                {(["$", "$$", "$$$"] as const).map((tier) => {
-                  const isActive = priceTierFilter === tier;
+              {/* Row 2: Spot Format */}
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 shrink-0 mr-0.5">
+                  Spot
+                </span>
+                {[
+                  { id: "all" as const, label: "All", icon: "all" },
+                  { id: "restaurant" as const, label: "Sit-down", icon: "storefront" },
+                  { id: "food_truck" as const, label: "Food Truck", icon: "food_truck" },
+                  { id: "popup" as const, label: "Pop-ups", icon: "popup" },
+                ].map((st) => {
+                  const isActive = (spotTypeFilter || "all") === st.id;
                   return (
                     <button
-                      key={tier}
+                      key={st.id}
                       type="button"
-                      onClick={() => setPriceTierFilter(isActive ? null : tier)}
-                      className={`px-2.5 py-0.5 rounded-full text-xs font-mono font-bold transition-all ${
+                      onClick={() => setSpotTypeFilter(isActive && st.id !== "all" ? "all" : st.id)}
+                      className={`shrink-0 px-2.5 py-1 rounded-full text-[11px] font-medium border flex items-center gap-1 transition-all active:scale-95 ${
                         isActive
-                          ? "bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 shadow-xs"
-                          : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+                          ? "bg-[#e84a27] text-white border-[#e84a27] font-bold shadow-xs"
+                          : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-white/10"
                       }`}
-                      title={`Price range ${tier}`}
                     >
-                      {tier}
+                      <SmakrFoodIcon name={st.icon} className="w-3 h-3 shrink-0" monochrome={isActive} />
+                      <span>{st.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Row 3: Dietary Tags */}
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 shrink-0 mr-0.5">
+                  Diet
+                </span>
+                {[
+                  { id: "halal" as const, label: "Halal" },
+                  { id: "vegan" as const, label: "Vegan" },
+                  { id: "vegetarian" as const, label: "Vegetarian" },
+                  { id: "gluten_free" as const, label: "Gluten-Free" },
+                ].map((d) => {
+                  const isActive = selectedDietary.includes(d.id);
+                  return (
+                    <button
+                      key={d.id}
+                      type="button"
+                      onClick={() => toggleDietary(d.id)}
+                      className={`shrink-0 px-2.5 py-1 rounded-full text-[11px] font-medium border flex items-center gap-1 transition-all active:scale-95 ${
+                        isActive
+                          ? "bg-[#4E8752] text-white border-[#4E8752] font-bold shadow-xs"
+                          : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-white/10"
+                      }`}
+                    >
+                      <SmakrFoodIcon name={d.id} className="w-3 h-3 shrink-0" monochrome={isActive} />
+                      <span>{d.label}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
-
-            {/* Reset All Filters button */}
-            {hasAnyActiveFilter && (
-              <button
-                type="button"
-                onClick={handleResetAll}
-                className="flex items-center gap-1 text-xs text-rose-500 hover:text-rose-600 font-medium transition-colors"
-              >
-                <RotateCcw className="w-3 h-3" />
-                <span>Reset Filters</span>
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

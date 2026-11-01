@@ -28,12 +28,12 @@ export const OFFICIAL_SMAKR_MASCOT_CONFIG: Readonly<MascotConfig> = Object.freez
   skinColor: "d08b5b",
   hairColor: "181615",
   topColor: "e84a27",
-  bottomColor: "1f2937",
+  bottomColor: "181615",
   hatColor: "e84a27",
   accessoryColor: "181615",
   peepsHead: "afro",
   peepsFace: "smileBig",
-  peepsBody: "sweater",
+  peepsBody: "pointing-up",
   peepsFacialHair: "none",
   peepsAccessories: "glasses",
   micahHair: "fonze",
@@ -50,8 +50,7 @@ export const OFFICIAL_SMAKR_MASCOT_CONFIG: Readonly<MascotConfig> = Object.freez
 
 /**
  * Resolves the official Smakr brand mascot config.
- * Never depends on `currentUser` auth session or random seeds — strictly
- * returns any saved official brand customization or `OFFICIAL_SMAKR_MASCOT_CONFIG`.
+ * Returns any saved official brand customization or `OFFICIAL_SMAKR_MASCOT_CONFIG`.
  */
 export function getOfficialSmakrMascotConfig(): MascotConfig {
   if (typeof window !== "undefined") {
@@ -75,18 +74,33 @@ export function getOfficialSmakrMascotConfig(): MascotConfig {
 
 /**
  * Allows an authenticated admin to persist an official brand mascot override
- * without ever clearing it on sign-out.
+ * across all brand surfaces (Header, Weekly Pick dropdown, Map Pin, and @smak posts).
  */
 export function saveOfficialSmakrMascotConfig(patch: Partial<MascotConfig>): MascotConfig {
+  const current = getOfficialSmakrMascotConfig();
   const next: MascotConfig = {
-    ...OFFICIAL_SMAKR_MASCOT_CONFIG,
+    ...current,
     ...patch,
   };
   if (typeof window !== "undefined") {
     try {
       window.localStorage.setItem(OFFICIAL_SMAKR_MASCOT_STORAGE_KEY, JSON.stringify(next));
+      window.dispatchEvent(new CustomEvent("smakr:brand-mascot-updated", { detail: next }));
     } catch {
       // Ignore quota errors
+    }
+  }
+  return next;
+}
+
+export function resetOfficialSmakrMascotConfig(): MascotConfig {
+  const next: MascotConfig = { ...OFFICIAL_SMAKR_MASCOT_CONFIG };
+  if (typeof window !== "undefined") {
+    try {
+      window.localStorage.removeItem(OFFICIAL_SMAKR_MASCOT_STORAGE_KEY);
+      window.dispatchEvent(new CustomEvent("smakr:brand-mascot-updated", { detail: next }));
+    } catch {
+      // Ignore storage errors
     }
   }
   return next;
@@ -100,11 +114,12 @@ export function buildOfficialSmakrMascotSvg(
   height = 48,
   animated = false
 ): string {
-  return buildMascotSVGString(OFFICIAL_SMAKR_MASCOT_CONFIG, animated, width, height);
+  return buildMascotSVGString(getOfficialSmakrMascotConfig(), animated, width, height);
 }
 
 /**
  * Reusable `<OfficialSmakrMascot />` component for all public brand surfaces.
+ * Automatically updates live when the Admin customizes the Smakr Mascot.
  */
 export const OfficialSmakrMascot = React.memo(function OfficialSmakrMascot({
   size = 32,
@@ -115,8 +130,22 @@ export const OfficialSmakrMascot = React.memo(function OfficialSmakrMascot({
   className?: string;
   animated?: boolean;
 }) {
+  const [brandConfig, setBrandConfig] = React.useState<MascotConfig>(
+    () => OFFICIAL_SMAKR_MASCOT_CONFIG
+  );
+
+  React.useEffect(() => {
+    setBrandConfig(getOfficialSmakrMascotConfig());
+    const onUpdate = (e: Event) => {
+      const detail = (e as CustomEvent<MascotConfig>).detail;
+      setBrandConfig(detail ?? getOfficialSmakrMascotConfig());
+    };
+    window.addEventListener("smakr:brand-mascot-updated", onUpdate);
+    return () => window.removeEventListener("smakr:brand-mascot-updated", onUpdate);
+  }, []);
+
   return React.createElement(MascotCharacter, {
-    config: OFFICIAL_SMAKR_MASCOT_CONFIG,
+    config: brandConfig,
     size,
     className,
     animated,

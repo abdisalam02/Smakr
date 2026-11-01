@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import { motion } from "motion/react";
 import { ThumbsUp, MapPin, Bookmark, Pencil, Flame, Send, Compass, ArrowUpRight } from "lucide-react";
-import { FoodPost } from "@/types";
+import { FoodPost, Venue } from "@/types";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { setPostLike, setPostSave } from "@/lib/supabase/data";
 import { OfficialSmakrMascot } from "@/lib/officialSmakrMascot";
@@ -17,6 +17,8 @@ interface FoodPostCardProps {
   post: FoodPost;
   /** True only for the first above-the-fold card so its photo is preloaded. */
   priority?: boolean;
+  linkedVenue?: Venue | null;
+  index?: number;
 }
 
 /**
@@ -28,6 +30,8 @@ interface FoodPostCardProps {
 export const FoodPostCard = React.memo(function FoodPostCard({
   post,
   priority = false,
+  linkedVenue: propLinkedVenue,
+  index,
 }: FoodPostCardProps) {
   // Atomic selectors: each returns a stable primitive / reference, so only the
   // cards whose own state changed re-render.
@@ -38,13 +42,32 @@ export const FoodPostCard = React.memo(function FoodPostCard({
   const flyToSpot = useCityPulseStore((state) => state.flyToSpot);
   const selectVenueById = useCityPulseStore((state) => state.selectVenueById);
   const setIsVenueDetailModalOpen = useCityPulseStore((state) => state.setIsVenueDetailModalOpen);
-  const currentUser = useCityPulseStore((state) => state.currentUser);
   const userLocation = useCityPulseStore((state) => state.userLocation);
   const setQuickEditPost = useCityPulseStore((state) => state.setQuickEditPost);
-  const linkedVenue = useCityPulseStore(
-    (state) => state.venues.find((v) => v.id === post.spot_id) ?? null
-  );
   const mascotConfig = useCityPulseStore((state) => state.mascotConfig);
+
+  // Decoupled atomic selectors
+  const isSelected = useCityPulseStore(
+    React.useCallback((s) => Boolean(s.selectedVenue && s.selectedVenue.id === post.spot_id), [post.spot_id])
+  );
+  const isViewerAdmin = useCityPulseStore(
+    React.useCallback((s) => Boolean(s.currentUser && (s.currentUser.role === "admin" || s.currentUser.is_official)), [])
+  );
+  const isCurrentUserAuthor = useCityPulseStore(
+    React.useCallback((s) => Boolean(s.currentUser && s.currentUser.handle === post.author?.handle), [post.author?.handle])
+  );
+
+  // Avoid store subscription to venues when precomputed linkedVenue prop is provided
+  const storeLinkedVenue = useCityPulseStore(
+    React.useCallback(
+      (state) => {
+        if (propLinkedVenue !== undefined) return null;
+        return state.venues.find((v) => v.id === post.spot_id) ?? null;
+      },
+      [propLinkedVenue, post.spot_id]
+    )
+  );
+  const linkedVenue = propLinkedVenue !== undefined ? propLinkedVenue : storeLinkedVenue;
 
   const popupStatus = getPopupStatus(linkedVenue);
   const popupMeta = linkedVenue ? getPopupMeta(linkedVenue) : null;
@@ -118,7 +141,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
 
   // Auto-generate real AI taste notes for the primary hero dish if imported without a note
   React.useEffect(() => {
-    if (currentUser?.role !== "admin") return;
+    if (!isViewerAdmin) return;
     if (!priority || !isGenericSignatureText(post.review_text)) return;
     if (dinerQuotes.length === 0) return;
     const cacheKey = `smakr_ai_note_v4_${post.id}_${post.dish_name}`;
@@ -138,7 +161,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
         dishName: post.dish_name,
         venueName: post.spot_name,
         category: post.category,
-        rawGoogleReviews: dinerQuotes.map((q) => q.text),
+        rawGoogleReviews: dinerQuotes.map((q: any) => typeof q === "string" ? q : q.text || ""),
       }),
     })
       .then((r) => r.json())
@@ -156,7 +179,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
     return () => {
       cancelled = true;
     };
-  }, [priority, post.id, post.review_text, post.dish_name, post.spot_name, post.category, dinerQuotes, currentUser?.role]);
+  }, [priority, post.id, post.review_text, post.dish_name, post.spot_name, post.category, dinerQuotes, isViewerAdmin]);
 
   // Dish-specific Smakr Taste Note / Verdict (never generic "Signature X prepared fresh at Y")
   const dishVerdict = React.useMemo(() => {
@@ -216,12 +239,10 @@ export const FoodPostCard = React.memo(function FoodPostCard({
       ? (post.rating > 5 ? (post.rating / 2).toFixed(1) : post.rating.toFixed(1))
       : "4.7";
 
-  const isViewerAdmin = currentUser?.role === "admin";
-
   const isNiwacheAdmin = Boolean(
     post.is_official_pick ||
     post.author?.badge === "Verified Foodie" ||
-    (currentUser?.role === "admin" && currentUser?.handle === post.author?.handle) ||
+    (isViewerAdmin && isCurrentUserAuthor) ||
     isViewerAdmin
   );
 
@@ -232,13 +253,15 @@ export const FoodPostCard = React.memo(function FoodPostCard({
   const handleToggleLike = () => {
     const nextLiked = !isLiked;
     toggleLikePost(post.id);
-    if (currentUser?.id) void setPostLike(currentUser.id, post.id, nextLiked);
+    const uid = useCityPulseStore.getState().currentUser?.id;
+    if (uid) void setPostLike(uid, post.id, nextLiked);
   };
 
   const handleToggleSave = () => {
     const nextSaved = !isSaved;
     toggleSavePost(post.id);
-    if (currentUser?.id) void setPostSave(currentUser.id, post.id, nextSaved);
+    const uid = useCityPulseStore.getState().currentUser?.id;
+    if (uid) void setPostSave(uid, post.id, nextSaved);
   };
 
   const handleShareDish = async (e: React.MouseEvent) => {
@@ -303,6 +326,8 @@ export const FoodPostCard = React.memo(function FoodPostCard({
       onClick={handleCardClick}
       onDoubleClick={handleDoubleTap}
       className={`group relative w-full rounded-[26px] overflow-hidden border bg-[#181615]/80 backdrop-blur-md shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer select-none ${
+        isSelected ? "ring-2 ring-[#E84A27]" : ""
+      } ${
         isPopupActive
           ? "border-[#E84A27]/40 dark:border-[#E84A27]/50 shadow-[0_4px_20px_rgba(232,74,39,0.14)]"
           : isPopupInactive
@@ -363,8 +388,8 @@ export const FoodPostCard = React.memo(function FoodPostCard({
           alt={post.dish_name}
           fill
           unoptimized
-          priority={priority}
-          loading={priority ? undefined : "lazy"}
+          priority={priority || (typeof index === "number" && index < 4)}
+          loading={priority || (typeof index === "number" && index < 4) ? undefined : "lazy"}
           decoding="async"
           placeholder="blur"
           blurDataURL={FEED_BLUR_DARK}

@@ -1666,7 +1666,7 @@ export function StudioControls({
                             const updated = (state.map.venues || []).filter(
                               (_, i) => i !== idx
                             );
-                            onUpdateMap({ venues: updated });
+                            onUpdateMap({ venues: updated, autoFitCamera: true });
                           }}
                           className="text-[#8C827A] hover:text-[#e84a27] p-0.5 rounded-full cursor-pointer"
                           title="Remove spot"

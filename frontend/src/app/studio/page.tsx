@@ -183,6 +183,8 @@ const INITIAL_STUDIO_STATE: StudioState = {
 
 export default function StudioPage() {
   const currentUser = useCityPulseStore((s) => s.currentUser);
+  const isAuthResolved = useCityPulseStore((s) => s.isAuthResolved);
+  const isAdmin = currentUser?.role === 'admin';
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -435,6 +437,18 @@ export default function StudioPage() {
     if (!assetRef.current || exporting) return;
     setExporting(true);
     try {
+      const isMultiCrawl =
+        activeMode === 'venue-map' &&
+        ((state.map.venues && state.map.venues.length >= 2) ||
+          (state.map.layoutMode && state.map.layoutMode !== 'single'));
+      if (isMultiCrawl && state.map.exportTarget !== 'full-scene') {
+        setState((prev) => ({
+          ...prev,
+          map: { ...prev.map, exportTarget: 'full-scene' },
+        }));
+        await new Promise((r) => setTimeout(r, 150));
+      }
+
       const isWallpaperSolid = activeMode === 'wallpaper' && !state.transparentBg;
       const ok = await copyElementPngToClipboard(assetRef.current, {
         backgroundColor: isWallpaperSolid ? state.wallpaper.bgColor : undefined,
@@ -459,6 +473,18 @@ export default function StudioPage() {
     if (!assetRef.current || exporting) return;
     setExporting(true);
     try {
+      const isMultiCrawl =
+        activeMode === 'venue-map' &&
+        ((state.map.venues && state.map.venues.length >= 2) ||
+          (state.map.layoutMode && state.map.layoutMode !== 'single'));
+      if (isMultiCrawl && state.map.exportTarget !== 'full-scene') {
+        setState((prev) => ({
+          ...prev,
+          map: { ...prev.map, exportTarget: 'full-scene' },
+        }));
+        await new Promise((r) => setTimeout(r, 150));
+      }
+
       const isWallpaperSolid = activeMode === 'wallpaper' && !state.transparentBg;
       const blob = await exportElementAsPngBlob(assetRef.current, {
         pixelRatio: 3,
@@ -483,6 +509,18 @@ export default function StudioPage() {
     if (!assetRef.current || exporting) return;
     setExporting(true);
     try {
+      const isMultiCrawl =
+        activeMode === 'venue-map' &&
+        ((state.map.venues && state.map.venues.length >= 2) ||
+          (state.map.layoutMode && state.map.layoutMode !== 'single'));
+      if (isMultiCrawl && state.map.exportTarget !== 'full-scene') {
+        setState((prev) => ({
+          ...prev,
+          map: { ...prev.map, exportTarget: 'full-scene' },
+        }));
+        await new Promise((r) => setTimeout(r, 150));
+      }
+
       const isWallpaperSolid = activeMode === 'wallpaper' && !state.transparentBg;
       await downloadElementPng(
         assetRef.current,

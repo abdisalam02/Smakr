@@ -168,12 +168,36 @@ function micahOptions(config: MascotConfig): StyleOptions<MicahOptions> {
   };
 }
 
+function injectPeepsBustTorso(svg: string, shirtHex: string, skinHex: string): string {
+  if (svg.includes('data-layer="open-peeps-bust"')) return svg;
+  const bustMarkup = `
+    <g data-layer="open-peeps-bust" transform="translate(0 0)">
+      <path d="M168 725 C176 620 232 574 300 568 L404 568 C472 574 528 620 536 725 Z" fill="#${shirtHex}" stroke="#181615" stroke-width="12" stroke-linejoin="round"/>
+      <path d="M294 566 C318 604 386 604 410 566" fill="#${skinHex}" stroke="#181615" stroke-width="10" stroke-linecap="round"/>
+      <path d="M254 624 L254 720 M450 624 L450 720" stroke="#181615" stroke-width="8" stroke-linecap="round" opacity="0.55"/>
+    </g>
+  `;
+  const firstGroupIdx = svg.search(/<g[\s>]/);
+  if (firstGroupIdx > 0) {
+    return (
+      svg.slice(0, firstGroupIdx).replace('viewBox="0 0 704 704"', 'viewBox="80 36 544 688"') +
+      bustMarkup +
+      svg.slice(firstGroupIdx)
+    );
+  }
+  return svg;
+}
+
 function renderEngineAvatar(config: MascotConfig): string {
-  const result =
-    config.engine === "micah"
-      ? createAvatar(micah, micahOptions(config))
-      : createAvatar(openPeeps, peepsOptions(config));
-  return result.toString();
+  if (config.engine === "micah") {
+    return createAvatar(micah, micahOptions(config)).toString();
+  }
+  const raw = createAvatar(openPeeps, peepsOptions(config)).toString();
+  return injectPeepsBustTorso(
+    raw,
+    normalizeHex(config.topColor, "e84a27"),
+    normalizeHex(config.skinColor, "d08b5b")
+  );
 }
 
 /* ------------------------------------------------------------------ */

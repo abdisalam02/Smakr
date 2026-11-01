@@ -84,7 +84,18 @@ export function resolveFoodCategoryAndIcon(
     return { category: "burger", icon: "🍔", label: "Burgers" };
   }
 
-  // 6b. Fried Chicken & Korean
+  // 6b. Korean BBQ & Grill
+  if (
+    combined.includes("kbbq") ||
+    combined.includes("korean bbq") ||
+    combined.includes("bulgogi") ||
+    combined.includes("samgyeopsal") ||
+    combined.includes("galbi")
+  ) {
+    return { category: "kbbq", icon: "🥓", label: "Korean BBQ" };
+  }
+
+  // 6c. Fried Chicken & Korean
   if (
     combined.includes("fried chicken") ||
     combined.includes("korean") ||
@@ -195,6 +206,16 @@ export function resolveFoodCategoryAndIcon(
     return { category: "matcha", icon: "🍵", label: "Matcha & Tea" };
   }
 
+  // 8b. Boba & Bubble Tea
+  if (
+    combined.includes("boba") ||
+    combined.includes("bubble tea") ||
+    combined.includes("tapioca") ||
+    combined.includes("pearl tea")
+  ) {
+    return { category: "boba", icon: "🧋", label: "Bubble Tea & Boba" };
+  }
+
   // 9. Coffee & Espresso
   if (
     combined.includes("coffee") ||
@@ -210,6 +231,16 @@ export function resolveFoodCategoryAndIcon(
     return { category: "coffee", icon: "☕", label: "Specialty Coffee" };
   }
 
+  // 9b. Artisan Sourdough
+  if (
+    combined.includes("sourdough") ||
+    combined.includes("surdeig") ||
+    combined.includes("landbrød") ||
+    combined.includes("levain")
+  ) {
+    return { category: "sourdough", icon: "🍞", label: "Artisan Sourdough" };
+  }
+
   // 10. Bakery & Pastries
   if (
     combined.includes("croissant") ||
@@ -217,45 +248,87 @@ export function resolveFoodCategoryAndIcon(
     combined.includes("cinnamon") ||
     combined.includes("bolle") ||
     combined.includes("kanelbolle") ||
-    combined.includes("sourdough") ||
-    combined.includes("surdeig") ||
     combined.includes("bakery") ||
     combined.includes("bakeri") ||
     googleTypes.includes("bakery")
   ) {
-    return { category: "bakery", icon: "🥐", label: "Bakery & Sourdough" };
+    return { category: "bakery", icon: "🥐", label: "Bakery & Pastries" };
   }
 
-  // 11. Sushi & Seafood
+  // 10b. Nordic Seafood & Fish
+  if (
+    (combined.includes("salmon") ||
+      combined.includes("laks") ||
+      combined.includes("ørret") ||
+      combined.includes("torsk") ||
+      combined.includes("cod") ||
+      combined.includes("herring") ||
+      combined.includes("sild") ||
+      combined.includes("fisk") ||
+      combined.includes("seafood") ||
+      combined.includes("reker") ||
+      combined.includes("skalldyr")) &&
+    !combined.includes("sushi") &&
+    !combined.includes("sashimi") &&
+    !combined.includes("nigiri")
+  ) {
+    return { category: "nordic_seafood", icon: "🐟", label: "Nordic Seafood" };
+  }
+
+  // 11. Sushi & Japanese Raw Bar
   if (
     combined.includes("sushi") ||
     combined.includes("sashimi") ||
     combined.includes("nigiri") ||
-    combined.includes("salmon") ||
-    combined.includes("laks") ||
-    combined.includes("oyster") ||
-    combined.includes("fisk") ||
-    googleTypes.includes("sushi_restaurant") ||
-    googleTypes.includes("seafood_restaurant")
+    googleTypes.includes("sushi_restaurant")
   ) {
     return { category: "sushi", icon: "🍣", label: "Seafood & Sushi" };
   }
 
-  // 12. Sweets & Desserts
+  // 11b. Artisanal Gelato & Ice Cream
   if (
     combined.includes("gelato") ||
-    combined.includes("ice cream") ||
+    combined.includes("isbar") ||
+    combined.includes("sorbet") ||
     combined.includes("iskrem") ||
+    googleTypes.includes("ice_cream_shop")
+  ) {
+    return { category: "gelato", icon: "🍨", label: "Artisan Gelato" };
+  }
+
+  // 12. Sweets & Desserts
+  if (
     combined.includes("waffle") ||
     combined.includes("vaffel") ||
     combined.includes("donut") ||
     combined.includes("cookie") ||
     combined.includes("cake") ||
     combined.includes("kake") ||
-    googleTypes.includes("ice_cream_shop") ||
     googleTypes.includes("dessert_shop")
   ) {
     return { category: "dessert", icon: "🍦", label: "Sweets & Desserts" };
+  }
+
+  // 12b. Low-Intervention Natural Wine & Cider
+  if (
+    combined.includes("natural wine") ||
+    combined.includes("naturvin") ||
+    combined.includes("orange wine") ||
+    combined.includes("pet-nat") ||
+    combined.includes("pet nat")
+  ) {
+    return { category: "natural_wine", icon: "🍷", label: "Natural Wine" };
+  }
+
+  // 12c. Specialty Brunch & Toast
+  if (
+    combined.includes("brunch") ||
+    combined.includes("avocado toast") ||
+    combined.includes("benedict") ||
+    combined.includes("poached egg") ||
+    combined.includes("toast")
+  ) {
+    return { category: "brunch", icon: "🥑", label: "Brunch & Toast" };
   }
 
   // 13. Drinks & Cocktails

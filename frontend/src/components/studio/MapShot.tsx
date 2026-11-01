@@ -160,8 +160,16 @@ function MultiVenueCard({
   const defaultWidth = totalSpots >= 4 ? 300 : totalSpots === 3 ? 340 : 380;
   const cardWidth = Math.min(s.cardWidth || 860, defaultWidth);
 
-  // Alternating slight lateral offset so adjacent pins don't completely stack cards directly on top of each other
-  const staggerX = totalSpots > 1 ? (index % 2 === 0 ? -14 : 14) : 0;
+  // Smart Horizontal Edge Shift: bias boundary cards inward so they never clip canvas edges
+  const allLngs = (s.venues || []).map((v) => v.lng);
+  const minLng = allLngs.length > 0 ? Math.min(...allLngs) : venue.lng;
+  const maxLng = allLngs.length > 0 ? Math.max(...allLngs) : venue.lng;
+  const isLeftmost = minLng !== maxLng && venue.lng === minLng;
+  const isRightmost = minLng !== maxLng && venue.lng === maxLng;
+
+  // Alternating slight lateral offset biased inward at boundaries
+  const defaultStaggerX = totalSpots > 1 ? (index % 2 === 0 ? -14 : 14) : 0;
+  const staggerX = isLeftmost ? 28 : isRightmost ? -28 : defaultStaggerX;
 
   const [dragDelta, setDragDelta] = useState<{ x: number; y: number } | null>(null);
   const isDraggingRef = useRef(false);
@@ -215,7 +223,7 @@ function MultiVenueCard({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
-      className="select-none pointer-events-auto touch-none"
+      className="group select-none pointer-events-auto touch-none"
       style={{
         marginTop: 48 + (s.cardOffsetY || 0),
         width: cardWidth,
@@ -237,11 +245,14 @@ function MultiVenueCard({
           padding: totalSpots >= 4 ? '10px 12px' : '14px 16px',
         }}
       >
-        {/* Subtle drag handle header */}
-        <div className="flex items-center justify-between pb-1 text-[9px] font-bold opacity-60 hover:opacity-100 transition-opacity">
+        {/* Drag handle header: hidden on idle/export, visible on hover */}
+        <div
+          data-export-ignore="true"
+          className="flex items-center justify-between pb-1 text-[9px] font-bold opacity-0 group-hover:opacity-80 transition-opacity"
+        >
           <span className="flex items-center gap-1 cursor-grab">
             <span className="text-[11px] leading-none">⠿</span>
-            <span>DRAG TO REPOSITION</span>
+            <span>Drag to reposition</span>
           </span>
           {isCustomMoved && (
             <span className="text-[8px] font-mono text-[#e84a27] font-extrabold uppercase">
@@ -360,6 +371,7 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
   const markersRef = useRef<maplibregl.Marker[]>([]);
   const styleRef = useRef(s.style);
   const prevVenuesKeyRef = useRef<string>('');
+  const prevDimensionsRef = useRef<{ w: number; h: number }>({ w, h });
   const isProgrammaticMoveRef = useRef<boolean>(false);
   const [portalTargets, setPortalTargets] = useState<
     { pinEl: HTMLDivElement; cardEl: HTMLDivElement; venue: StudioVenueItem; index: number }[]
@@ -375,6 +387,9 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
       s.layoutMode !== 'single'
   );
   const venuesList = isMulti ? s.venues! : [];
+  const venuesIdentityKey = isMulti
+    ? venuesList.map((v) => `${v.id || ''}_${v.name}`).join('|')
+    : 'single';
 
   // Initialize MapLibre GL only if map rendering is requested
   useEffect(() => {
@@ -404,7 +419,19 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
         return;
       }
       const c = map.getCenter();
-      onMapChange?.([c.lng, c.lat], map.getZoom(), map.getPitch());
+      const z = map.getZoom();
+      const p = map.getPitch();
+
+      // Epsilon diff guard: prevent infinite React state loops on microscopic changes
+      const lngDiff = Math.abs(c.lng - s.lng);
+      const latDiff = Math.abs(c.lat - s.lat);
+      const zoomDiff = Math.abs(z - s.zoom);
+      const pitchDiff = Math.abs(p - s.pitch);
+      if (lngDiff < 0.00005 && latDiff < 0.00005 && zoomDiff < 0.01 && pitchDiff < 0.5) {
+        return;
+      }
+
+      onMapChange?.([c.lng, c.lat], z, p);
     };
 
     if (interactive && onMapChange) {
@@ -446,12 +473,89 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [needsMap, interactive]);
 
-  // Synchronize style, markers and camera changes
+  // Effect A: Marker & Portal Reconciliation (ONLY runs when venues identity or multi mode changes)
   useEffect(() => {
     if (!needsMap) {
+      markersRef.current.forEach((m) => m.remove());
+      markersRef.current = [];
       setPortalTargets([]);
+      prevVenuesKeyRef.current = '';
       return;
     }
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (isMulti && venuesList.length > 0) {
+      if (prevVenuesKeyRef.current !== venuesIdentityKey) {
+        // Clear old markers
+        markersRef.current.forEach((m) => m.remove());
+        markersRef.current = [];
+
+        const newTargets: {
+          pinEl: HTMLDivElement;
+          cardEl: HTMLDivElement;
+          venue: StudioVenueItem;
+          index: number;
+        }[] = [];
+
+        venuesList.forEach((v, idx) => {
+          // 1. Pin Marker — always on top layer (zIndex: 100 on MapLibre marker wrapper)
+          const pinEl = document.createElement('div');
+          pinEl.className = 'smakr-multi-spot-pin-marker';
+          pinEl.style.position = 'relative';
+          pinEl.style.cursor = 'pointer';
+
+          const pinMarker = new maplibregl.Marker({
+            element: pinEl,
+            anchor: 'center',
+          })
+            .setLngLat([v.lng, v.lat])
+            .addTo(map);
+
+          pinMarker.getElement().style.zIndex = '100';
+          markersRef.current.push(pinMarker);
+
+          // 2. Card Marker — lower layer (zIndex: 20 + idx on MapLibre marker wrapper)
+          const cardEl = document.createElement('div');
+          cardEl.className = 'smakr-multi-spot-card-marker';
+          cardEl.style.position = 'relative';
+          cardEl.style.cursor = 'pointer';
+
+          const cardMarker = new maplibregl.Marker({
+            element: cardEl,
+            anchor: 'top',
+          })
+            .setLngLat([v.lng, v.lat])
+            .addTo(map);
+
+          cardMarker.getElement().style.zIndex = String(20 + idx);
+          markersRef.current.push(cardMarker);
+
+          newTargets.push({ pinEl, cardEl, venue: v, index: idx });
+        });
+
+        prevVenuesKeyRef.current = venuesIdentityKey;
+        setPortalTargets(newTargets);
+      } else {
+        // Update positions in place without destroying DOM elements
+        venuesList.forEach((v, idx) => {
+          const pinMarker = markersRef.current[idx * 2];
+          const cardMarker = markersRef.current[idx * 2 + 1];
+          if (pinMarker) pinMarker.setLngLat([v.lng, v.lat]);
+          if (cardMarker) cardMarker.setLngLat([v.lng, v.lat]);
+        });
+      }
+    } else {
+      markersRef.current.forEach((m) => m.remove());
+      markersRef.current = [];
+      setPortalTargets([]);
+      prevVenuesKeyRef.current = '';
+    }
+  }, [needsMap, isMulti, venuesIdentityKey, venuesList]);
+
+  // Effect B: Camera Synchronization & Dynamic Card-Aware Auto-Fit (Does NOT touch DOM markers)
+  useEffect(() => {
+    if (!needsMap) return;
     const map = mapRef.current;
     if (!map) return;
 
@@ -460,103 +564,85 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
       map.setStyle(MAP_STYLE_URLS[s.style]);
     }
 
-    map.resize();
-
-    // Clear old markers
-    markersRef.current.forEach((m) => m.remove());
-    markersRef.current = [];
+    // Guard map.resize() so container dimension changes never emit recursive moveend events
+    if (w !== prevDimensionsRef.current.w || h !== prevDimensionsRef.current.h) {
+      prevDimensionsRef.current = { w, h };
+      isProgrammaticMoveRef.current = true;
+      map.resize();
+      requestAnimationFrame(() => {
+        isProgrammaticMoveRef.current = false;
+      });
+    }
 
     if (isMulti && venuesList.length > 0) {
-      // Add multi-venue markers: Pin Marker (anchor: center, zIndex: 50) + Card Marker (anchor: top, zIndex: 20 + idx)
       const bounds = new maplibregl.LngLatBounds();
-      const newTargets: { pinEl: HTMLDivElement; cardEl: HTMLDivElement; venue: StudioVenueItem; index: number }[] = [];
-
-      venuesList.forEach((v, idx) => {
+      venuesList.forEach((v) => {
         bounds.extend([v.lng, v.lat]);
-
-        // 1. Pin Marker — always on top layer (zIndex: 100 on MapLibre marker wrapper)
-        const pinEl = document.createElement('div');
-        pinEl.className = 'smakr-multi-spot-pin-marker';
-        pinEl.style.position = 'relative';
-        pinEl.style.cursor = 'pointer';
-
-        const pinMarker = new maplibregl.Marker({
-          element: pinEl,
-          anchor: 'center',
-        })
-          .setLngLat([v.lng, v.lat])
-          .addTo(map);
-
-        pinMarker.getElement().style.zIndex = '100';
-        markersRef.current.push(pinMarker);
-
-        // 2. Card Marker — lower layer (zIndex: 20 + idx on MapLibre marker wrapper)
-        const cardEl = document.createElement('div');
-        cardEl.className = 'smakr-multi-spot-card-marker';
-        cardEl.style.position = 'relative';
-        cardEl.style.cursor = 'pointer';
-
-        const cardMarker = new maplibregl.Marker({
-          element: cardEl,
-          anchor: 'top',
-        })
-          .setLngLat([v.lng, v.lat])
-          .addTo(map);
-
-        cardMarker.getElement().style.zIndex = String(20 + idx);
-        markersRef.current.push(cardMarker);
-
-        newTargets.push({ pinEl, cardEl, venue: v, index: idx });
       });
 
-      setPortalTargets(newTargets);
-
-      // Check if venues composition changed or if fit was explicitly triggered
-      const venuesKey = venuesList.map((v) => `${v.id}_${v.lat}_${v.lng}`).join('|');
-      const venuesChanged = prevVenuesKeyRef.current !== venuesKey;
-      const shouldFit = venuesChanged || s.autoFitCamera === true;
-
-      if (shouldFit && !bounds.isEmpty()) {
-        const isSquare = Math.abs(w - h) < 100;
-        const isStory = h > 1600;
-        const fitPadding = isSquare
-          ? { top: 110, bottom: 120, left: 120, right: 120 }
-          : isStory
-          ? { top: 180, bottom: 220, left: 160, right: 160 }
-          : { top: 130, bottom: 160, left: 140, right: 140 };
-
+      if (s.autoFitCamera && !bounds.isEmpty()) {
         isProgrammaticMoveRef.current = true;
+
+        const containerW = map.getContainer()?.clientWidth || w;
+        const containerH = map.getContainer()?.clientHeight || h;
+        const scaleRatio = containerW / w;
+        const effectiveCardHalfW = ((340 * (s.cardScale || 1)) / 2 + 28) * scaleRatio;
+        const effectiveCardH = (165 * (s.cardScale || 1) + 48) * scaleRatio;
+        const effectiveTopBanner = (s.roundupTitle ? 150 : 90) * scaleRatio;
+
+        const safePadding = {
+          top: Math.min(containerH * 0.28, Math.max(70, effectiveTopBanner)),
+          bottom: Math.min(containerH * 0.35, Math.max(110, effectiveCardH)),
+          left: Math.min(containerW * 0.28, Math.max(90, effectiveCardHalfW)),
+          right: Math.min(containerW * 0.28, Math.max(90, effectiveCardHalfW)),
+        };
+
         map.fitBounds(bounds, {
-          padding: fitPadding,
-          maxZoom: 16.8,
+          padding: safePadding,
+          maxZoom: 15.8,
           duration: 0,
         });
-        prevVenuesKeyRef.current = venuesKey;
+
+        // Sync fitted center & zoom back to state
+        const newCenter = map.getCenter();
+        const newZoom = map.getZoom();
+        onMapChange?.([newCenter.lng, newCenter.lat], newZoom, map.getPitch());
+
+        requestAnimationFrame(() => {
+          isProgrammaticMoveRef.current = false;
+        });
       } else {
         // Manual camera adjustment (zoom in/out or pan from controls)
         const curCenter = map.getCenter();
         const curZoom = map.getZoom();
         const dist = Math.abs(curCenter.lng - s.lng) + Math.abs(curCenter.lat - s.lat);
         const zoomDiff = Math.abs(curZoom - s.zoom);
-        if (zoomDiff > 0.05 || dist > 0.001) {
+        const pitchDiff = Math.abs(map.getPitch() - s.pitch);
+        if (zoomDiff > 0.05 || dist > 0.0005 || pitchDiff > 1) {
           isProgrammaticMoveRef.current = true;
           map.jumpTo({
             center: [s.lng, s.lat],
             zoom: s.zoom,
             pitch: s.pitch,
           });
+          requestAnimationFrame(() => {
+            isProgrammaticMoveRef.current = false;
+          });
         }
       }
-    } else {
-      setPortalTargets([]);
+    } else if (!isMulti) {
       const pinCy = (s.pinY || 0.36) * h;
       const bottomPadding = Math.max(0, Math.round(h - 2 * pinCy));
 
+      isProgrammaticMoveRef.current = true;
       map.jumpTo({
         center: [s.lng, s.lat],
         padding: { top: 0, bottom: bottomPadding, left: 0, right: 0 },
         zoom: s.zoom,
         pitch: s.pitch,
+      });
+      requestAnimationFrame(() => {
+        isProgrammaticMoveRef.current = false;
       });
     }
   }, [
@@ -568,10 +654,13 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
     s.pitch,
     s.pinY,
     s.autoFitCamera,
+    s.cardScale,
+    s.roundupTitle,
     isMulti,
     venuesList,
     w,
     h,
+    onMapChange,
   ]);
 
   const t = THEMES[s.cardTheme] || THEMES.cream;
@@ -916,7 +1005,7 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
 
       {/* Multi-Spot Mode: Pins (layer 50) and Cards (layer 20) via Portals */}
       {isMulti &&
-        exportTarget === 'full-scene' &&
+        exportTarget !== 'map-only' &&
         portalTargets.map(({ pinEl, cardEl, venue, index }) => (
           <React.Fragment key={venue.id || index}>
             {createPortal(

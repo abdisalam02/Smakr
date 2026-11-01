@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Plus_Jakarta_Sans, DM_Sans, Space_Grotesk, Geist } from "next/font/google";
 import { comico } from "@/lib/fonts";
@@ -22,6 +22,13 @@ import { AutumnLeavesBurst } from "@/components/effects/AutumnLeavesBurst";
 // route is rendered on demand — declare it explicitly to avoid static-generation
 // `DYNAMIC_SERVER_USAGE` warnings.
 export const dynamic = "force-dynamic";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
+};
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -97,7 +104,7 @@ export default async function RootLayout({
         <AutumnLeavesBurst />
         <AuthProvider initialUser={initialUser}>
           <Header initialUser={initialUser} />
-          <main className="flex-1 flex flex-col relative overflow-hidden">
+          <main className="flex-1 flex flex-col relative overflow-x-hidden w-full max-w-[100vw]">
             {children}
           </main>
           <QuickCheckInModal />

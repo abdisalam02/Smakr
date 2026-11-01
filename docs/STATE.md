@@ -1,10 +1,10 @@
 # STATE.md — CityPulse / Smakr (read first, keep <= 30 lines)
 
-Updated: 2026-10-29
+Updated: 2026-11-01
 
 ## Now
-- Task: Email mascot dark-mode inversion fix, full-bleed email layout, and feed/sheet performance pass.
-- Status: `tsc --noEmit` and `npm run test:security` clean; blur placeholders and memoized rigs active.
+- Task: Framer Motion sliding pill indicator in FoodViewSlider + fluid feed crossfade transition in HomeView.
+- Status: `npx tsc --noEmit` verified (0 errors); ready to commit and push upon user approval.
 
 ## Next (max 3)
 1. Re-run `npm run test:security` from `frontend/` after any environment change.
