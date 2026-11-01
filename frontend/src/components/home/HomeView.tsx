@@ -704,14 +704,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                 </motion.div>
               )}
 
-              {feedMode === "food" && (
-                <motion.div
-                  key="desktop-food"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.16, ease: "easeOut" }}
-                >
+              {(<motion.div initial={false} animate={feedMode === "food" ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }} transition={{ duration: 0.18, ease: "easeOut" }} className={feedMode === "food" ? "block" : "hidden"}>
                   {foodPosts.length === 0 && isHydratingData ? (
                     <div
                       className={`grid ${
@@ -748,14 +741,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                 </motion.div>
               )}
 
-              {feedMode === "places" && (
-                <motion.div
-                  key="desktop-places"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.16, ease: "easeOut" }}
-                >
+              {(<motion.div initial={false} animate={feedMode === "places" ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }} transition={{ duration: 0.18, ease: "easeOut" }} className={feedMode === "places" ? "block" : "hidden"}>
                   {venues.length === 0 && isHydratingData ? (
                     <div
                       className={`grid ${
@@ -943,14 +929,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                 </motion.div>
               )}
 
-              {feedMode === "food" && (
-                <motion.div
-                  key="mobile-food"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.16, ease: "easeOut" }}
-                >
+              {(<motion.div initial={false} animate={feedMode === "food" ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }} transition={{ duration: 0.18, ease: "easeOut" }} className={feedMode === "food" ? "block" : "hidden"}>
                   {foodPosts.length === 0 && isHydratingData ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {Array.from({ length: 3 }).map((_, i) => (
@@ -979,14 +958,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                 </motion.div>
               )}
 
-              {feedMode === "places" && (
-                <motion.div
-                  key="mobile-places"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.16, ease: "easeOut" }}
-                >
+              {(<motion.div initial={false} animate={feedMode === "places" ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }} transition={{ duration: 0.18, ease: "easeOut" }} className={feedMode === "places" ? "block" : "hidden"}>
                   {venues.length === 0 && isHydratingData ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {Array.from({ length: 3 }).map((_, i) => (

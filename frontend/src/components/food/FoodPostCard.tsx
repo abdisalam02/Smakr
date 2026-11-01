@@ -320,12 +320,10 @@ export const FoodPostCard = React.memo(function FoodPostCard({
 
   return (
     <motion.article
-      initial={{ opacity: 0, y: 14, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+      style={{ contain: "layout paint style" }}
       onClick={handleCardClick}
       onDoubleClick={handleDoubleTap}
-      className={`group relative w-full rounded-[26px] overflow-hidden border bg-[#181615]/80 backdrop-blur-md shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer select-none ${
+      className={`group relative w-full rounded-[26px] overflow-hidden border bg-[#181615] shadow-md hover:shadow-xl transition-shadow duration-300 cursor-pointer select-none ${
         isSelected ? "ring-2 ring-[#E84A27]" : ""
       } ${
         isPopupActive
@@ -387,7 +385,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
           }
           alt={post.dish_name}
           fill
-          unoptimized
+          unoptimized={post.image_url?.startsWith("/") || post.image_url?.startsWith("data:")}
           priority={priority || (typeof index === "number" && index < 4)}
           loading={priority || (typeof index === "number" && index < 4) ? undefined : "lazy"}
           decoding="async"
@@ -430,32 +428,32 @@ export const FoodPostCard = React.memo(function FoodPostCard({
                   e.stopPropagation();
                   setQuickEditPost(post);
                 }}
-                className="font-sans font-bold tracking-tight bg-black/65 hover:bg-[#e84a27] backdrop-blur-md text-zinc-100 border border-white/20 px-2.5 py-1 rounded-full text-[11px] shadow-md transition-colors"
+                className="font-sans font-bold tracking-tight bg-black/65 hover:bg-[#e84a27] text-zinc-100 border border-white/20 px-2.5 py-1 rounded-full text-[11px] shadow-md transition-colors"
                 title="Add NOK price"
               >
                 {post.price_tier || linkedVenue?.price_level ? `${post.price_tier || linkedVenue?.price_level} · + kr` : "+ Add kr"}
               </button>
             ) : !isPopup && (post.price_tier || linkedVenue?.price_level) ? (
-              <span className="font-sans font-bold tracking-tight bg-black/60 backdrop-blur-md text-zinc-200 border border-white/15 px-2.5 py-1 rounded-full text-xs shadow-md">
+              <span className="font-sans font-bold tracking-tight bg-black/75 text-zinc-200 border border-white/15 px-2.5 py-1 rounded-full text-xs shadow-md">
                 {post.price_tier || linkedVenue?.price_level}
               </span>
             ) : null}
 
             {/* Live Kitchen Batch Badges */}
             {activeKitchenStatus === "fresh_batch" && (
-              <span className="bg-[#e84a27] text-white font-bold px-2.5 py-1 rounded-full text-[11px] backdrop-blur-md shadow-md flex items-center gap-1 animate-pulse">
+              <span className="bg-[#e84a27] text-white font-bold px-2.5 py-1 rounded-full text-[11px] shadow-md flex items-center gap-1 animate-pulse">
                 <span>🔥</span>
                 <span>Fresh Batch</span>
               </span>
             )}
             {activeKitchenStatus === "low_stock" && (
-              <span className="bg-amber-500 text-zinc-950 font-bold px-2.5 py-1 rounded-full text-[11px] backdrop-blur-md shadow-md flex items-center gap-1">
+              <span className="bg-amber-500 text-zinc-950 font-bold px-2.5 py-1 rounded-full text-[11px] shadow-md flex items-center gap-1">
                 <span>⚡</span>
                 <span>Few Left Today</span>
               </span>
             )}
             {activeKitchenStatus === "sold_out" && (
-              <span className="bg-zinc-900/90 text-zinc-300 font-bold px-2.5 py-1 rounded-full text-[11px] backdrop-blur-md border border-white/20 flex items-center gap-1">
+              <span className="bg-zinc-900/90 text-zinc-300 font-bold px-2.5 py-1 rounded-full text-[11px] border border-white/20 flex items-center gap-1">
                 <span>❌</span>
                 <span>Sold Out Today</span>
               </span>
@@ -468,14 +466,14 @@ export const FoodPostCard = React.memo(function FoodPostCard({
               </span>
             )}
             {!isPopup && popupStatus.status === "grace" && (
-              <span className="bg-zinc-800/90 text-zinc-300 font-medium px-2.5 py-1 rounded-full text-[11px] backdrop-blur-md border border-white/10">
+              <span className="bg-zinc-800/90 text-zinc-300 font-medium px-2.5 py-1 rounded-full text-[11px] border border-white/10">
                 {popupStatus.label}
               </span>
             )}
 
             {/* Food Truck Badge */}
             {linkedVenue?.spot_type === "food_truck" && (
-              <span className="bg-emerald-600 text-white font-bold px-2.5 py-1 rounded-full text-[11px] backdrop-blur-md shadow-md flex items-center gap-1">
+              <span className="bg-emerald-600 text-white font-bold px-2.5 py-1 rounded-full text-[11px] shadow-md flex items-center gap-1">
                 <span>🚚</span>
                 <span>Food Truck</span>
               </span>
@@ -491,7 +489,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
                   e.stopPropagation();
                   setQuickEditPost(post);
                 }}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/95 hover:bg-white text-[#e84a27] shadow-md backdrop-blur-md border border-white/50 text-[11px] font-bold tracking-wide transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/95 hover:bg-white text-[#e84a27] shadow-md border border-white/50 text-[11px] font-bold tracking-wide transition-all hover:scale-105 active:scale-95 cursor-pointer"
                 title="Admin Quick Edit"
                 aria-label="Admin Quick Edit"
               >
@@ -501,7 +499,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
             )}
 
             {!isPopup && (
-              <span className="bg-black/60 backdrop-blur-md text-amber-400 font-bold px-2.5 py-1 rounded-full text-xs border border-white/10 flex items-center gap-1 shadow-xs">
+              <span className="bg-black/75 text-amber-400 font-bold px-2.5 py-1 rounded-full text-xs border border-white/10 flex items-center gap-1 shadow-xs">
                 <span className="text-amber-400 text-xs">★</span>
                 <span className="font-sans font-bold text-white text-xs tracking-tight">{displayRating}</span>
               </span>
@@ -512,7 +510,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
                 e.stopPropagation();
                 handleToggleSave();
               }}
-              className={`p-1.5 rounded-full backdrop-blur-md border transition-all active:scale-95 ${
+              className={`p-1.5 rounded-full border transition-all active:scale-95 ${
                 isSaved
                   ? "bg-white text-zinc-900 border-white shadow-xs"
                   : "bg-black/60 text-white border-white/10 hover:bg-black/80"
@@ -528,7 +526,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
         {/* Double-tap heart feedback animation */}
         {showHeart && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 animate-in fade-in zoom-in-50 duration-200">
-            <div className="p-3.5 rounded-full bg-white/30 backdrop-blur-md shadow-xl">
+            <div className="p-3.5 rounded-full bg-white/30 shadow-xl">
               <ThumbsUp className="w-10 h-10 text-white fill-[#e84a27] stroke-white" />
             </div>
           </div>
@@ -594,7 +592,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
 
           {/* Kitchen Live Batch Soundbite */}
           {kitchenBatchNote && activeKitchenStatus !== null && (
-            <div className="bg-orange-500/20 border border-orange-500/35 backdrop-blur-md rounded-xl px-2.5 py-1.5 my-1.5 max-w-[96%] flex items-center gap-1.5 text-[11px] text-orange-200">
+            <div className="bg-orange-500/20 border border-orange-500/35 rounded-xl px-2.5 py-1.5 my-1.5 max-w-[96%] flex items-center gap-1.5 text-[11px] text-orange-200">
               <span className="shrink-0">👨‍🍳</span>
               <span className="font-medium italic leading-snug line-clamp-1">
                 &ldquo;{kitchenBatchNote}&rdquo;
@@ -604,7 +602,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
 
           {/* Concise Dish-Specific Smakr Verdict (✦ Quote Only — Permanent spots only; removed for popups) */}
           {!isPopup && dishVerdict && (
-            <div className="bg-black/45 backdrop-blur-md border border-white/15 rounded-xl px-2.5 py-1.5 my-2 max-w-[96%]">
+            <div className="bg-black/60 border border-white/15 rounded-xl px-2.5 py-1.5 my-2 max-w-[96%]">
               <p className="text-[11px] text-zinc-100 leading-snug line-clamp-2">
                 <span className="text-[#E84A27] font-bold not-italic mr-1">✦</span>
                 <span className="italic">&ldquo;{dishVerdict}&rdquo;</span>
@@ -646,7 +644,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
                   e.stopPropagation();
                   handleToggleLike();
                 }}
-                className={`h-9 px-3 rounded-full text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer backdrop-blur-md ${
+                className={`h-9 px-3 rounded-full text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer ${
                   isLiked
                     ? "bg-[#E84A27] border border-[#FF7A5C] text-white shadow-[0_4px_12px_rgba(232,74,39,0.4)]"
                     : "bg-[#181615]/75 border border-white/20 text-[#FAF7F2] hover:bg-[#181615]"
@@ -662,7 +660,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
               <button
                 type="button"
                 onClick={handleShareDish}
-                className="h-9 w-9 rounded-full bg-[#181615]/75 hover:bg-[#181615] backdrop-blur-md border border-white/20 text-[#FAF7F2] active:scale-90 transition-all flex items-center justify-center cursor-pointer shrink-0"
+                className="h-9 w-9 rounded-full bg-[#181615]/75 hover:bg-[#181615] border border-white/20 text-[#FAF7F2] active:scale-90 transition-all flex items-center justify-center cursor-pointer shrink-0"
                 title="Send 'Spise her?' to a friend"
                 aria-label="Share dish"
               >

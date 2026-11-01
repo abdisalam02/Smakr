@@ -166,40 +166,10 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
   return (
     <div
       onClick={handleClick}
-      className={`group relative flex items-center gap-3 sm:gap-3.5 p-3 sm:p-3.5 rounded-2xl sm:rounded-3xl bg-[#FAF7F2] dark:bg-[#181615] border border-[#181615]/10 dark:border-white/10 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer active:scale-[0.985] select-none overflow-hidden min-h-[126px] sm:min-h-[136px] ${
+      className={`group relative flex items-center gap-3 sm:gap-3.5 p-3 sm:p-3.5 rounded-2xl sm:rounded-3xl bg-[#FAF7F2] dark:bg-[#181615] border border-[#181615]/10 dark:border-white/10 shadow-sm hover:shadow-md transition-[box-shadow,transform] duration-200 cursor-pointer active:scale-[0.985] select-none overflow-hidden min-h-[126px] sm:min-h-[136px] ${
         isSelected ? "ring-2 ring-[#E84A27]" : ""
       } ${popupStatus.isDimmedCard ? "opacity-50 grayscale-[20%]" : ""}`}
     >
-      {/* Ambient Blurred Photo Color Bleed (Route A) — Hardware-contained static GPU rasterization */}
-      {spotCoverUrl && (
-        <div
-          aria-hidden="true"
-          style={{
-            contain: "paint layout",
-            transform: "translateZ(0)",
-            WebkitTransform: "translateZ(0)",
-            backfaceVisibility: "hidden",
-            WebkitBackfaceVisibility: "hidden",
-          }}
-          className="pointer-events-none select-none z-0 absolute inset-0 overflow-hidden will-change-transform"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={spotCoverUrl}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            className="w-4/5 h-full object-cover scale-[1.35] blur-[30px] saturate-[1.4] opacity-[0.26] dark:opacity-[0.20]"
-            style={{
-              WebkitMaskImage:
-                "linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,0.5) 55%, transparent 88%)",
-              maskImage:
-                "linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,0.5) 55%, transparent 88%)",
-            }}
-          />
-        </div>
-      )}
-
       {/* Repeating SMAKR Monogram Watermark Pattern */}
       <svg
         className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.03] dark:opacity-[0.05] select-none text-zinc-950 dark:text-white z-0"
@@ -266,7 +236,7 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
 
         {/* Google Rating Badge bottom-left */}
         {hasGoogleRating && (
-          <div className="absolute bottom-2 left-2 z-[3] flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/75 backdrop-blur-md text-white text-[10px] font-bold shadow-xs">
+          <div className="absolute bottom-2 left-2 z-[3] flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/80 text-white text-[10px] font-bold shadow-xs">
             <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
             <span className="font-sans font-bold tracking-tight text-white">{venue.google_rating!.toFixed(1)}</span>
           </div>

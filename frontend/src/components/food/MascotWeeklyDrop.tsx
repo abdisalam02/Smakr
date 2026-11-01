@@ -126,7 +126,9 @@ export function MascotWeeklyDrop({
     let scrolled = false;
     const cleanups = containers.map((el) => {
       const onScroll = () => {
-        const isDown = el.scrollTop > 35;
+        // Hysteresis: the capsule changes height, which shifts the scroller; a single
+        // threshold made scrollTop oscillate across it and flicker the page.
+        const isDown = scrolled ? el.scrollTop > 12 : el.scrollTop > 70;
         if (isDown !== scrolled) {
           scrolled = isDown;
           setIsScrolledDown(isDown);
