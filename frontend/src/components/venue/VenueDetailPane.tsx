@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
+import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowLeft,
   MapPin,
@@ -21,6 +22,8 @@ import {
   ExternalLink,
   Instagram,
   Calendar,
+  ZoomIn,
+  X,
 } from "lucide-react";
 import { FoodPost, Neighborhood, Venue } from "@/types";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
@@ -32,6 +35,7 @@ import { getPopupStatus, getPopupMeta, isPopupVenue } from "@/lib/popupUtils";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import { formatOsloLocation } from "@/lib/location";
 import { ExpandableReviewText } from "./ExpandableReviewText";
+import { FEED_BLUR_DARK } from "@/lib/feedImages";
 
 const NEIGHBORHOOD_LABELS: Record<Neighborhood, string> = {
   all: "Oslo",
@@ -113,8 +117,16 @@ function ReactionButton({
 
 export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
   const [selectedDish, setSelectedDish] = useState<FoodPost | null>(null);
+  const [heroImgReady, setHeroImgReady] = useState(false);
+  const [loadedDishIds, setLoadedDishIds] = useState<Record<string, boolean>>({});
+  const [zoomImage, setZoomImage] = useState<{ src: string; alt: string } | null>(null);
   const openCreateDish = useCityPulseStore((state) => state.openCreateDish);
   const showToast = useCityPulseStore((state) => state.showToast);
+
+  useEffect(() => {
+    setHeroImgReady(false);
+    setZoomImage(null);
+  }, [venue?.id]);
 
   const {
     recommendedMeals,
@@ -250,23 +262,48 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
       {/* ================= SCROLLABLE BODY ================= */}
       <div className="flex-1 overflow-y-auto no-scrollbar p-4 sm:p-5 space-y-5">
         {/* Hero image */}
-        <div className="relative w-full h-52 rounded-3xl overflow-hidden border border-[var(--surface-border)] bg-zinc-100">
+        <div
+          onClick={() =>
+            venue.cover_image_url &&
+            setZoomImage({ src: venue.cover_image_url, alt: venue.name })
+          }
+          className={`group/hero relative w-full h-52 rounded-3xl overflow-hidden border border-[var(--surface-border)] bg-[#181615] ${
+            venue.cover_image_url ? "cursor-zoom-in" : ""
+          }`}
+        >
           {venue.cover_image_url ? (
-            <Image
-              src={venue.cover_image_url}
-              alt={venue.name}
-              fill
-              className="object-cover"
-              sizes="600px"
-              priority
-            />
+            <>
+              <Image
+                src={venue.cover_image_url}
+                alt={venue.name}
+                fill
+                onLoad={() => setHeroImgReady(true)}
+                placeholder="blur"
+                blurDataURL={FEED_BLUR_DARK}
+                className={`object-cover transition-all duration-500 group-hover/hero:scale-[1.03] ${
+                  heroImgReady ? "opacity-100" : "opacity-0"
+                }`}
+                sizes="600px"
+                priority
+              />
+              <div
+                aria-hidden="true"
+                className={`smakr-shimmer absolute inset-0 pointer-events-none transition-opacity duration-500 ${
+                  heroImgReady ? "opacity-0" : "opacity-100"
+                }`}
+              />
+              <span className="absolute top-3 right-3 px-2 py-1 rounded-lg bg-black/50 backdrop-blur-md text-white/90 text-[10px] font-semibold flex items-center gap-1 pointer-events-none">
+                <ZoomIn className="w-3 h-3" />
+                <span>Zoom</span>
+              </span>
+            </>
           ) : (
             <div className="w-full h-full flex items-center justify-center text-4xl">
               {venue.icon || categoryDef?.emoji || "🍽️"}
             </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent" />
-          <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent pointer-events-none" />
+          <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white pointer-events-none">
             <span className="text-xs font-semibold drop-shadow-sm">
               {venue.live_food_status || "Oslo Culinary Hotspot"}
             </span>
@@ -622,7 +659,7 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
                     onClick={() => setSelectedDish(dish)}
                     className="group p-2.5 rounded-2xl bg-[var(--surface)] border border-[var(--surface-border)] shadow-xs flex flex-col cursor-pointer hover:border-[#e84a27]/40 transition-all hover:shadow-sm"
                   >
-                    <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden bg-zinc-200 shrink-0 border border-[var(--surface-border)]">
+                    <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden bg-zinc-900 shrink-0 border border-[var(--surface-border)]">
                       <Image
                         src={
                           dish.image_url?.startsWith("/api/places/photos") &&
@@ -634,9 +671,22 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
                         fill
                         loading="lazy"
                         decoding="async"
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        onLoad={() =>
+                          setLoadedDishIds((prev) => ({ ...prev, [dish.id]: true }))
+                        }
+                        placeholder="blur"
+                        blurDataURL={FEED_BLUR_DARK}
+                        className={`object-cover group-hover:scale-105 transition-all duration-300 ${
+                          loadedDishIds[dish.id] ? "opacity-100" : "opacity-0"
+                        }`}
                         sizes="(max-width: 640px) 45vw, 220px"
                         unoptimized
+                      />
+                      <div
+                        aria-hidden="true"
+                        className={`smakr-shimmer absolute inset-0 pointer-events-none transition-opacity duration-500 ${
+                          loadedDishIds[dish.id] ? "opacity-0" : "opacity-100"
+                        }`}
                       />
                       {typeof dish.price_nok === "number" && dish.price_nok > 0 && (
                         <span className="absolute bottom-1.5 right-1.5 px-2 py-0.5 rounded-full bg-[#E84A27] text-white text-[10px] font-sans font-extrabold shadow-xs">
@@ -729,6 +779,39 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
         activeReaction={selectedDish ? reactions[selectedDish.id] : null}
         onReaction={handleReaction}
       />
+
+      {/* Fullscreen Smooth Image Zoom Lightbox */}
+      <AnimatePresence>
+        {zoomImage && (
+          <motion.div
+            key="venue-pane-zoom-lightbox"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setZoomImage(null)}
+            className="fixed inset-0 z-[80] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 cursor-zoom-out select-none"
+          >
+            <button
+              type="button"
+              onClick={() => setZoomImage(null)}
+              aria-label="Close zoom"
+              className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <motion.img
+              src={zoomImage.src}
+              alt={zoomImage.alt}
+              initial={{ scale: 0.82, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.82, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 380, damping: 30, mass: 0.65 }}
+              className="max-w-full max-h-[85dvh] rounded-2xl object-contain shadow-2xl"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

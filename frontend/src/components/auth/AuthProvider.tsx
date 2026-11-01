@@ -7,6 +7,11 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { persistMascotConfig } from "@/lib/supabase/data";
 import type { OnboardingAvatarConfig } from "@/types/onboarding";
 import { type MascotConfig, DEFAULT_MASCOT_CONFIG } from "@/types/mascot";
+import {
+  OFFICIAL_SMAKR_MASCOT_STORAGE_KEY,
+  getOfficialSmakrMascotConfig,
+  saveOfficialSmakrMascotConfig,
+} from "@/lib/officialSmakrMascot";
 import type { UserProfile } from "@/types";
 
 /**
@@ -66,7 +71,17 @@ export function AuthProvider({
       // immediately without waiting for a client round-trip.
       setProfileResolved(true);
       if (initialUser.mascot_config) {
-        hydrateMascotConfig(initialUser.mascot_config);
+        const hasLocalBrandOverride =
+          typeof window !== "undefined" &&
+          Boolean(window.localStorage.getItem(OFFICIAL_SMAKR_MASCOT_STORAGE_KEY));
+        if (initialUser.role === "admin" && hasLocalBrandOverride) {
+          hydrateMascotConfig(getOfficialSmakrMascotConfig());
+        } else {
+          hydrateMascotConfig(initialUser.mascot_config);
+          if (initialUser.role === "admin") {
+            saveOfficialSmakrMascotConfig(initialUser.mascot_config);
+          }
+        }
       }
     }
 
@@ -160,9 +175,20 @@ export function AuthProvider({
           mascot_config: profile.mascot_config ?? undefined,
           onboarding_completed: Boolean(profile.onboarding_completed),
         });
-        // Mascot is per-user (profiles.mascot_config) — restore it when present.
-        if (profile.mascot_config) {
+        // Mascot is per-user (profiles.mascot_config) — restore it when present,
+        // but never clobber an admin's locally saved brand mascot override.
+        const hasLocalBrandOverride =
+          typeof window !== "undefined" &&
+          Boolean(window.localStorage.getItem(OFFICIAL_SMAKR_MASCOT_STORAGE_KEY));
+        if (isAdmin && hasLocalBrandOverride) {
+          const localBrand = getOfficialSmakrMascotConfig();
+          hydrateMascotConfig(localBrand);
+          void persistMascotConfig(profile.id, localBrand);
+        } else if (profile.mascot_config) {
           hydrateMascotConfig(profile.mascot_config);
+          if (isAdmin) {
+            saveOfficialSmakrMascotConfig(profile.mascot_config);
+          }
         } else {
           // First sign-in with a browser-local mascot — back it up to the profile
           // so it follows the account instead of living only on this device.

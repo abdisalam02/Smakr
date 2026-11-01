@@ -666,156 +666,229 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
             : viewMode === "feed"
             ? "w-full max-w-5xl mx-auto opacity-100 border-r-0"
             : "w-[46%] xl:w-[42%] opacity-100 border-r border-zinc-200/80"
-        } h-full bg-[#FAF7F2] dark:bg-[#181615] flex-col overflow-hidden transition-all duration-350 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[width,opacity] relative shrink-0`}
+        } h-full bg-[#F5F0E6] dark:bg-[#181615] flex-col overflow-hidden transition-all duration-350 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[width,opacity] relative shrink-0`}
       >
+        <AnimatePresence mode="wait" initial={false}>
           {selectedVenue ? (
-            <VenueDetailPane
-              venue={selectedVenue}
-              onBack={() => setSelectedVenue(null)}
-            />
+            <motion.div
+              key={`desktop-venue-${selectedVenue.id}`}
+              initial={{ opacity: 0, x: -16 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -16 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              className="flex flex-col h-full w-full overflow-hidden"
+            >
+              <VenueDetailPane
+                venue={selectedVenue}
+                onBack={() => setSelectedVenue(null)}
+              />
+            </motion.div>
           ) : (
-            <>
-              <div className="sticky top-0 z-20 bg-[#FAF7F2]/95 dark:bg-[#181615]/95 border-b border-black/[0.06]">
+            <motion.div
+              key="desktop-feed-stream"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className="flex flex-col h-full w-full overflow-hidden"
+            >
+              <div className="sticky top-0 z-20 bg-[#F5F0E6]/95 dark:bg-[#181615]/95 backdrop-blur-md border-b border-black/[0.06]">
                 <MascotWeeklyDrop feedCount={filteredPosts.length} />
                 <FeedFilterBar />
               </div>
               <div data-feed-scroll className="flex-1 overflow-y-auto p-5 space-y-4 no-scrollbar pb-36">
-            <AnimatePresence mode="wait" initial={false}>
-              {feedMode === "popups" && (
-                <motion.div
-                  key="desktop-popups"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.16, ease: "easeOut" }}
-                >
-                  {popupVenues.length === 0 ? (
-                    <div className="py-16 text-center text-xs text-zinc-500 space-y-2 max-w-sm mx-auto">
-                      <p className="font-semibold text-sm text-[#181615] dark:text-zinc-200">No active pop-ups right now</p>
-                      <p>Check back soon for limited Oslo kitchen residencies and guest drops.</p>
-                    </div>
-                  ) : (
-                    <div
-                      className={`grid ${
-                        viewMode === "feed"
-                          ? "grid-cols-2 xl:grid-cols-3"
-                          : "grid-cols-1 xl:grid-cols-2"
-                      } gap-4`}
+                <AnimatePresence mode="wait" initial={false}>
+                  {feedMode === "popups" && (
+                    <motion.div
+                      key="desktop-popups"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                     >
-                      {popupVenues.map((venue, index) => (
-                        <PopupEventCard
-                          key={venue.id}
-                          venue={venue}
-                          priority={isDesktop && index === 0}
-                        />
-                      ))}
-                    </div>
+                      {popupVenues.length === 0 ? (
+                        <div className="py-16 text-center text-xs text-zinc-500 space-y-2 max-w-sm mx-auto">
+                          <p className="font-semibold text-sm text-[#181615] dark:text-zinc-200">No active pop-ups right now</p>
+                          <p>Check back soon for limited Oslo kitchen residencies and guest drops.</p>
+                        </div>
+                      ) : (
+                        <motion.div
+                          layout
+                          className={`grid ${
+                            viewMode === "feed"
+                              ? "grid-cols-2 xl:grid-cols-3"
+                              : "grid-cols-1 xl:grid-cols-2"
+                          } gap-4`}
+                        >
+                          <AnimatePresence mode="popLayout" initial={false}>
+                            {popupVenues.map((venue, index) => (
+                              <motion.div
+                                key={venue.id}
+                                layout="position"
+                                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.14 } }}
+                                transition={{ type: "spring", stiffness: 420, damping: 32, mass: 0.65 }}
+                              >
+                                <PopupEventCard
+                                  venue={venue}
+                                  priority={isDesktop && index === 0}
+                                />
+                              </motion.div>
+                            ))}
+                          </AnimatePresence>
+                        </motion.div>
+                      )}
+                    </motion.div>
                   )}
-                </motion.div>
-              )}
 
-              {(<motion.div initial={false} animate={feedMode === "food" ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }} transition={{ duration: 0.18, ease: "easeOut" }} className={feedMode === "food" ? "block" : "hidden"}>
-                  {foodPosts.length === 0 && isHydratingData ? (
-                    <div
-                      className={`grid ${
-                        viewMode === "feed"
-                          ? "grid-cols-2 xl:grid-cols-3"
-                          : "grid-cols-1 xl:grid-cols-2"
-                      } gap-4`}
+                  {feedMode === "food" && (
+                    <motion.div
+                      key="desktop-food"
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                     >
-                      {Array.from({ length: 4 }).map((_, i) => (
-                        <FoodPostCardSkeleton key={`post-skeleton-${i}`} />
-                      ))}
-                    </div>
-                  ) : filteredPosts.length === 0 ? (
-                    <FeedEmptyState />
-                  ) : (
-                    <div key={postsKey}
-                      className={`smakr-stagger grid ${
-                        viewMode === "feed"
-                          ? "grid-cols-2 xl:grid-cols-3"
-                          : "grid-cols-1 xl:grid-cols-2"
-                      } gap-4`}
-                    >
-                      {filteredPosts.map((post, index) => (
-                        <FoodPostCard
-                          key={post.id}
-                          post={post}
-                          index={index}
-                          linkedVenue={venueById.get(post.spot_id) ?? null}
-                          priority={isDesktop && index === 0}
-                        />
-                      ))}
-                    </div>
+                      {foodPosts.length === 0 && isHydratingData ? (
+                        <div
+                          className={`grid ${
+                            viewMode === "feed"
+                              ? "grid-cols-2 xl:grid-cols-3"
+                              : "grid-cols-1 xl:grid-cols-2"
+                          } gap-4`}
+                        >
+                          {Array.from({ length: 4 }).map((_, i) => (
+                            <FoodPostCardSkeleton key={`post-skeleton-${i}`} />
+                          ))}
+                        </div>
+                      ) : filteredPosts.length === 0 ? (
+                        <FeedEmptyState />
+                      ) : (
+                        <motion.div
+                          layout
+                          className={`grid ${
+                            viewMode === "feed"
+                              ? "grid-cols-2 xl:grid-cols-3"
+                              : "grid-cols-1 xl:grid-cols-2"
+                          } gap-4`}
+                        >
+                          <AnimatePresence mode="popLayout" initial={false}>
+                            {filteredPosts.map((post, index) => (
+                              <motion.div
+                                key={post.id}
+                                layout="position"
+                                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.14 } }}
+                                transition={{ type: "spring", stiffness: 420, damping: 32, mass: 0.65 }}
+                              >
+                                <FoodPostCard
+                                  post={post}
+                                  index={index}
+                                  linkedVenue={venueById.get(post.spot_id) ?? null}
+                                  priority={isDesktop && index === 0}
+                                />
+                              </motion.div>
+                            ))}
+                          </AnimatePresence>
+                        </motion.div>
+                      )}
+                    </motion.div>
                   )}
-                </motion.div>
-              )}
 
-              {(<motion.div initial={false} animate={feedMode === "places" ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }} transition={{ duration: 0.18, ease: "easeOut" }} className={feedMode === "places" ? "block" : "hidden"}>
-                  {venues.length === 0 && isHydratingData ? (
-                    <div
-                      className={`grid ${
-                        viewMode === "feed"
-                          ? "grid-cols-2 xl:grid-cols-3"
-                          : "grid-cols-1 xl:grid-cols-2"
-                      } gap-4`}
+                  {feedMode === "places" && (
+                    <motion.div
+                      key="desktop-places"
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                     >
-                      {Array.from({ length: 4 }).map((_, i) => (
-                        <FoodSpotCardSkeleton key={`spot-skeleton-${i}`} />
-                      ))}
-                    </div>
-                  ) : filteredVenues.length === 0 ? (
-                    <div className="py-16 text-center text-xs text-zinc-500">
-                      No spots found in this category.
-                    </div>
-                  ) : (
-                    <div key={venuesKey}
-                      className={`smakr-stagger grid ${
-                        viewMode === "feed"
-                          ? "grid-cols-2 xl:grid-cols-3"
-                          : "grid-cols-1 xl:grid-cols-2"
-                      } gap-4`}
-                    >
-                      {filteredVenues.map((venue, index) => {
-                        if (venue.spot_type === "popup") {
-                          return (
-                            <PopupEventCard
-                              key={venue.id}
-                              venue={venue}
-                              priority={isDesktop && index === 0}
-                            />
-                          );
-                        }
-                        const topPost = topPostByVenueId.get(venue.id);
-                        return (
-                          <FoodSpotCard
-                            key={venue.id}
-                            venue={venue}
-                            index={index}
-                            primaryDishPhoto={topPost?.photo}
-                            topDishName={topPost?.dishName}
-                            priority={isDesktop && index === 0}
-                          />
-                        );
-                      })}
-                    </div>
+                      {venues.length === 0 && isHydratingData ? (
+                        <div
+                          className={`grid ${
+                            viewMode === "feed"
+                              ? "grid-cols-2 xl:grid-cols-3"
+                              : "grid-cols-1 xl:grid-cols-2"
+                          } gap-4`}
+                        >
+                          {Array.from({ length: 4 }).map((_, i) => (
+                            <FoodSpotCardSkeleton key={`spot-skeleton-${i}`} />
+                          ))}
+                        </div>
+                      ) : filteredVenues.length === 0 ? (
+                        <div className="py-16 text-center text-xs text-zinc-500">
+                          No spots found in this category.
+                        </div>
+                      ) : (
+                        <motion.div
+                          layout
+                          className={`grid ${
+                            viewMode === "feed"
+                              ? "grid-cols-2 xl:grid-cols-3"
+                              : "grid-cols-1 xl:grid-cols-2"
+                          } gap-4`}
+                        >
+                          <AnimatePresence mode="popLayout" initial={false}>
+                            {filteredVenues.map((venue, index) => {
+                              if (venue.spot_type === "popup") {
+                                return (
+                                  <motion.div
+                                    key={venue.id}
+                                    layout="position"
+                                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.14 } }}
+                                    transition={{ type: "spring", stiffness: 420, damping: 32, mass: 0.65 }}
+                                  >
+                                    <PopupEventCard
+                                      venue={venue}
+                                      priority={isDesktop && index === 0}
+                                    />
+                                  </motion.div>
+                                );
+                              }
+                              const topPost = topPostByVenueId.get(venue.id);
+                              return (
+                                <motion.div
+                                  key={venue.id}
+                                  layout="position"
+                                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                                  exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.14 } }}
+                                  transition={{ type: "spring", stiffness: 420, damping: 32, mass: 0.65 }}
+                                >
+                                  <FoodSpotCard
+                                    venue={venue}
+                                    index={index}
+                                    primaryDishPhoto={topPost?.photo}
+                                    topDishName={topPost?.dishName}
+                                    priority={isDesktop && index === 0}
+                                  />
+                                </motion.div>
+                              );
+                            })}
+                          </AnimatePresence>
+                        </motion.div>
+                      )}
+                    </motion.div>
                   )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+                </AnimatePresence>
+              </div>
 
-          {/* Floating Glassmorphism Slider Toggle at bottom of feed */}
-          <div className="absolute bottom-4 left-0 right-0 flex justify-center z-20 pointer-events-none">
-            <FoodViewSlider
-              dishesCount={filteredPosts.length}
-              spotsCount={filteredVenues.length}
-              popupsCount={popupVenues.length}
-            />
-          </div>
-            </>
+              {/* Floating Slider Toggle at bottom of feed */}
+              <div className="absolute bottom-4 left-0 right-0 flex justify-center z-20 pointer-events-none">
+                <FoodViewSlider
+                  dishesCount={filteredPosts.length}
+                  spotsCount={filteredVenues.length}
+                  popupsCount={popupVenues.length}
+                />
+              </div>
+            </motion.div>
           )}
-        </div>
+        </AnimatePresence>
+      </div>
       )}
 
       {/* ========================================================================= */}
@@ -854,10 +927,10 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
           transition: isDraggingRef.current ? "none" : "transform 0.28s cubic-bezier(0.16, 1, 0.3, 1)",
           contain: "layout style",
         }}
-        className="lg:hidden absolute left-0 right-0 top-[57px] z-30 bg-[#FAF7F2] dark:bg-[#181615] rounded-t-3xl border-t border-[#181615]/10 dark:border-white/10 shadow-2xl flex flex-col will-change-transform pb-[140px] w-full max-w-[100vw] overflow-x-hidden smakr-bottom-sheet"
+        className="lg:hidden absolute left-0 right-0 top-[57px] z-30 bg-[#F5F0E6] dark:bg-[#181615] rounded-t-3xl border-t border-[#181615]/10 dark:border-white/10 shadow-2xl flex flex-col will-change-transform pb-[140px] w-full max-w-[100vw] overflow-x-hidden smakr-bottom-sheet"
       >
           {/* Sticky Sheet Header: Grab Handle + Mascot Drop Pill + Category Filter Bar */}
-          <div className="sticky top-0 z-20 bg-[#FAF7F2] dark:bg-[#181615] border-b border-[#181615]/10 dark:border-white/10 rounded-t-3xl shrink-0 w-full max-w-full overflow-hidden">
+          <div className="sticky top-0 z-20 bg-[#F5F0E6] dark:bg-[#181615] border-b border-[#181615]/10 dark:border-white/10 rounded-t-3xl shrink-0 w-full max-w-full overflow-hidden">
             <div
               onTouchStart={handleHeaderTouchStart}
               onTouchMove={handleHeaderTouchMove}
@@ -914,7 +987,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.16, ease: "easeOut" }}
+                  transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                 >
                   {popupVenues.length === 0 ? (
                     <div className="py-14 text-center text-xs text-zinc-500 space-y-2 max-w-sm mx-auto">
@@ -922,24 +995,42 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                       <p>Check back soon for limited Oslo kitchen residencies and guest drops.</p>
                     </div>
                   ) : (
-                    <div
+                    <motion.div
+                      layout
                       className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${
                         mobileSheet === "peek" ? "pointer-events-none" : ""
                       }`}
                     >
-                      {popupVenues.map((venue, index) => (
-                        <PopupEventCard
-                          key={venue.id}
-                          venue={venue}
-                          priority={!isDesktop && index === 0}
-                        />
-                      ))}
-                    </div>
+                      <AnimatePresence mode="popLayout" initial={false}>
+                        {popupVenues.map((venue, index) => (
+                          <motion.div
+                            key={venue.id}
+                            layout="position"
+                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.14 } }}
+                            transition={{ type: "spring", stiffness: 420, damping: 32, mass: 0.65 }}
+                          >
+                            <PopupEventCard
+                              venue={venue}
+                              priority={!isDesktop && index === 0}
+                            />
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                    </motion.div>
                   )}
                 </motion.div>
               )}
 
-              {(<motion.div initial={false} animate={feedMode === "food" ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }} transition={{ duration: 0.18, ease: "easeOut" }} className={feedMode === "food" ? "block" : "hidden"}>
+              {feedMode === "food" && (
+                <motion.div
+                  key="mobile-food"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                >
                   {foodPosts.length === 0 && isHydratingData ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {Array.from({ length: 3 }).map((_, i) => (
@@ -949,26 +1040,44 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                   ) : filteredPosts.length === 0 ? (
                     <FeedEmptyState />
                   ) : (
-                    <div key={postsKey}
-                      className={`smakr-stagger grid grid-cols-1 sm:grid-cols-2 gap-4 ${
+                    <motion.div
+                      layout
+                      className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${
                         mobileSheet === "peek" ? "pointer-events-none" : ""
                       }`}
                     >
-                      {filteredPosts.map((post, index) => (
-                        <FoodPostCard
-                          key={post.id}
-                          post={post}
-                          index={index}
-                          linkedVenue={venueById.get(post.spot_id) ?? null}
-                          priority={!isDesktop && index === 0}
-                        />
-                      ))}
-                    </div>
+                      <AnimatePresence mode="popLayout" initial={false}>
+                        {filteredPosts.map((post, index) => (
+                          <motion.div
+                            key={post.id}
+                            layout="position"
+                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.14 } }}
+                            transition={{ type: "spring", stiffness: 420, damping: 32, mass: 0.65 }}
+                          >
+                            <FoodPostCard
+                              post={post}
+                              index={index}
+                              linkedVenue={venueById.get(post.spot_id) ?? null}
+                              priority={!isDesktop && index === 0}
+                            />
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                    </motion.div>
                   )}
                 </motion.div>
               )}
 
-              {(<motion.div initial={false} animate={feedMode === "places" ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }} transition={{ duration: 0.18, ease: "easeOut" }} className={feedMode === "places" ? "block" : "hidden"}>
+              {feedMode === "places" && (
+                <motion.div
+                  key="mobile-places"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                >
                   {venues.length === 0 && isHydratingData ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {Array.from({ length: 3 }).map((_, i) => (
@@ -986,34 +1095,53 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                       </button>
                     </div>
                   ) : (
-                    <div key={venuesKey}
-                      className={`smakr-stagger grid grid-cols-1 sm:grid-cols-2 gap-4 ${
+                    <motion.div
+                      layout
+                      className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${
                         mobileSheet === "peek" ? "pointer-events-none" : ""
                       }`}
                     >
-                      {filteredVenues.map((venue, index) => {
-                        if (venue.spot_type === "popup") {
+                      <AnimatePresence mode="popLayout" initial={false}>
+                        {filteredVenues.map((venue, index) => {
+                          if (venue.spot_type === "popup") {
+                            return (
+                              <motion.div
+                                key={venue.id}
+                                layout="position"
+                                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.14 } }}
+                                transition={{ type: "spring", stiffness: 420, damping: 32, mass: 0.65 }}
+                              >
+                                <PopupEventCard
+                                  venue={venue}
+                                  priority={!isDesktop && index === 0}
+                                />
+                              </motion.div>
+                            );
+                          }
+                          const topPost = topPostByVenueId.get(venue.id);
                           return (
-                            <PopupEventCard
+                            <motion.div
                               key={venue.id}
-                              venue={venue}
-                              priority={!isDesktop && index === 0}
-                            />
+                              layout="position"
+                              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.14 } }}
+                              transition={{ type: "spring", stiffness: 420, damping: 32, mass: 0.65 }}
+                            >
+                              <FoodSpotCard
+                                venue={venue}
+                                index={index}
+                                primaryDishPhoto={topPost?.photo}
+                                topDishName={topPost?.dishName}
+                                priority={!isDesktop && index === 0}
+                              />
+                            </motion.div>
                           );
-                        }
-                        const topPost = topPostByVenueId.get(venue.id);
-                        return (
-                          <FoodSpotCard
-                            key={venue.id}
-                            venue={venue}
-                            index={index}
-                            primaryDishPhoto={topPost?.photo}
-                            topDishName={topPost?.dishName}
-                            priority={!isDesktop && index === 0}
-                          />
-                        );
-                      })}
-                    </div>
+                        })}
+                      </AnimatePresence>
+                    </motion.div>
                   )}
                 </motion.div>
               )}

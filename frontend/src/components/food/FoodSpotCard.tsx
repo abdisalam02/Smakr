@@ -167,7 +167,7 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
   return (
     <div
       onClick={handleClick}
-      className={`group relative flex items-center gap-3 sm:gap-3.5 p-3 sm:p-3.5 rounded-2xl sm:rounded-3xl bg-[#FAF7F2] dark:bg-[#181615] border border-[#181615]/10 dark:border-white/10 shadow-sm hover:shadow-md transition-[box-shadow,transform] duration-200 cursor-pointer active:scale-[0.985] select-none overflow-hidden min-h-[126px] sm:min-h-[136px] ${
+      className={`group relative flex items-center gap-3 sm:gap-3.5 p-3 sm:p-3.5 rounded-2xl sm:rounded-3xl bg-[#EFE8DC] hover:bg-[#EAE1D3] dark:bg-[#1C1917] dark:hover:bg-[#231F1C] border border-[#181615]/12 dark:border-white/10 shadow-sm hover:shadow-md transition-[background-color,box-shadow,transform] duration-200 cursor-pointer active:scale-[0.985] select-none overflow-hidden min-h-[126px] sm:min-h-[136px] ${
         isSelected ? "ring-2 ring-[#E84A27]" : ""
       } ${popupStatus.isDimmedCard ? "opacity-50 grayscale-[20%]" : ""}`}
     >
@@ -336,7 +336,7 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
           <button
             type="button"
             onClick={handleSpotOnMap}
-            className="px-2.5 py-1 rounded-xl bg-white dark:bg-stone-800 hover:bg-[#E84A27] hover:text-white dark:hover:bg-[#E84A27] text-[#181615] dark:text-white border border-[#181615]/10 dark:border-white/10 text-[11px] font-bold shrink-0 flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-2xs group/btn"
+            className="px-2.5 py-1 rounded-xl bg-[#FAF6EE] dark:bg-stone-800 hover:bg-[#E84A27] hover:text-white dark:hover:bg-[#E84A27] text-[#181615] dark:text-white border border-[#181615]/12 dark:border-white/10 text-[11px] font-bold shrink-0 flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-2xs group/btn"
           >
             <Compass className="w-3 h-3 text-[#E84A27] group-hover/btn:text-white transition-colors" />
             <span>Map</span>

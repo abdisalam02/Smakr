@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import type { MascotConfig } from "@/types/mascot";
+import { MASCOT_STORAGE_KEY, type MascotConfig } from "@/types/mascot";
 import { MascotCharacter, buildMascotSVGString } from "@/components/avatar/MascotCharacter";
 
 /**
@@ -55,7 +55,9 @@ export const OFFICIAL_SMAKR_MASCOT_CONFIG: Readonly<MascotConfig> = Object.freez
 export function getOfficialSmakrMascotConfig(): MascotConfig {
   if (typeof window !== "undefined") {
     try {
-      const raw = window.localStorage.getItem(OFFICIAL_SMAKR_MASCOT_STORAGE_KEY);
+      const raw =
+        window.localStorage.getItem(OFFICIAL_SMAKR_MASCOT_STORAGE_KEY) ||
+        window.localStorage.getItem(MASCOT_STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as Partial<MascotConfig>;
         if (parsed && typeof parsed === "object" && parsed.peepsHead) {
@@ -84,7 +86,9 @@ export function saveOfficialSmakrMascotConfig(patch: Partial<MascotConfig>): Mas
   };
   if (typeof window !== "undefined") {
     try {
-      window.localStorage.setItem(OFFICIAL_SMAKR_MASCOT_STORAGE_KEY, JSON.stringify(next));
+      const serialized = JSON.stringify(next);
+      window.localStorage.setItem(OFFICIAL_SMAKR_MASCOT_STORAGE_KEY, serialized);
+      window.localStorage.setItem(MASCOT_STORAGE_KEY, serialized);
       window.dispatchEvent(new CustomEvent("smakr:brand-mascot-updated", { detail: next }));
     } catch {
       // Ignore quota errors
@@ -98,6 +102,7 @@ export function resetOfficialSmakrMascotConfig(): MascotConfig {
   if (typeof window !== "undefined") {
     try {
       window.localStorage.removeItem(OFFICIAL_SMAKR_MASCOT_STORAGE_KEY);
+      window.localStorage.removeItem(MASCOT_STORAGE_KEY);
       window.dispatchEvent(new CustomEvent("smakr:brand-mascot-updated", { detail: next }));
     } catch {
       // Ignore storage errors

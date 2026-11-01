@@ -61,73 +61,113 @@ export interface OpenPeepsConfig {
   facialHair: string;
   /** Clothing colour (hex without '#'). */
   clothingColor: string;
+  /** Hat / hijab / turban colour (hex without '#'). */
+  hatColor?: string;
+  /** Beard & moustache colour (hex without '#'). */
+  facialHairColor?: string;
 }
 
 /* ------------------------------------------------------------------ */
-/* 1. Textured, Black & diverse hair (official Open Peeps enums)       */
+/* Unified 3-Category Hairstyle Taxonomy (No gender labels)            */
 /* ------------------------------------------------------------------ */
 
-export const TEXTURED_HAIR_OPTIONS = [
-  { label: "Curly Afro", value: "afro" },
-  { label: "Long Afro", value: "longAfro" },
-  { label: "Short Dreads", value: "dreads1" },
-  { label: "Long Dreads", value: "dreads2" },
-  { label: "Cornrows Classic", value: "cornrows" },
-  { label: "Cornrows Fade", value: "cornrows2" },
-  { label: "Twists", value: "twists" },
-  { label: "Bantu Knots", value: "bantuKnots" },
-  { label: "Flat Top", value: "flatTop" },
-  { label: "Flat Top Long", value: "flatTopLong" },
-] as const satisfies readonly { label: string; value: HeadValue }[];
+export type HairCategoryTabKey = "shortFades" | "longWaves" | "afroBraids";
 
-/* ------------------------------------------------------------------ */
-/* 2. Short, fades & crops                                             */
-/* ------------------------------------------------------------------ */
+export const HAIR_CATEGORY_TABS: readonly { key: HairCategoryTabKey; label: string }[] = [
+  { key: "shortFades", label: "Short & Fades" },
+  { key: "longWaves", label: "Long & Waves" },
+  { key: "afroBraids", label: "Afro & Braids" },
+];
 
-export const SHORT_HAIR_OPTIONS = [
-  { label: "Clean Buzz / Short", value: "short1" },
-  { label: "Textured Crop", value: "short2" },
-  { label: "Side Part Fade", value: "short3" },
-  { label: "Wavy Short", value: "short4" },
-  { label: "Clean Fade", value: "short5" },
-  { label: "Shaved Sides", value: "shaved1" },
+export const SHORT_FADES_HAIR_OPTIONS = [
+  { label: "Side Part Fade", value: "short1" },
+  { label: "Buzz Cut", value: "short2" },
+  { label: "Tousled Fringe", value: "short5" },
+  { label: "High Fade Crop", value: "shaved2" },
+  { label: "Textured Quiff", value: "short4" },
+  { label: "Soft Wavy Crop", value: "short3" },
   { label: "Pompadour", value: "pomp" },
-  { label: "Clean Shaved / Bald", value: "noHair1" },
+  { label: "Undercut Sweep", value: "shaved1" },
+  { label: "Spiky Fade / Slit", value: "shaved3" },
+  { label: "Mohawk", value: "mohawk" },
+  { label: "Classic Side-Comb", value: "grayShort" },
+  { label: "Clean Shaved", value: "noHair1" },
+  { label: "Receding Hairline", value: "noHair2" },
+  { label: "Bald Crown", value: "noHair3" },
 ] as const satisfies readonly { label: string; value: HeadValue }[];
 
-/* ------------------------------------------------------------------ */
-/* 3. Medium & long styles                                             */
-/* ------------------------------------------------------------------ */
-
-export const LONG_HAIR_OPTIONS = [
-  { label: "Topknot Bun", value: "bun" },
+export const LONG_WAVES_HAIR_OPTIONS = [
+  { label: "Side-Swept Bob", value: "medium1" },
+  { label: "Wavy Bob", value: "medium2" },
+  { label: "Shoulder-Length", value: "mediumStraight" },
+  { label: "Layered Shag", value: "medium3" },
+  { label: "Bandana Bun", value: "bun" },
+  { label: "Messy High Bun", value: "bun2" },
   { label: "Double Buns", value: "buns" },
-  { label: "Messy Bun", value: "bun2" },
-  { label: "Long Curly", value: "longCurly" },
-  { label: "Classic Long", value: "long" },
-  { label: "Medium Straight", value: "mediumStraight" },
-  { label: "Medium with Bangs", value: "mediumBangs" },
+  { label: "Classic Updo", value: "grayBun" },
+  { label: "Medium Bangs", value: "mediumBangs" },
+  { label: "Wavy Bangs", value: "mediumBangs2" },
+  { label: "Choppy Bangs", value: "mediumBangs3" },
   { label: "Curtain Bangs", value: "bangs" },
-  { label: "Classic Bob", value: "medium1" },
+  { label: "Blunt Fringe Bob", value: "bangs2" },
+  { label: "Classic Long", value: "long" },
+  { label: "Long with Bangs", value: "longBangs" },
+  { label: "Long Curls", value: "longCurly" },
 ] as const satisfies readonly { label: string; value: HeadValue }[];
+
+export const AFRO_BRAIDS_HAIR_OPTIONS = [
+  { label: "Classic Afro", value: "afro" },
+  { label: "Long Afro", value: "longAfro" },
+  { label: "Flat Top", value: "flatTop" },
+  { label: "High Flat Top", value: "flatTopLong" },
+  { label: "Short Twists", value: "dreads2" },
+  { label: "Long Twists", value: "dreads1" },
+  { label: "Cornrows", value: "cornrows" },
+  { label: "Fade Cornrows", value: "cornrows2" },
+  { label: "Spiky Crop", value: "twists" },
+  { label: "Sponge Curls", value: "twists2" },
+  { label: "Bantu Knots", value: "bantuKnots" },
+] as const satisfies readonly { label: string; value: HeadValue }[];
+
+export const HAIR_CATEGORIES: Record<
+  HairCategoryTabKey,
+  readonly { label: string; value: HeadValue }[]
+> = {
+  shortFades: SHORT_FADES_HAIR_OPTIONS,
+  longWaves: LONG_WAVES_HAIR_OPTIONS,
+  afroBraids: AFRO_BRAIDS_HAIR_OPTIONS,
+};
+
+export function hairCategoryForHead(value: string): HairCategoryTabKey {
+  for (const tab of HAIR_CATEGORY_TABS) {
+    if (HAIR_CATEGORIES[tab.key].some((o) => o.value === value)) return tab.key;
+  }
+  return "shortFades";
+}
+
+/* ------------------------------------------------------------------ */
+/* Legacy grouped exports (kept for backwards-compatibility)           */
+/* ------------------------------------------------------------------ */
+
+export const TEXTURED_HAIR_OPTIONS = AFRO_BRAIDS_HAIR_OPTIONS;
+export const SHORT_HAIR_OPTIONS = SHORT_FADES_HAIR_OPTIONS;
+export const LONG_HAIR_OPTIONS = LONG_WAVES_HAIR_OPTIONS;
 
 /** Every selectable hairstyle, grouped exactly as the builder renders them. */
 export const HAIR_GROUPS: readonly {
   title: string;
   options: readonly { label: string; value: HeadValue }[];
 }[] = [
-  { title: "Textured & Afro", options: TEXTURED_HAIR_OPTIONS },
-  { title: "Short & Fades", options: SHORT_HAIR_OPTIONS },
-  { title: "Medium & Long", options: LONG_HAIR_OPTIONS },
+  { title: "Short & Fades", options: SHORT_FADES_HAIR_OPTIONS },
+  { title: "Long & Waves", options: LONG_WAVES_HAIR_OPTIONS },
+  { title: "Afro & Braids", options: AFRO_BRAIDS_HAIR_OPTIONS },
 ];
 
 export const HAIR_OPTIONS = [
-  ...TEXTURED_HAIR_OPTIONS,
-  ...SHORT_HAIR_OPTIONS,
-  ...LONG_HAIR_OPTIONS,
+  ...SHORT_FADES_HAIR_OPTIONS,
+  ...LONG_WAVES_HAIR_OPTIONS,
+  ...AFRO_BRAIDS_HAIR_OPTIONS,
 ] as const;
-
-/* ---- Men's hairstyle categories (valid DiceBear Open Peeps enums) ---- */
 
 export type MensHairCategoryKey = "fades" | "wavyVolume" | "flowLong" | "braidsAfro";
 
@@ -135,48 +175,16 @@ export const MENS_HAIR_CATEGORIES: Record<
   MensHairCategoryKey,
   readonly { label: string; value: HeadValue }[]
 > = {
-  fades: [
-    { label: "Clean Fade", value: "short5" },
-    { label: "Side Part / Comb-Over", value: "short3" },
-    { label: "Classic Crew Cut", value: "short1" },
-    { label: "Textured Crop", value: "short2" },
-    { label: "Buzz Cut", value: "shaved2" },
-    { label: "Shaved Crop", value: "shaved3" },
-    { label: "Bald / Shaved", value: "noHair1" },
-  ],
-  wavyVolume: [
-    { label: "Messy Waves", value: "short4" },
-    { label: "Pompadour / Quiff", value: "pomp" },
-    { label: "Undercut Taper", value: "shaved1" },
-    { label: "Mohawk", value: "mohawk" },
-    { label: "Faux Hawk", value: "mohawk2" },
-    { label: "Layered Shag", value: "medium3" },
-  ],
-  flowLong: [
-    { label: "Surfer Flow", value: "medium2" },
-    { label: "Skater Side-Sweep", value: "medium1" },
-    { label: "Shoulder-Length", value: "mediumStraight" },
-    { label: "Topknot / Man Bun", value: "bun" },
-  ],
-  braidsAfro: [
-    { label: "Short Dreads", value: "dreads1" },
-    { label: "Long Dreads", value: "dreads2" },
-    { label: "Cornrows", value: "cornrows" },
-    { label: "Twists", value: "twists" },
-    { label: "Flat Top Fade", value: "flatTop" },
-    { label: "Full Rounded Afro", value: "afro" },
-  ],
+  fades: SHORT_FADES_HAIR_OPTIONS.slice(0, 7),
+  wavyVolume: SHORT_FADES_HAIR_OPTIONS.slice(6),
+  flowLong: LONG_WAVES_HAIR_OPTIONS.slice(0, 4),
+  braidsAfro: AFRO_BRAIDS_HAIR_OPTIONS,
 };
 
-/** Combined men's list for flat lookups and validation. */
 export const ALL_MENS_HAIR: readonly { label: string; value: HeadValue }[] = [
-  ...MENS_HAIR_CATEGORIES.fades,
-  ...MENS_HAIR_CATEGORIES.wavyVolume,
-  ...MENS_HAIR_CATEGORIES.flowLong,
-  ...MENS_HAIR_CATEGORIES.braidsAfro,
+  ...SHORT_FADES_HAIR_OPTIONS,
+  ...AFRO_BRAIDS_HAIR_OPTIONS,
 ];
-
-/* ---- Women's hairstyle categories (valid DiceBear Open Peeps enums) ---- */
 
 export type WomensHairCategoryKey = "bobBangs" | "longWavy" | "bunsUpdos" | "afroBraids";
 
@@ -184,43 +192,15 @@ export const WOMENS_HAIR_CATEGORIES: Record<
   WomensHairCategoryKey,
   readonly { label: string; value: HeadValue }[]
 > = {
-  bobBangs: [
-    { label: "Classic Bob", value: "medium1" },
-    { label: "Medium with Bangs", value: "mediumBangs" },
-    { label: "Layered Bangs", value: "mediumBangs2" },
-    { label: "Soft Bangs", value: "mediumBangs3" },
-    { label: "Curtain Bangs", value: "bangs" },
-    { label: "Full Fringe", value: "bangs2" },
-  ],
-  longWavy: [
-    { label: "Classic Long", value: "long" },
-    { label: "Long with Bangs", value: "longBangs" },
-    { label: "Long Curly", value: "longCurly" },
-    { label: "Medium Straight", value: "mediumStraight" },
-    { label: "Shoulder Waves", value: "medium2" },
-  ],
-  bunsUpdos: [
-    { label: "Topknot Bun", value: "bun" },
-    { label: "Messy Bun", value: "bun2" },
-    { label: "Double Buns", value: "buns" },
-    { label: "Silver Bun", value: "grayBun" },
-  ],
-  afroBraids: [
-    { label: "Curly Afro", value: "afro" },
-    { label: "Long Afro", value: "longAfro" },
-    { label: "Twists", value: "twists" },
-    { label: "Long Twists", value: "twists2" },
-    { label: "Cornrows Fade", value: "cornrows2" },
-    { label: "Bantu Knots", value: "bantuKnots" },
-  ],
+  bobBangs: LONG_WAVES_HAIR_OPTIONS.slice(7, 13),
+  longWavy: LONG_WAVES_HAIR_OPTIONS.slice(0, 4),
+  bunsUpdos: LONG_WAVES_HAIR_OPTIONS.slice(3, 7),
+  afroBraids: AFRO_BRAIDS_HAIR_OPTIONS,
 };
 
-/** Combined women's list for flat lookups and validation. */
 export const ALL_WOMENS_HAIR: readonly { label: string; value: HeadValue }[] = [
-  ...WOMENS_HAIR_CATEGORIES.bobBangs,
-  ...WOMENS_HAIR_CATEGORIES.longWavy,
-  ...WOMENS_HAIR_CATEGORIES.bunsUpdos,
-  ...WOMENS_HAIR_CATEGORIES.afroBraids,
+  ...LONG_WAVES_HAIR_OPTIONS,
+  ...AFRO_BRAIDS_HAIR_OPTIONS,
 ];
 
 /* ------------------------------------------------------------------ */
@@ -274,13 +254,20 @@ export const HAIR_COLORS = NATURAL_HAIR_COLORS;
 /* ------------------------------------------------------------------ */
 
 export const EXPRESSION_OPTIONS = [
-  { label: "Friendly Smile", value: "smile" },
-  { label: "Big Smile", value: "smileBig" },
-  { label: "Loving Grin", value: "lovingGrin1" },
-  { label: "Calm / Chill", value: "calm" },
-  { label: "Cheeky", value: "cheeky" },
-  { label: "Driven / Foodie", value: "driven" },
-  { label: "Delighted Eater", value: "eatingHappy" },
+  { label: "😊 Warm Smile", value: "smile" },
+  { label: "😄 Big Smile", value: "smileBig" },
+  { label: "😋 Delighted Eater", value: "eatingHappy" },
+  { label: "🥳 Cheeky Grin", value: "smileTeethGap" },
+  { label: "😌 Calm / Chill", value: "calm" },
+  { label: "😍 Food Love", value: "lovingGrin1" },
+  { label: "🤩 Hungry / Driven", value: "driven" },
+  { label: "😮 Amazed / Awe", value: "awe" },
+  { label: "😏 Winking / Clever", value: "cheeky" },
+  { label: "🤤 Savoring Taste", value: "eyesClosed" },
+  { label: "🧐 Food Critic", value: "explaining" },
+  { label: "😐 Low-Key Cool", value: "serious" },
+  { label: "🤨 Skeptical / Picky", value: "suspicious" },
+  { label: "😴 Need Coffee", value: "tired" },
 ] as const satisfies readonly { label: string; value: FaceValue }[];
 
 /* ------------------------------------------------------------------ */
@@ -332,6 +319,17 @@ export const CLOTHING_COLORS = [
   { label: "Charcoal", value: "262e33", hex: "#262E33" },
 ] as const;
 
+export const HAT_COLORS = [
+  { label: "Paprika", value: "e84a27", hex: "#E84A27" },
+  { label: "Warm Cream", value: "f5efe3", hex: "#F5EFE3" },
+  { label: "Emerald", value: "10b981", hex: "#10B981" },
+  { label: "Cobalt", value: "3b82f6", hex: "#3B82F6" },
+  { label: "Sun Yellow", value: "fdea6b", hex: "#FDEA6B" },
+  { label: "Warm Chestnut", value: "92400e", hex: "#92400E" },
+  { label: "Blush", value: "e78276", hex: "#E78276" },
+  { label: "Charcoal", value: "262e33", hex: "#262E33" },
+] as const;
+
 /* ------------------------------------------------------------------ */
 /* The four tailored base presets                                      */
 /* ------------------------------------------------------------------ */
@@ -353,22 +351,24 @@ export interface OpenPeepsPreset {
 }
 
 export const OPEN_PEEPS_PRESETS: readonly OpenPeepsPreset[] = [
-  { id: "male1", label: "Avatar 1", hint: "seed · xgeqkw0b", seed: "xgeqkw0b" },
-  { id: "male2", label: "Avatar 2", hint: "seed · 77x9ehpo", seed: "77x9ehpo" },
-  { id: "female1", label: "Avatar 3", hint: "seed · 34olnlwc", seed: "34olnlwc" },
-  { id: "female2", label: "Avatar 4", hint: "seed · irwxl9ik", seed: "irwxl9ik" },
+  { id: "male1", label: "Avatar 1", hint: "Clean & classic", seed: "xgeqkw0b" },
+  { id: "male2", label: "Avatar 2", hint: "Bold & expressive", seed: "77x9ehpo" },
+  { id: "female1", label: "Avatar 3", hint: "Warm & casual", seed: "34olnlwc" },
+  { id: "female2", label: "Avatar 4", hint: "Cool & modern", seed: "irwxl9ik" },
 ];
 
 export const DEFAULT_OPEN_PEEPS_CONFIG: OpenPeepsConfig = {
   genderPreset: "male1",
-  headType: "short3",
+  headType: "short1",
   headwear: "none",
   headColor: "2c1b18",
+  facialHairColor: "2c1b18",
   skinColor: "edb98a",
   faceExpression: "smile",
   accessories: "none",
   facialHair: "none",
   clothingColor: "262e33",
+  hatColor: "e84a27",
 };
 
 /**
@@ -557,6 +557,11 @@ export function normalizeOpenPeepsConfig(raw?: unknown): OpenPeepsConfig {
     accessories,
     facialHair,
     clothingColor: normHex(r.clothingColor, presetBase.clothingColor),
+    hatColor: normHex(r.hatColor, presetBase.hatColor || "e84a27"),
+    facialHairColor: normHex(
+      r.facialHairColor ?? r.beardColor,
+      presetBase.facialHairColor || presetBase.headColor
+    ),
   };
 }
 
@@ -577,6 +582,10 @@ export function openPeepsStyleOptions(
 ): StyleOptions<OpenPeepsOptions> {
   const hasAccessories = Boolean(config.accessories) && config.accessories !== "none";
   const hasFacialHair = Boolean(config.facialHair) && config.facialHair !== "none";
+  const hasHat = Boolean(config.headwear) && config.headwear !== "none";
+  const activeHeadFabric = hasHat
+    ? normHex(config.hatColor ?? config.clothingColor, "e84a27")
+    : normHex(config.clothingColor, "e84a27");
 
   return {
     seed: "smakr-open-peeps",
@@ -584,7 +593,7 @@ export function openPeepsStyleOptions(
     face: [isFaceValue(config.faceExpression) ? config.faceExpression : "smile"],
     skinColor: [normHex(config.skinColor, "ffdbb4")],
     headContrastColor: [normHex(config.headColor, "2c1b18")],
-    clothingColor: [normHex(config.clothingColor, "e84a27")],
+    clothingColor: [activeHeadFabric],
     accessories: isAccessoryValue(config.accessories) && config.accessories !== "none"
       ? [config.accessories]
       : [],
@@ -672,6 +681,18 @@ function recolorHeadHair(svg: string, hair: string): string {
   return svg.slice(0, range.from) + patched + svg.slice(range.to);
 }
 
+const FACIAL_HAIR_GROUP_OPEN = '<g transform="translate(279 400)">';
+
+function recolorFacialHair(svg: string, color: string): string {
+  const start = svg.indexOf(FACIAL_HAIR_GROUP_OPEN);
+  if (start < 0) return svg;
+  const end = svg.indexOf("</g>", start);
+  if (end < 0) return svg;
+  const chunk = svg.slice(start, end + 4);
+  const patched = chunk.replaceAll('fill="#000"', `fill="#${normHex(color, "2c1b18")}"`);
+  return svg.slice(0, start) + patched + svg.slice(end + 4);
+}
+
 function injectBustTorso(svg: string, shirtHex: string, skinHex: string): string {
   if (svg.includes('data-layer="open-peeps-bust"')) return svg;
   const closeIdx = svg.lastIndexOf("</svg>");
@@ -723,12 +744,17 @@ export function ensureBustAvatarSvg(
 export function buildOpenPeepsSvg(config: OpenPeepsConfig): string {
   const rawSvg = createAvatar(openPeeps, openPeepsStyleOptions(config)).toString();
   const head = resolveActiveHead(config);
+  const hatHex = normHex(config.hatColor ?? config.clothingColor, "e84a27");
   const hairPatched =
-    NON_HAIR_HEADS.has(head) || headHonorsContrast(head)
+    head === "hatHip" || head === "hijab"
+      ? recolorHeadHair(rawSvg, hatHex)
+      : NON_HAIR_HEADS.has(head) || headHonorsContrast(head)
       ? rawSvg
       : recolorHeadHair(rawSvg, normHex(config.headColor, "2c1b18"));
+  const beardColor = config.facialHairColor || config.headColor;
+  const beardPatched = recolorFacialHair(hairPatched, beardColor);
   return injectBustTorso(
-    hairPatched,
+    beardPatched,
     normHex(config.clothingColor, "e84a27"),
     normHex(config.skinColor, "ffdbb4")
   );
@@ -825,6 +851,8 @@ export function seedToOpenPeepsConfig(
         ? extra.facialHair
         : "none",
     clothingColor: normHex(asHex(extra.clothingColor), DEFAULT_OPEN_PEEPS_CONFIG.clothingColor),
+    hatColor: normHex(asHex(extra.clothingColor), DEFAULT_OPEN_PEEPS_CONFIG.hatColor || "e84a27"),
+    facialHairColor: DEFAULT_OPEN_PEEPS_CONFIG.facialHairColor || "2c1b18",
   };
 }
 
@@ -836,16 +864,19 @@ function pick<T>(arr: readonly T[]): T {
 export function surpriseOpenPeepsConfig(): OpenPeepsConfig {
   const genderPreset = pick(OPEN_PEEPS_PRESETS).id;
   const isMale = genderPreset.startsWith("male");
+  const hairColor = pick(NATURAL_HAIR_COLORS).value;
   return {
     genderPreset,
     headType: pick(isMale ? ALL_MENS_HAIR : ALL_WOMENS_HAIR).value,
     headwear: "none",
-    headColor: pick(NATURAL_HAIR_COLORS).value,
+    headColor: hairColor,
+    facialHairColor: hairColor,
     skinColor: pick(SKIN_TONES).value,
     faceExpression: pick(EXPRESSION_OPTIONS).value,
     accessories: pick(ACCESSORIES_OPTIONS).value,
     facialHair: isMale ? pick(FACIAL_HAIR_OPTIONS).value : "none",
     clothingColor: pick(CLOTHING_COLORS).value,
+    hatColor: pick(HAT_COLORS).value,
   };
 }
 

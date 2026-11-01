@@ -3,8 +3,8 @@
 Updated: 2026-11-01
 
 ## Now
-- Task: Framer Motion sliding pill indicator in FoodViewSlider + fluid feed crossfade transition in HomeView.
-- Status: `npx tsc --noEmit` verified (0 errors); ready to commit and push upon user approval.
+- Task: UI/UX performance, smoothness, animation, and admin mascot persistence pass across feed, map, and venue modals.
+- Status: Defaulted to Dishes feed with collapsed Smakr Pick; added FLIP filter reorder, spring accordions, unified map popup, smooth sheet close + image zoom lightbox, warm Spots surface, and sticky mascot persistence (`tsc --noEmit` 0 errors).
 
 ## Next (max 3)
 1. Re-run `npm run test:security` from `frontend/` after any environment change.

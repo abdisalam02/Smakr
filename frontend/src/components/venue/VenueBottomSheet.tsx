@@ -18,6 +18,7 @@ import {
   Share2,
   Instagram,
   Calendar,
+  ZoomIn,
 } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { motion, AnimatePresence } from "motion/react";
@@ -49,7 +50,7 @@ function useIsDesktop() {
 }
 
 export function VenueBottomSheet() {
-  const selectedVenue = useCityPulseStore((state) => state.selectedVenue);
+  const storeSelectedVenue = useCityPulseStore((state) => state.selectedVenue);
   const setSelectedVenue = useCityPulseStore((state) => state.setSelectedVenue);
   const bottomSheetOpen = useCityPulseStore((state) => state.bottomSheetOpen);
   const setBottomSheetOpen = useCityPulseStore((state) => state.setBottomSheetOpen);
@@ -62,6 +63,22 @@ export function VenueBottomSheet() {
   // Expanded detailed slidable card state on mobile
   const isVenueDetailModalOpen = useCityPulseStore((state) => state.isVenueDetailModalOpen);
   const setIsVenueDetailModalOpen = useCityPulseStore((state) => state.setIsVenueDetailModalOpen);
+
+  // Retain the last selected venue while the slide-down exit animation completes
+  const lastVenueRef = React.useRef<typeof storeSelectedVenue>(null);
+  if (storeSelectedVenue) {
+    lastVenueRef.current = storeSelectedVenue;
+  }
+  const selectedVenue = storeSelectedVenue ?? (isVenueDetailModalOpen ? lastVenueRef.current : lastVenueRef.current);
+
+  const [heroImgReady, setHeroImgReady] = useState(false);
+  const [loadedDishIds, setLoadedDishIds] = useState<Record<string, boolean>>({});
+  const [zoomImage, setZoomImage] = useState<{ src: string; alt: string } | null>(null);
+
+  useEffect(() => {
+    setHeroImgReady(false);
+    setZoomImage(null);
+  }, [selectedVenue?.id]);
 
   const handleShare = async () => {
     if (!selectedVenue) return;
@@ -209,19 +226,27 @@ export function VenueBottomSheet() {
 
   const handleClose = React.useCallback(() => {
     setIsVenueDetailModalOpen(false);
-    setSelectedVenue(null);
     setBottomSheetOpen(false);
+    // Clear selectedVenue after the 360ms slide-down animation finishes
+    setTimeout(() => {
+      if (!useCityPulseStore.getState().isVenueDetailModalOpen) {
+        setSelectedVenue(null);
+      }
+    }, 360);
   }, [setIsVenueDetailModalOpen, setSelectedVenue, setBottomSheetOpen]);
 
   // Keyboard Escape dismiss
   useEffect(() => {
     if (!isVenueDetailModalOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") handleClose();
+      if (e.key === "Escape") {
+        if (zoomImage) setZoomImage(null);
+        else handleClose();
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isVenueDetailModalOpen, handleClose]);
+  }, [isVenueDetailModalOpen, zoomImage, handleClose]);
 
   // 1. Header grab bar touch drag handlers (direct GPU transform, fluid 0.38s ease)
   const handleHeaderTouchStart = (e: React.TouchEvent) => {
@@ -368,8 +393,14 @@ export function VenueBottomSheet() {
       {/* DEDICATED FULL-SCREEN SLIDE-UP DRAWER (View Details / Menu & Vibes)     */}
       {/* Dimmed backdrop, 0.38s cubic-bezier easing matching feed modal, fluid pull */}
       {/* ======================================================================= */}
-      <AnimatePresence>
-        {isVenueDetailModalOpen && (
+      <AnimatePresence
+        onExitComplete={() => {
+          if (!useCityPulseStore.getState().isVenueDetailModalOpen) {
+            setSelectedVenue(null);
+          }
+        }}
+      >
+        {isVenueDetailModalOpen && selectedVenue && (
           <div className="fixed inset-0 z-50 flex flex-col justify-end pointer-events-auto">
             {/* Dimmed backdrop overlay that fades in and dismisses the drawer when tapped */}
             <motion.div
@@ -492,15 +523,36 @@ export function VenueBottomSheet() {
                 <div className="space-y-4">
                   {/* Cover Photo */}
                   {selectedVenue.cover_image_url && (
-                    <div className="relative w-full h-56 rounded-3xl overflow-hidden border border-[#181615]/10 bg-[#FAF7F2] dark:bg-[#1E1C1A] shadow-xs">
+                    <div
+                      onClick={() =>
+                        selectedVenue.cover_image_url &&
+                        setZoomImage({ src: selectedVenue.cover_image_url, alt: selectedVenue.name })
+                      }
+                      className="group/hero relative w-full h-56 rounded-3xl overflow-hidden border border-[#181615]/10 bg-[#181615] shadow-xs cursor-zoom-in"
+                    >
                       <Image
                         src={selectedVenue.cover_image_url}
                         alt={selectedVenue.name}
                         fill
-                        className="object-cover"
+                        onLoad={() => setHeroImgReady(true)}
+                        placeholder="blur"
+                        blurDataURL={FEED_BLUR_DARK}
+                        className={`object-cover transition-all duration-500 group-hover/hero:scale-[1.03] ${
+                          heroImgReady ? "opacity-100" : "opacity-0"
+                        }`}
                         sizes="600px"
                       />
+                      <div
+                        aria-hidden="true"
+                        className={`smakr-shimmer absolute inset-0 pointer-events-none transition-opacity duration-500 ${
+                          heroImgReady ? "opacity-0" : "opacity-100"
+                        }`}
+                      />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent pointer-events-none" />
+                      <span className="absolute top-3 right-3 px-2 py-1 rounded-lg bg-black/50 backdrop-blur-md text-white/90 text-[10px] font-semibold flex items-center gap-1 pointer-events-none">
+                        <ZoomIn className="w-3 h-3" />
+                        <span>Zoom</span>
+                      </span>
                       <div className="absolute bottom-3.5 left-3.5 right-3.5 flex items-center justify-between text-white pointer-events-none">
                         <span className="font-comico font-black text-lg tracking-tight drop-shadow-md truncate">
                           {selectedVenue.name}
@@ -750,19 +802,38 @@ export function VenueBottomSheet() {
                    STANDARD RESTAURANT SHEET
                    ========================================================================= */
                 <>
-                  {/* Cover Photo — Upgraded to 288px (h-72) Hero with Bottom Dark Scrim and Frosted Metadata */}
+                   {/* Cover Photo — Upgraded to 288px (h-72) Hero with Bottom Dark Scrim and Frosted Metadata */}
                   {selectedVenue.cover_image_url && (
-                    <div className="relative w-full h-72 rounded-3xl overflow-hidden border border-[#181615]/10 dark:border-white/10 bg-zinc-900 shadow-md">
+                    <div
+                      onClick={() =>
+                        selectedVenue.cover_image_url &&
+                        setZoomImage({ src: selectedVenue.cover_image_url, alt: selectedVenue.name })
+                      }
+                      className="group/hero relative w-full h-72 rounded-3xl overflow-hidden border border-[#181615]/10 dark:border-white/10 bg-[#181615] shadow-md cursor-zoom-in"
+                    >
                       <Image
                         src={selectedVenue.cover_image_url}
                         alt={selectedVenue.name}
                         fill
-                        className="object-cover"
+                        onLoad={() => setHeroImgReady(true)}
+                        className={`object-cover transition-all duration-500 group-hover/hero:scale-[1.03] ${
+                          heroImgReady ? "opacity-100" : "opacity-0"
+                        }`}
                         sizes="(max-width: 640px) 100vw, 600px"
                         placeholder="blur"
                         blurDataURL={FEED_BLUR_DARK}
                       />
+                      <div
+                        aria-hidden="true"
+                        className={`smakr-shimmer absolute inset-0 pointer-events-none transition-opacity duration-500 ${
+                          heroImgReady ? "opacity-0" : "opacity-100"
+                        }`}
+                      />
                       <div className="absolute inset-0 bg-gradient-to-t from-[#181615]/95 via-[#181615]/40 to-transparent pointer-events-none" />
+                      <span className="absolute top-3 right-3 px-2 py-1 rounded-lg bg-black/50 backdrop-blur-md text-white/90 text-[10px] font-semibold flex items-center gap-1 pointer-events-none">
+                        <ZoomIn className="w-3 h-3" />
+                        <span>Zoom</span>
+                      </span>
                       <div className="absolute bottom-0 inset-x-0 p-4 sm:p-5 flex flex-col justify-end gap-1.5 text-white pointer-events-none">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="px-2.5 py-1 rounded-lg bg-black/40 backdrop-blur-md text-[10px] sm:text-[11px] font-bold text-white/90 border border-white/15 uppercase tracking-wider flex items-center gap-1 shadow-xs">
@@ -943,15 +1014,26 @@ export function VenueBottomSheet() {
                           >
                             <div>
                               {/* Dish Photo */}
-                              <div className="relative aspect-[4/3] w-full rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 shadow-2xs">
+                              <div className="relative aspect-[4/3] w-full rounded-xl overflow-hidden bg-zinc-900 shadow-2xs">
                                 <Image
                                   src={dish.image_url}
                                   alt={dish.dish_name}
                                   fill
-                                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                  onLoad={() =>
+                                    setLoadedDishIds((prev) => ({ ...prev, [dish.id]: true }))
+                                  }
+                                  className={`object-cover group-hover:scale-105 transition-all duration-300 ${
+                                    loadedDishIds[dish.id] ? "opacity-100" : "opacity-0"
+                                  }`}
                                   sizes="(max-width: 640px) 50vw, 240px"
                                   placeholder="blur"
                                   blurDataURL={FEED_BLUR_DARK}
+                                />
+                                <div
+                                  aria-hidden="true"
+                                  className={`smakr-shimmer absolute inset-0 pointer-events-none transition-opacity duration-500 ${
+                                    loadedDishIds[dish.id] ? "opacity-0" : "opacity-100"
+                                  }`}
                                 />
                                 {dish.price_nok && (
                                   <span className="absolute top-1.5 right-1.5 px-2 py-0.5 rounded-lg bg-[#181615]/85 backdrop-blur-xs text-white font-comico text-[11px] shadow-xs border border-white/10">
@@ -1192,6 +1274,39 @@ export function VenueBottomSheet() {
       activeReaction={selectedDish ? reactions[selectedDish.id] : null}
       onReaction={handleReaction}
     />
+
+    {/* Fullscreen Smooth Image Zoom Lightbox */}
+    <AnimatePresence>
+      {zoomImage && (
+        <motion.div
+          key="venue-sheet-zoom-lightbox"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          onClick={() => setZoomImage(null)}
+          className="fixed inset-0 z-[80] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 cursor-zoom-out select-none"
+        >
+          <button
+            type="button"
+            onClick={() => setZoomImage(null)}
+            aria-label="Close zoom"
+            className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center transition-colors cursor-pointer"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <motion.img
+            src={zoomImage.src}
+            alt={zoomImage.alt}
+            initial={{ scale: 0.82, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.82, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 380, damping: 30, mass: 0.65 }}
+            className="max-w-full max-h-[85dvh] rounded-2xl object-contain shadow-2xl"
+          />
+        </motion.div>
+      )}
+    </AnimatePresence>
   </>
   );
 }

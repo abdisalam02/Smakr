@@ -12,7 +12,7 @@ interface FoodViewSliderProps {
   className?: string;
 }
 
-const SPRING = { type: "spring", stiffness: 380, damping: 34, mass: 0.7 } as const;
+const SPRING = { type: "spring", stiffness: 520, damping: 34, mass: 0.52 } as const;
 
 export function FoodViewSlider({
   dishesCount,
@@ -73,7 +73,7 @@ export function FoodViewSlider({
           <motion.div
             layoutId="activeFeedTabPill"
             className="absolute inset-0 bg-[#e84a27] rounded-full shadow-xs -z-10 pointer-events-none"
-            transition={{ type: "spring", stiffness: 340, damping: 30, mass: 0.8 }}
+            transition={SPRING}
           />
         )}
         <motion.span layout className="flex items-center gap-1.5 shrink-0">
@@ -84,7 +84,7 @@ export function FoodViewSlider({
                 initial={{ opacity: 0, width: 0 }}
                 animate={{ opacity: 1, width: "auto" }}
                 exit={{ opacity: 0, width: 0 }}
-                transition={{ width: { type: "spring", stiffness: 380, damping: 34 }, opacity: { duration: 0.16, delay: 0.04 } }}
+                transition={{ width: SPRING, opacity: { duration: 0.12 } }}
                 className="flex items-center gap-1.5 whitespace-nowrap overflow-hidden"
               >
                 <span className="tracking-tight">Dishes</span>
@@ -129,7 +129,7 @@ export function FoodViewSlider({
           <motion.div
             layoutId="activeFeedTabPill"
             className="absolute inset-0 bg-[#e84a27] rounded-full shadow-xs -z-10 pointer-events-none"
-            transition={{ type: "spring", stiffness: 340, damping: 30, mass: 0.8 }}
+            transition={SPRING}
           />
         )}
         <motion.span layout className="flex items-center gap-1.5 shrink-0">
@@ -140,7 +140,7 @@ export function FoodViewSlider({
                 initial={{ opacity: 0, width: 0 }}
                 animate={{ opacity: 1, width: "auto" }}
                 exit={{ opacity: 0, width: 0 }}
-                transition={{ width: { type: "spring", stiffness: 380, damping: 34 }, opacity: { duration: 0.16, delay: 0.04 } }}
+                transition={{ width: SPRING, opacity: { duration: 0.12 } }}
                 className="flex items-center gap-1.5 whitespace-nowrap overflow-hidden"
               >
                 <span className="tracking-tight">Spots</span>

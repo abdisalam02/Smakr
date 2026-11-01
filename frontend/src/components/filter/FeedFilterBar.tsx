@@ -114,19 +114,6 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
     }
   };
 
-  // Collapse the drawer once the feed scrolls, same behaviour as the Smakr Pick capsule.
-  React.useEffect(() => {
-    if (!isExpanded) return;
-    const onScroll = (e: Event) => {
-      const t = e.target as HTMLElement | null;
-      if (t && t.hasAttribute && t.hasAttribute("data-feed-scroll") && t.scrollTop > 40) {
-        setIsExpanded(false);
-      }
-    };
-    document.addEventListener("scroll", onScroll, { capture: true, passive: true });
-    return () => document.removeEventListener("scroll", onScroll, { capture: true });
-  }, [isExpanded]);
-
   const currentCategory = useCityPulseStore((state) => state.feedCategory);
   const setFeedCategory = useCityPulseStore((state) => state.setFeedCategory);
   const selectedDietary = useCityPulseStore((state) => state.selectedDietary);
@@ -279,9 +266,9 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                   }
                 }}
                 aria-pressed={isActive}
-                className={`snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-colors duration-100 select-none active:scale-95 ${
+                className={`snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-all duration-200 ease-out select-none active:scale-95 ${
                   isActive
-                    ? "text-white border-transparent font-semibold shadow-xs"
+                    ? "text-white border-transparent font-semibold shadow-sm scale-[1.02]"
                     : "bg-white/80 dark:bg-white/5 text-zinc-600 dark:text-zinc-300 border-zinc-200/70 dark:border-white/10 hover:bg-white dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-white font-medium"
                 }`}
                 style={isActive ? { backgroundColor: "#e84a27" } : undefined}
@@ -302,10 +289,11 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
       <AnimatePresence initial={false}>
         {isExpanded && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            key="smakr-filter-drawer"
+            initial={{ height: 0, opacity: 0, y: -4 }}
+            animate={{ height: "auto", opacity: 1, y: 0 }}
+            exit={{ height: 0, opacity: 0, y: -4 }}
+            transition={{ type: "spring", stiffness: 380, damping: 32, mass: 0.65 }}
             className="w-full overflow-hidden border-t border-black/[0.06] dark:border-white/[0.08] bg-[#f7f4ed]/98 dark:bg-[#151413]/98"
           >
             <div className="px-3.5 py-2.5 space-y-2">

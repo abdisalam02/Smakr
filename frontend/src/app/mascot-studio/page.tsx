@@ -15,6 +15,10 @@ import {
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { persistMascotConfig } from "@/lib/supabase/data";
 import {
+  saveOfficialSmakrMascotConfig,
+  resetOfficialSmakrMascotConfig,
+} from "@/lib/officialSmakrMascot";
+import {
   MascotCharacter,
   buildMascotSVGString,
   MASCOT_VIEWBOX_WIDTH,
@@ -261,6 +265,9 @@ export default function MascotStudioPage() {
 
   const handleSave = async () => {
     updateMascotConfig(config);
+    if (isAdmin) {
+      saveOfficialSmakrMascotConfig(config);
+    }
     if (currentUser?.id) {
       await persistMascotConfig(currentUser.id, config);
       setCurrentUser({
@@ -289,6 +296,9 @@ export default function MascotStudioPage() {
 
   const handleReset = async () => {
     resetMascotConfig();
+    if (isAdmin) {
+      resetOfficialSmakrMascotConfig();
+    }
     if (currentUser?.id) {
       await persistMascotConfig(currentUser.id, DEFAULT_MASCOT_CONFIG);
       setCurrentUser({

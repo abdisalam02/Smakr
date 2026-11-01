@@ -723,14 +723,13 @@ export function MapRadarView() {
   }, [setSelectedVenue, flyToTarget]);
 
   // Anchor the official Smakr mascot exclusively to the Weekly Pick.
-  // Locked to OFFICIAL_SMAKR_MASCOT_CONFIG so logging out never changes the brand pin.
   const renderWeeklyMarker = useCallback(() => {
     const map = mapInstance.current;
     if (!map || !isMapReadyRef.current) return;
 
     const state = useCityPulseStore.getState();
     const pick = state.weeklyPick;
-    const config = OFFICIAL_SMAKR_MASCOT_CONFIG;
+    const config = getOfficialSmakrMascotConfig();
     const [lng, lat] = pick.coords;
     if (typeof lng !== "number" || typeof lat !== "number") return;
 
@@ -1170,6 +1169,9 @@ export function MapRadarView() {
   // 5. Weekly Pick mascot anchor (re-anchors + recolours on dispatch/config change)
   useEffect(() => {
     renderWeeklyMarker();
+    const onBrandUpdate = () => renderWeeklyMarker();
+    window.addEventListener("smakr:brand-mascot-updated", onBrandUpdate);
+    return () => window.removeEventListener("smakr:brand-mascot-updated", onBrandUpdate);
   }, [weeklyPick, mascotConfig, renderWeeklyMarker]);
 
   // 6. Synchronize active venue popup card directly under marker pin
@@ -1211,223 +1213,31 @@ export function MapRadarView() {
     const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${selectedVenue.latitude},${selectedVenue.longitude}`;
 
     const isWeeklyPickVenue = selectedVenue.id === weeklyPick.venue_id;
+    const displayImage = isWeeklyPickVenue
+      ? weeklyPick.dish_image || imageUrl
+      : imageUrl;
 
-    if (isWeeklyPickVenue) {
-      const pickDishImage = weeklyPick.dish_image || imageUrl;
-      popupNode.innerHTML = `
-        <div style="
-          background: rgba(250, 247, 242, 0.82);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
-          border: 1px solid rgba(255, 255, 255, 0.65);
-          border-radius: 18px;
-          box-shadow: 0 12px 32px rgba(24, 22, 21, 0.14);
-          overflow: hidden;
-          width: 268px;
-          max-width: 86vw;
-          position: relative;
-          font-family: inherit;
-        ">
-          <!-- Compact Frosted Smakr Pick Header (Only ✦ SMAKR PICK pill — no Drop #41) -->
-          <div style="
-            background: rgba(255, 243, 237, 0.65);
-            color: #7C2D12;
-            padding: 6px 10px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 1px solid rgba(232, 74, 39, 0.14);
-          ">
-            <span style="
-              background: #E84A27;
-              color: #FFFFFF;
-              font-size: 8.5px;
-              font-weight: 800;
-              letter-spacing: 0.06em;
-              text-transform: uppercase;
-              padding: 2px 7px;
-              border-radius: 999px;
-            ">✦ SMAKR PICK</span>
-            <button id="smakr-popup-close-btn" style="
-              width: 18px;
-              height: 18px;
-              border-radius: 50%;
-              background: rgba(24, 22, 21, 0.08);
-              border: none;
-              color: #57534E;
-              font-size: 10px;
-              cursor: pointer;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-            ">✕</button>
-          </div>
-
-          <div style="padding: 10px;">
-            <!-- Compact 64x64 Dish + Spot Row (No 'Featured Dish' overline) -->
-            <div style="display: flex; gap: 9px; align-items: center;">
-              <div style="
-                position: relative;
-                width: 64px;
-                height: 64px;
-                border-radius: 12px;
-                overflow: hidden;
-                flex-shrink: 0;
-                background: #F5EFE3;
-                border: 1px solid rgba(24, 22, 21, 0.08);
-              ">
-                <img src="${pickDishImage}" alt="${weeklyPick.dish_name}" style="width: 100%; height: 100%; object-fit: cover;" />
-                <span style="
-                  position: absolute;
-                  bottom: 3px;
-                  right: 3px;
-                  background: #E84A27;
-                  color: #FFFFFF;
-                  font-size: 9px;
-                  font-weight: 800;
-                  padding: 1px 5px;
-                  border-radius: 5px;
-                  box-shadow: 0 2px 5px rgba(232, 74, 39, 0.32);
-                ">${weeklyPick.price_nok} kr</span>
-              </div>
-
-              <div style="flex: 1; min-width: 0;">
-                <div style="
-                  font-family: var(--font-comico, sans-serif);
-                  font-size: 13.5px;
-                  color: #181615;
-                  font-weight: bold;
-                  white-space: nowrap;
-                  overflow: hidden;
-                  text-overflow: ellipsis;
-                ">
-                  ${weeklyPick.dish_name}
-                </div>
-
-                <div style="
-                  font-size: 11px;
-                  font-weight: 700;
-                  color: #57534E;
-                  margin-top: 1px;
-                  white-space: nowrap;
-                  overflow: hidden;
-                  text-overflow: ellipsis;
-                ">
-                  📍 ${selectedVenue.name}
-                </div>
-
-                <div style="display: flex; align-items: center; gap: 4px; margin-top: 3px; flex-wrap: wrap;">
-                  <span style="
-                    background: rgba(254, 243, 199, 0.85);
-                    color: #92400E;
-                    border: 1px solid #FDE68A;
-                    font-size: 9px;
-                    font-weight: bold;
-                    padding: 1px 5.5px;
-                    border-radius: 999px;
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 2px;
-                  ">
-                    <span style="color: #D97706;">★</span> ${ratingVal}
-                  </span>
-                  <span style="
-                    background: ${openStatus.isOpen ? 'rgba(236, 253, 245, 0.85)' : 'rgba(254, 242, 242, 0.85)'};
-                    color: ${openStatus.isOpen ? '#047857' : '#b91c1c'};
-                    border: 1px solid ${openStatus.isOpen ? '#a7f3d0' : '#fecaca'};
-                    font-size: 8.5px;
-                    font-weight: 700;
-                    padding: 1px 5.5px;
-                    border-radius: 999px;
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 3px;
-                  ">
-                    <span style="width: 4.5px; height: 4.5px; border-radius: 50%; background: ${openStatus.isOpen ? '#10b981' : '#ef4444'};"></span>
-                    ${openStatus.statusText}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Compact Mascot Quote Box -->
-            <div style="
-              margin-top: 7px;
-              padding: 5.5px 8px;
-              border-radius: 9px;
-              background: rgba(255, 255, 255, 0.65);
-              border: 1px solid rgba(232, 74, 39, 0.18);
-              border-left: 2.5px solid #E84A27;
-              font-size: 10.5px;
-              font-style: italic;
-              font-weight: 600;
-              color: #292524;
-              line-height: 1.3;
-            ">
-              <span style="color: #E84A27; font-style: normal; font-weight: 800; margin-right: 3px;">✦</span>&ldquo;${weeklyPick.speech_bubble}&rdquo;
-            </div>
-
-            <!-- Compact 30px Action Row -->
-            <div style="display: flex; gap: 6px; margin-top: 7px; padding-top: 7px; border-top: 1px solid rgba(24, 22, 21, 0.06);">
-              <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" style="
-                flex: 1;
-                height: 30px;
-                padding: 0 8px;
-                border-radius: 8px;
-                background: rgba(255, 255, 255, 0.85);
-                border: 1px solid rgba(24, 22, 21, 0.12);
-                color: #181615;
-                font-size: 10px;
-                font-weight: 700;
-                text-align: center;
-                text-decoration: none;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 3px;
-              ">
-                <span>Directions</span> ↗
-              </a>
-
-              <button id="smakr-popup-menu-btn" style="
-                flex: 1.25;
-                height: 30px;
-                padding: 0 8px;
-                border-radius: 8px;
-                background: #E84A27;
-                border: none;
-                color: #ffffff;
-                font-family: var(--font-comico, sans-serif);
-                font-size: 10px;
-                font-weight: bold;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 3px;
-                box-shadow: 0 2px 6px rgba(232,74,39,0.26);
-              ">
-                <span>Spot &amp; Menu</span> →
-              </button>
-            </div>
-          </div>
-        </div>
-      `;
-    } else {
-      popupNode.innerHTML = `
+    popupNode.innerHTML = `
       <div style="
-        background: rgba(250, 247, 242, 0.82);
+        background: rgba(250, 247, 242, 0.92);
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.65);
+        border: 1px solid ${isWeeklyPickVenue ? "rgba(232, 74, 39, 0.35)" : "rgba(255, 255, 255, 0.65)"};
         border-radius: 18px;
-        box-shadow: 0 12px 32px rgba(24, 22, 21, 0.14);
+        box-shadow: 0 12px 32px rgba(24, 22, 21, 0.16);
         padding: 10px;
         width: 280px;
         max-width: 86vw;
         position: relative;
         font-family: inherit;
+        animation: smakrPopupEnter 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
       ">
+        <style>
+          @keyframes smakrPopupEnter {
+            from { opacity: 0; transform: translateY(-6px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+          }
+        </style>
         <button id="smakr-popup-close-btn" style="
           position: absolute;
           top: 6px;
@@ -1448,6 +1258,7 @@ export function MapRadarView() {
 
         <div style="display: flex; gap: 10px; align-items: center;">
           <div style="
+            position: relative;
             width: 68px;
             height: 68px;
             border-radius: 13px;
@@ -1456,7 +1267,23 @@ export function MapRadarView() {
             background: #e4d9c8;
             border: 1px solid rgba(24, 22, 21, 0.08);
           ">
-            <img src="${imageUrl}" alt="${selectedVenue.name}" style="width: 100%; height: 100%; object-fit: cover;" />
+            <img src="${displayImage}" alt="${selectedVenue.name}" style="width: 100%; height: 100%; object-fit: cover;" />
+            ${
+              isWeeklyPickVenue && weeklyPick.price_nok
+                ? `<span style="
+                    position: absolute;
+                    bottom: 3px;
+                    right: 3px;
+                    background: #E84A27;
+                    color: #FFFFFF;
+                    font-size: 8.5px;
+                    font-weight: 800;
+                    padding: 1px 4.5px;
+                    border-radius: 5px;
+                    box-shadow: 0 2px 5px rgba(232, 74, 39, 0.32);
+                  ">${weeklyPick.price_nok} kr</span>`
+                : ""
+            }
           </div>
 
           <div style="flex: 1; min-width: 0;">
@@ -1474,6 +1301,20 @@ export function MapRadarView() {
             </div>
 
             <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px; flex-wrap: wrap;">
+              ${
+                isWeeklyPickVenue
+                  ? `<span style="
+                      background: #E84A27;
+                      color: #FFFFFF;
+                      font-size: 8.5px;
+                      font-weight: 800;
+                      letter-spacing: 0.04em;
+                      text-transform: uppercase;
+                      padding: 1px 6px;
+                      border-radius: 999px;
+                    ">✦ Smakr Pick</span>`
+                  : ""
+              }
               <span style="
                 background: #181615;
                 color: #ffffff;
@@ -1510,9 +1351,11 @@ export function MapRadarView() {
               color: #57534E;
               margin-top: 3px;
               line-height: 1.3;
-              word-break: break-word;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
             ">
-              📍 ${addressText}
+              ${isWeeklyPickVenue && weeklyPick.dish_name ? `✦ ${weeklyPick.dish_name} · ${addressText}` : `📍 ${addressText}`}
             </div>
           </div>
         </div>
@@ -1561,7 +1404,6 @@ export function MapRadarView() {
         </div>
       </div>
     `;
-    }
 
     popupNode.querySelector("#smakr-popup-close-btn")?.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -1574,8 +1416,8 @@ export function MapRadarView() {
     });
 
     const popup = new maplibregl.Popup({
-      offset: isWeeklyPickVenue ? [0, -56] : [0, 22],
-      anchor: isWeeklyPickVenue ? "bottom" : "top",
+      offset: isWeeklyPickVenue ? [0, 14] : [0, 22],
+      anchor: "top",
       closeButton: false,
       closeOnClick: false,
       focusAfterOpen: false,

@@ -508,7 +508,7 @@ export interface MapShotState {
   venues?: StudioVenueItem[];
   activeVenueIndex?: number;
   layoutMode?: 'single' | 'multi_compact' | 'multi_full';
-  multiPlacementMode?: 'auto_stack' | 'bento' | 'free_drag';
+  multiPlacementMode?: 'auto_fan' | 'bottom_shelf' | 'free_drag' | 'auto_stack' | 'bento';
   autoFitCamera?: boolean;
   roundupTitle?: string;
   showRoundupBanner?: boolean;

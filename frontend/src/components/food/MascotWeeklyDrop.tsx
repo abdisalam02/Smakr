@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { MapPin, ArrowUpRight, X, ChevronDown, Pencil } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { MascotCharacter } from "@/components/avatar/MascotCharacter";
 import {
@@ -80,10 +81,10 @@ export function MascotWeeklyDrop({
 
   const isViewerAdmin = currentUser?.role === "admin";
 
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [brandMascot, setBrandMascot] = useState<MascotConfig>(
-    () => OFFICIAL_SMAKR_MASCOT_CONFIG
+    () => getOfficialSmakrMascotConfig()
   );
   const rootRef = useRef<HTMLElement>(null);
 
@@ -109,7 +110,7 @@ export function MascotWeeklyDrop({
   const weekChip = (weeklyPick.week_label || "This Week").replace(/\s*pick$/i, "").trim();
   const weekNumber = weekChip.replace(/[^0-9]/g, "") || "41";
 
-  const [isScrolledDown, setIsScrolledDown] = useState(false);
+  const isScrolledDown = false;
 
   // Auto-collapse when sheet transitions to peek
   useEffect(() => {
@@ -117,29 +118,6 @@ export function MascotWeeklyDrop({
       setIsExpanded(false);
     }
   }, [isPeek]);
-
-  // Scroll-driven collapse: listen to feed container scroll (passive)
-  useEffect(() => {
-    const containers = Array.from(
-      document.querySelectorAll<HTMLElement>("[data-feed-scroll]")
-    );
-    let scrolled = false;
-    const cleanups = containers.map((el) => {
-      const onScroll = () => {
-        // Hysteresis: the capsule changes height, which shifts the scroller; a single
-        // threshold made scrollTop oscillate across it and flicker the page.
-        const isDown = scrolled ? el.scrollTop > 12 : el.scrollTop > 70;
-        if (isDown !== scrolled) {
-          scrolled = isDown;
-          setIsScrolledDown(isDown);
-          if (isDown) setIsExpanded(false);
-        }
-      };
-      el.addEventListener("scroll", onScroll, { passive: true });
-      return () => el.removeEventListener("scroll", onScroll);
-    });
-    return () => cleanups.forEach((fn) => fn());
-  }, []);
 
   const handleSpot = () => {
     setIsExpanded(false);
@@ -295,16 +273,21 @@ export function MascotWeeklyDrop({
         </div>
       )}
 
-      {/* ── Expanded spotlight card underneath ── */}
-      <div
-        className={`grid transition-[grid-template-rows,opacity] duration-200 ease-out will-change-[grid-template-rows,opacity] ${
-          isExpanded ? "grid-rows-[1fr] opacity-100 mt-2.5" : "grid-rows-[0fr] opacity-0"
-        }`}
-      >
-        <div className="overflow-hidden">
-          <div
-            className="w-full max-w-full mx-auto relative overflow-hidden rounded-3xl bg-[#FAF7F2] dark:bg-[#181615] border border-[#181615]/10 dark:border-white/10 shadow-xl p-3 sm:p-3.5 space-y-2.5 mt-1"
+      {/* ── Expanded spotlight card underneath (smooth spring accordion) ── */}
+      <AnimatePresence initial={false}>
+        {isExpanded && (
+          <motion.div
+            key="smakr-weekly-drop-panel"
+            initial={{ height: 0, opacity: 0, y: -6, scale: 0.985 }}
+            animate={{ height: "auto", opacity: 1, y: 0, scale: 1 }}
+            exit={{ height: 0, opacity: 0, y: -6, scale: 0.985 }}
+            transition={{ type: "spring", stiffness: 380, damping: 32, mass: 0.68 }}
+            className="overflow-hidden"
           >
+            <div className="pt-2.5 pb-0.5">
+              <div
+                className="w-full max-w-full mx-auto relative overflow-hidden rounded-3xl bg-[#FAF7F2] dark:bg-[#181615] border border-[#181615]/10 dark:border-white/10 shadow-xl p-3 sm:p-3.5 space-y-2.5"
+              >
             {/* ROW 1: Mascot on Left + Clean Speech Bubble with ✦ SMAKR PICK on Right */}
             <div className="flex gap-2.5 sm:gap-3 items-stretch">
               {/* Mascot Anchor Box (Warm Pedestal Box, Unclipped Afro) */}
@@ -415,9 +398,11 @@ export function MascotWeeklyDrop({
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <EditWeeklyDropModal
         isOpen={isEditModalOpen}

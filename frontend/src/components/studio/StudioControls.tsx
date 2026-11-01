@@ -30,7 +30,7 @@ import {
 } from '@/lib/blushMascotCatalog';
 import { Color } from './StudioUi';
 import { SmakrMascotRig } from './SmakrMascotRig';
-import { MapShot } from './MapShot';
+import { MapShot, computeMultiSpotSpatialLayout } from './MapShot';
 import { StudioCanvas } from './StudioCanvas';
 import { StudioCaptionGenerator } from './StudioCaptionGenerator';
 import { useCityPulseStore } from '@/store/useCityPulseStore';
@@ -1709,6 +1709,42 @@ export function StudioControls({
                   </div>
                 </div>
 
+                {/* Placement / Anti-Collision Mode */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-[#231F1D]">
+                      Collision & Placement Mode
+                    </label>
+                    <span className="text-[10px] text-[#8C827A]">
+                      {(state.map.multiPlacementMode || 'auto_fan') === 'auto_fan' ? 'Smart Fan-Out' : 'Bottom Shelf'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onUpdateMap({ multiPlacementMode: 'auto_fan' })}
+                      className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                        (state.map.multiPlacementMode || 'auto_fan') === 'auto_fan'
+                          ? 'bg-[#FAF7F2] border-[#e84a27] text-[#e84a27] ring-1 ring-[#e84a27]'
+                          : 'bg-white border-[#D8CFC0] text-[#6E655F]'
+                      }`}
+                    >
+                      <span>📍 Smart Fan-Out</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onUpdateMap({ multiPlacementMode: 'bottom_shelf' })}
+                      className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                        state.map.multiPlacementMode === 'bottom_shelf'
+                          ? 'bg-[#FAF7F2] border-[#e84a27] text-[#e84a27] ring-1 ring-[#e84a27]'
+                          : 'bg-white border-[#D8CFC0] text-[#6E655F]'
+                      }`}
+                    >
+                      <span>🗂️ Bottom Shelf</span>
+                    </button>
+                  </div>
+                </div>
+
                 {/* Multi-Spot Camera Zoom Controls */}
                 <div className="p-3 bg-white rounded-2xl border border-[#E6DEC8] space-y-2">
                   <div className="flex items-center justify-between">
@@ -1820,22 +1856,44 @@ export function StudioControls({
                         Drag cards directly with your mouse on preview
                       </span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const resetVenues = (state.map.venues || []).map((v) => ({
-                          ...v,
-                          x: 0,
-                          y: 0,
-                        }));
-                        onUpdateMap({ venues: resetVenues, cardOffsetY: 0 });
-                      }}
-                      className="py-1 px-2.5 rounded-xl text-xs font-bold bg-[#FAF7F2] text-[#231F1D] border border-[#D8CFC0] hover:bg-[#EFEAE1] transition-all cursor-pointer flex items-center gap-1"
-                      title="Reset all cards to default positions"
-                    >
-                      <RotateCcw className="w-3 h-3 text-[#e84a27]" />
-                      <span>Reset Positions</span>
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const spatial = computeMultiSpotSpatialLayout(
+                            state.map.venues || [],
+                            state.map.cardScale || 1
+                          );
+                          const spreadVenues = (state.map.venues || []).map((v, idx) => ({
+                            ...v,
+                            x: spatial[idx]?.autoX ?? 0,
+                            y: spatial[idx]?.autoY ?? 0,
+                          }));
+                          onUpdateMap({ venues: spreadVenues });
+                        }}
+                        className="py-1 px-2.5 rounded-xl text-xs font-bold bg-[#FAF0ED] text-[#e84a27] border border-[#e84a27]/30 hover:bg-[#FCE8E3] transition-all cursor-pointer flex items-center gap-1"
+                        title="Automatically spread cards to non-overlapping positions"
+                      >
+                        <Sparkles className="w-3 h-3 text-[#e84a27]" />
+                        <span>Auto-Spread</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const resetVenues = (state.map.venues || []).map((v) => ({
+                            ...v,
+                            x: undefined,
+                            y: undefined,
+                          }));
+                          onUpdateMap({ venues: resetVenues, cardOffsetY: 0 });
+                        }}
+                        className="py-1 px-2.5 rounded-xl text-xs font-bold bg-[#FAF7F2] text-[#231F1D] border border-[#D8CFC0] hover:bg-[#EFEAE1] transition-all cursor-pointer flex items-center gap-1"
+                        title="Reset all cards to smart default positions"
+                      >
+                        <RotateCcw className="w-3 h-3 text-[#8C827A]" />
+                        <span>Reset</span>
+                      </button>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-3 gap-2 pt-1">

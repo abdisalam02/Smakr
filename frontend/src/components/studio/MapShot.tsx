@@ -1,6 +1,6 @@
 'use client';
 
-import React, { forwardRef, useEffect, useRef, useState } from 'react';
+import React, { forwardRef, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -93,40 +93,217 @@ interface MapShotProps {
   onUpdateVenueOffset?: (venueIdOrIndex: string | number, x: number, y: number) => void;
 }
 
+export interface SpotSpatialLayout {
+  pinSize: number;
+  autoX: number;
+  autoY: number;
+  anchorDirection: 'above' | 'below' | 'left' | 'right';
+  isCrowded: boolean;
+}
+
+/**
+ * Intelligent spatial layout algorithm for multi-spot crawl maps.
+ * Computes proximity, detects dense clusters, dynamically scales pins,
+ * and calculates anti-collision directional fan-out vectors so cards never overlap.
+ */
+export function computeMultiSpotSpatialLayout(
+  venues: StudioVenueItem[],
+  cardScale = 1
+): SpotSpatialLayout[] {
+  const n = venues.length;
+  if (n === 0) return [];
+  if (n === 1) {
+    return [
+      {
+        pinSize: 72,
+        autoX: 0,
+        autoY: 0,
+        anchorDirection: 'below',
+        isCrowded: false,
+      },
+    ];
+  }
+
+  // 1. Calculate pairwise geographic distances (in meters)
+  // At Oslo latitude (~60 deg N):
+  // 1 deg lat ~= 111,320m, 1 deg lng ~= 55,660m
+  const minDists: number[] = Array(n).fill(Infinity);
+
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      if (i === j) continue;
+      const dLatMeters = (venues[j].lat - venues[i].lat) * 111320;
+      const dLngMeters = (venues[j].lng - venues[i].lng) * 55660;
+      const d = Math.hypot(dLatMeters, dLngMeters);
+      if (d < minDists[i]) minDists[i] = d;
+    }
+  }
+
+  // If any two venues are closer than 450 meters, they are in danger of overlap at crawl zoom levels
+  const clusterIsDense = minDists.some((d) => d < 450);
+
+  // Card height approximation based on scale
+  const approxCardHeight = Math.round(175 * cardScale);
+  const upwardOffsetY = -approxCardHeight - 56;
+
+  const layouts: SpotSpatialLayout[] = [];
+
+  for (let i = 0; i < n; i++) {
+    const minDist = minDists[i];
+    // Dynamic Proximity Pin Size:
+    // When venues are close, scale pin down so they stay crisp and never collide
+    let pinSize = 72;
+    let isCrowded = false;
+    if (minDist < 70) {
+      pinSize = 48;
+      isCrowded = true;
+    } else if (minDist < 130) {
+      pinSize = 56;
+      isCrowded = true;
+    } else if (minDist < 220) {
+      pinSize = 64;
+    }
+
+    if (!clusterIsDense) {
+      // Spots are far apart (different neighborhoods) - standard downward cards with slight stagger
+      const defaultStaggerX = n > 1 ? (i % 2 === 0 ? -14 : 14) : 0;
+      layouts.push({
+        pinSize,
+        autoX: defaultStaggerX,
+        autoY: 0,
+        anchorDirection: 'below',
+        isCrowded,
+      });
+      continue;
+    }
+
+    // Spots ARE dense / close to each other!
+    if (n === 2) {
+      // 2 spots: Northern spot sits ABOVE pin, Southern spot sits BELOW pin!
+      const isNorthern = venues[0].lat >= venues[1].lat ? i === 0 : i === 1;
+      const isWestern = venues[0].lng <= venues[1].lng ? i === 0 : i === 1;
+      const lateralShift = isWestern ? -28 : 28;
+
+      if (isNorthern) {
+        layouts.push({
+          pinSize,
+          autoX: lateralShift,
+          autoY: upwardOffsetY,
+          anchorDirection: 'above',
+          isCrowded,
+        });
+      } else {
+        layouts.push({
+          pinSize,
+          autoX: lateralShift,
+          autoY: 0,
+          anchorDirection: 'below',
+          isCrowded,
+        });
+      }
+    } else if (n === 3) {
+      // 3 spots: Sort by latitude descending (North to South)
+      const sortedIndicesByLat = [...Array(3).keys()].sort(
+        (a, b) => venues[b].lat - venues[a].lat
+      );
+      const topIdx = sortedIndicesByLat[0];
+      const midIdx = sortedIndicesByLat[1];
+      const botIdx = sortedIndicesByLat[2];
+
+      if (i === topIdx) {
+        // Northernmost spot: sits ABOVE, shifted slightly left
+        layouts.push({
+          pinSize,
+          autoX: -36,
+          autoY: upwardOffsetY,
+          anchorDirection: 'above',
+          isCrowded,
+        });
+      } else if (i === botIdx) {
+        // Southernmost spot: sits BELOW, shifted slightly right
+        layouts.push({
+          pinSize,
+          autoX: 36,
+          autoY: 0,
+          anchorDirection: 'below',
+          isCrowded,
+        });
+      } else {
+        // Middle spot: checks longitude relative to top/bot average
+        const avgLng = (venues[topIdx].lng + venues[botIdx].lng) / 2;
+        const midIsWest = venues[midIdx].lng <= avgLng;
+        layouts.push({
+          pinSize,
+          autoX: midIsWest ? -150 : 150,
+          autoY: Math.round(upwardOffsetY * 0.48),
+          anchorDirection: midIsWest ? 'left' : 'right',
+          isCrowded,
+        });
+      }
+    } else {
+      // 4 spots: Quadrant fan-out from cluster centroid
+      const centerLat = venues.reduce((acc, v) => acc + v.lat, 0) / n;
+      const centerLng = venues.reduce((acc, v) => acc + v.lng, 0) / n;
+      const isNorth = venues[i].lat >= centerLat;
+      const isWest = venues[i].lng <= centerLng;
+
+      const autoX = isWest ? -54 : 54;
+      const autoY = isNorth ? upwardOffsetY : 0;
+      layouts.push({
+        pinSize,
+        autoX,
+        autoY,
+        anchorDirection: isNorth ? 'above' : 'below',
+        isCrowded,
+      });
+    }
+  }
+
+  return layouts;
+}
+
 /**
  * MultiVenuePin
- * Fixed-size circular pin anchored at center to exact GPS coordinate with zIndex 50
+ * Proximity-aware circular pin anchored at center to exact GPS coordinate with zIndex 50
  * so it is NEVER hidden by any card on the map.
  */
 function MultiVenuePin({
   venue,
   index,
   s,
+  pinSize = 72,
+  isCrowded = false,
 }: {
   venue: StudioVenueItem;
   index: number;
   s: MapShotState;
+  pinSize?: number;
+  isCrowded?: boolean;
 }) {
-  const pinSize = 72;
+  const badgeSize = Math.max(20, Math.round(pinSize * 0.36));
+  const badgeFontSize = Math.max(10, Math.round(pinSize * 0.18));
+  const emojiFontSize = Math.round(pinSize * 0.52);
+
   return (
     <div
-      className="relative flex items-center justify-center rounded-full bg-white/95 shrink-0 transition-transform select-none cursor-pointer"
+      className="relative flex items-center justify-center rounded-full bg-white/95 shrink-0 transition-all select-none cursor-pointer"
       style={{
         width: pinSize,
         height: pinSize,
-        fontSize: pinSize * 0.52,
-        border: '3.5px solid rgba(255, 255, 255, 0.95)',
-        boxShadow:
-          '0 0 36px 8px rgba(232, 74, 39, 0.35), 0 10px 24px rgba(0, 0, 0, 0.25)',
+        fontSize: emojiFontSize,
+        border: `${pinSize < 55 ? 2.5 : 3.5}px solid rgba(255, 255, 255, 0.95)`,
+        boxShadow: isCrowded
+          ? '0 0 18px 4px rgba(232, 74, 39, 0.3), 0 6px 16px rgba(0, 0, 0, 0.22)'
+          : '0 0 36px 8px rgba(232, 74, 39, 0.35), 0 10px 24px rgba(0, 0, 0, 0.25)',
       }}
     >
       <span>{venue.icon || '🍽️'}</span>
       <span
         className="absolute -top-1 -right-1 flex items-center justify-center rounded-full bg-[#e84a27] text-white font-comico font-black border-2 border-white shadow-md"
         style={{
-          width: 26,
-          height: 26,
-          fontSize: 13,
+          width: badgeSize,
+          height: badgeSize,
+          fontSize: badgeFontSize,
         }}
       >
         {index + 1}
@@ -137,7 +314,7 @@ function MultiVenuePin({
 
 /**
  * MultiVenueCard
- * Scalable Warm Nordic card anchored below the pin with adaptive width and edge safety.
+ * Scalable Warm Nordic card with smart directional anchoring and anti-collision offsets.
  */
 function MultiVenueCard({
   venue,
@@ -145,6 +322,7 @@ function MultiVenueCard({
   s,
   t,
   totalSpots,
+  spatialLayout,
   onUpdateVenueOffset,
 }: {
   venue: StudioVenueItem;
@@ -152,6 +330,7 @@ function MultiVenueCard({
   s: MapShotState;
   t: (typeof THEMES)[keyof typeof THEMES];
   totalSpots: number;
+  spatialLayout?: SpotSpatialLayout;
   onUpdateVenueOffset?: (venueIdOrIndex: string | number, x: number, y: number) => void;
 }) {
   const isCompact = s.layoutMode === 'multi_compact';
@@ -160,16 +339,9 @@ function MultiVenueCard({
   const defaultWidth = totalSpots >= 4 ? 300 : totalSpots === 3 ? 340 : 380;
   const cardWidth = Math.min(s.cardWidth || 860, defaultWidth);
 
-  // Smart Horizontal Edge Shift: bias boundary cards inward so they never clip canvas edges
-  const allLngs = (s.venues || []).map((v) => v.lng);
-  const minLng = allLngs.length > 0 ? Math.min(...allLngs) : venue.lng;
-  const maxLng = allLngs.length > 0 ? Math.max(...allLngs) : venue.lng;
-  const isLeftmost = minLng !== maxLng && venue.lng === minLng;
-  const isRightmost = minLng !== maxLng && venue.lng === maxLng;
-
-  // Alternating slight lateral offset biased inward at boundaries
-  const defaultStaggerX = totalSpots > 1 ? (index % 2 === 0 ? -14 : 14) : 0;
-  const staggerX = isLeftmost ? 28 : isRightmost ? -28 : defaultStaggerX;
+  // Default computed spatial offsets
+  const defaultAutoX = spatialLayout?.autoX ?? (totalSpots > 1 ? (index % 2 === 0 ? -14 : 14) : 0);
+  const defaultAutoY = spatialLayout?.autoY ?? 0;
 
   const [dragDelta, setDragDelta] = useState<{ x: number; y: number } | null>(null);
   const isDraggingRef = useRef(false);
@@ -184,7 +356,10 @@ function MultiVenueCard({
     } catch {}
     isDraggingRef.current = true;
     startPosRef.current = { x: e.clientX, y: e.clientY };
-    startOffsetRef.current = { x: venue.x || 0, y: venue.y || 0 };
+    startOffsetRef.current = {
+      x: venue.x != null ? venue.x : defaultAutoX,
+      y: venue.y != null ? venue.y : defaultAutoY,
+    };
     setDragDelta({ x: 0, y: 0 });
   };
 
@@ -213,8 +388,8 @@ function MultiVenueCard({
     onUpdateVenueOffset?.(venue.id || index, finalX, finalY);
   };
 
-  const currentX = (venue.x != null ? venue.x : staggerX) + (dragDelta?.x || 0);
-  const currentY = (venue.y || 0) + (dragDelta?.y || 0);
+  const currentX = (venue.x != null ? venue.x : defaultAutoX) + (dragDelta?.x || 0);
+  const currentY = (venue.y != null ? venue.y : defaultAutoY) + (dragDelta?.y || 0);
   const isCustomMoved = venue.x != null || venue.y != null;
 
   return (
@@ -223,7 +398,7 @@ function MultiVenueCard({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
-      className="group select-none pointer-events-auto touch-none"
+      className="group select-none pointer-events-auto touch-none relative"
       style={{
         marginTop: 48 + (s.cardOffsetY || 0),
         width: cardWidth,
@@ -232,6 +407,31 @@ function MultiVenueCard({
         cursor: dragDelta ? 'grabbing' : 'grab',
       }}
     >
+      {/* Editorial Leader Connecting Stem to Pin */}
+      {currentY < -40 && (
+        <div
+          data-export-ignore="false"
+          className="absolute left-1/2 -translate-x-1/2 top-full flex flex-col items-center pointer-events-none"
+          style={{ height: Math.max(16, Math.min(65, -currentY - 145)) }}
+        >
+          <div
+            className="w-0.5 flex-1"
+            style={{
+              background: `linear-gradient(to bottom, #e84a27 0%, rgba(232, 74, 39, 0.45) 100%)`,
+            }}
+          />
+          <div className="w-2 h-2 rounded-full bg-[#e84a27] shadow-xs shrink-0" />
+        </div>
+      )}
+      {currentY >= 0 && Math.abs(currentX) > 45 && (
+        <div
+          data-export-ignore="false"
+          className="absolute -top-3.5 left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none"
+        >
+          <div className="w-2 h-2 rounded-full bg-[#e84a27] shadow-xs shrink-0" />
+          <div className="w-0.5 h-3 bg-[#e84a27]/50" />
+        </div>
+      )}
       <section
         className="shadow-2xl border transition-shadow"
         style={{
@@ -387,9 +587,14 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
       s.layoutMode !== 'single'
   );
   const venuesList = isMulti ? s.venues! : [];
+  const isBottomShelf = s.multiPlacementMode === 'bottom_shelf';
   const venuesIdentityKey = isMulti
-    ? venuesList.map((v) => `${v.id || ''}_${v.name}`).join('|')
+    ? `${venuesList.map((v) => `${v.id || ''}_${v.name}`).join('|')}_${s.multiPlacementMode || 'auto_fan'}`
     : 'single';
+
+  const spatialLayouts = useMemo(() => {
+    return computeMultiSpotSpatialLayout(venuesList, s.cardScale || 1);
+  }, [venuesList, s.cardScale]);
 
   // Initialize MapLibre GL only if map rendering is requested
   useEffect(() => {
@@ -515,21 +720,23 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
           pinMarker.getElement().style.zIndex = '100';
           markersRef.current.push(pinMarker);
 
-          // 2. Card Marker — lower layer (zIndex: 20 + idx on MapLibre marker wrapper)
+          // 2. Card Marker — only created when NOT in bottom_shelf mode
           const cardEl = document.createElement('div');
-          cardEl.className = 'smakr-multi-spot-card-marker';
-          cardEl.style.position = 'relative';
-          cardEl.style.cursor = 'pointer';
+          if (!isBottomShelf) {
+            cardEl.className = 'smakr-multi-spot-card-marker';
+            cardEl.style.position = 'relative';
+            cardEl.style.cursor = 'pointer';
 
-          const cardMarker = new maplibregl.Marker({
-            element: cardEl,
-            anchor: 'top',
-          })
-            .setLngLat([v.lng, v.lat])
-            .addTo(map);
+            const cardMarker = new maplibregl.Marker({
+              element: cardEl,
+              anchor: 'top',
+            })
+              .setLngLat([v.lng, v.lat])
+              .addTo(map);
 
-          cardMarker.getElement().style.zIndex = String(20 + idx);
-          markersRef.current.push(cardMarker);
+            cardMarker.getElement().style.zIndex = String(20 + idx);
+            markersRef.current.push(cardMarker);
+          }
 
           newTargets.push({ pinEl, cardEl, venue: v, index: idx });
         });
@@ -538,12 +745,19 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
         setPortalTargets(newTargets);
       } else {
         // Update positions in place without destroying DOM elements
-        venuesList.forEach((v, idx) => {
-          const pinMarker = markersRef.current[idx * 2];
-          const cardMarker = markersRef.current[idx * 2 + 1];
-          if (pinMarker) pinMarker.setLngLat([v.lng, v.lat]);
-          if (cardMarker) cardMarker.setLngLat([v.lng, v.lat]);
-        });
+        if (!isBottomShelf) {
+          venuesList.forEach((v, idx) => {
+            const pinMarker = markersRef.current[idx * 2];
+            const cardMarker = markersRef.current[idx * 2 + 1];
+            if (pinMarker) pinMarker.setLngLat([v.lng, v.lat]);
+            if (cardMarker) cardMarker.setLngLat([v.lng, v.lat]);
+          });
+        } else {
+          venuesList.forEach((v, idx) => {
+            const pinMarker = markersRef.current[idx];
+            if (pinMarker) pinMarker.setLngLat([v.lng, v.lat]);
+          });
+        }
       }
     } else {
       markersRef.current.forEach((m) => m.remove());
@@ -551,7 +765,7 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
       setPortalTargets([]);
       prevVenuesKeyRef.current = '';
     }
-  }, [needsMap, isMulti, venuesIdentityKey, venuesList]);
+  }, [needsMap, isMulti, venuesIdentityKey, venuesList, isBottomShelf]);
 
   // Effect B: Camera Synchronization & Dynamic Card-Aware Auto-Fit (Does NOT touch DOM markers)
   useEffect(() => {
@@ -590,16 +804,23 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
         const effectiveCardH = (165 * (s.cardScale || 1) + 48) * scaleRatio;
         const effectiveTopBanner = (s.roundupTitle ? 150 : 90) * scaleRatio;
 
-        const safePadding = {
-          top: Math.min(containerH * 0.28, Math.max(70, effectiveTopBanner)),
-          bottom: Math.min(containerH * 0.35, Math.max(110, effectiveCardH)),
-          left: Math.min(containerW * 0.28, Math.max(90, effectiveCardHalfW)),
-          right: Math.min(containerW * 0.28, Math.max(90, effectiveCardHalfW)),
-        };
+        const safePadding = isBottomShelf
+          ? {
+              top: Math.min(containerH * 0.22, Math.max(60, effectiveTopBanner)),
+              bottom: Math.min(containerH * 0.38, Math.max(160, 210 * scaleRatio)),
+              left: Math.min(containerW * 0.2, 70),
+              right: Math.min(containerW * 0.2, 70),
+            }
+          : {
+              top: Math.min(containerH * 0.32, Math.max(110, (effectiveTopBanner + effectiveCardH) * 0.7)),
+              bottom: Math.min(containerH * 0.34, Math.max(110, effectiveCardH)),
+              left: Math.min(containerW * 0.28, Math.max(90, effectiveCardHalfW)),
+              right: Math.min(containerW * 0.28, Math.max(90, effectiveCardHalfW)),
+            };
 
         map.fitBounds(bounds, {
           padding: safePadding,
-          maxZoom: 15.8,
+          maxZoom: 15.6,
           duration: 0,
         });
 
@@ -1003,6 +1224,62 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
       {!isMulti && s.showPin && renderPin(false)}
       {!isMulti && exportTarget === 'full-scene' && s.showCardInfo !== false && renderCard(false)}
 
+      {/* Bottom Shelf Layout Mode: Clean docked horizontal cards along canvas bottom */}
+      {isMulti &&
+        isBottomShelf &&
+        exportTarget !== 'map-only' && (
+          <div
+            className="absolute bottom-6 left-6 right-6 z-30 flex items-stretch gap-3 justify-center select-none"
+            style={{ maxHeight: '28%' }}
+          >
+            {venuesList.map((venue, idx) => (
+              <div
+                key={venue.id || idx}
+                className="flex-1 min-w-0 shadow-2xl rounded-2xl border p-3 sm:p-3.5 flex flex-col justify-between backdrop-blur-md"
+                style={{
+                  background: t.card,
+                  color: t.ink,
+                  borderColor: t.border,
+                  boxShadow: '0 20px 48px -10px rgba(0, 0, 0, 0.45)',
+                }}
+              >
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="flex items-center justify-center rounded-full bg-[#e84a27] text-white font-comico font-black text-xs shrink-0 shadow-xs"
+                      style={{ width: 24, height: 24 }}
+                    >
+                      {idx + 1}
+                    </span>
+                    <span className="text-lg shrink-0">{venue.icon || '🍽️'}</span>
+                    <h4 className="font-comico uppercase tracking-wide truncate text-sm">
+                      {venue.name}
+                    </h4>
+                    {venue.rating && (
+                      <span className="ml-auto inline-flex items-center gap-0.5 rounded bg-black px-1.5 py-0.5 font-comico text-[10px] text-white shrink-0">
+                        <span className="text-amber-400 text-[9px]">★</span>
+                        {typeof venue.rating === 'number'
+                          ? venue.rating.toFixed(1)
+                          : venue.rating}
+                      </span>
+                    )}
+                  </div>
+                  {venue.dish && (
+                    <div className="mt-1.5 text-xs font-bold text-[#e84a27] truncate">
+                      {venue.dish} {venue.price ? `· ${venue.price}` : ''}
+                    </div>
+                  )}
+                </div>
+                {venue.address && (
+                  <div className="mt-1.5 text-[10px] text-[#8C827A] truncate font-medium">
+                    📍 {venue.address}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
       {/* Multi-Spot Mode: Pins (layer 50) and Cards (layer 20) via Portals */}
       {isMulti &&
         exportTarget !== 'map-only' &&
@@ -1013,20 +1290,24 @@ export const MapShot = forwardRef<HTMLDivElement, MapShotProps>(function MapShot
                 venue={venue}
                 index={index}
                 s={s}
+                pinSize={spatialLayouts[index]?.pinSize || 72}
+                isCrowded={spatialLayouts[index]?.isCrowded}
               />,
               pinEl
             )}
-            {createPortal(
-              <MultiVenueCard
-                venue={venue}
-                index={index}
-                s={s}
-                t={t}
-                totalSpots={venuesList.length}
-                onUpdateVenueOffset={onUpdateVenueOffset}
-              />,
-              cardEl
-            )}
+            {!isBottomShelf &&
+              createPortal(
+                <MultiVenueCard
+                  venue={venue}
+                  index={index}
+                  s={s}
+                  t={t}
+                  totalSpots={venuesList.length}
+                  spatialLayout={spatialLayouts[index]}
+                  onUpdateVenueOffset={onUpdateVenueOffset}
+                />,
+                cardEl
+              )}
           </React.Fragment>
         ))}
     </div>

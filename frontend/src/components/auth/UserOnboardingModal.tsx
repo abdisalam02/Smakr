@@ -12,6 +12,7 @@ import {
   Check,
   CheckCircle2,
   RotateCcw,
+  ChevronDown,
 } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import {
@@ -20,21 +21,22 @@ import {
   DEFAULT_OPEN_PEEPS_CONFIG,
   EXPRESSION_OPTIONS,
   FACIAL_HAIR_OPTIONS,
+  HAIR_CATEGORIES,
+  HAIR_CATEGORY_TABS,
+  HAT_COLORS,
   HEADWEAR_OPTIONS,
-  MENS_HAIR_CATEGORIES,
   NATURAL_HAIR_COLORS,
   OPEN_PEEPS_PRESETS,
   SKIN_TONES,
-  WOMENS_HAIR_CATEGORIES,
   buildOpenPeepsDataUri,
   buildOpenPeepsSvg,
+  hairCategoryForHead,
   normalizeOpenPeepsConfig,
   openPeepsConfigFromPreset,
   surpriseOpenPeepsConfig,
-  type MensHairCategoryKey,
+  type HairCategoryTabKey,
   type OpenPeepsConfig,
   type OpenPeepsPresetId,
-  type WomensHairCategoryKey,
 } from "@/lib/onboardingAvatar";
 import {
   OFFICIAL_SMAKR_MASCOT_CONFIG,
@@ -66,49 +68,13 @@ import { persistOnboarding, persistMascotConfig } from "@/lib/supabase/data";
  */
 const STEPS = [
   { key: "base", title: "Base preset", hint: "Pick your starting look" },
-  { key: "hair", title: "Hair style", hint: "Find your texture & cut" },
-  { key: "hats", title: "Hats & headwear", hint: "Add a fitted hat or wrap" },
-  { key: "colors", title: "Colours", hint: "Skin, hair & outfit" },
+  { key: "hair", title: "Hair style", hint: "Short, waves, afro & twists" },
+  { key: "hats", title: "Hats & headwear", hint: "Add a fitted hat, hijab or wrap" },
   { key: "vibe", title: "Face & Beard", hint: "Expression, eyewear & facial hair" },
+  { key: "colors", title: "Colours", hint: "Skin, hair, beard & outfit" },
 ] as const;
 
 type StepKey = (typeof STEPS)[number]["key"];
-
-/** Sub-filter tabs for the men's hair section. */
-const MENS_HAIR_TABS: { key: MensHairCategoryKey; label: string }[] = [
-  { key: "fades", label: "Fades & Short" },
-  { key: "wavyVolume", label: "Wavy & Quiff" },
-  { key: "flowLong", label: "Flow & Long" },
-  { key: "braidsAfro", label: "Braids & Afro" },
-];
-
-/** Sub-filter tabs for the women's hair section. */
-const WOMENS_HAIR_TABS: { key: WomensHairCategoryKey; label: string }[] = [
-  { key: "bobBangs", label: "Bob & Bangs" },
-  { key: "longWavy", label: "Long & Wavy" },
-  { key: "bunsUpdos", label: "Buns & Updos" },
-  { key: "afroBraids", label: "Afro & Braids" },
-];
-
-type HairCategoryKey = MensHairCategoryKey | WomensHairCategoryKey;
-
-function mensCategoryForHead(value: string): MensHairCategoryKey {
-  for (const tab of MENS_HAIR_TABS) {
-    if (MENS_HAIR_CATEGORIES[tab.key].some((o) => o.value === value)) return tab.key;
-  }
-  return "fades";
-}
-
-function womensCategoryForHead(value: string): WomensHairCategoryKey {
-  for (const tab of WOMENS_HAIR_TABS) {
-    if (WOMENS_HAIR_CATEGORIES[tab.key].some((o) => o.value === value)) return tab.key;
-  }
-  return "bobBangs";
-}
-
-function categoryForHead(isMasculine: boolean, value: string): HairCategoryKey {
-  return isMasculine ? mensCategoryForHead(value) : womensCategoryForHead(value);
-}
 
 export function UserOnboardingModal() {
   const currentUser = useCityPulseStore((state) => state.currentUser);
@@ -124,14 +90,31 @@ export function UserOnboardingModal() {
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [isPreview, setIsPreview] = useState(false);
   /** First-run only: show the "account confirmed" welcome before the builder. */
   const [introDone, setIntroDone] = useState(false);
-  const [hairCategory, setHairCategory] = useState<HairCategoryKey>("fades");
+  const [hairCategory, setHairCategory] = useState<HairCategoryTabKey>("shortFades");
+  const [activeVibeAccordion, setActiveVibeAccordion] = useState<"expression" | "eyewear" | "facialHair" | null>("expression");
   const seededFor = useRef<string | null>(null);
 
-  const isEditMode = isStudioOpen;
-  const isAdmin = Boolean(currentUser?.role === "admin" || currentUser?.is_official);
-  const isMasculine = config.genderPreset.startsWith("male");
+  const effectiveUser =
+    currentUser ||
+    (isPreview
+      ? {
+          id: "preview-user-id",
+          email: "foodie@smakr.no",
+          name: displayName || "Alex",
+          handle: handle ? `@${handle}` : "@alex_foodie",
+          role: "user" as const,
+          is_official: false,
+          onboarding_completed: false,
+          avatar_url: "",
+          avatar_config: config,
+        }
+      : null);
+
+  const isEditMode = isStudioOpen && !isPreview;
+  const isAdmin = !isPreview && Boolean(effectiveUser?.role === "admin" || effectiveUser?.is_official);
   const isLastStep = step === STEPS.length - 1;
 
   // Admin Brand Mascot Customizer state
@@ -140,6 +123,30 @@ export function UserOnboardingModal() {
     getOfficialSmakrMascotConfig()
   );
   const [brandTab, setBrandTab] = useState<"pose" | "hair" | "face" | "colors">("pose");
+
+  // Allow instant testing of on-signup flow via ?onboarding=1 or window.openOnboardingPreview()
+  useEffect(() => {
+    const triggerPreview = () => {
+      setIsPreview(true);
+      setDismissed(false);
+      setIntroDone(false);
+      setStep(0);
+      if (!currentUser) {
+        setDisplayName("Alex");
+        setHandle("alex_foodie");
+        setConfig(DEFAULT_OPEN_PEEPS_CONFIG);
+        setHairCategory(hairCategoryForHead(DEFAULT_OPEN_PEEPS_CONFIG.headType));
+      }
+    };
+
+    if (typeof window !== "undefined") {
+      const sp = new URLSearchParams(window.location.search);
+      if (sp.has("onboarding") || sp.has("preview_onboarding")) {
+        triggerPreview();
+      }
+      (window as unknown as { openOnboardingPreview?: () => void }).openOnboardingPreview = triggerPreview;
+    }
+  }, [currentUser]);
 
   useEffect(() => {
     if (isStudioOpen && isAdmin) {
@@ -159,7 +166,7 @@ export function UserOnboardingModal() {
     seededFor.current = currentUser.id;
     const seeded = normalizeOpenPeepsConfig(currentUser.avatar_config);
     setConfig(seeded);
-    setHairCategory(categoryForHead(seeded.genderPreset.startsWith("male"), seeded.headType));
+    setHairCategory(hairCategoryForHead(seeded.headType));
     setStep(0);
     setIntroDone(false);
     setHandle(
@@ -176,7 +183,7 @@ export function UserOnboardingModal() {
     if (!user) return;
     const seeded = normalizeOpenPeepsConfig(user.avatar_config);
     setConfig(seeded);
-    setHairCategory(categoryForHead(seeded.genderPreset.startsWith("male"), seeded.headType));
+    setHairCategory(hairCategoryForHead(seeded.headType));
     setStep(0);
     setHandle((user.handle || "").replace(/^[@_\s]+/, ""));
     setDisplayName(user.name || "");
@@ -191,18 +198,19 @@ export function UserOnboardingModal() {
   );
 
   const shouldShowOnboarding =
-    Boolean(currentUser) &&
-    // Wait until `public.profiles` has actually been read — otherwise a returning
-    // user briefly sees the setup card before their stored flag arrives.
-    profileResolved &&
-    currentUser!.onboarding_completed !== true &&
-    !currentUser!.is_official &&
-    currentUser!.role !== "admin" &&
-    !dismissed;
+    isPreview ||
+    (Boolean(currentUser) &&
+      // Wait until `public.profiles` has actually been read — otherwise a returning
+      // user briefly sees the setup card before their stored flag arrives.
+      profileResolved &&
+      currentUser!.onboarding_completed !== true &&
+      !currentUser!.is_official &&
+      currentUser!.role !== "admin" &&
+      !dismissed);
 
-  const shouldShow = Boolean(currentUser) && (isEditMode || shouldShowOnboarding);
+  const shouldShow = Boolean(effectiveUser) && (isEditMode || shouldShowOnboarding);
 
-  if (!shouldShow || !currentUser) return null;
+  if (!shouldShow || !effectiveUser) return null;
 
   const showIntro = !isEditMode && !introDone;
 
@@ -212,13 +220,13 @@ export function UserOnboardingModal() {
   const applyPreset = (id: OpenPeepsPresetId) => {
     const next = openPeepsConfigFromPreset(id);
     setConfig(next);
-    setHairCategory(categoryForHead(id.startsWith("male"), next.headType));
+    setHairCategory(hairCategoryForHead(next.headType));
   };
 
   const surprise = () => {
     const next = surpriseOpenPeepsConfig();
     setConfig(next);
-    setHairCategory(categoryForHead(next.genderPreset.startsWith("male"), next.headType));
+    setHairCategory(hairCategoryForHead(next.headType));
   };
 
   // Picking hair takes any hat off so the choice is immediately visible.
@@ -227,6 +235,51 @@ export function UserOnboardingModal() {
   const close = () => {
     if (isEditMode) setIsStudioOpen(false);
     else setDismissed(true);
+    if (isPreview) setIsPreview(false);
+  };
+
+  const handleSkipRandom = async () => {
+    setSaving(true);
+    const randomCfg = surpriseOpenPeepsConfig();
+    const avatarUrl = buildOpenPeepsDataUri(randomCfg);
+    const rawHandle =
+      handle.trim().replace(/^@+/, "").replace(/\s+/g, "_") ||
+      (effectiveUser.email ? effectiveUser.email.split("@")[0] : "") ||
+      `foodie_${effectiveUser.id.slice(0, 5)}`;
+    const cleanHandle = "@" + rawHandle;
+    const cleanName = displayName.trim() || effectiveUser.name || "";
+
+    if (effectiveUser.id === "preview-user-id") {
+      setSaving(false);
+      setDismissed(true);
+      setIsPreview(false);
+      showToast("Random foodie avatar created ✨ Customize it anytime in your profile.");
+      return;
+    }
+
+    await persistOnboarding({
+      userId: effectiveUser.id,
+      handle: cleanHandle,
+      name: cleanName,
+      avatarConfig: randomCfg,
+      avatarUrl,
+    });
+
+    if (currentUser) {
+      setCurrentUser({
+        ...currentUser,
+        handle: cleanHandle,
+        name: cleanName || undefined,
+        avatar_url: avatarUrl,
+        avatar_config: randomCfg,
+        onboarding_completed: true,
+      });
+    }
+    setSaving(false);
+    setDismissed(true);
+    setIsPreview(false);
+    setIsStudioOpen(false);
+    showToast("Random foodie avatar created ✨ Customize it anytime in your profile.");
   };
 
   const handleComplete = async () => {
@@ -238,8 +291,17 @@ export function UserOnboardingModal() {
     setSaving(true);
     const avatarUrl = buildOpenPeepsDataUri(config);
     const cleanName = displayName.trim();
+
+    if (effectiveUser.id === "preview-user-id") {
+      setSaving(false);
+      setDismissed(true);
+      setIsPreview(false);
+      showToast("Welcome to Smakr ✨ Your foodie profile is ready.");
+      return;
+    }
+
     const result = await persistOnboarding({
-      userId: currentUser.id,
+      userId: effectiveUser.id,
       handle: cleanHandle,
       name: cleanName,
       avatarConfig: config,
@@ -256,16 +318,19 @@ export function UserOnboardingModal() {
     }
 
     // Hydrate locally regardless — the UI reflects the choice instantly.
-    setCurrentUser({
-      ...currentUser,
-      handle: cleanHandle,
-      name: cleanName || undefined,
-      avatar_url: avatarUrl,
-      avatar_config: config,
-      onboarding_completed: true,
-    });
+    if (currentUser) {
+      setCurrentUser({
+        ...currentUser,
+        handle: cleanHandle,
+        name: cleanName || undefined,
+        avatar_url: avatarUrl,
+        avatar_config: config,
+        onboarding_completed: true,
+      });
+    }
     setSaving(false);
     setDismissed(true);
+    setIsPreview(false);
     setIsStudioOpen(false);
     showToast(
       result.success
@@ -348,22 +413,19 @@ export function UserOnboardingModal() {
         );
 
       case "hair": {
-        const tabs: { key: string; label: string }[] = isMasculine
-          ? MENS_HAIR_TABS
-          : WOMENS_HAIR_TABS;
-        const activeKey = tabs.some((t) => t.key === hairCategory) ? hairCategory : tabs[0].key;
-        const options: readonly { label: string; value: string }[] = isMasculine
-          ? MENS_HAIR_CATEGORIES[activeKey as MensHairCategoryKey]
-          : WOMENS_HAIR_CATEGORIES[activeKey as WomensHairCategoryKey];
+        const activeKey = HAIR_CATEGORY_TABS.some((t) => t.key === hairCategory)
+          ? hairCategory
+          : HAIR_CATEGORY_TABS[0].key;
+        const options = HAIR_CATEGORIES[activeKey];
         return (
           <div className="space-y-4">
             <div className="-mx-1 px-1 flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
-              {tabs.map((tab) => {
+              {HAIR_CATEGORY_TABS.map((tab) => {
                 const active = activeKey === tab.key;
                 return (
                   <button
                     key={tab.key}
-                    onClick={() => setHairCategory(tab.key as HairCategoryKey)}
+                    onClick={() => setHairCategory(tab.key)}
                     className={`shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all active:scale-95 ${
                       active
                         ? "bg-[#e84a27] text-white border-[#e84a27] shadow-sm shadow-[#e84a27]/25"
@@ -379,7 +441,7 @@ export function UserOnboardingModal() {
               {options.map((opt) => (
                 <Pill
                   key={opt.value}
-                  active={config.headType === opt.value}
+                  active={config.headType === opt.value && config.headwear === "none"}
                   onClick={() => selectHair(opt.value)}
                 >
                   {opt.label}
@@ -404,6 +466,15 @@ export function UserOnboardingModal() {
                 </Pill>
               ))}
             </div>
+            {config.headwear && config.headwear !== "none" && (
+              <Section title="Hat / Hijab colour">
+                <SwatchRow
+                  options={HAT_COLORS}
+                  active={config.hatColor || config.clothingColor}
+                  onSelect={(value) => update({ hatColor: value })}
+                />
+              </Section>
+            )}
             <p className="text-[10px] text-zinc-400 leading-relaxed">
               Hats sit over your hair. Pick <span className="font-semibold text-zinc-500">No Hat</span>{" "}
               to show your hairstyle.
@@ -411,7 +482,161 @@ export function UserOnboardingModal() {
           </div>
         );
 
-      case "colors":
+      case "vibe": {
+        const activeExpressionLabel =
+          EXPRESSION_OPTIONS.find((o) => o.value === config.faceExpression)?.label ?? "Expression";
+        const activeEyewearLabel =
+          ACCESSORIES_OPTIONS.find((o) => o.value === config.accessories)?.label ?? "None";
+        const activeBeardLabel =
+          FACIAL_HAIR_OPTIONS.find((o) => o.value === config.facialHair)?.label ?? "Clean Shaven";
+        const isWearingHijab = config.headwear === "hijab";
+
+        const toggleAccordion = (sec: "expression" | "eyewear" | "facialHair") => {
+          setActiveVibeAccordion((cur) => (cur === sec ? null : sec));
+        };
+
+        return (
+          <div className="space-y-2.5">
+            {/* 1. Collapsible Expression Accordion */}
+            <div className="rounded-2xl border border-zinc-200 bg-white overflow-hidden shadow-2xs">
+              <button
+                type="button"
+                onClick={() => toggleAccordion("expression")}
+                className="w-full flex items-center justify-between px-3.5 py-2.5 text-left hover:bg-zinc-50 transition-colors"
+              >
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">
+                    Expression
+                  </span>
+                  <span className="text-xs font-bold text-zinc-800">{activeExpressionLabel}</span>
+                </div>
+                <ChevronDown
+                  className={`w-4 h-4 text-zinc-400 transition-transform duration-200 ${
+                    activeVibeAccordion === "expression" ? "rotate-180 text-[#e84a27]" : ""
+                  }`}
+                />
+              </button>
+              <AnimatePresence initial={false}>
+                {activeVibeAccordion === "expression" && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="overflow-hidden border-t border-zinc-100"
+                  >
+                    <div className="p-2.5 grid grid-cols-2 gap-1.5 bg-zinc-50/40">
+                      {EXPRESSION_OPTIONS.map((opt) => (
+                        <Pill
+                          key={opt.value}
+                          active={config.faceExpression === opt.value}
+                          onClick={() => update({ faceExpression: opt.value })}
+                        >
+                          {opt.label}
+                        </Pill>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* 2. Collapsible Eyewear Accordion */}
+            <div className="rounded-2xl border border-zinc-200 bg-white overflow-hidden shadow-2xs">
+              <button
+                type="button"
+                onClick={() => toggleAccordion("eyewear")}
+                className="w-full flex items-center justify-between px-3.5 py-2.5 text-left hover:bg-zinc-50 transition-colors"
+              >
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">
+                    Eyewear
+                  </span>
+                  <span className="text-xs font-bold text-zinc-800">{activeEyewearLabel}</span>
+                </div>
+                <ChevronDown
+                  className={`w-4 h-4 text-zinc-400 transition-transform duration-200 ${
+                    activeVibeAccordion === "eyewear" ? "rotate-180 text-[#e84a27]" : ""
+                  }`}
+                />
+              </button>
+              <AnimatePresence initial={false}>
+                {activeVibeAccordion === "eyewear" && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    className="overflow-hidden border-t border-zinc-100"
+                  >
+                    <div className="p-2.5 grid grid-cols-2 gap-1.5 bg-zinc-50/40">
+                      {ACCESSORIES_OPTIONS.map((opt) => (
+                        <Pill
+                          key={opt.value}
+                          active={config.accessories === opt.value}
+                          onClick={() => update({ accessories: opt.value })}
+                        >
+                          {opt.label}
+                        </Pill>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* 3. Collapsible Facial Hair Accordion (hidden when wearing hijab) */}
+            {!isWearingHijab && (
+              <div className="rounded-2xl border border-zinc-200 bg-white overflow-hidden shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => toggleAccordion("facialHair")}
+                  className="w-full flex items-center justify-between px-3.5 py-2.5 text-left hover:bg-zinc-50 transition-colors"
+                >
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">
+                      Facial hair
+                    </span>
+                    <span className="text-xs font-bold text-zinc-800">{activeBeardLabel}</span>
+                  </div>
+                  <ChevronDown
+                    className={`w-4 h-4 text-zinc-400 transition-transform duration-200 ${
+                      activeVibeAccordion === "facialHair" ? "rotate-180 text-[#e84a27]" : ""
+                    }`}
+                  />
+                </button>
+                <AnimatePresence initial={false}>
+                  {activeVibeAccordion === "facialHair" && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.18 }}
+                      className="overflow-hidden border-t border-zinc-100"
+                    >
+                      <div className="p-2.5 grid grid-cols-2 gap-1.5 bg-zinc-50/40">
+                        {FACIAL_HAIR_OPTIONS.map((opt) => (
+                          <Pill
+                            key={opt.value}
+                            active={config.facialHair === opt.value}
+                            onClick={() => update({ facialHair: opt.value })}
+                          >
+                            {opt.label}
+                          </Pill>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      case "colors": {
+        const hasBeard =
+          config.facialHair && config.facialHair !== "none" && config.headwear !== "hijab";
         return (
           <div className="space-y-4">
             <Section title="Skin tone">
@@ -428,6 +653,15 @@ export function UserOnboardingModal() {
                 onSelect={(value) => update({ headColor: value })}
               />
             </Section>
+            {hasBeard && (
+              <Section title="Facial hair colour">
+                <SwatchRow
+                  options={NATURAL_HAIR_COLORS}
+                  active={config.facialHairColor || config.headColor}
+                  onSelect={(value) => update({ facialHairColor: value })}
+                />
+              </Section>
+            )}
             <Section title="Outfit">
               <SwatchRow
                 options={CLOTHING_COLORS}
@@ -435,55 +669,16 @@ export function UserOnboardingModal() {
                 onSelect={(value) => update({ clothingColor: value })}
               />
             </Section>
-          </div>
-        );
-
-      case "vibe":
-        return (
-          <div className="space-y-4">
-            <Section title="Expression">
-              <div className="grid grid-cols-2 gap-1.5">
-                {EXPRESSION_OPTIONS.map((opt) => (
-                  <Pill
-                    key={opt.value}
-                    active={config.faceExpression === opt.value}
-                    onClick={() => update({ faceExpression: opt.value })}
-                  >
-                    {opt.label}
-                  </Pill>
-                ))}
-              </div>
-            </Section>
-
-            <Section title="Eyewear">
-              <div className="grid grid-cols-2 gap-1.5">
-                {ACCESSORIES_OPTIONS.map((opt) => (
-                  <Pill
-                    key={opt.value}
-                    active={config.accessories === opt.value}
-                    onClick={() => update({ accessories: opt.value })}
-                  >
-                    {opt.label}
-                  </Pill>
-                ))}
-              </div>
-            </Section>
-
-            <Section title="Facial hair">
-              <div className="grid grid-cols-2 gap-1.5">
-                {FACIAL_HAIR_OPTIONS.map((opt) => (
-                  <Pill
-                    key={opt.value}
-                    active={config.facialHair === opt.value}
-                    onClick={() => update({ facialHair: opt.value })}
-                  >
-                    {opt.label}
-                  </Pill>
-                ))}
-              </div>
+            <Section title="Hat / Hijab colour">
+              <SwatchRow
+                options={HAT_COLORS}
+                active={config.hatColor || config.clothingColor}
+                onSelect={(value) => update({ hatColor: value })}
+              />
             </Section>
           </div>
         );
+      }
     }
   };
 
@@ -492,7 +687,7 @@ export function UserOnboardingModal() {
   // created before sending them into the avatar builder.
   // ---------------------------------------------------------------------
   if (showIntro) {
-    const firstName = (currentUser.name || "").trim().split(/\s+/)[0];
+    const firstName = (effectiveUser.name || "").trim().split(/\s+/)[0];
     const shownHandle = `@${handle.trim().replace(/^@+/, "") || "foodie"}`;
     return (
       <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 bg-black/55 backdrop-blur-sm animate-in fade-in duration-200">
@@ -529,7 +724,7 @@ export function UserOnboardingModal() {
                   Account
                 </p>
                 <p className="text-xs font-semibold text-zinc-800 truncate">
-                  {currentUser.email ?? "confirmed"}
+                  {effectiveUser.email ?? "confirmed"}
                 </p>
               </div>
             </div>
@@ -544,7 +739,7 @@ export function UserOnboardingModal() {
             </div>
           </div>
 
-          <div className="px-6 py-5">
+          <div className="px-6 py-5 space-y-2.5">
             <button
               onClick={() => setIntroDone(true)}
               className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] text-white font-bold text-sm shadow-md shadow-[#e84a27]/25 transition-all active:scale-[0.99]"
@@ -553,8 +748,16 @@ export function UserOnboardingModal() {
               <span>Confirm &amp; build my avatar</span>
               <ArrowRight className="w-4 h-4" />
             </button>
-            <p className="text-[10px] text-zinc-400 text-center mt-2.5">
-              You can change your display name and @handle in the next step.
+            <button
+              onClick={handleSkipRandom}
+              disabled={saving}
+              className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-2xl border border-zinc-200 bg-zinc-50/80 hover:bg-zinc-100 text-zinc-700 font-bold text-xs transition-all active:scale-[0.99]"
+            >
+              <Shuffle className="w-3.5 h-3.5 text-[#e84a27]" />
+              <span>Skip &amp; surprise me with a random avatar</span>
+            </button>
+            <p className="text-[10px] text-zinc-400 text-center">
+              You can change your display name, @handle and avatar anytime.
             </p>
           </div>
         </div>
@@ -575,8 +778,16 @@ export function UserOnboardingModal() {
       setSaving(true);
       const savedCfg = saveOfficialSmakrMascotConfig(brandConfig);
       updateStoreMascotConfig(savedCfg);
+      const store = useCityPulseStore.getState();
+      if (store.weeklyPick?.mascot_avatar_url) {
+        store.setWeeklyPick({ ...store.weeklyPick, mascot_avatar_url: undefined });
+      }
       if (currentUser?.id) {
         await persistMascotConfig(currentUser.id, savedCfg);
+        setCurrentUser({
+          ...currentUser,
+          mascot_config: savedCfg,
+        });
       }
       setSaving(false);
       setIsStudioOpen(false);
@@ -911,7 +1122,7 @@ export function UserOnboardingModal() {
           <X className="w-4 h-4" />
         </button>
 
-        {/* Title (compact) */}
+        {/* Title & Top Action Buttons */}
         <div className="px-5 sm:px-6 pt-4 pb-2 pr-12">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-orange-50 text-[#e84a27] border border-orange-200/60 text-[10px] font-bold uppercase tracking-wider mb-1">
             <span>{isEditMode ? "✦ Avatar Studio" : "✦ OSLO BETA CONTRIBUTOR"}</span>
@@ -919,6 +1130,36 @@ export function UserOnboardingModal() {
           <h2 className="font-comico text-lg leading-tight text-zinc-900">
             {isEditMode ? "CUSTOMIZE YOUR MASCOT" : "BUILD YOUR FOODIE MASCOT"}
           </h2>
+
+          {/* Equal-sized Skip & Save Action Buttons */}
+          <div className="flex items-center gap-2 mt-2.5">
+            {!isEditMode && (
+              <button
+                type="button"
+                onClick={handleSkipRandom}
+                disabled={saving}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 text-xs font-bold transition-all active:scale-[0.98]"
+              >
+                <Shuffle className="w-3.5 h-3.5 text-[#e84a27]" />
+                <span>Skip (Random)</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleComplete}
+              disabled={saving}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#e84a27] hover:bg-[#d23e1d] disabled:opacity-60 text-white text-xs font-bold shadow-sm shadow-[#e84a27]/25 transition-all active:scale-[0.98]"
+            >
+              {saving ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <>
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>{isEditMode ? "Save Mascot" : "Save Mascot"}</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Pinned Bust Open Peeps preview + Direct Category Pill Tabs */}
@@ -981,41 +1222,26 @@ export function UserOnboardingModal() {
           {renderStep(STEPS[step].key)}
         </div>
 
-        {/* Footer: Save Anytime + Next/Back */}
-        <div className="px-5 sm:px-6 py-3.5 border-t border-black/[0.06] bg-white/80 flex items-center gap-2">
-          {step > 0 && !isEditMode && (
-            <button
-              onClick={() => setStep((s) => Math.max(0, s - 1))}
-              className="flex items-center justify-center gap-1 px-3.5 py-3 rounded-2xl border border-zinc-200 bg-white text-zinc-600 text-xs font-bold hover:bg-zinc-50 transition-all active:scale-[0.98]"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back</span>
-            </button>
-          )}
-
-          {!isEditMode && !isLastStep && (
-            <button
-              onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
-              className="flex items-center justify-center gap-1 px-3.5 py-3 rounded-2xl border border-zinc-200 bg-white text-zinc-800 text-xs font-bold hover:bg-zinc-50 transition-all active:scale-[0.98]"
-            >
-              <span>Next</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          )}
+        {/* Footer: Next and Back */}
+        <div className="px-5 sm:px-6 py-3 border-t border-black/[0.06] bg-white/80 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setStep((s) => Math.max(0, s - 1))}
+            disabled={step === 0}
+            className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-2xl border border-zinc-200 bg-white text-zinc-700 text-xs font-bold hover:bg-zinc-50 disabled:opacity-35 disabled:hover:bg-white transition-all active:scale-[0.98]"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Back</span>
+          </button>
 
           <button
-            onClick={handleComplete}
-            disabled={saving}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] disabled:opacity-60 text-white font-bold text-xs shadow-md shadow-[#e84a27]/25 transition-all active:scale-[0.98]"
+            type="button"
+            onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
+            disabled={isLastStep}
+            className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-2xl bg-[#181615] hover:bg-zinc-800 disabled:opacity-35 text-white text-xs font-bold transition-all active:scale-[0.98]"
           >
-            {saving ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4" />
-                <span>{isEditMode ? "Save Mascot" : "Save & Explore Oslo"}</span>
-              </>
-            )}
+            <span>Next</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
