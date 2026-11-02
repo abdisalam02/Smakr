@@ -23,7 +23,7 @@ Updated: 2026-11-02
 - No other open items recorded in this handoff.
 
 ## Recent (max 5, one line each)
-- 2026-11-02 — Pre-push verified: Google Places CDN ingest architecture, security tests 19/19 pass, production build clean
+- 2026-11-03 — Pushed commit 0a6ed2e to origin/main: Google Places CDN ingest architecture, sharp WebP pipeline, clean build
 - 2026-11-02 — V2 campaign deck: packaged all 5 slides in 3 aspect ratios (4:5, 9:16, 1:1) to ZIP, clean S3 & S4 distance, tsc clean
 - 2026-11-02 — V2 deck fact-check: Daglig Brød Boller Gamlebyen, Miso Ramen Sentrum, Yum Cha Majorstuen, Håndbakt photo S3, S4 dish details, tsc clean
 - 2026-11-02 — V2 deck: Daglig Brød hero pick S5, frosted glass CTA pill, removed 'menu' S4, tsc clean
