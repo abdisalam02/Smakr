@@ -8,7 +8,11 @@ import { curatedVenuePhotos, hashString } from "@/lib/places/curatedPhotos";
 
 export const PLACES_API_BASE = "https://places.googleapis.com/v1";
 
-/** Field mask covering the venue metrics + customer reviews we curate. */
+/**
+ * Field mask covering basic candidate discovery for search lists.
+ * Excludes expensive Atmosphere fields (reviews, editorialSummary, openingHours)
+ * to avoid Enterprise SKU charges during list queries.
+ */
 export const PLACES_FIELD_MASK = [
   "id",
   "displayName",
@@ -17,13 +21,8 @@ export const PLACES_FIELD_MASK = [
   "rating",
   "userRatingCount",
   "priceLevel",
-  "reviews",
   "photos",
-  "currentOpeningHours",
-  "websiteUri",
   "googleMapsUri",
-  "nationalPhoneNumber",
-  "editorialSummary",
 ]
   .map((f) => (f === "id" ? "places.id" : `places.${f}`))
   .join(",");

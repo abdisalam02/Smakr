@@ -271,7 +271,30 @@ export function VenueImporter() {
       return;
     }
     setSaving(true);
-    const coverImage = coverPhoto ?? (place?.photos[0] ? photoUrl(place.photos[0], 0) : null);
+
+    const resolveToStorageUrl = async (urlOrRef?: string | null): Promise<string | null> => {
+      if (!urlOrRef) return null;
+      if (!urlOrRef.includes("/api/places/photos") && !urlOrRef.startsWith("places/")) {
+        return urlOrRef;
+      }
+      try {
+        const res = await fetch("/api/places/photos/ingest", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refOrUrl: urlOrRef }),
+        });
+        const data = await res.json();
+        if (data.success && data.publicUrl) {
+          return data.publicUrl;
+        }
+      } catch {
+        // fallback
+      }
+      return urlOrRef;
+    };
+
+    const rawCover = coverPhoto ?? (place?.photos[0] ? photoUrl(place.photos[0], 0) : null);
+    const coverImage = await resolveToStorageUrl(rawCover);
     const venueName = name.trim();
     const wantsDish = alsoCreateDish && Boolean(dishName.trim());
 
@@ -352,11 +375,13 @@ export function VenueImporter() {
             // fallback handled gracefully
           }
         }
+        const rawDish = dishPhoto ?? coverImage;
+        const resolvedDishImage = await resolveToStorageUrl(rawDish);
         const dishResult = await insertFoodPost({
           venueId: savedVenue.id,
           authorId: currentUser.id,
           dishName: dishName.trim(),
-          dishImage: dishPhoto ?? coverImage,
+          dishImage: resolvedDishImage,
           reviewText: finalDishReview,
           priceNok: finalDishPrice,
           rating: 9,
@@ -617,7 +642,7 @@ export function VenueImporter() {
             <div className="flex items-center justify-between">
               <h3 className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
                 <ImageIcon className="w-3.5 h-3.5 text-[#e84a27]" />
-                Select photos ({place.photos.length})
+                Select photos ({Math.min(place.photos.length, 6)})
               </h3>
               <span className="text-[10px] text-zinc-400">
                 Tap a photo = cover · use overlay for dish
@@ -625,7 +650,7 @@ export function VenueImporter() {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
-              {place.photos.map((ref, i) => {
+              {place.photos.slice(0, 6).map((ref, i) => {
                 const url = photoUrl(ref, i);
                 const isCover = coverPhoto === url;
                 const isDish = dishPhoto === url;

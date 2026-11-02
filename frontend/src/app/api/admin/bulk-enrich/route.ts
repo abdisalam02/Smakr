@@ -14,6 +14,7 @@ import {
 } from "@/lib/places/google";
 import { resolveFoodCategoryAndIcon } from "@/lib/categoryResolver";
 import { curatedVenuePhotos } from "@/lib/places/curatedPhotos";
+import { ingestGooglePhotoToSupabase } from "@/lib/storage/ingestGooglePhoto";
 import type { DietaryTag, FoodCategory, ReviewItem } from "@/types";
 
 export const runtime = "nodejs";
@@ -363,12 +364,12 @@ export async function POST(req: NextRequest) {
         const initialCat = resolveFoodCategoryAndIcon(parsed.dishName || "", parsed.venueName);
         const place = await lookupGooglePlace(parsed.venueName, initialCat.category);
 
-        // Build up to 8 photo URLs
+        // Build up to 6 photo URLs
         let photoUrls: string[] = [];
         if (place.photos && place.photos.length > 0) {
           photoUrls = place.photos
             .filter((p) => typeof p === "string" && !p.startsWith("mock:"))
-            .slice(0, 8)
+            .slice(0, 6)
             .map((ref) => `/api/places/photos?ref=${encodeURIComponent(ref)}&w=800`);
         }
         if (photoUrls.length === 0) {
@@ -514,7 +515,10 @@ export async function POST(req: NextRequest) {
           openingHoursText: place.opening_hours_text || [],
           reviews: place.reviews || [],
           photoUrls,
-          selectedPhoto: photoUrls[0] || "",
+          selectedPhoto:
+            photoUrls[0]
+              ? await ingestGooglePhotoToSupabase(photoUrls[0]).catch(() => photoUrls[0])
+              : "",
           dishName,
           priceNok,
           tasteNote,

@@ -93,6 +93,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   const [isDesktop, setIsDesktop] = useState(false);
   useIsomorphicLayoutEffect(() => {
     if (typeof window === "undefined") return;
+    (window as any).__cityPulseStore = useCityPulseStore;
     const mq = window.matchMedia("(min-width: 1024px)");
     const update = () => setIsDesktop(mq.matches);
     update();

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { ingestGooglePhotoToSupabase } from "@/lib/storage/ingestGooglePhoto";
 
 export const runtime = "nodejs";
 
@@ -215,10 +216,10 @@ export async function POST(req: NextRequest) {
     };
 
     if (proposed.image_url && isValidImageUrl(proposed.image_url)) {
-      venuePatch.image_url = proposed.image_url;
+      venuePatch.image_url = await ingestGooglePhotoToSupabase(proposed.image_url);
     }
     if (proposed.cover_image_url && isValidImageUrl(proposed.cover_image_url)) {
-      venuePatch.image_url = proposed.cover_image_url;
+      venuePatch.image_url = await ingestGooglePhotoToSupabase(proposed.cover_image_url);
     }
     if (proposed.description) {
       venuePatch.description = proposed.description;
@@ -293,7 +294,9 @@ export async function POST(req: NextRequest) {
         const dAvailability = typeof (d.itemAvailability ?? d.item_availability) === "string"
           ? (d.itemAvailability ?? d.item_availability)
           : null;
-        const safeDImg = dImg && isValidImageUrl(dImg) ? dImg : currentVenue.image_url || "";
+        const ingestedDImg =
+          dImg && isValidImageUrl(dImg) ? await ingestGooglePhotoToSupabase(dImg) : "";
+        const safeDImg = ingestedDImg || currentVenue.image_url || "";
 
         let postMatch: { id: string } | null = null;
         if (d.id && !String(d.id).startsWith("dish_")) {
@@ -308,7 +311,7 @@ export async function POST(req: NextRequest) {
         if (postMatch) {
           await supabase.from("food_posts").update({
             dish_name: dName,
-            ...(dImg && isValidImageUrl(dImg) ? { dish_image: dImg } : {}),
+            ...(ingestedDImg ? { dish_image: ingestedDImg } : {}),
             price_nok: dPrice,
             review_text: dNote,
             category: dCat,

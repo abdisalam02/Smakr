@@ -841,6 +841,9 @@ export function MapRadarView() {
     });
 
     mapInstance.current = map;
+    if (typeof window !== "undefined") {
+      (window as unknown as { __cityPulseMap?: maplibregl.Map }).__cityPulseMap = map;
+    }
     const instanceId = ++MAP_INSTANCE_SEQ;
     console.info("[locate] map created", {
       instanceId,

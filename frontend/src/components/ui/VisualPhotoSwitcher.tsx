@@ -114,11 +114,12 @@ export function VisualPhotoSwitcher({
   const [googlePhotos, setGooglePhotos] = useState<string[]>([]);
   const [isLoadingGoogle, setIsLoadingGoogle] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [ingestingPhotoUrl, setIngestingPhotoUrl] = useState<string | null>(null);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [manualUrl, setManualUrl] = useState(currentImageUrl || "");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Auto-fetch Google photos if placeId or venueName provided
+  // Fetch Google photos (capped at 6 thumbnails)
   const fetchGooglePhotos = async () => {
     setIsLoadingGoogle(true);
     try {
@@ -129,7 +130,7 @@ export function VisualPhotoSwitcher({
         const mapped = photos
           .map(toPhotoUrl)
           .filter((u: any): u is string => Boolean(u))
-          .slice(0, 10);
+          .slice(0, 6);
         if (mapped.length > 0) {
           setGooglePhotos(mapped);
           return;
@@ -142,7 +143,7 @@ export function VisualPhotoSwitcher({
         const mapped = photos
           .map(toPhotoUrl)
           .filter((u: any): u is string => Boolean(u))
-          .slice(0, 10);
+          .slice(0, 6);
         setGooglePhotos(mapped);
       }
     } catch {
@@ -152,11 +153,43 @@ export function VisualPhotoSwitcher({
     }
   };
 
+  // Only auto-fetch if there is NO existing Supabase Storage image
   useEffect(() => {
-    if (venuePlaceId || venueName) {
+    const hasStorageImage =
+      Boolean(currentImageUrl) && currentImageUrl.includes(".supabase.co/storage/");
+    if (!hasStorageImage && (venuePlaceId || venueName)) {
       void fetchGooglePhotos();
     }
   }, [venuePlaceId, venueName]);
+
+  const handleSelectCandidate = async (photoUrl: string) => {
+    if (
+      !photoUrl.includes("/api/places/photos") &&
+      !photoUrl.startsWith("places/")
+    ) {
+      onSelectPhoto(photoUrl);
+      return;
+    }
+
+    setIngestingPhotoUrl(photoUrl);
+    try {
+      const res = await fetch("/api/places/photos/ingest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refOrUrl: photoUrl }),
+      });
+      const data = await res.json();
+      if (data.success && data.publicUrl) {
+        onSelectPhoto(data.publicUrl);
+        return;
+      }
+    } catch {
+      // Fallback to proxy url if ingest call fails
+    } finally {
+      setIngestingPhotoUrl(null);
+    }
+    onSelectPhoto(photoUrl);
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -266,12 +299,12 @@ export function VisualPhotoSwitcher({
                 disabled={isLoadingGoogle}
                 onClick={fetchGooglePhotos}
                 className="h-8 px-2.5 rounded-xl bg-white hover:bg-zinc-50 border border-[#181615]/15 text-[#181615] text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
-                title="Fetch photos from Google Places"
+                title="Load Google Photos"
               >
                 <RefreshCw
                   className={`w-3 h-3 text-[#E84A27] ${isLoadingGoogle ? "animate-spin" : ""}`}
                 />
-                <span className="hidden sm:inline">Google Photos</span>
+                <span className="hidden sm:inline">Load Google Photos</span>
               </button>
             )}
           </div>
@@ -321,11 +354,13 @@ export function VisualPhotoSwitcher({
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
             {candidates.map((photoUrl, idx) => {
               const isSelected = currentImageUrl === photoUrl;
+              const isIngesting = ingestingPhotoUrl === photoUrl;
               return (
                 <button
                   key={`${photoUrl.slice(0, 32)}_${idx}`}
                   type="button"
-                  onClick={() => onSelectPhoto(photoUrl)}
+                  disabled={isIngesting}
+                  onClick={() => handleSelectCandidate(photoUrl)}
                   className={`relative w-[60px] h-[60px] min-w-[60px] min-h-[60px] max-w-[60px] max-h-[60px] rounded-xl overflow-hidden shrink-0 border-2 transition-all cursor-pointer ${
                     isSelected
                       ? "border-[#E84A27] ring-2 ring-[#E84A27]/20 scale-102 shadow-xs"
@@ -339,7 +374,12 @@ export function VisualPhotoSwitcher({
                     className="w-full h-full object-cover block"
                     referrerPolicy="no-referrer"
                   />
-                  {isSelected && (
+                  {isIngesting && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                      <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    </div>
+                  )}
+                  {isSelected && !isIngesting && (
                     <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-[#E84A27] text-white flex items-center justify-center text-[10px] font-bold shadow-xs">
                       ✓
                     </div>

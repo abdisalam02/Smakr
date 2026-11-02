@@ -341,15 +341,43 @@ export function CreateFoodPostModal() {
     wasOpenRef.current = isOpen;
   }, [isOpen, selectedVenue]);
 
-  /* ---- debounced Google Places search ---- */
+  const handleSearchGoogle = useCallback(async (searchTerm?: string) => {
+    const q = (searchTerm ?? query).trim();
+    if (!q) return;
+    setSearching(true);
+    try {
+      const res = await fetch(`/api/places/search?q=${encodeURIComponent(q)}`);
+      const json = (await res.json()) as { results?: PlaceResult[]; place?: PlaceResult };
+      const list = json.results ?? (json.place ? [json.place] : []);
+      setResults(list);
+    } catch {
+      setResults([]);
+    } finally {
+      setSearching(false);
+    }
+  }, [query]);
+
+  /* ---- debounced Google Places search: 700ms, only when >= 3 chars and no local DB match ---- */
   useEffect(() => {
     if (!isOpen) return;
     const q = query.trim();
-    if (q.length < 2) {
+    if (q.length < 3) {
       setResults([]);
       setSearching(false);
       return;
     }
+
+    // Skip auto-fetch if user matches existing spots locally (0 API cost)
+    const hasLocal = venues.some(
+      (v) =>
+        v.name.toLowerCase().includes(q.toLowerCase()) ||
+        v.address.toLowerCase().includes(q.toLowerCase())
+    );
+    if (hasLocal) {
+      setSearching(false);
+      return;
+    }
+
     let cancelled = false;
     setSearching(true);
     const handle = setTimeout(async () => {
@@ -363,12 +391,12 @@ export function CreateFoodPostModal() {
       } finally {
         if (!cancelled) setSearching(false);
       }
-    }, 300);
+    }, 700);
     return () => {
       cancelled = true;
       clearTimeout(handle);
     };
-  }, [query, isOpen]);
+  }, [query, isOpen, venues]);
 
   /* ---- listing photos for the Google fallback ---- */
   const loadListingPhotos = useCallback(async (placeId: string | null | undefined, venueName?: string, venueAddress?: string) => {
@@ -879,6 +907,12 @@ export function CreateFoodPostModal() {
                       type="text"
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          void handleSearchGoogle();
+                        }
+                      }}
                       placeholder="Search any Oslo spot (e.g. Koie, Fuglen, Kveitemjøl)..."
                       className="w-full pl-10 pr-9 py-3 rounded-2xl bg-white border border-[#e2d8c8] text-sm text-[#221e19] placeholder-[#a89d8c] focus:outline-none focus:border-[#e84a27] focus:ring-1 focus:ring-[#e84a27]/30 transition-all shadow-2xs"
                     />
@@ -895,6 +929,17 @@ export function CreateFoodPostModal() {
                       </button>
                     ) : null}
                   </div>
+
+                  {query.trim().length >= 2 && !searching && (
+                    <button
+                      type="button"
+                      onClick={() => handleSearchGoogle()}
+                      className="w-full py-2 px-3 rounded-xl border border-dashed border-[#e84a27]/30 text-[#e84a27] text-xs font-semibold hover:bg-[#e84a27]/5 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      <Search className="w-3.5 h-3.5" />
+                      <span>Search Google Maps for &ldquo;{query.trim()}&rdquo;</span>
+                    </button>
+                  )}
 
                   {/* Compact Toggle to Browse Curated Smakr Spots on Demand */}
                   {query.trim().length === 0 && venues.length > 0 && (

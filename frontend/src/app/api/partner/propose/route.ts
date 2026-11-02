@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { curatedVenuePhotos } from "@/lib/places/curatedPhotos";
+import { ingestGooglePhotoToSupabase } from "@/lib/storage/ingestGooglePhoto";
 
 export const runtime = "nodejs";
 
@@ -232,10 +233,11 @@ export async function POST(req: NextRequest) {
         .slice(-5)}`;
       const parsedLat = Number.isFinite(fallbackLat) ? fallbackLat : 59.9139;
       const parsedLng = Number.isFinite(fallbackLng) ? fallbackLng : 10.7522;
-      const fallbackImage =
+      const rawFallbackImage =
         coverImageUrl ||
         (isValidImageUrl(imageUrl) ? imageUrl : null) ||
         curatedVenuePhotos(category || "all", 1)[0];
+      const fallbackImage = await ingestGooglePhotoToSupabase(rawFallbackImage);
       const openingHoursJson = openingHours ? { summary: openingHours } : {};
       const googleRatingRaw = Number(
         body.googleRating ?? body.proposedChanges?.googleRating
@@ -312,10 +314,13 @@ export async function POST(req: NextRequest) {
       dietary_tags: livePost?.dietary_tags || [],
     };
 
+    const resolvedImageUrl = imageUrl ? await ingestGooglePhotoToSupabase(imageUrl) : "";
+    const resolvedCoverUrl = coverImageUrl ? await ingestGooglePhotoToSupabase(coverImageUrl) : "";
+
     const proposedPayload: Record<string, unknown> = {
       dish_name: dishName,
       price_nok: priceNok,
-      image_url: imageUrl,
+      image_url: resolvedImageUrl || undefined,
       taste_note: tasteNote,
       category,
       dietary_tags: dietaryTags,
@@ -323,7 +328,7 @@ export async function POST(req: NextRequest) {
       location_schedule: locationSchedule,
       spot_type: spotType,
       description: description || undefined,
-      cover_image_url: coverImageUrl || undefined,
+      cover_image_url: resolvedCoverUrl || undefined,
       dishes: menuDishes || undefined,
       popup_meta: popupMeta || undefined,
       taste_tags: Array.isArray(proposedCard.tasteTags)

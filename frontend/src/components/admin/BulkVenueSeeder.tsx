@@ -206,6 +206,26 @@ export function BulkVenueSeeder() {
       setCommitProgress({ current: i + 1, total: selected.length });
 
       try {
+        let resolvedPhoto = item.selectedPhoto || "";
+        if (
+          resolvedPhoto &&
+          (resolvedPhoto.includes("/api/places/photos") || resolvedPhoto.startsWith("places/"))
+        ) {
+          try {
+            const ingestRes = await fetch("/api/places/photos/ingest", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ refOrUrl: resolvedPhoto }),
+            });
+            const ingestData = await ingestRes.json();
+            if (ingestData.success && ingestData.publicUrl) {
+              resolvedPhoto = ingestData.publicUrl;
+            }
+          } catch {
+            // keep existing photo
+          }
+        }
+
         // 1. Insert or reuse venue
         const vResult = await insertVenue({
           name: item.venueName,
@@ -215,7 +235,7 @@ export function BulkVenueSeeder() {
           icon: item.icon,
           latitude: item.latitude,
           longitude: item.longitude,
-          imageUrl: item.selectedPhoto,
+          imageUrl: resolvedPhoto,
           priceLevel: item.priceLevel,
           openNow: item.openNow,
           googlePlaceId: item.googlePlaceId,
@@ -239,7 +259,7 @@ export function BulkVenueSeeder() {
           authorId: currentUser?.id || vResult.venue.id,
           dishName: item.dishName,
           category: item.category,
-          dishImage: item.selectedPhoto,
+          dishImage: resolvedPhoto,
           reviewText: item.tasteNote,
           priceNok: item.priceNok,
           rating: item.googleRating ? Math.round(item.googleRating * 2) : 9,

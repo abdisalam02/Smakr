@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import crypto from "crypto";
+import { ingestGooglePhotoToSupabase } from "@/lib/storage/ingestGooglePhoto";
 
 export const runtime = "nodejs";
 
@@ -262,13 +263,15 @@ export async function POST(req: NextRequest) {
       dietaryTags.push(`cat_${category}`);
     }
 
+    const resolvedDishImage = await ingestGooglePhotoToSupabase(dish.dishImage);
+
     const { data, error } = await supabase
       .from("food_posts")
       .insert({
         venue_id: venueId,
         author_id: authorId,
         dish_name: dish.dishName,
-        dish_image: dish.dishImage,
+        dish_image: resolvedDishImage,
         review_text: dish.reviewText,
         price_nok: dish.priceNok,
         rating: 0,
@@ -373,7 +376,7 @@ export async function PATCH(req: NextRequest) {
       if (!dish.dishImage || !isValidImageUrl(dish.dishImage)) {
         return NextResponse.json({ success: false, error: "Invalid dish photo." }, { status: 400 });
       }
-      patch.dish_image = dish.dishImage;
+      patch.dish_image = await ingestGooglePhotoToSupabase(dish.dishImage);
     }
     if (
       body.tasteNote !== undefined ||

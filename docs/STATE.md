@@ -1,10 +1,10 @@
 # STATE.md — CityPulse / Smakr (read first, keep <= 30 lines)
 
-Updated: 2026-11-01
+Updated: 2026-11-02
 
 ## Now
-- Task: UI/UX performance, smoothness, animation, and admin mascot persistence pass across feed, map, and venue modals.
-- Status: Defaulted to Dishes feed with collapsed Smakr Pick; added FLIP filter reorder, spring accordions, unified map popup, smooth sheet close + image zoom lightbox, warm Spots surface, and sticky mascot persistence (`tsc --noEmit` 0 errors).
+- Task: Zero-cost Google Places Ingest-Once -> Supabase Storage CDN architecture.
+- Status: Migrated 100% of DB photos (0 proxy URLs remain), sharp WebP pipeline active, tsc clean.
 
 ## Next (max 3)
 1. Re-run `npm run test:security` from `frontend/` after any environment change.
@@ -23,8 +23,8 @@ Updated: 2026-11-01
 - No other open items recorded in this handoff.
 
 ## Recent (max 5, one line each)
-- 2026-10-29 — Moved the ad reel to ad-studio; removed `/ad-reel`, tsc clean
-- 2026-10-29 — Applied workspace harness; archived prior history
-- Security — automated terminal suite for headers, secret isolation, RLS, and API auth
-- Security — standard HTTP security headers in `frontend/next.config.ts`
-- Security — remediated 3 high/critical CVEs; added `npm run security:audit`
+- 2026-11-02 — Pre-push verified: Google Places CDN ingest architecture, security tests 19/19 pass, production build clean
+- 2026-11-02 — V2 campaign deck: packaged all 5 slides in 3 aspect ratios (4:5, 9:16, 1:1) to ZIP, clean S3 & S4 distance, tsc clean
+- 2026-11-02 — V2 deck fact-check: Daglig Brød Boller Gamlebyen, Miso Ramen Sentrum, Yum Cha Majorstuen, Håndbakt photo S3, S4 dish details, tsc clean
+- 2026-11-02 — V2 deck: Daglig Brød hero pick S5, frosted glass CTA pill, removed 'menu' S4, tsc clean
+- 2026-11-02 — V2 deck perfected: glasslike frosted card, pure white edges, 6 land-only icons, top card badge, tsc clean
