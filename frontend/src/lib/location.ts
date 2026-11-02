@@ -95,3 +95,37 @@ export function formatOsloLocation(
     fullClean,
   };
 }
+
+/**
+ * Generates an authoritative Google Maps Directions URL.
+ * Uses the official Google Maps URLs Directions API:
+ * https://www.google.com/maps/dir/?api=1&destination=lat,lng&destination_place_id=...
+ * This ensures the map opens directly into turn-by-turn navigation rather than
+ * pasting search queries or raw place IDs into the search box.
+ */
+export function getDirectionsUrl(venue?: {
+  name?: string | null;
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  google_place_id?: string | null;
+  google_maps_uri?: string | null;
+} | null): string {
+  if (!venue) return "https://www.google.com/maps";
+
+  if (venue.latitude && venue.longitude) {
+    const dest = `${venue.latitude},${venue.longitude}`;
+    if (venue.google_place_id && !venue.google_place_id.startsWith("mock:")) {
+      return `https://www.google.com/maps/dir/?api=1&destination=${dest}&destination_place_id=${encodeURIComponent(venue.google_place_id)}`;
+    }
+    return `https://www.google.com/maps/dir/?api=1&destination=${dest}`;
+  }
+
+  // If coordinates are missing but a valid non-place_id URI exists, use it
+  if (venue.google_maps_uri && !venue.google_maps_uri.includes("q=place_id:")) {
+    return venue.google_maps_uri;
+  }
+
+  const queryParts = [venue.name, venue.address, "Oslo"].filter(Boolean).join(", ");
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(queryParts || "Oslo")}`;
+}

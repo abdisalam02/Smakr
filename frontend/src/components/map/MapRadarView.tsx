@@ -33,6 +33,7 @@ import {
 } from "@/lib/officialSmakrMascot";
 import { FOOD_PIN_SVG_MAP } from "@/components/food/FoodIcons";
 import { formatDistance } from "@/lib/math";
+import { getDirectionsUrl } from "@/lib/location";
 import { getPopupStatus, getPopupUrgencyLabel } from "@/lib/popupUtils";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import {
@@ -1213,7 +1214,7 @@ export function MapRadarView() {
       .foodPosts.find((p) => p.spot_id === selectedVenue.id && p.image_url && !p.is_archived)?.image_url;
     const imageUrl =
       curatedDishPhoto || selectedVenue.cover_image_url || "/images/placeholder-venue.jpg";
-    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${selectedVenue.latitude},${selectedVenue.longitude}`;
+    const googleMapsUrl = getDirectionsUrl(selectedVenue);
 
     const isWeeklyPickVenue = selectedVenue.id === weeklyPick.venue_id;
     const displayImage = isWeeklyPickVenue

@@ -293,7 +293,12 @@ export function mapVenueRow(row: VenueRow): Venue {
     popup_end_date: row.popup_end_date || (signals.popup_end_date as string) || null,
     location_schedule: row.location_schedule || (signals.location_schedule as string) || null,
     website_uri: row.website_uri || (signals.website_uri as string) || null,
-    google_maps_uri: row.google_maps_uri || row.google_maps_url || (signals.google_maps_uri as string) || null,
+    google_maps_uri:
+      (row.google_maps_uri && !row.google_maps_uri.includes("q=place_id:") ? row.google_maps_uri : null) ||
+      (row.google_maps_url && !row.google_maps_url.includes("q=place_id:") ? row.google_maps_url : null) ||
+      (typeof signals.google_maps_uri === "string" && !signals.google_maps_uri.includes("q=place_id:")
+        ? signals.google_maps_uri
+        : null),
     phone_number: row.phone_number || (signals.phone_number as string) || null,
     vibe_signals: signals,
     kitchen_status: parseKitchenLiveStatus(signals.kitchen_status),

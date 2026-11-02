@@ -649,7 +649,7 @@ export function VenueBottomSheet() {
                               </div>
                             </div>
                             <a
-                              href={selectedVenue.google_maps_uri || googleMapsUrl}
+                              href={googleMapsUrl}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="px-3 py-1.5 rounded-xl bg-[#181615] hover:bg-black text-white text-xs font-bold flex items-center gap-1 shrink-0"
@@ -897,7 +897,7 @@ export function VenueBottomSheet() {
                   {/* Action Buttons */}
                   <div className="grid grid-cols-2 gap-2.5">
                     <a
-                      href={selectedVenue.google_maps_uri || googleMapsUrl}
+                      href={googleMapsUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center justify-center gap-1.5 py-2.5 rounded-2xl bg-white hover:bg-zinc-50 dark:bg-[#1E1C1A] dark:hover:bg-zinc-800 border border-[#181615]/10 dark:border-white/10 text-zinc-900 dark:text-white font-semibold transition-colors shadow-2xs"

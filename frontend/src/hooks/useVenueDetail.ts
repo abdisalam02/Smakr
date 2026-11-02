@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { FoodPost, Venue } from "@/types";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { getCulinaryImageForDish, getRealisticPrice } from "@/lib/culinaryImages";
+import { getDirectionsUrl } from "@/lib/location";
 
 export type VenueReaction = "craving" | "must_try" | "ate_here";
 
@@ -121,10 +122,7 @@ export function useVenueDetail(venue: Venue | null): UseVenueDetailResult {
   }, [venue, venuePosts]);
 
   const googleMapsUrl = useMemo(() => {
-    if (!venue) return "https://www.google.com/maps";
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-      venue.name + ", " + venue.address + ", Oslo"
-    )}`;
+    return getDirectionsUrl(venue);
   }, [venue]);
 
   const handleReaction = (dishId: string, type: VenueReaction) => {

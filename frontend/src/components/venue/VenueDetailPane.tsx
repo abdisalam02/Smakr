@@ -451,7 +451,7 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
                     <div className="flex items-center gap-2 flex-wrap pt-1">
                       {popupHostVenue && (
                         <a
-                          href={venue.google_maps_uri || googleMapsUrl}
+                          href={googleMapsUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex-1 py-2.5 px-3 rounded-xl bg-[#181615] text-white hover:bg-black text-xs font-bold flex items-center justify-center gap-1.5"
@@ -490,7 +490,7 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
           ) : (
             <div className="flex items-center gap-2 flex-wrap pt-1">
               <a
-                href={venue.google_maps_uri || googleMapsUrl}
+                href={googleMapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[var(--surface-raised)] hover:bg-zinc-100 dark:hover:bg-white/10 border border-[var(--surface-border)] text-xs font-semibold text-zinc-700 dark:text-zinc-200 transition-colors"
