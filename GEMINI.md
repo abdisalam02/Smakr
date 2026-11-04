@@ -16,6 +16,7 @@ Canonical rules file. `AGENTS.md` points here; `CLAUDE.md` imports this file.
 | `docs/AGENT_BRIEF.md` | hard boundaries and active paths |
 | `docs/DESIGN.md` | any UI, colour, type, card, or avatar change |
 | `docs/MASCOT_SVG_FIX_GUIDE.md` | mascot or SVG work |
+| `docs/FOOD_ICON_FACTORY_GUIDE.md` | food icon pipeline & vectorizing |
 
 ## 1. Identity and scope
 - Product: Smakr, a live food-discovery radar for Oslo (venues, dish posts, weekly drop).

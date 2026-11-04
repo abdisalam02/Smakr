@@ -63,28 +63,37 @@ export function formatOsloLocation(
     .replace(/,\s*Norge\b/gi, '')
     .trim();
 
-  // 2. Extract postal code (e.g. "0190 Oslo" or "0366")
-  const postalMatch = clean.match(/\b(0\d{3})\b/);
-  const postalCode = postalMatch ? postalMatch[1] : null;
-  const resolvedNeighborhood = postalCode ? resolveOsloPostalCode(postalCode) : null;
+  // 2. Extract postal code + city (e.g. "0154 Oslo" or "2000 Lillestrøm")
+  const postalCityMatch = clean.match(/\b(\d{4})\s+([A-Za-zæøåÆØÅ]+)\b/);
+  const postalOnlyMatch = clean.match(/\b(\d{4})\b/);
+  const postalCode = postalCityMatch ? postalCityMatch[1] : (postalOnlyMatch ? postalOnlyMatch[1] : null);
+  const extractedCity = postalCityMatch ? postalCityMatch[2] : null;
 
-  // 3. Clean street component by removing postal code and Oslo suffix
+  const resolvedNeighborhood = postalCode && postalCode.startsWith('0')
+    ? resolveOsloPostalCode(postalCode)
+    : (extractedCity && extractedCity.toLowerCase() !== 'oslo' ? extractedCity : null);
+
+  // 3. Clean street component by removing postal code + city
   let street = clean
-    .replace(/\b0\d{3}\s+Oslo\b/gi, '')
-    .replace(/\b0\d{3}\b/g, '')
+    .replace(/\b\d{4}\s+[A-Za-zæøåÆØÅ]+\b/gi, '')
+    .replace(/\b\d{4}\b/g, '')
     .replace(/,\s*Oslo\b/gi, '')
+    .replace(/,\s*[A-Za-zæøåÆØÅ]+\b/gi, (match) => {
+      const word = match.replace(/^[,\s]+/, '');
+      return word.toLowerCase() === (extractedCity || '').toLowerCase() ? '' : match;
+    })
     .replace(/\s+/g, ' ')
     .trim();
 
-  // Strip trailing commas
-  street = street.replace(/,\s*$/, '').trim();
+  // Strip trailing/leading commas
+  street = street.replace(/^[,\s]+|[,\s]+$/g, '').trim();
 
   // Neighborhood resolution precedence: Postal code match > fallback neighborhood > 'Oslo'
   const neighborhood =
     resolvedNeighborhood ||
     (fallbackNeighborhood && fallbackNeighborhood.toLowerCase() !== 'all' && fallbackNeighborhood.toLowerCase() !== 'oslo'
       ? fallbackNeighborhood
-      : 'Oslo');
+      : (extractedCity || 'Oslo'));
 
   const fullClean = street ? `${street} · ${neighborhood}` : neighborhood;
 
@@ -99,9 +108,9 @@ export function formatOsloLocation(
 /**
  * Generates an authoritative Google Maps Directions URL.
  * Uses the official Google Maps URLs Directions API:
- * https://www.google.com/maps/dir/?api=1&destination=lat,lng&destination_place_id=...
- * This ensures the map opens directly into turn-by-turn navigation rather than
- * pasting search queries or raw place IDs into the search box.
+ * https://www.google.com/maps/dir/?api=1&destination=name+address&destination_place_id=...
+ * Passing name and formatted address preserves the readable destination label
+ * in Google Maps navigation, while destination_place_id binds directly to the verified place.
  */
 export function getDirectionsUrl(venue?: {
   name?: string | null;
@@ -113,19 +122,25 @@ export function getDirectionsUrl(venue?: {
 } | null): string {
   if (!venue) return "https://www.google.com/maps";
 
-  if (venue.latitude && venue.longitude) {
-    const dest = `${venue.latitude},${venue.longitude}`;
-    if (venue.google_place_id && !venue.google_place_id.startsWith("mock:")) {
-      return `https://www.google.com/maps/dir/?api=1&destination=${dest}&destination_place_id=${encodeURIComponent(venue.google_place_id)}`;
-    }
-    return `https://www.google.com/maps/dir/?api=1&destination=${dest}`;
+  const destParts = [venue.name, venue.address].filter(Boolean);
+  const destQuery = destParts.length > 0
+    ? destParts.join(", ")
+    : (venue.latitude && venue.longitude ? `${venue.latitude},${venue.longitude}` : "Oslo");
+
+  const encodedDest = encodeURIComponent(destQuery);
+
+  if (venue.google_place_id && !venue.google_place_id.startsWith("mock:")) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodedDest}&destination_place_id=${encodeURIComponent(venue.google_place_id)}`;
   }
 
-  // If coordinates are missing but a valid non-place_id URI exists, use it
+  if (venue.latitude && venue.longitude) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodedDest}`;
+  }
+
+  // Fallback to direct URI when place ID or coordinates are absent
   if (venue.google_maps_uri && !venue.google_maps_uri.includes("q=place_id:")) {
     return venue.google_maps_uri;
   }
 
-  const queryParts = [venue.name, venue.address, "Oslo"].filter(Boolean).join(", ");
-  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(queryParts || "Oslo")}`;
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodedDest}`;
 }

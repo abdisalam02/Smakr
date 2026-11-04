@@ -469,18 +469,12 @@ const blushHeads = {
   },
 };
 
-// Add Beanie from react-peeps
-if (fs.existsSync(path.join(reactPeepsHairDir, 'Beanie.js'))) {
-  const code = fs.readFileSync(path.join(reactPeepsHairDir, 'Beanie.js'), 'utf8');
-  const dMatches = [...code.matchAll(/d:\s*'([^']+)'/g)].map(m => m[1]);
-  if (dMatches.length >= 2) {
-    blushHeads['beanie'] = {
-      id: 'beanie',
-      name: 'Knitted Beanie',
-      markup: `${baseSkinPath}<g transform="translate(-7.992421, 58.70615)"><path d="${dMatches[0]}" id="Hat" fill="#e84a27"/></g><g transform="translate(-14.99996, 50.99953)"><path d="${dMatches[1]}" id="Ink" fill="#181615" fill-rule="evenodd"/></g>`,
-    };
-  }
-}
+// Add Beanie from Open Peeps (clean separated Skin, Hat, Ink paths)
+blushHeads['beanie'] = {
+  id: 'beanie',
+  name: 'Knitted Beanie',
+  markup: `<path fill-rule="evenodd" clip-rule="evenodd" d="M244.8 58.7c44.8 0 98.5 21.7 103 22.1h.2c2.4 0 11.8 7.2 28.1 21.5L358.4 137l1.4 1.4c7 6.6 12.8 12.6 17.4 17.3 37.8 38.6 44.6 190.3 35.7 243.2-9 53-25.4 104.7-102.2 104.7-76.8 0-162.3-46.2-175.4-60.6a37.4 37.4 0 0 0-29.6-13.8c-.4-.5-.9-1-1.3-1.7l-1.6-.2a99.6 99.6 0 0 1-32.6-8.8C57.4 411 43.4 373 43.4 364.7c0-8.3-21-68.8-21.5-75.2v-.1c0-5.4-27.4-30-27.4-37.7 0-7.8-5.6-7.4 0-34.9l1.6-8C2 179.5 13.5 131 57.4 109.9c48.3-23 142.2-51.2 187.4-51.2Z" id="Skin" fill="#ae5d29"/><path d="M117.7 298.3s-20.2 9.6-40.4 25.2c-20.1 15.5-10.2 16-10.2 16s-.8 33.5 5.4 46.7c6.2 13.3 43 15.6 43 15.6l6.2 21-.8 9.6a33.5 33.5 0 0 0-15.2-3c-.4-.5-.9-1-1.3-1.7l-1.6-.2a99.6 99.6 0 0 1-32.6-8.8c-12.8-7.3-26.9-45.4-26.9-53.7 0-4.7-6.6-25.8-12.5-44.6-4.6-14.6-8.7-27.8-8.9-30.6v-.1c0-2.5-5.6-8.8-11.8-15.8-7.4-8.4-15.6-17.7-15.6-22 0-2.2-.5-3.8-1-5.6-1.3-4.3-3-9.7 1-29.2l1.6-8c5.9-29.3 17.4-77.8 61.3-98.9C105.7 87.1 199.6 59 244.8 59c35.3 0 76 13.5 94 19.4 4.9 1.6 8 2.6 9 2.7h.2c2.4 0 11.8 7.2 28.1 21.5l-4.1 8.1c-54.1 1.6-143 6.4-181.9 21.2-57.7 21.9-72.4 166.4-72.4 166.4Z" id="Hat" fill="#e84a27"/><path fill-rule="evenodd" clip-rule="evenodd" d="M50 108.9C74 83.3 210.8 43.8 280 52l2 .3c5.5.7 11 1.8 16.4 3.2 17.3 4 35.2 10.2 49.6 20.5 12 8.3 49.7 22 38.6 44a32.5 32.5 0 0 1 2.9 25.2c-.4 2.6-1.2 5-2.3 7.6 8.9 13 15.8 27.7 21.5 41.7 9.9 35.2 16 71.9 17 107.8 2.9 68.3-4.6 149.9-64 194-36 28-92.2 29-132.6-5.8-2.3-2.7-13-10-9.5-11.3a102.7 102.7 0 0 0 3.3 3l-1-1c-2-1.8-4.6-4.5-1.7-4l.4.5 1.5 1h.1c-1.7-1.8-2.7-3.6-.2-2.4l.3.1 3.5 3.4v-.4l-1-1c-1.1-1-1-1-.4-1.9-2.3-3.1 2-1.3 2.2 0 2.6-.6 5 4.3 6.6 4.9 74 56.9 181.4 6.4 179.7-152.1v-3.1c-.6-50.7-4.8-102.8-25.8-148.7a132 132 0 0 0-6.8-12.9c-1.8-3.1-3.6-6.2-5.6-9.1a82.5 82.5 0 0 1-22-4.7l-80.1 4.6-8.5.5c-22.8 1.5-46.4 3.8-64.8 18-18.1 12.8-18.2 38.2-33.7 52.3-22 15-22.2 28.5-26.5 50.6.4 16.6 11.9 40.8-9.3 47.8 3.6 5-1.4 2.6-1.8.8 3.1 6-1.6 2.3-2 .4l-.7-.5c3.2 5.1-2 1.5-1.7.6-6.2-9.6-19-11-28-8.5 0 .3-.5.4-.7.2-38.2 8.3-28.4 87.4 10.8 79.7 1.7-.3 1.6.5 2 .6-1-2.4 1.6-1.4 1.6-1H109.6c-.9-4.8 4 2.3 3.7 2.5l.4-.1-.1-.5c-.8-2.2-.8-1.2-.8-2.5-.6-1.5-.6-.9-.5-1.9 2.2-1.6 2.8 3.4 3.5 3.8-1.2-1.7-.2-3.1 1-2.2 8.8 18.6 20.2 36 34.9 49.7 1.6 1.3 3.2 2.6 5 3.7 6.2 5.5 15.8 9 21.7 13.8l-.1.3v.1l.2.2 2 1c.7.5 1.2 1 1.7 1.7.5.6 1 1.2 1.3 1.9.2.8-.2 1.2-1 .8-.4 0-.7-.2-1-.4v.1c.1.2.9 2 0 1.7h-.1l-1.5-.6 1.6 2.1c.5.5.8 1.1.9 1.8 0 .4-.2.5-.6.5l-1.7-.6.1.3c.4.8 1 2.1 0 1.7a32 32 0 0 1-2.6-1c0 .2-.2.2-.5.1-2.6-1-5.2-2-7.7-3.5l-6.5-4.7c-2-1.2-4-2.6-6-4.1a129 129 0 0 1-32.4-30.1c-14.7 12.7-44.1.6-62.3-9.4-16-8.9-22.4-25.4-24-43-3.4-24-23-32.2-21.5-84.6h-.1c-.8-.2-1.4-.4-2-.8-.8-.3-1.4-.7-2-1.2l-.7-1-1-.6-.1.1c-.5.6-.2-.2-.1-.4L9.4 290l-9-12.4v.2l-.2.2a79.2 79.2 0 0 1-14-31c-2-8.3-1.2-16.8.5-24.5C-6 195.6 18.2 134.9 50 108.9ZM223.5 480l-.4-.3.4.4c.2.2.3.4.7.6v-.2l-.7-.5Zm56.1-414.5c-46.9-4-93 6.3-137.8 18.8l-3 1c-25.5 7.2-52.4 13.7-74 29.3-30 23-45.5 59.6-59 93.4a62.3 62.3 0 0 0 12 71c1.9-17.4 5-34.4 10-51.1 1-2.7.2-3.5 2.4-3.9 3.4 45.3-13.1 78.7 19.6 132.3 14.2 25.3-2.3 43.8 37.8 57l1 .5a47.3 47.3 0 0 0 25.7 3.9l-.7-1.2c-.7-1.2-1-1.8.1-2.4v-.1c-1-1.7-1.8-3.4-2.6-5l-1 .2c.2.4.2.8-.4 1-2.2.7-4.5 1-6.8.9h-.5a23 23 0 0 1-5.7-1.1l-1.5-.3c-4.7-1-9.7-3.7-13-6.4-37-21-33.2-92.7 12.5-99.5.9-45 22.4-121.2 58-164.2 32.1-39.5 120-56.6 181.2-50.6l2.6.9c9.5.8 18.5 5 27.9 7A85 85 0 0 0 342 85.6a161.7 161.7 0 0 0-62.4-20Zm-187 274.6c2.4-1.4 2.1 0 2.7-.4 17.7-1.5 36.7 14 46.6 26.9-.8.8-2.9-1.6-3.3-2l-.1.1.2.4c4 5.8-3.9-1-4.6-2.4-.2 0-.3.1-.4 0 .6.7 2.5 2.3 2.8 3.5l.5.4c4.8 4 4.4 7.2-1 1.3.1.3.2.6 0 .8h.3c2.7 2 4.9 7.2-.7 1.8.5 4-5.6-3.6-5.8-3.6a82.3 82.3 0 0 0-39.6-17.5h-.4c-2.5-.4-3.6-1-2.8-2.7-3-.7-2.3-2.2-.8-2.1-2.2-1.4-.3-2.8 1-2.3-.9-2.3 2.5-.7 2.8-1 1.8-2.8 2.3-.5 2.6-1.2Zm-37-145.4c8.4-3 33.5 6.2 31.5 18.6-1.2 2.8-5.1 4.4-8 2.8l-3.5-2.4c-6.3-4.2-12-8-18.7-11.6-3.7-1.8-5.3-5.7-1.4-7.4Zm48.2-18.3-3.3-2.1c-17.6-11.6-42.6-29.1 1.7-11 5 2.2 11.8 3.5 14.5 8.3 4.3 8.9-7 9.4-12.9 4.8Zm2-52c-1.4-5.3 16.2 1 21.4 2.7l.8.3c5 1.9 10.7 3.6 13.7 7.9 3.5 6-3.6 7.2-8 4.5-9-5.9-18.9-10.3-28-15.3Zm44.9-25c-10-10.8 16.7-.4 20.6 2.4l.2.1c3 2.1 2.3 6.6-.5 8-8 0-13.8-6.5-20.3-10.5Zm45.2-11.9c-15.8-11.3 5-6 12.3-1.5 4.9 4.4-.2 11.7-12.3 1.5Z" id="Ink" fill="#181615"/>`,
+};
 
 // Add Bun from react-peeps (pure hairstyle, path 1 with exact translate)
 if (fs.existsSync(path.join(reactPeepsHairDir, 'Bun.js'))) {
@@ -503,36 +497,24 @@ if (fs.existsSync(path.join(reactPeepsHairDir, 'HatHip.js'))) {
     blushHeads['hat-hip'] = {
       id: 'hat-hip',
       name: 'Hipster Cap',
-      markup: `${baseSkinPath}<g transform="translate(45.99902, 88.99984)"><path d="${dMatches[0]}" id="Hat" fill="#e84a27"/></g><g transform="translate(-62.00126, 16.99961)"><path d="${dMatches[1]}" id="Ink" fill="#181615" fill-rule="evenodd"/></g>`,
+      markup: `<g transform="translate(45.99902, 88.99984)"><path d="${dMatches[0]}" id="Skin" fill="#ae5d29"/></g><g transform="translate(-62.00126, 16.99961)"><path d="${dMatches[1]}" id="Ink" fill="#181615" fill-rule="evenodd"/></g>`,
     };
   }
 }
 
-// Add Hijab from react-peeps
-if (fs.existsSync(path.join(reactPeepsHairDir, 'Hijab.js'))) {
-  const code = fs.readFileSync(path.join(reactPeepsHairDir, 'Hijab.js'), 'utf8');
-  const dMatches = [...code.matchAll(/d:\s*'([^']+)'/g)].map(m => m[1]);
-  if (dMatches.length >= 2) {
-    blushHeads['hijab'] = {
-      id: 'hijab',
-      name: 'Hijab Wrap',
-      markup: `${baseSkinPath}<g transform="translate(89.07787, 105.0979)"><path d="${dMatches[0]}" id="Hat" fill="#e84a27"/></g><g transform="translate(3.00046, 36.99949)"><path d="${dMatches[1]}" id="Ink" fill="#181615" fill-rule="evenodd"/></g>`,
-    };
-  }
-}
+// Add Hijab from Open Peeps (clean separated face opening and scarf wrap)
+blushHeads['hijab'] = {
+  id: 'hijab',
+  name: 'Hijab Wrap',
+  markup: `<path d="M260.3 105.2c150.5 4.7 159.6 76.2 159.6 196.1 0 120-78.1 195.5-106.9 208.7-28.7 13.2-104.4 69.8-172.7 43.7C72 527.6 91.7 417.3 91.7 370c0-47.4 18-269.5 168.6-264.7Z" id="Skin" fill="#ae5d29"/><path d="M114.8 295.4c31.1-126.9 88-188.8 170.4-185.7C409 114.3 407.7 240.5 400 229c-5-7.5-40.6-33.7-106.5-78.7l-4-2.8-174.6 148Z" id="Hat" fill="#e84a27"/><path d="M321.3 470.6c-27.6 15.4-59.2 16-89 6.3a187.5 187.5 0 0 1-49.5-25.5 341 341 0 0 1-37-30.8 272.6 272.6 0 0 1-22.3-66c-3.6-20.8-4-42.4.1-63.3 31-25.5 62-51.3 92.8-77.1 15.7-13.2 31.4-26.3 47.4-39.2l24.1-19.7 4-3.2c16.6 12.1 34.5 22.6 51 35a349.4 349.4 0 0 1 37.4 32.4c3.6 3.7 7.2 9 12.3 10.3a5 5 0 0 0 2 .2c7 60.7 12 126.4-17.8 181.5-13 24.1-31.4 45.6-55.5 59Zm-179.8 22.3c-3.8-3.5 1.9-9.1 5.7-5.6 23.8 21.8 55 33.3 86.4 38.7 5 .8 2.9 8.5-2.2 7.7-32.8-5.6-65-18-89.9-40.8ZM113 526.4c-4.6-2.5-.5-9.4 4-7 18.6 10 38.9 15.2 59.5 18.7 5.1.8 3 8.5-2 7.7a198.6 198.6 0 0 1-61.5-19.4Zm75.5-337c15.3-13.9 31.9-27 49.4-38 17.6-11.3 37-18 57.8-18.2l-4.2 3.7-11.8 10.1c-8 6.8-15.8 13.6-23.5 20.4-15.3 13.6-30.7 27-46 40.7-29.2 26.1-57.9 52.8-86 80.3l.5-2c9.3-38.9 34.6-70.9 63.8-97ZM309 134.8l.2-.9c40 5.3 73.5 34.7 84.6 73.5-1 1.4-1.5 3-1.3 4.6 0 .9.2 1.8.3 2.6l-4-3.8a325.7 325.7 0 0 0-39.2-33.8 178.2 178.2 0 0 0-53.5-28.5l3.8-3.2c3.9-3 7.4-5.7 9-10.5Zm71.8-41.5A175.2 175.2 0 0 0 286.4 40a185 185 0 0 0-102 10.5c-67.7 26.6-121.1 85-146.2 152.9a278.3 278.3 0 0 0-15 124.6c4.4 41.6 17 84.5 39.8 120 2 3.2 4.3 6.3 6.7 9.3a79.7 79.7 0 0 1-11.5 34.6l-1.1 1.7c-6.6 4.9-13.4 9.5-20 14.3-5.8 4.1-11.5 8.4-17 13-5 4.3-11 9-14.5 14.9-2.8 4.8-4 11.3-.1 15.8 4.7 5.5 12.6 3.6 19 3.6H26l5.8 3.3 57.7 30.2c38.3 20 76.5 40.6 115.7 59 18.1 8.5 37.5 16 57.8 16 19.1-.1 36.3-7.7 51.2-19.2 17-13.1 31.2-29.8 45-46 5.4-6.6 10.8-13.2 16-20 10.3-3.3 20.3-4.3 29.4 2.2 7.3 5.3 16.8-1.8 17-9.7 0-2.8 0-5.6-.3-8.3-1.9-16.8-10-32-19.3-46.1a694.1 694.1 0 0 0-19.5-28.1 363.6 363.6 0 0 0 49.1-103.6A353 353 0 0 0 444 266c-3.7-61.4-20.6-126.3-63-172.7Z" id="Ink" fill="#181615"/>`,
+};
 
-// Add Turban from react-peeps
-if (fs.existsSync(path.join(reactPeepsHairDir, 'Turban.js'))) {
-  const code = fs.readFileSync(path.join(reactPeepsHairDir, 'Turban.js'), 'utf8');
-  const dMatches = [...code.matchAll(/d:\s*'([^']+)'/g)].map(m => m[1]);
-  if (dMatches.length >= 2) {
-    blushHeads['turban'] = {
-      id: 'turban',
-      name: 'Turban Wrap',
-      markup: `${baseSkinPath}<g transform="translate(17.99997, 10.99906)"><path d="${dMatches[0]}" id="Hat" fill="#e84a27"/></g><g transform="translate(13.00033, 1.000502)"><path d="${dMatches[1]}" id="Ink" fill="#181615" fill-rule="evenodd"/></g>`,
-    };
-  }
-}
+// Add Turban from Open Peeps (clean separated face and turban wrap)
+blushHeads['turban'] = {
+  id: 'turban',
+  name: 'Turban Wrap',
+  markup: `<path d="M463.9 255.6A268.4 268.4 0 0 0 397.5 121c-4-4.4-7.6-11.3-13.7-12.5-6.1-12.4-17.8-21.3-27.1-31.3-20.4-20.3-39.9-43-66.2-55.9-121.8-50-239.1 92.8-264 200.3C1.8 308 28.8 427.3 136 430.8c15.2 20 36 33.9 57.6 46.3 29.3 18.8 61.3 26.4 95.2 16 33.8 8.8 68.9-19.6 89.2-44.4 16-19.3 27-42.8 41.7-62.7a37.5 37.5 0 0 0 34.7-32.3c16.2-29.8 15.4-65.4 9.6-98.1Z" id="Skin" fill="#ae5d29"/><path d="M26.5 221.6c24.9-107.5 142.2-250.4 264-200.3 26.3 12.9 45.8 35.6 66.2 55.9 9.3 10 21 18.9 27.1 31.3 6.1 1.2 9.7 8.1 13.7 12.5A268.4 268.4 0 0 1 464 255.6c5.8 32.7 6.6 68.3-9.6 98a37.5 37.5 0 0 1-34.7 32.4c-3.2 4.3-6.2 8.8-9 13.4l-.8.2v-5c-1.5-82-6.2-131.5-14.2-148.5-8-17.2-42.8-48.6-104-94.3l-2-1.4-14.3-11.8-11.2 12.6c-42 47.4-74.9 84-98.7 109.7-25.5 27.7-47.2 69.8-64.9 126.4l-.5 1.8 31.3 41.4C28 423.8 2 306.8 26.5 221.6Z" id="Hat" fill="#e84a27"/><path d="M198.4 4.3c22.2-5.1 45.4-4 67.4 1.6 43.5 11.3 79.4 40.7 109 73.4a405 405 0 0 1 70.4 108l.9 2c12.3 28 23 57.2 23.5 88.2a239 239 0 0 1-11 79.7c-7.6 22.5-21.7 45.3-46 50.7a155.4 155.4 0 0 1-75.7 82.8 129.7 129.7 0 0 1-68.5 12.5 128.4 128.4 0 0 1-65.5-28.7c-.5-.4.2-1.2.7-.9a142 142 0 0 0 75.5 17 128.2 128.2 0 0 0 104.4-60.8 185 185 0 0 0 14.5-28.4 9.1 9.1 0 0 1 3.7-10.1 133.5 133.5 0 0 0 6.5-35.2c.5-6.8.2-14 .9-20.8-.3-5.6-.6-11-1.1-16.6a199.9 199.9 0 0 0-11.2-52.2c-6.3-17-16.4-32-29-44.8-27.3-27.6-61.1-47.8-87.6-76.2l-1.4-1.5-10 10-15 15.4c-30.6 31.3-61 63-87.7 97.8a461.4 461.4 0 0 0-41 63.4 382 382 0 0 0-15.4 32.4l-1.9 4.4a105 105 0 0 0-5.7 17.1c3.8 3.9 6.6 9.5 9.8 13.8a130.4 130.4 0 0 0 25.7 26.4l.6.4c5.6 4 12.2 6.8 13 14.5.4 3.3-2.6 6-5.4 7-7.5 2.9-15.3-5.3-20.4-10-3.1-2.9-6-6-8.7-9.4-2.6.4-5.2.6-7.8.3-4-.5-8-1.2-12-2.2-32.4-8.6-56.4-35.5-69.4-65.6-17.4-40.3-17-86.8-9.8-129.4 13.2-78 56-150.7 120.7-196.8 18.1-13 38.2-24 60-29.2Zm35 10.5C191.6 12.6 153.6 34 123 60.9a296.6 296.6 0 0 0-96.8 193.7c-3.7 39-1 81 19.4 115.5a131 131 0 0 0 30 34.9 97.4 97.4 0 0 0 38 18.2 79.4 79.4 0 0 1-9.7-17.5c-.2.2-.5.2-.7 0-8.7-12-6-26.3-1.9-39.4 4.4-13.7 9.9-27.1 16.2-40.1 22.9-47.3 57-88.6 92.3-127 18-19.7 36.7-38.8 55.3-58A2691.7 2691.7 0 0 0 306.4 98c4.4-4.9 8.4-10 14-13.6 4.3-3 8.7 2.6 6.7 6.7-3.2 6.3-8.6 11.3-13.5 16.5l-.5.5a1443.4 1443.4 0 0 1-30.7 32.2c4.7-.5 9.5-.8 14.2-1.6 6.4-1 12.7-2.3 19-3.9 6.5-1.6 13-3.7 19.3-6.3 6-2.4 11.5-6.3 18-6.7 5.5-.3 7.2 6.5 4.2 10-4.2 5-11.8 7-18 8.8l-.8.2c-6.8 2-13.7 3.6-20.7 4.7-9.3 1.3-20 2-29.8.6 19.7 11.5 37.9 25.9 56 39.9l3.2 2.4a210 210 0 0 1 47.6 47 156.7 156.7 0 0 1 22.8 58.1c2 10.1 3.3 20.4 4.2 30.6 3.2 9.1 2.7 20 1.9 30l-.3 3.4v1c.1 6.3 2.7 20.3-3.3 25l-.3 1.5 2.2-1.4 1-.6.7-.7h.1a61.4 61.4 0 0 0 13.9-17.8c6-10.8 9.8-22.6 12.7-34.8a204 204 0 0 0 5.2-69c-.4-3.2-1-7.2-2.2-11.3A388.6 388.6 0 0 0 345.4 67.9c-30.4-28.3-69.8-51-112-53.1Zm-58.9 115.1c1.5-.9 3 .9 2.3 2.3-3.6 7-9.7 13-14.7 18.9l-15.6 18.6a973.5 973.5 0 0 0-30.8 38.9l-2.6 3.5A484.4 484.4 0 0 0 88.2 248c-4 6.5-7.4 13.2-10.6 20.1-3 6.6-4.4 14.5-8 20.7-.3.4-1 .4-1.1-.1-1.2-6.7 1.7-14.7 3.8-21a128 128 0 0 1 9.9-21.2c7.9-14.2 17.4-27.6 27-40.7a747.8 747.8 0 0 1 45.4-56.7l2-2.2c5.5-5.9 11-12.7 18-17Zm-25.3-20.6c2.5-1.9 4.6 1.9 3 3.9-9.4 11.8-20.2 22.5-30.5 33.6a381.7 381.7 0 0 0-73.6 109c-.2.5-1 .2-.8-.3C53.8 226.4 69 200 86.6 176l.6-.9c17.7-24 38-48.1 62-66Z" id="Ink" fill="#181615"/>`,
+};
 
 // Add Short Crop from react-peeps
 let shortCropD = '';
@@ -623,7 +605,7 @@ blushFaces['contempt'] = {
   markup: readNativeBlushFace('blush-sitting-one-leg-up-2.svg', 'Contempt'),
 };
 
-// 4.2 Awe (stripped of built-in spectacles [2,3,4,5], keeping Awe eyebrows [0,1], starry wide eyes [6,7], nose, and open mouth [8])
+// 4.2 Awe (stripped of built-in spectacles [2,3,4,5], keeping Awe eyebrows [0,1], starry wide eyes [6,7], nose, open mouth [8], plus white eye scleras [4,5])
 const aweFace = readReactPeepsFace('Awe.js');
 // Nose from Smile.js shifted by (53-36, 52-36) = (+17, +16) into Awe's local coordinate space
 const aweNoseD = 'M145.748 135.039C153.872 123.66 142.366 112.957 134.814 108.367C132.836 106.947 134.406 102.243 138.634 102.97C177.031 109.567 157.136 175.708 108.112 139.413C102.275 134.704 109.343 124.334 115.634 128.366C115.953 128.611 116.288 128.869 116.636 129.139C123.704 134.603 136.636 144.601 145.748 135.039Z';
@@ -631,15 +613,17 @@ const aweCleanD = [aweFace.subs[0], aweFace.subs[1], aweFace.subs[6], aweFace.su
 blushFaces['awe'] = {
   id: 'awe',
   name: 'Awe',
-  markup: `<g transform="${aweFace.transform}"><path id="Ink" fill="#181615" fill-rule="evenodd" d="${aweCleanD}"/></g>`,
+  markup: `<g transform="${aweFace.transform}"><path id="sclera" fill="#FFFFFF" fill-rule="evenodd" d="${aweFace.subs[4]} ${aweFace.subs[5]}"/><path id="Ink" fill="#181615" fill-rule="evenodd" d="${aweCleanD}"/></g>`,
 };
 
-// 4.3 Loving Grin (heart eyes + open grin + exact tongue fill for cutout hole [6])
+// 4.3 Loving Grin (heart eyes in Burnt Paprika Red + open grin + red tongue)
 const loveGrinFace = readReactPeepsFace('LoveGrin.js');
+const loveHeartEyesD = [loveGrinFace.subs[2], loveGrinFace.subs[3]].join(' ');
+const loveInkWithoutHearts = [loveGrinFace.subs[0], loveGrinFace.subs[1], loveGrinFace.subs[4], loveGrinFace.subs[5]].join(' ');
 blushFaces['loving-grin'] = {
   id: 'loving-grin',
   name: 'Loving Grin',
-  markup: `<g transform="${loveGrinFace.transform}"><path id="tongue" fill="#E84A27" fill-rule="evenodd" d="${loveGrinFace.subs[6]}"/><path id="Ink" fill="#181615" fill-rule="evenodd" d="${loveGrinFace.d}"/></g>`,
+  markup: `<g transform="${loveGrinFace.transform}"><path id="Ink" fill="#181615" fill-rule="evenodd" d="${loveInkWithoutHearts}"/><path id="heart-eyes" fill="#E84A27" stroke="#181615" stroke-width="2" fill-rule="evenodd" d="${loveHeartEyesD}"/><path id="tongue" fill="#E84A27" stroke="#181615" stroke-width="1.5" fill-rule="evenodd" d="${loveGrinFace.subs[6]}"/></g>`,
 };
 
 // 4.4 Cheeky (exact inner tongue fill bounded by the black tongue loop)
@@ -711,16 +695,16 @@ const hecticFace = readReactPeepsFace('Hectic.js');
 blushFaces['hectic'] = {
   id: 'hectic',
   name: 'Hectic',
-  markup: `<g transform="${hecticFace.transform}"><path id="teeth" fill="#FFFFFF" fill-rule="evenodd" d="${hecticFace.subs.slice(10, 18).join(' ')}"/><path id="Ink" fill="#181615" fill-rule="evenodd" d="${hecticFace.d}"/></g>`,
+  markup: `<g transform="${hecticFace.transform}"><path id="sclera" fill="#FFFFFF" fill-rule="evenodd" d="${hecticFace.subs[4]} ${hecticFace.subs[5]}"/><path id="teeth" fill="#FFFFFF" fill-rule="evenodd" d="${hecticFace.subs.slice(10, 18).join(' ')}"/><path id="Ink" fill="#181615" fill-rule="evenodd" d="${hecticFace.d}"/></g>`,
 };
 
-// 4.13 Monster (exact white fangs + white eye sclera holes [2, 3])
+// 4.13 Monster (exact white fangs + all 3 white eye scleras [circle + subs 2, 3])
 const monsterFace = readReactPeepsFace('Monster.js');
 const monsterLeftFangD = 'M57.3202,175.92 C60.3852,179.646 61.3122,185.421 62.6362,189.994 C64.1102,195.082 66.2452,200.639 67.0112,205.917 L67.2252,205.545 C67.9797,204.112 68.7494,202.686 69.5229,201.262 L71.8432,196.991 C73.9242,193.135 76.0432,189.303 78.1812,185.48 C75.7398,184.563 73.3212,183.578 70.9121,182.576 L65.4449,180.29 C62.322,178.971 59.1377,177.482 56.7902,175.082 Z';
 blushFaces['monster'] = {
   id: 'monster',
   name: 'Monster',
-  markup: `<g transform="${monsterFace.transform}"><path id="teeth" fill="#FFFFFF" fill-rule="evenodd" d="${monsterLeftFangD} ${monsterFace.subs[9]}"/><path id="Ink" fill="#181615" fill-rule="evenodd" d="${monsterFace.d}"/></g>`,
+  markup: `<g transform="${monsterFace.transform}"><ellipse cx="114" cy="38" rx="22" ry="22" id="top-sclera" fill="#FFFFFF"/><path id="sclera" fill="#FFFFFF" fill-rule="evenodd" d="${monsterFace.subs[2]} ${monsterFace.subs[3]}"/><path id="teeth" fill="#FFFFFF" fill-rule="evenodd" d="${monsterLeftFangD} ${monsterFace.subs[9]}"/><path id="Ink" fill="#181615" fill-rule="evenodd" d="${monsterFace.d}"/></g>`,
 };
 
 console.log(`Harvested ${Object.keys(blushFaces).length} face expressions.`);

@@ -34,6 +34,7 @@ import { DishDetailPopup } from "@/components/food/DishDetailPopup";
 import { getPopupStatus, getPopupMeta, isPopupVenue } from "@/lib/popupUtils";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import { formatOsloLocation } from "@/lib/location";
+import { SmakrFoodIcon, isCustomFoodIcon } from "@/components/food/FoodIcons";
 import { ExpandableReviewText } from "./ExpandableReviewText";
 import { FEED_BLUR_DARK } from "@/lib/feedImages";
 
@@ -242,9 +243,13 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
 
         {/* Category + dietary pills */}
         <div className="flex items-center gap-1.5 flex-wrap px-4 pb-2.5">
-          <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-1 rounded-full bg-[#e84a27]/10 text-[#e84a27] border border-[#e84a27]/20">
-            {categoryDef?.emoji || venue.icon ? `${venue.icon || categoryDef?.emoji} ` : ""}
-            {categoryDef?.label || venue.food_category || "Food Spot"}
+          <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-1 rounded-full bg-[#e84a27]/10 text-[#e84a27] border border-[#e84a27]/20 inline-flex items-center gap-1">
+            {venue.icon && isCustomFoodIcon(venue.icon) ? (
+              <SmakrFoodIcon name={venue.icon} className="w-3.5 h-3.5 object-contain" />
+            ) : (
+              <span>{venue.icon || categoryDef?.emoji || "🍽️"}</span>
+            )}
+            <span>{categoryDef?.label || venue.food_category || "Food Spot"}</span>
           </span>
 
           {venue.price_level && (
@@ -299,7 +304,11 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
             </>
           ) : (
             <div className="w-full h-full flex items-center justify-center text-4xl">
-              {venue.icon || categoryDef?.emoji || "🍽️"}
+              {venue.icon && isCustomFoodIcon(venue.icon) ? (
+                <SmakrFoodIcon name={venue.icon} className="w-16 h-16 object-contain" />
+              ) : (
+                venue.icon || categoryDef?.emoji || "🍽️"
+              )}
             </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent pointer-events-none" />

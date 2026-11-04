@@ -35,6 +35,7 @@ import {
   ResidencyStatus,
 } from "@/types";
 import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
+import { isCustomFoodIcon } from "@/components/food/FoodIcons";
 import { VenueImporter, DataCleanupCard } from "@/components/admin/VenueImporter";
 import { BulkVenueSeeder } from "@/components/admin/BulkVenueSeeder";
 import { EditPostModal } from "@/components/admin/EditPostModal";
@@ -387,7 +388,7 @@ export default function AdminControlCenterPage() {
   const saveEdit = () => {
     if (!editing) return;
     const cat = editing.food_category ?? "ramen";
-    const emoji = FOOD_CATEGORIES.find((c) => c.id === cat)?.emoji ?? editing.icon ?? "🥢";
+    const emoji = isCustomFoodIcon(cat) ? cat : (FOOD_CATEGORIES.find((c) => c.id === cat)?.emoji ?? editing.icon ?? "🥢");
     updateVenue(editing.id, {
       name: editing.name,
       address: editing.address,
@@ -1280,7 +1281,7 @@ export default function AdminControlCenterPage() {
                           setEditing({
                             ...editing,
                             food_category: e.target.value as FoodCategory,
-                            icon: FOOD_CATEGORIES.find((c) => c.id === e.target.value)?.emoji ?? editing.icon,
+                            icon: isCustomFoodIcon(e.target.value) ? e.target.value : (FOOD_CATEGORIES.find((c) => c.id === e.target.value)?.emoji ?? editing.icon),
                           })
                         }
                         className={inputCls}

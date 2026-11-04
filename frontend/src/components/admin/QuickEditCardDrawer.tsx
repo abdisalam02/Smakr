@@ -8,6 +8,7 @@ import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { updateFoodPost, updateVenue, uploadDishPhoto } from "@/lib/supabase/data";
 import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
 import { IconPickerModal } from "./IconPickerModal";
+import { SmakrFoodIcon, SMAKR_ICON_SVG_BODIES, isCustomFoodIcon } from "@/components/food/FoodIcons";
 import { getPopupStatus } from "@/lib/popupUtils";
 import { VisualPhotoSwitcher } from "@/components/ui/VisualPhotoSwitcher";
 
@@ -168,11 +169,13 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
           popup_start_date: spotType === "popup" && popupStartDate ? popupStartDate : undefined,
           popup_end_date: spotType === "popup" && popupEndDate ? popupEndDate : undefined,
           location_schedule: spotType === "food_truck" && locationSchedule ? locationSchedule : undefined,
+          food_category: category,
           icon: spotIcon || linkedVenue.icon,
           curated_reviews: nextCurated,
           kitchen_status: updatedKStatus,
           vibe_signals: {
             ...linkedVenue.vibe_signals,
+            food_category: category,
             icon: spotIcon || linkedVenue.icon,
             kitchen_status: updatedKStatus,
           },
@@ -181,6 +184,7 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
         storeUpdateVenue(linkedVenue.id, venueUpdates);
         await updateVenue(linkedVenue.id, {
           spotType,
+          category,
           popupStartDate: spotType === "popup" && popupStartDate ? popupStartDate : undefined,
           popupEndDate: spotType === "popup" && popupEndDate ? popupEndDate : undefined,
           locationSchedule: spotType === "food_truck" && locationSchedule ? locationSchedule : undefined,
@@ -375,11 +379,15 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
                   className="shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#e84a27]/15 hover:bg-[#e84a27]/25 border border-[#e84a27]/35 text-xs font-bold text-[#FAF7F2] transition-all active:scale-95 cursor-pointer"
                   title="Open 95+ Foodie Emoji Picker"
                 >
-                  <span className="text-base leading-none">
-                    {spotIcon ||
+                  <span className="text-base leading-none flex items-center justify-center">
+                    {isCustomFoodIcon(spotIcon) ? (
+                      <SmakrFoodIcon name={spotIcon} className="w-5 h-5 object-contain" />
+                    ) : (
+                      spotIcon ||
                       linkedVenue?.icon ||
                       FOOD_CATEGORIES.find((c) => c.id === category)?.emoji ||
-                      "📍"}
+                      "📍"
+                    )}
                   </span>
                   <span className="text-[#FF8A6C]">🎨 Customize Pin Emoji</span>
                 </button>
@@ -773,9 +781,12 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
       {/* Searchable Icon Picker Modal */}
       {isIconPickerOpen && (
         <IconPickerModal
-          currentIcon={spotIcon || linkedVenue?.icon}
-          onSelect={(icon) => {
-            setSpotIcon(icon);
+          currentIcon={spotIcon || linkedVenue?.icon || (category as string)}
+          onSelect={(iconKey, item) => {
+            setSpotIcon(iconKey);
+            if (item?.category && item.category !== "all") {
+              setCategory(item.category as FoodCategory);
+            }
             setIsIconPickerOpen(false);
           }}
           onClose={() => setIsIconPickerOpen(false)}

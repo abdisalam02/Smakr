@@ -124,6 +124,9 @@ const NEIGHBORHOODS: Neighborhood[] = [
 export function mapCategory(raw?: string | null): FoodCategory {
   const key = (raw ?? "").toLowerCase().replace(/[^a-z]/g, "");
   if (!key) return "all";
+  if (key === "kchicken" || key.includes("kchicken") || key.includes("kfried") || key.includes("koreanfried")) return "k_chicken";
+  if (key.includes("chicken") || key.includes("wings")) return "fried_chicken";
+  if (key.includes("naan") || key.includes("flatbread")) return "naan";
   if (key.includes("dumpling") || key.includes("gyoza") || key.includes("dimsum") || key.includes("momo"))
     return "dumplings";
   if (key.includes("bao")) return "bao";

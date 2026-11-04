@@ -2,19 +2,22 @@
 
 import React, { useState, useMemo } from "react";
 import { X, Search, Sparkles } from "lucide-react";
-import { FOOD_ICONS_CATALOG, searchFoodIcons } from "@/lib/foodIconsCatalog";
+import { FOOD_ICONS_CATALOG, searchFoodIcons, FoodIconEntry } from "@/lib/foodIconsCatalog";
+import { SmakrFoodIcon, SMAKR_ICON_SVG_BODIES, isCustomFoodIcon } from "@/components/food/FoodIcons";
 
 interface IconPickerModalProps {
   currentIcon?: string;
-  onSelect: (icon: string) => void;
+  initialTab?: string;
+  onSelect: (icon: string, item?: FoodIconEntry) => void;
   onClose: () => void;
 }
 
 const CATEGORY_TABS = [
   { id: "all", label: "All" },
+  { id: "chicken", label: "Chicken & Korean" },
   { id: "dumplings", label: "Dumplings" },
   { id: "tacos", label: "Tacos & Street" },
-  { id: "ramen", label: "Ramen" },
+  { id: "ramen", label: "Ramen & Asian" },
   { id: "pizza", label: "Pizza & Burgers" },
   { id: "bakery", label: "Bakery" },
   { id: "coffee", label: "Coffee & Matcha" },
@@ -23,17 +26,23 @@ const CATEGORY_TABS = [
   { id: "spots", label: "Trucks & Pop-ups" },
 ];
 
-export function IconPickerModal({ currentIcon, onSelect, onClose }: IconPickerModalProps) {
+export function IconPickerModal({ currentIcon, initialTab = "all", onSelect, onClose }: IconPickerModalProps) {
   const [query, setQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("all");
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   const filteredIcons = useMemo(() => {
     let list = searchFoodIcons(query);
     if (activeTab !== "all") {
-      if (activeTab === "tacos") {
+      if (activeTab === "chicken") {
+        list = list.filter((i) => i.category === "k_chicken" || i.category === "fried_chicken" || i.id === "k_chicken" || i.id === "fried_chicken");
+      } else if (activeTab === "tacos") {
         list = list.filter((i) => i.category === "tacos" || i.category === "street_food");
+      } else if (activeTab === "ramen") {
+        list = list.filter((i) => i.category === "ramen" || i.category === "vietnamese" || i.id === "banh_mi");
       } else if (activeTab === "pizza") {
         list = list.filter((i) => i.category === "pizza" || i.category === "burger");
+      } else if (activeTab === "bakery") {
+        list = list.filter((i) => i.category === "bakery" || i.category === "cinnamon_roll" || i.id === "cinnamon_roll" || i.id === "croissant");
       } else if (activeTab === "coffee") {
         list = list.filter((i) => i.category === "coffee" || i.category === "matcha");
       } else {
@@ -53,8 +62,12 @@ export function IconPickerModal({ currentIcon, onSelect, onClose }: IconPickerMo
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-black/5 dark:border-white/5">
           <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-xl bg-[#e84a27]/10 text-[#e84a27] flex items-center justify-center text-base">
-              {currentIcon || "✨"}
+            <span className="w-8 h-8 rounded-xl bg-[#e84a27]/10 text-[#e84a27] flex items-center justify-center text-base overflow-hidden p-1">
+              {isCustomFoodIcon(currentIcon) ? (
+                <SmakrFoodIcon name={currentIcon!} className="w-6 h-6 object-contain" />
+              ) : (
+                currentIcon || "✨"
+              )}
             </span>
             <div>
               <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 font-comico">
@@ -117,12 +130,15 @@ export function IconPickerModal({ currentIcon, onSelect, onClose }: IconPickerMo
         {/* Icons Grid */}
         <div className="flex-1 overflow-y-auto p-3 grid grid-cols-4 sm:grid-cols-5 gap-2 no-scrollbar">
           {filteredIcons.map((item) => {
-            const isSelected = currentIcon === item.emoji;
+            const isNewRecraftIcon = isCustomFoodIcon(item.id);
+            const isSelected = isNewRecraftIcon
+              ? currentIcon === item.id || currentIcon === item.category
+              : currentIcon === item.emoji;
             return (
               <button
                 key={item.id}
                 onClick={() => {
-                  onSelect(item.emoji);
+                  onSelect(isNewRecraftIcon ? item.id : item.emoji, item);
                   onClose();
                 }}
                 className={`flex flex-col items-center justify-center p-2.5 rounded-2xl border transition-all active:scale-95 text-center ${
@@ -132,7 +148,13 @@ export function IconPickerModal({ currentIcon, onSelect, onClose }: IconPickerMo
                 }`}
                 title={item.name}
               >
-                <span className="text-2xl leading-none select-none">{item.emoji}</span>
+                {isNewRecraftIcon ? (
+                  <div className="w-8 h-8 flex items-center justify-center p-0.5 select-none">
+                    <SmakrFoodIcon name={item.id} className="w-7 h-7 object-contain" />
+                  </div>
+                ) : (
+                  <span className="text-2xl leading-none select-none">{item.emoji}</span>
+                )}
                 <span className="text-[10px] font-medium text-zinc-600 dark:text-zinc-300 mt-1 truncate max-w-full">
                   {item.name.split("/")[0].trim()}
                 </span>

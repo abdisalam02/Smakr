@@ -312,8 +312,8 @@ export function CreateFoodPostModal() {
       setListingPhotos([]);
       setCategoryKey(
         fromVenue
-          ? CATEGORY_ICONS.find((c) => c.icon === fromVenue.icon)?.key ??
-              detectCategoryKey(fromVenue.name)
+          ? (CATEGORY_ICONS.find((c) => c.icon === fromVenue.icon || c.category === fromVenue.food_category)?.key ??
+              detectCategoryKey(fromVenue.name))
           : CATEGORY_ICONS[0].key
       );
       setFormatType(fromVenue?.spot_type === "food_truck" ? "food_truck" : "restaurant");

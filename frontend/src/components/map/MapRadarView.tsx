@@ -31,7 +31,7 @@ import {
   OFFICIAL_SMAKR_MASCOT_CONFIG,
   getOfficialSmakrMascotConfig,
 } from "@/lib/officialSmakrMascot";
-import { FOOD_PIN_SVG_MAP } from "@/components/food/FoodIcons";
+import { FOOD_PIN_SVG_MAP, isCustomFoodIcon } from "@/components/food/FoodIcons";
 import { formatDistance } from "@/lib/math";
 import { getDirectionsUrl } from "@/lib/location";
 import { getPopupStatus, getPopupUrgencyLabel } from "@/lib/popupUtils";
@@ -235,10 +235,14 @@ function createAquarellePinElement(
   const isSoldOut = kitchenStatus === "sold_out";
 
   const categoryKey = venue.food_category || "all";
-  const iconSvg = FOOD_PIN_SVG_MAP[categoryKey] || FOOD_PIN_SVG_MAP.all;
-  // A curated emoji (set by the admin importer) overrides the default SVG pin.
-  const curatedIcon = venue.icon
-    ? String(venue.icon).replace(/[<>&"']/g, "").trim()
+  const rawIcon = venue.icon ? String(venue.icon).replace(/[<>&"']/g, "").trim() : "";
+  const isCustomVectorKey = isCustomFoodIcon(rawIcon) || isCustomFoodIcon(categoryKey);
+  const iconKey = rawIcon && isCustomFoodIcon(rawIcon) ? rawIcon : categoryKey;
+  const iconSvg = FOOD_PIN_SVG_MAP[iconKey] || FOOD_PIN_SVG_MAP[categoryKey] || FOOD_PIN_SVG_MAP.all;
+  const curatedIcon = isCustomVectorKey
+    ? ""
+    : rawIcon
+    ? rawIcon
     : venue.spot_type === "food_truck"
     ? "🚚"
     : venue.spot_type === "popup"

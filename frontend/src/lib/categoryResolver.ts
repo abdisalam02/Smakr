@@ -95,12 +95,21 @@ export function resolveFoodCategoryAndIcon(
     return { category: "kbbq", icon: "🥓", label: "Korean BBQ" };
   }
 
-  // 6c. Fried Chicken & Korean
+  // 6c. K-Chicken & Korean Fried Chicken
+  if (
+    combined.includes("k-chicken") ||
+    combined.includes("kchicken") ||
+    combined.includes("kfried") ||
+    combined.includes("yangnyeom")
+  ) {
+    return { category: "k_chicken", icon: "k_chicken", label: "K-Chicken" };
+  }
+
+  // 6d. Fried Chicken & Korean
   if (
     combined.includes("fried chicken") ||
     combined.includes("korean") ||
     combined.includes("wings") ||
-    combined.includes("yangnyeom") ||
     combined.includes("bibimbap") ||
     combined.includes("tteokbokki") ||
     googleTypes.includes("korean_restaurant")

@@ -23,8 +23,8 @@ Updated: 2026-11-02
 - No other open items recorded in this handoff.
 
 ## Recent (max 5, one line each)
-- 2026-11-03 — Unified Google Maps directions URL across bottom sheet, detail pane, and radar; sanitized place_id queries
-- 2026-11-03 — Pushed commit 0a6ed2e to origin/main: Google Places CDN ingest architecture, sharp WebP pipeline, clean build
-- 2026-11-02 — V2 campaign deck: packaged all 5 slides in 3 aspect ratios (4:5, 9:16, 1:1) to ZIP, clean S3 & S4 distance, tsc clean
-- 2026-11-02 — V2 deck fact-check: Daglig Brød Boller Gamlebyen, Miso Ramen Sentrum, Yum Cha Majorstuen, Håndbakt photo S3, S4 dish details, tsc clean
-- 2026-11-02 — V2 deck: Daglig Brød hero pick S5, frosted glass CTA pill, removed 'menu' S4, tsc clean
+- 2026-11-04 — Generated Pizza, Coffee, Bánh Mì & Ramen icons (<12 KB WebP, <60 KB SVG); wired studio, picker & radar; tsc clean
+- 2026-11-04 — Fixed custom icon rendering: MapRadarView & drawer now render WebP icons instead of raw text; tsc clean
+- 2026-11-04 — Promoted Part 2 lineless gouache cinnamon roll (11.2 KB WebP) to active icon gallery; verified in picker; tsc clean
+- 2026-11-04 — Upgraded Food Icon Studio with all custom SVGs; regenerated croissant via lineless pipeline; documented go-to guide; tsc clean
+- 2026-11-04 — Benchmarked Part 1 (direct photo quantization, 8.4 KB WebP, 18 paths) vs Part 2 (lineless gouache, 11.2 KB WebP); tsc clean

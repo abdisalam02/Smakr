@@ -13,7 +13,8 @@ export const FOOD_ICONS_CATALOG: FoodIconEntry[] = [
   { id: "takeout_box", emoji: "🥡", name: "Dim Sum / Wok Box", tags: ["wok", "takeout", "dim sum", "noodles", "asian"], category: "dumplings" },
 
   // Korean & Fried Chicken
-  { id: "fried_chicken", emoji: "🍗", name: "Korean Fried Chicken / Wings", tags: ["chicken", "korean", "wings", "crispy", "fried", "yangnyeom", "kfc"], category: "fried_chicken" },
+  { id: "k_chicken", emoji: "🍗", name: "K-Chicken (3-Wing Stack)", tags: ["k-chicken", "korean", "chicken", "wings", "crispy", "yangnyeom", "kfc", "kfried"], category: "k_chicken" },
+  { id: "fried_chicken", emoji: "🍗", name: "Fried Chicken & Wings (Duotone)", tags: ["chicken", "korean", "wings", "crispy", "fried", "yangnyeom", "kfc"], category: "fried_chicken" },
   { id: "korean_bbq", emoji: "🥩", name: "Korean BBQ / Galbi / Steak", tags: ["bbq", "korean", "galbi", "bulgogi", "steak", "meat", "grill"], category: "fried_chicken" },
   { id: "bibimbap", emoji: "🍲", name: "Bibimbap / Tteokbokki / Hotpot", tags: ["bibimbap", "tteokbokki", "hotpot", "kimchi", "stew", "korean"], category: "fried_chicken" },
   { id: "corn_dog", emoji: "🌭", name: "Korean Corn Dog / Pølse", tags: ["corndog", "hotdog", "polse", "sausage", "street food"], category: "street_food" },
@@ -35,10 +36,12 @@ export const FOOD_ICONS_CATALOG: FoodIconEntry[] = [
 
   // Indian & Curry
   { id: "curry_rice", emoji: "🍛", name: "Indian Curry / Tikka Masala / Biryani", tags: ["curry", "indian", "masala", "tikka", "butter chicken", "biryani", "dal", "vindaloo"], category: "indian" },
+  { id: "naan", emoji: "🫓", name: "Garlic Naan / Tandoor Flatbread", tags: ["naan", "flatbread", "garlic naan", "roti", "indian", "tandoor", "bread"], category: "naan" },
   { id: "samosa", emoji: "🥟", name: "Samosa / Pakora / Chaat", tags: ["samosa", "pakora", "chaat", "indian", "street food"], category: "indian" },
   { id: "tandoori_pot", emoji: "🏺", name: "Tandoori / Clay Oven / Handi", tags: ["tandoori", "clay pot", "handi", "biryani", "indian"], category: "indian" },
 
   // Ramen, Sushi & Japanese
+  { id: "ramen", emoji: "🍜", name: "Tonkotsu Ramen Bowl", tags: ["ramen", "noodles", "chashu", "egg", "broth", "japanese"], category: "ramen" },
   { id: "sushi", emoji: "🍣", name: "Sushi / Nigiri / Sashimi", tags: ["sushi", "fish", "salmon", "raw", "nigiri", "maki", "omakase"], category: "sushi" },
   { id: "bento", emoji: "🍱", name: "Bento Box / Donburi", tags: ["bento", "japanese", "lunch", "donburi", "poke"], category: "sushi" },
   { id: "rice_ball", emoji: "🍙", name: "Onigiri / Hand Roll", tags: ["onigiri", "rice", "seaweed", "temaki"], category: "sushi" },
@@ -69,6 +72,7 @@ export const FOOD_ICONS_CATALOG: FoodIconEntry[] = [
 
   // Nordic, Bakery & Sourdough
   { id: "croissant", emoji: "🥐", name: "Croissant / Flaky Pastry", tags: ["croissant", "pastry", "french", "butter", "viennoiserie"], category: "bakery" },
+  { id: "cinnamon_roll", emoji: "🥮", name: "Glazed Cinnamon Roll / Kanelbolle", tags: ["cinnamon roll", "cinnamon", "kanelbolle", "cinnamon bun", "swirl", "glazed", "pastry", "bakery"], category: "cinnamon_roll" },
   { id: "cinnamon_bun", emoji: "🥨", name: "Cardamom / Cinnamon Knot (Kanelbolle)", tags: ["cardamom", "cinnamon", "kanelbolle", "kardemommebolle", "knot", "bun", "pretzel", "bolle"], category: "bakery" },
   { id: "bread", emoji: "🍞", name: "Sourdough Loaf (Surdeigsbrød)", tags: ["bread", "sourdough", "surdeig", "loaf", "toast"], category: "bakery" },
   { id: "baguette", emoji: "🥖", name: "French Baguette / Sub", tags: ["baguette", "french", "crusty", "bread"], category: "bakery" },
