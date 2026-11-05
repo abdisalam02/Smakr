@@ -31,12 +31,14 @@ interface FeedFilterBarProps {
 
 export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isSpotTypeOpen, setIsSpotTypeOpen] = useState(false);
+  const [isCuisinesOpen, setIsCuisinesOpen] = useState(false);
 
   // Auto-collapse drawer on feed scroll anywhere
   useCollapseOnFeedScroll({
-    threshold: 20,
+    threshold: 24,
     isExpanded,
-    ignoreSelector: "[data-filter-drawer]",
+    ignoreSelector: "[data-filter-drawer], [data-filter-bar]",
     onCollapse: () => setIsExpanded(false),
   });
 
@@ -253,7 +255,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
   }, [selectedGroup]);
 
   return (
-    <div className="w-full max-w-full min-w-0 bg-transparent border-b border-black/[0.06] dark:border-white/[0.08]">
+    <div data-filter-bar className="w-full max-w-full min-w-0 bg-transparent border-b border-black/[0.06] dark:border-white/[0.08]">
       {/* ── TOP HORIZONTAL STRIP (W1–W3: Non-empty only, count desc, short & honest) ── */}
       <div
         ref={filterScrollRef}
@@ -534,39 +536,12 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                 )}
               </AnimatePresence>
 
-              {/* ── SECTION 3: Spot Kinds (Axis 1: 9 Staple Venue Types) ── */}
-              <div>
-                <div className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-1.5">
-                  Spot Type (Venue Kind)
-                </div>
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
-                  {SPOT_KINDS.filter((spot) => spot.id !== "street_stall").map((spot) => {
-                    const isActive = selectedSpotKind === spot.id;
-                    return (
-                      <button
-                        key={spot.id}
-                        type="button"
-                        onClick={() => handleSelectSpotKind(spot.id)}
-                        className={`shrink-0 min-h-[44px] px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
-                          isActive
-                            ? "bg-[#181615] dark:bg-white text-white dark:text-[#181615] border-[#181615] dark:border-white shadow-xs"
-                            : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-white/10 hover:border-zinc-400"
-                        }`}
-                      >
-                        <SmakrFoodIcon name={spot.id} className="w-4 h-4 shrink-0" monochrome={isActive} />
-                        <span>{spot.shortLabel}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* ── SECTION 4: Dietary Badges (Axis 4: Custom Vector Icons) ── */}
+              {/* ── SECTION 3: Dietary Badges (Directly Visible) ── */}
               <div>
                 <div className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-1.5">
                   Dietary Preferences
                 </div>
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
                   {(["halal", "vegan", "vegetarian", "gluten_free", "spicy"] as const).map((diet) => {
                     const isActive = selectedDietary.includes(diet);
                     const dietLabels: Record<DietaryTag, string> = {
@@ -582,13 +557,13 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                         key={diet}
                         type="button"
                         onClick={() => toggleDietary(diet)}
-                        className={`shrink-0 min-h-[44px] px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
+                        className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
                           isActive
                             ? "bg-[#4E8752] text-white border-[#4E8752] shadow-xs"
                             : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-white/10 hover:border-[#4E8752]/40"
                         }`}
                       >
-                        <SmakrFoodIcon name={diet} className="w-4 h-4 shrink-0" monochrome={isActive} />
+                        <SmakrFoodIcon name={diet} className="w-3.5 h-3.5 shrink-0" monochrome={isActive} />
                         <span>{dietLabels[diet]}</span>
                       </button>
                     );
@@ -596,31 +571,120 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                 </div>
               </div>
 
-              {/* ── SECTION 5: Regional Cuisines (Axis 3: Flag-Free Glyphs) ── */}
-              <div>
-                <div className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-1.5">
-                  Regional Cuisines
-                </div>
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
-                  {CUISINES.map((cuisine) => {
-                    const isActive = selectedCuisine === cuisine.id;
-                    return (
-                      <button
-                        key={cuisine.id}
-                        type="button"
-                        onClick={() => handleSelectCuisine(cuisine.id)}
-                        className={`shrink-0 px-2.5 py-1 rounded-xl text-[11px] font-semibold border flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
-                          isActive
-                            ? "bg-[#e84a27] text-white border-[#e84a27] font-bold shadow-xs"
-                            : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-white/10 hover:border-[#e84a27]/30"
-                        }`}
-                      >
-                        <SmakrFoodIcon name={cuisine.glyph} className="w-3.5 h-3.5 shrink-0" monochrome={isActive} />
-                        <span>{cuisine.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+              {/* ── SECTION 4: Spot Type Dropdown (Toggles Horizontal Slider) ── */}
+              <div className="rounded-2xl border border-zinc-200/70 dark:border-white/10 bg-white/60 dark:bg-white/5 overflow-hidden transition-all">
+                <button
+                  type="button"
+                  onClick={() => setIsSpotTypeOpen(!isSpotTypeOpen)}
+                  className="w-full px-3 py-2 flex items-center justify-between text-left cursor-pointer active:scale-[0.99] transition-transform select-none"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                      Spot Type (Venue Kind)
+                    </span>
+                    {selectedSpotKind && (
+                      <span className="px-2 py-0.5 rounded-full bg-[#e84a27] text-white text-[10px] font-bold">
+                        {SPOT_KINDS.find((s) => s.id === selectedSpotKind)?.shortLabel || selectedSpotKind}
+                      </span>
+                    )}
+                  </div>
+                  <ChevronDown
+                    className={`w-4 h-4 text-zinc-400 transition-transform duration-200 ${
+                      isSpotTypeOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                <AnimatePresence>
+                  {isSpotTypeOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.18 }}
+                      className="overflow-hidden border-t border-zinc-200/60 dark:border-white/10 p-2.5 pt-2"
+                    >
+                      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                        {SPOT_KINDS.filter((spot) => spot.id !== "street_stall").map((spot) => {
+                          const isActive = selectedSpotKind === spot.id;
+                          return (
+                            <button
+                              key={spot.id}
+                              type="button"
+                              onClick={() => handleSelectSpotKind(spot.id)}
+                              className={`shrink-0 min-h-[42px] px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
+                                isActive
+                                  ? "bg-[#181615] dark:bg-white text-white dark:text-[#181615] border-[#181615] dark:border-white shadow-xs"
+                                  : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-white/10 hover:border-zinc-400"
+                              }`}
+                            >
+                              <SmakrFoodIcon name={spot.id} className="w-4 h-4 shrink-0" monochrome={isActive} />
+                              <span>{spot.shortLabel}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* ── SECTION 5: Regional Cuisines Dropdown (Toggles Horizontal Slider) ── */}
+              <div className="rounded-2xl border border-zinc-200/70 dark:border-white/10 bg-white/60 dark:bg-white/5 overflow-hidden transition-all">
+                <button
+                  type="button"
+                  onClick={() => setIsCuisinesOpen(!isCuisinesOpen)}
+                  className="w-full px-3 py-2 flex items-center justify-between text-left cursor-pointer active:scale-[0.99] transition-transform select-none"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                      Regional Cuisines
+                    </span>
+                    {selectedCuisine && (
+                      <span className="px-2 py-0.5 rounded-full bg-[#e84a27] text-white text-[10px] font-bold">
+                        {CUISINES.find((c) => c.id === selectedCuisine)?.label || selectedCuisine}
+                      </span>
+                    )}
+                  </div>
+                  <ChevronDown
+                    className={`w-4 h-4 text-zinc-400 transition-transform duration-200 ${
+                      isCuisinesOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                <AnimatePresence>
+                  {isCuisinesOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.18 }}
+                      className="overflow-hidden border-t border-zinc-200/60 dark:border-white/10 p-2.5 pt-2"
+                    >
+                      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                        {CUISINES.map((cuisine) => {
+                          const isActive = selectedCuisine === cuisine.id;
+                          return (
+                            <button
+                              key={cuisine.id}
+                              type="button"
+                              onClick={() => handleSelectCuisine(cuisine.id)}
+                              className={`shrink-0 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold border flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
+                                isActive
+                                  ? "bg-[#e84a27] text-white border-[#e84a27] font-bold shadow-xs"
+                                  : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-white/10 hover:border-[#e84a27]/30"
+                              }`}
+                            >
+                              <SmakrFoodIcon name={cuisine.glyph} className="w-3.5 h-3.5 shrink-0" monochrome={isActive} />
+                              <span>{cuisine.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* ── SECTION 6: Quick Status & Price Tiers ── */}

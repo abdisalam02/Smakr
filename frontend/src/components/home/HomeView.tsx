@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useLayoutEffect, useState, useRef, useMemo } from "react";
+import React, { useEffect, useLayoutEffect, useState, useRef, useMemo, useCallback } from "react";
 import { FeedFilterBar } from "@/components/filter/FeedFilterBar";
 import { MascotWeeklyDrop } from "@/components/food/MascotWeeklyDrop";
 import { FoodPostCard } from "@/components/food/FoodPostCard";
@@ -453,6 +453,41 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
 
   // Content scroll container ref & pull-to-minimize tracker
   const feedScrollRef = useRef<HTMLDivElement>(null);
+  const desktopFeedScrollRef = useRef<HTMLDivElement>(null);
+  const modeScrollRef = useRef<Record<string, number>>({ food: 0, places: 0, popups: 0 });
+  const prevModeRef = useRef<string>(feedMode);
+
+  // Independent scroll per mode (prevents Food and Spots from scrolling together)
+  const handleDesktopScroll = useCallback(() => {
+    if (desktopFeedScrollRef.current) {
+      modeScrollRef.current[feedMode] = desktopFeedScrollRef.current.scrollTop;
+    }
+  }, [feedMode]);
+
+  const handleMobileScroll = useCallback(() => {
+    if (feedScrollRef.current) {
+      modeScrollRef.current[feedMode] = feedScrollRef.current.scrollTop;
+    }
+  }, [feedMode]);
+
+  useEffect(() => {
+    if (prevModeRef.current !== feedMode) {
+      prevModeRef.current = feedMode;
+      const targetScroll = modeScrollRef.current[feedMode] || 0;
+      const applyScroll = () => {
+        if (desktopFeedScrollRef.current) {
+          desktopFeedScrollRef.current.scrollTop = targetScroll;
+        }
+        if (feedScrollRef.current) {
+          feedScrollRef.current.scrollTop = targetScroll;
+        }
+      };
+      applyScroll();
+      const timer = setTimeout(applyScroll, 20);
+      return () => clearTimeout(timer);
+    }
+  }, [feedMode]);
+
   const contentTouchStartY = useRef<number | null>(null);
   const isContentPulling = useRef<boolean>(false);
   // When the sheet is in "peek", a touch anywhere on the content drags the sheet.
@@ -754,7 +789,12 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                 <MascotWeeklyDrop feedCount={filteredPosts.length} />
                 <FeedFilterBar />
               </div>
-              <div data-feed-scroll className="flex-1 overflow-y-auto p-5 space-y-4 no-scrollbar pb-36">
+              <div
+                ref={desktopFeedScrollRef}
+                onScroll={handleDesktopScroll}
+                data-feed-scroll
+                className="flex-1 overflow-y-auto p-5 space-y-4 no-scrollbar pb-36"
+              >
                 <AnimatePresence mode="wait" initial={false}>
                   {feedMode === "popups" && (
                     <motion.div
@@ -1023,6 +1063,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
           <div
             ref={feedScrollRef}
             data-feed-scroll
+            onScroll={handleMobileScroll}
             onTouchStart={handleContentTouchStart}
             onTouchMove={handleContentTouchMove}
             onTouchEnd={handleContentTouchEnd}

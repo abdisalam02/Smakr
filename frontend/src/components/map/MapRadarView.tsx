@@ -1300,17 +1300,11 @@ export function MapRadarView() {
 
     popupNode.innerHTML = `
       <div style="
-        background: rgba(250, 247, 242, 0.94);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        border: 1px solid ${isWeeklyPickVenue ? "rgba(232, 74, 39, 0.35)" : "rgba(255, 255, 255, 0.65)"};
-        border-radius: 18px;
-        box-shadow: 0 12px 32px rgba(24, 22, 21, 0.16);
-        padding: 10px;
         width: 290px;
         max-width: 88vw;
-        position: relative;
-        font-family: inherit;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
         animation: smakrPopupEnter 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
       ">
         <style>
@@ -1319,6 +1313,18 @@ export function MapRadarView() {
             to { opacity: 1; transform: translateY(0) scale(1); }
           }
         </style>
+
+        <div style="
+          background: rgba(250, 247, 242, 0.94);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border: 1px solid ${isWeeklyPickVenue ? "rgba(232, 74, 39, 0.35)" : "rgba(255, 255, 255, 0.65)"};
+          border-radius: 18px;
+          box-shadow: 0 12px 32px rgba(24, 22, 21, 0.16);
+          padding: 10px;
+          position: relative;
+          font-family: inherit;
+        ">
         <button id="smakr-popup-close-btn" style="
           position: absolute;
           top: 8px;
@@ -1457,7 +1463,7 @@ export function MapRadarView() {
             <div style="
               font-size: 10.5px;
               color: #57534E;
-              margin-top: 3px;
+              margin-top: 5px;
               line-height: 1.3;
               white-space: nowrap;
               overflow: hidden;
@@ -1465,47 +1471,53 @@ export function MapRadarView() {
             ">
               ${isWeeklyPickVenue && weeklyPick.dish_name ? `✦ ${weeklyPick.dish_name} · ${addressText}` : `📍 ${addressText}`}
             </div>
-          </div>
         </div>
 
-        <div style="display: flex; gap: 6px; margin-top: 8px; padding-top: 7px; border-top: 1px solid rgba(24, 22, 21, 0.06);">
+        <!-- Floating Action Buttons (Outside card, matching exact card width) -->
+        <div style="display: flex; gap: 7px; width: 100%; box-sizing: border-box;">
           <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" style="
             flex: 1;
-            height: 30px;
-            padding: 0 8px;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.85);
+            height: 36px;
+            padding: 0 10px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(24, 22, 21, 0.12);
             color: #181615;
-            font-size: 10px;
-            font-weight: 600;
+            font-size: 11.5px;
+            font-weight: 700;
             text-align: center;
             text-decoration: none;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 3px;
+            gap: 4px;
+            box-shadow: 0 4px 14px rgba(24, 22, 21, 0.08);
+            box-sizing: border-box;
+            cursor: pointer;
           ">
             <span>Map</span> ↗
           </a>
 
           <button id="smakr-popup-menu-btn" style="
-            flex: 1;
-            height: 30px;
-            padding: 0 8px;
-            border-radius: 8px;
+            flex: 1.25;
+            height: 36px;
+            padding: 0 12px;
+            border-radius: 12px;
             background: #e84a27;
             border: none;
             color: #ffffff;
             font-family: var(--font-comico, sans-serif);
-            font-size: 10px;
+            font-size: 11.5px;
             font-weight: bold;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 2px;
-            box-shadow: 0 1px 4px rgba(232,74,39,0.2);
+            gap: 4px;
+            box-shadow: 0 4px 14px rgba(232, 74, 39, 0.32);
+            box-sizing: border-box;
           ">
             <span>Details</span> →
           </button>

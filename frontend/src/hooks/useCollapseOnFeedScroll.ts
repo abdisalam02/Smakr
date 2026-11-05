@@ -35,20 +35,31 @@ export function useCollapseOnFeedScroll({
       return;
     }
 
-    // Anchor baseline from whatever container or window is active
+    // Anchor baseline from whatever feed container or window is active
     const feedContainer = document.querySelector("[data-feed-scroll]");
-    if (feedContainer instanceof HTMLElement) {
-      baselineScrollRef.current = feedContainer.scrollTop;
-    } else {
-      baselineScrollRef.current = window.scrollY || document.documentElement.scrollTop || 0;
-    }
+    const isContainer = feedContainer instanceof HTMLElement;
 
-    const checkCollapse = (currentScroll: number) => {
-      if (baselineScrollRef.current === null) {
-        baselineScrollRef.current = currentScroll;
-        return;
+    const getScrollY = (): number => {
+      if (isContainer && feedContainer) {
+        return feedContainer.scrollTop;
       }
-      const diff = Math.abs(currentScroll - baselineScrollRef.current);
+      return window.scrollY || document.documentElement.scrollTop || 0;
+    };
+
+    baselineScrollRef.current = getScrollY();
+
+    // Grace period: allow 280ms for open animation & tap inertia to settle before listening
+    let isArmed = false;
+    const armTimer = setTimeout(() => {
+      isArmed = true;
+      // Re-anchor baseline scroll after drawer has fully mounted
+      baselineScrollRef.current = getScrollY();
+    }, 280);
+
+    const checkCollapse = () => {
+      if (!isArmed || baselineScrollRef.current === null) return;
+      const current = getScrollY();
+      const diff = Math.abs(current - baselineScrollRef.current);
       if (diff > threshold) {
         onCollapseRef.current?.();
       }
@@ -59,14 +70,7 @@ export function useCollapseOnFeedScroll({
       if (ignoreSelector && target instanceof Element && target.closest(ignoreSelector)) {
         return;
       }
-
-      let current = 0;
-      if (target instanceof HTMLElement) {
-        current = target.scrollTop;
-      } else {
-        current = window.scrollY || document.documentElement.scrollTop || 0;
-      }
-      checkCollapse(current);
+      checkCollapse();
     };
 
     const handleTouchStart = (e: TouchEvent) => {
@@ -81,7 +85,7 @@ export function useCollapseOnFeedScroll({
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (touchStartYRef.current === null) return;
+      if (!isArmed || touchStartYRef.current === null) return;
       const target = e.target;
       if (ignoreSelector && target instanceof Element && target.closest(ignoreSelector)) {
         return;
@@ -94,12 +98,21 @@ export function useCollapseOnFeedScroll({
       }
     };
 
+    let accumulatedWheel = 0;
+    let wheelTimer: NodeJS.Timeout | null = null;
     const handleWheel = (e: WheelEvent) => {
+      if (!isArmed) return;
       const target = e.target;
       if (ignoreSelector && target instanceof Element && target.closest(ignoreSelector)) {
         return;
       }
-      if (Math.abs(e.deltaY) > 12) {
+      accumulatedWheel += Math.abs(e.deltaY);
+      if (wheelTimer) clearTimeout(wheelTimer);
+      wheelTimer = setTimeout(() => {
+        accumulatedWheel = 0;
+      }, 200);
+
+      if (accumulatedWheel > threshold) {
         onCollapseRef.current?.();
       }
     };
@@ -110,6 +123,8 @@ export function useCollapseOnFeedScroll({
     window.addEventListener("wheel", handleWheel, { capture: true, passive: true });
 
     return () => {
+      clearTimeout(armTimer);
+      if (wheelTimer) clearTimeout(wheelTimer);
       window.removeEventListener("scroll", handleScroll, { capture: true });
       window.removeEventListener("touchstart", handleTouchStart, { capture: true });
       window.removeEventListener("touchmove", handleTouchMove, { capture: true });
