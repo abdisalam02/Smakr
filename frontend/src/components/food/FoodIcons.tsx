@@ -165,11 +165,39 @@ SMAKR_ICON_SVG_BODIES.outdoor_park = SMAKR_ICON_SVG_BODIES.park;
  * Filter-bar specific hand-drawn sketchbook artwork (used on filter pills and drawer only, never overwriting spot icons)
  */
 export const FILTER_CATEGORY_WEBP: Record<string, string> = {
+  // All 13 canonical Food Groups
   pastries_bakery: "/icons/filters/pastries_bakery.webp",
   breads: "/icons/filters/breads.webp",
   coffee_tea: "/icons/filters/coffee_tea.webp",
   noodles_soup: "/icons/filters/noodles_soup.webp",
   dumplings_buns: "/icons/filters/dumplings_buns.webp",
+  sandwiches_handhelds: "/icons/filters/sandwiches_handhelds.webp",
+  pizza_pasta: "/icons/filters/pizza_pasta.webp",
+  chicken_grill: "/icons/filters/chicken_grill.webp",
+  rice_bowls: "/icons/filters/rice_bowls.webp",
+  seafood: "/icons/filters/seafood.webp",
+  sweets_frozen: "/icons/filters/sweets_frozen.webp",
+  drinks_bars: "/icons/filters/drinks_bars.webp",
+  brunch: "/icons/filters/brunch.webp",
+
+  // Child category aliases
+  sandwich: "/icons/filters/sandwiches_handhelds.webp",
+  burger: "/icons/filters/sandwiches_handhelds.webp",
+  tacos: "/icons/filters/sandwiches_handhelds.webp",
+  pizza: "/icons/filters/pizza_pasta.webp",
+  pasta: "/icons/filters/pizza_pasta.webp",
+  k_chicken: "/icons/filters/chicken_grill.webp",
+  fried_chicken: "/icons/filters/chicken_grill.webp",
+  curry: "/icons/filters/rice_bowls.webp",
+  indian: "/icons/filters/rice_bowls.webp",
+  mandi_rice: "/icons/filters/rice_bowls.webp",
+  sushi: "/icons/filters/seafood.webp",
+  gelato: "/icons/filters/sweets_frozen.webp",
+  dessert: "/icons/filters/sweets_frozen.webp",
+  natural_wine: "/icons/filters/drinks_bars.webp",
+  wine: "/icons/filters/drinks_bars.webp",
+  drinks: "/icons/filters/drinks_bars.webp",
+  breakfast: "/icons/filters/brunch.webp",
 };
 
 export const CUSTOM_VECTOR_ICONS = new Set([
