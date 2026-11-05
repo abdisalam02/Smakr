@@ -31,7 +31,7 @@ import {
   OFFICIAL_SMAKR_MASCOT_CONFIG,
   getOfficialSmakrMascotConfig,
 } from "@/lib/officialSmakrMascot";
-import { FOOD_PIN_SVG_MAP, isCustomFoodIcon } from "@/components/food/FoodIcons";
+import { FOOD_PIN_SVG_MAP, isCustomFoodIcon, resolveCustomIconKey } from "@/components/food/FoodIcons";
 import { formatDistance } from "@/lib/math";
 import { getDirectionsUrl } from "@/lib/location";
 import { getPopupStatus, getPopupUrgencyLabel } from "@/lib/popupUtils";
@@ -236,8 +236,9 @@ function createAquarellePinElement(
 
   const categoryKey = venue.food_category || "all";
   const rawIcon = venue.icon ? String(venue.icon).replace(/[<>&"']/g, "").trim() : "";
-  const isCustomVectorKey = isCustomFoodIcon(rawIcon) || isCustomFoodIcon(categoryKey);
-  const iconKey = rawIcon && isCustomFoodIcon(rawIcon) ? rawIcon : categoryKey;
+  const customKey = resolveCustomIconKey(rawIcon) || resolveCustomIconKey(categoryKey);
+  const isCustomVectorKey = Boolean(customKey);
+  const iconKey = customKey || rawIcon || categoryKey;
   const iconSvg = FOOD_PIN_SVG_MAP[iconKey] || FOOD_PIN_SVG_MAP[categoryKey] || FOOD_PIN_SVG_MAP.all;
   const curatedIcon = isCustomVectorKey
     ? ""

@@ -61,7 +61,7 @@ export function resolveFoodCategoryAndIcon(
     combined.includes("soba") ||
     googleTypes.includes("ramen_restaurant")
   ) {
-    return { category: "ramen", icon: "🍜", label: "Ramen" };
+    return { category: "ramen", icon: "ramen", label: "Ramen" };
   }
 
   // 5. Pizza & Calzone
@@ -71,7 +71,7 @@ export function resolveFoodCategoryAndIcon(
     combined.includes("woodfired") ||
     googleTypes.includes("pizza_restaurant")
   ) {
-    return { category: "pizza", icon: "🍕", label: "Pizza" };
+    return { category: "pizza", icon: "pizza", label: "Pizza" };
   }
 
   // 6. Burgers & Smash
@@ -163,7 +163,7 @@ export function resolveFoodCategoryAndIcon(
     return { category: "kebab", icon: "🥙", label: "Kebab & Shawarma" };
   }
 
-  // 6f. Pho & Vietnamese
+  // 6f. Pho & Vietnamese / Bánh Mì
   if (
     combined.includes("pho") ||
     combined.includes("phở") ||
@@ -173,10 +173,11 @@ export function resolveFoodCategoryAndIcon(
     combined.includes("summer roll") ||
     googleTypes.includes("vietnamese_restaurant")
   ) {
-    return { category: "vietnamese", icon: "🍲", label: "Pho & Vietnamese" };
+    const icon = combined.includes("bánh mì") || combined.includes("banh mi") ? "banh_mi" : "vietnamese";
+    return { category: "vietnamese", icon, label: "Pho & Vietnamese" };
   }
 
-  // 6g. Indian & Curry
+  // 6g. Indian, Curry & Garlic Naan
   if (
     combined.includes("curry") ||
     combined.includes("masala") ||
@@ -188,7 +189,8 @@ export function resolveFoodCategoryAndIcon(
     combined.includes("indian") ||
     googleTypes.includes("indian_restaurant")
   ) {
-    return { category: "indian", icon: "🍛", label: "Indian & Curry" };
+    const icon = combined.includes("naan") ? "naan" : "indian";
+    return { category: "indian", icon, label: "Indian & Curry" };
   }
 
   // 7. Pasta & Italian
@@ -237,7 +239,7 @@ export function resolveFoodCategoryAndIcon(
     googleTypes.includes("cafe") ||
     googleTypes.includes("coffee_shop")
   ) {
-    return { category: "coffee", icon: "☕", label: "Specialty Coffee" };
+    return { category: "coffee", icon: "coffee", label: "Specialty Coffee" };
   }
 
   // 9b. Artisan Sourdough
@@ -247,10 +249,10 @@ export function resolveFoodCategoryAndIcon(
     combined.includes("landbrød") ||
     combined.includes("levain")
   ) {
-    return { category: "sourdough", icon: "🍞", label: "Artisan Sourdough" };
+    return { category: "sourdough", icon: "sourdough", label: "Artisan Sourdough" };
   }
 
-  // 10. Bakery & Pastries
+  // 10. Bakery, Croissants & Kanelbolle
   if (
     combined.includes("croissant") ||
     combined.includes("cardamom") ||
@@ -261,7 +263,13 @@ export function resolveFoodCategoryAndIcon(
     combined.includes("bakeri") ||
     googleTypes.includes("bakery")
   ) {
-    return { category: "bakery", icon: "🥐", label: "Bakery & Pastries" };
+    if (combined.includes("cinnamon") || combined.includes("kanelbolle")) {
+      return { category: "cinnamon_roll", icon: "cinnamon_roll", label: "Cinnamon Roll" };
+    }
+    if (combined.includes("croissant")) {
+      return { category: "bakery", icon: "croissant", label: "Croissant & Bakery" };
+    }
+    return { category: "bakery", icon: "bakery", label: "Bakery & Pastries" };
   }
 
   // 10b. Nordic Seafood & Fish

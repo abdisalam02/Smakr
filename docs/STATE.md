@@ -23,8 +23,8 @@ Updated: 2026-11-02
 - No other open items recorded in this handoff.
 
 ## Recent (max 5, one line each)
+- 2026-11-05 — Wired custom icons to Smakr map pins, spot cards & detail pane; restored K-Chicken garnished preset in studio; tsc clean
+- 2026-11-05 — Fixed Coffee & Pizza background cutout: neutral shadow-aware flood fill + handle hole seeding; tsc clean
+- 2026-11-05 — Overhauled 6 icons via Real-Photo De-ID + 44-color VTracer preset (color_precision=7, zero blur, vector-rasterized WebP <12 KB); tsc clean
 - 2026-11-04 — Generated Pizza, Coffee, Bánh Mì & Ramen icons (<12 KB WebP, <60 KB SVG); wired studio, picker & radar; tsc clean
 - 2026-11-04 — Fixed custom icon rendering: MapRadarView & drawer now render WebP icons instead of raw text; tsc clean
-- 2026-11-04 — Promoted Part 2 lineless gouache cinnamon roll (11.2 KB WebP) to active icon gallery; verified in picker; tsc clean
-- 2026-11-04 — Upgraded Food Icon Studio with all custom SVGs; regenerated croissant via lineless pipeline; documented go-to guide; tsc clean
-- 2026-11-04 — Benchmarked Part 1 (direct photo quantization, 8.4 KB WebP, 18 paths) vs Part 2 (lineless gouache, 11.2 KB WebP); tsc clean

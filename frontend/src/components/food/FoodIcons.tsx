@@ -164,16 +164,41 @@ export const CUSTOM_VECTOR_ICONS = new Set([
   "ramen",
 ]);
 
+export const EMOJI_TO_CUSTOM_ICON: Record<string, string> = {
+  "🍕": "pizza",
+  "☕": "coffee",
+  "🍜": "ramen",
+  "🍗": "k_chicken",
+  "🥐": "croissant",
+  "🥮": "cinnamon_roll",
+  "🫓": "naan",
+  "🥖": "banh_mi",
+  "🥪": "banh_mi",
+};
+
+export function resolveCustomIconKey(nameOrEmoji?: string | null): string | null {
+  if (!nameOrEmoji) return null;
+  const raw = nameOrEmoji.trim();
+  if (EMOJI_TO_CUSTOM_ICON[raw]) {
+    return EMOJI_TO_CUSTOM_ICON[raw];
+  }
+  const clean = raw.toLowerCase().replace(/[\s-]/g, "_");
+  if (CUSTOM_VECTOR_ICONS.has(clean)) {
+    return clean;
+  }
+  return null;
+}
+
 export function isCustomFoodIcon(name?: string | null): boolean {
-  if (!name) return false;
-  const clean = name.toLowerCase().trim().replace(/[\s-]/g, "_");
-  return CUSTOM_VECTOR_ICONS.has(clean);
+  return Boolean(resolveCustomIconKey(name));
 }
 
 /**
  * Normalizes an icon name to match keys in SMAKR_ICON_SVG_BODIES
  */
 export function normalizeSmakrIconName(name: string): string {
+  const custom = resolveCustomIconKey(name);
+  if (custom) return custom;
   return name.toLowerCase().trim().replace(/[\s-]/g, "_");
 }
 

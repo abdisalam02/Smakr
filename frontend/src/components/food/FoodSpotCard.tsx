@@ -11,7 +11,7 @@ import { getPopupStatus } from "@/lib/popupUtils";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import { formatOsloLocation } from "@/lib/location";
 import { FEED_BLUR_DARK } from "@/lib/feedImages";
-import { SmakrFoodIcon, SMAKR_ICON_SVG_BODIES } from "@/components/food/FoodIcons";
+import { SmakrFoodIcon, SMAKR_ICON_SVG_BODIES, resolveCustomIconKey } from "@/components/food/FoodIcons";
 
 interface FoodSpotCardProps {
   venue: Venue;
@@ -240,8 +240,14 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
             sizes="(max-width: 640px) 114px, 128px"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-4xl">
-            {categoryInfo.emoji || "🍽️"}
+          <div className="w-full h-full flex items-center justify-center p-4">
+            {(() => {
+              const customKey = resolveCustomIconKey(venue.icon) || resolveCustomIconKey(venue.food_category);
+              if (customKey) {
+                return <SmakrFoodIcon name={customKey} className="w-16 h-16 object-contain" />;
+              }
+              return <span className="text-4xl">{categoryInfo.emoji || "🍽️"}</span>;
+            })()}
           </div>
         )}
         {spotCoverUrl && (<div aria-hidden="true" className={`smakr-shimmer-light absolute inset-0 pointer-events-none transition-opacity duration-500 ${thumbReady ? "opacity-0" : "opacity-100"}`} />)}
@@ -275,7 +281,7 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
         {/* Line 1: Category Icon/Name + Refined Status Pill */}
         <div className="flex items-center justify-between gap-1.5 min-w-0">
           <span className="text-[11px] font-semibold text-[#e84a27] uppercase tracking-wider flex items-center gap-1 font-comico truncate">
-            <SmakrFoodIcon name={venue.icon && SMAKR_ICON_SVG_BODIES[venue.icon] ? venue.icon : (venue.food_category || "all")} className="w-3.5 h-3.5 shrink-0" />
+            <SmakrFoodIcon name={resolveCustomIconKey(venue.icon) || resolveCustomIconKey(venue.food_category) || (venue.icon && SMAKR_ICON_SVG_BODIES[venue.icon] ? venue.icon : (venue.food_category || "all"))} className="w-3.5 h-3.5 shrink-0" />
             <span className="truncate">{categoryInfo.label}</span>
           </span>
 

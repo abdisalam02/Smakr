@@ -19,9 +19,10 @@ const PRESETS: Record<PresetKey, PresetConfig> = {
     label: "K-Chicken (3 Wings)",
     iconFile: "/food-svgs/k-chicken.svg",
     pieces: [
-      { id: "left", label: "Left wing", file: "/food-svgs/recraft-left-wing-flat.svg", x: -150, y: 119.33, rot: -80, scale: 0.88 },
-      { id: "right", label: "Drumette", file: "/food-svgs/recraft-right-drumette.svg", x: 113.56, y: 82, rot: 46, scale: 0.9 },
-      { id: "center", label: "Top tender", file: "/food-svgs/recraft-center-flat.svg", x: -9.78, y: -47.11, rot: 37, scale: 1.01 }
+      { id: "k_chicken_main", label: "K-Chicken (Active with Sesame & Scallions)", file: "/food-svgs/k-chicken.svg", x: 0, y: 0, rot: 0, scale: 0.95 },
+      { id: "left", label: "Left wing piece", file: "/food-svgs/recraft-left-wing-flat.svg", x: -160, y: 130, rot: -80, scale: 0.75 },
+      { id: "right", label: "Drumette piece", file: "/food-svgs/recraft-right-drumette.svg", x: 140, y: 90, rot: 46, scale: 0.75 },
+      { id: "center", label: "Top tender piece", file: "/food-svgs/recraft-center-flat.svg", x: -10, y: -60, rot: 37, scale: 0.85 }
     ]
   },
   cinnamon_roll: {
