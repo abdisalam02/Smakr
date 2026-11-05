@@ -23,8 +23,8 @@ Updated: 2026-11-02
 - No other open items recorded in this handoff.
 
 ## Recent (max 5, one line each)
+- 2026-11-05 — Aligned map cards to feed filter icons & clean placeholder cloche, and re-tagged Em Oi to Noodles; tsc clean
+- 2026-11-05 — Statically anchored mascot on left (z:9999), revamped map card header & Smakr Pick line, and unified Saved pill; tsc clean
 - 2026-11-05 — Made spot type & regional sections collapsible dropdowns revealing horizontal icon sliders; tsc clean
 - 2026-11-05 — Decoupled feed/spots scroll state, armed filter drawer collapse with grace period, and matched map popup buttons to card width; tsc clean
 - 2026-11-05 — Fixed category filter feed zero-state: wired taxonomy group & child matching so pill counts match displayed dishes; tsc clean
-- 2026-11-05 — Made Pop-up mutual with categories, fixed white-on-white text, and smoothed All pill glide; tsc clean
-- 2026-11-05 — Restored all 8 yesterday's custom dish icons to map pins & isolated filter icons in public/icons/filters; tsc clean

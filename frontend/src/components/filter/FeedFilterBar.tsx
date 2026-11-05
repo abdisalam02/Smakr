@@ -206,16 +206,32 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
     setSelectedCuisine(null);
     setFeedCategory("all");
     setSpotTypeFilter("all");
+    setFilters({ saved_only: false });
     filterScrollRef.current?.scrollTo({ left: 0, behavior: "smooth" });
+  };
+
+  const handleSelectSaved = () => {
+    if (savedOnly) {
+      handleSelectAll();
+    } else {
+      setSelectedGroup(null);
+      setSelectedDishCategory(null);
+      setSelectedSpotKind(null);
+      setSelectedCuisine(null);
+      setFeedCategory("all");
+      setSpotTypeFilter("all");
+      setFilters({ saved_only: true });
+    }
   };
 
   const handleSelectGroup = (groupId: FoodGroupId | null) => {
     if (selectedGroup === groupId) {
       handleSelectAll();
     } else {
-      // Clear spot kind (e.g. Pop-up) when switching to a category group
+      // Clear spot kind (e.g. Pop-up) and saved filter when switching to a category group
       setSelectedSpotKind(null);
       setSpotTypeFilter("all");
+      setFilters({ saved_only: false });
       setSelectedGroup(groupId);
       setSelectedDishCategory(null);
       setFeedCategory("all");
@@ -236,10 +252,11 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
     if (selectedSpotKind === kind) {
       handleSelectAll();
     } else {
-      // Clear category groups when selecting a quick spot-kind pill like Pop-ups
+      // Clear category groups and saved filter when selecting a quick spot-kind pill like Pop-ups
       setSelectedGroup(null);
       setSelectedDishCategory(null);
       setFeedCategory("all");
+      setFilters({ saved_only: false });
       setSelectedSpotKind(kind);
       setSpotTypeFilter(kind === "popup" ? "popup" : kind === "food_truck" ? "food_truck" : "restaurant");
     }
@@ -299,6 +316,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
             !selectedGroup &&
             (currentCategory === "all" || !currentCategory) &&
             !selectedSpotKind &&
+            !savedOnly &&
             selectedDietary.length === 0;
           return (
             <button
@@ -330,16 +348,27 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
           <button
             key="filter-pill-saved"
             type="button"
-            onClick={toggleSavedOnly}
-            className={`snap-start shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold border transition-colors select-none active:scale-95 cursor-pointer ${
-              savedOnly
-                ? "bg-[#181615] dark:bg-white text-white dark:text-zinc-950 border-[#181615] dark:border-white shadow-xs"
-                : "bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 border-zinc-200/70 dark:border-white/10"
-            }`}
+            onClick={handleSelectSaved}
+            className="relative snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border border-zinc-200/70 dark:border-white/10 select-none active:scale-95 cursor-pointer bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 transition-colors duration-200"
           >
-            <Bookmark className={`w-3 h-3 ${savedOnly ? "fill-current" : ""}`} />
-            <span>Saved</span>
-            <span className="text-[10px] font-mono opacity-80">({savedPostIds.size})</span>
+            {savedOnly && (
+              <motion.div
+                layoutId="feed-filter-active-pill"
+                className="absolute inset-0 rounded-full bg-[#e84a27] shadow-xs"
+                transition={{ type: "spring", stiffness: 320, damping: 28, mass: 0.8 }}
+              />
+            )}
+            <span
+              className={`relative z-10 flex items-center gap-1.5 transition-colors duration-200 ${
+                savedOnly ? "text-white font-bold" : "font-medium text-zinc-700 dark:text-zinc-200"
+              }`}
+            >
+              <Bookmark className={`w-3.5 h-3.5 ${savedOnly ? "fill-white" : ""}`} />
+              <span>Saved</span>
+              <span className={`text-[10px] font-mono ${savedOnly ? "text-white/90" : "text-zinc-400"}`}>
+                ({savedPostIds.size})
+              </span>
+            </span>
           </button>
         )}
 

@@ -282,10 +282,20 @@ export function resolveEntityTaxonomy(
   // Decouple Pho from Banh Mi: check textual clues in post title or venue signature dishes
   const allText = `${v.name || ""} ${p.dish_name || ""} ${(v.signature_dishes || []).join(" ")}`.toLowerCase();
 
-  if (candidateCat === "ramen" || allText.includes("ramen")) {
-    dishCategory = "ramen";
-  } else if (allText.includes("pho") || (candidateCat === "vietnamese" && allText.includes("noodle"))) {
+  // Em Oi and Vietnamese noodle eateries resolve to Noodles (noodles_soup)
+  if (
+    allText.includes("em oi") ||
+    allText.includes("êm ôi") ||
+    allText.includes("pho") ||
+    allText.includes("phở") ||
+    allText.includes("noodle") ||
+    allText.includes("udon") ||
+    candidateCat === "pho" ||
+    (candidateCat === "vietnamese" && !allText.includes("banh mi") && !allText.includes("bánh mì"))
+  ) {
     dishCategory = "pho";
+  } else if (candidateCat === "ramen" || allText.includes("ramen")) {
+    dishCategory = "ramen";
   } else if (candidateCat === "banh_mi" || candidateCat === "vietnamese" || allText.includes("banh mi") || allText.includes("bánh mì")) {
     dishCategory = "banh_mi";
   } else if (candidateCat === "pizza" || allText.includes("pizza") || allText.includes("margherita")) {
@@ -337,7 +347,7 @@ export function resolveEntityTaxonomy(
 
   // 3. Resolve Cuisines
   const cuisines: CuisineId[] = [];
-  if (allText.includes("vietnam") || dishCategory === "pho" || dishCategory === "banh_mi") {
+  if (allText.includes("vietnam") || dishCategory === "pho" || dishCategory === "banh_mi" || allText.includes("em oi") || allText.includes("êm ôi")) {
     cuisines.push("vietnamese");
   }
   if (allText.includes("korean") || dishCategory === "k_chicken" || candidateCat === "kbbq") {

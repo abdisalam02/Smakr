@@ -31,7 +31,12 @@ import {
   OFFICIAL_SMAKR_MASCOT_CONFIG,
   getOfficialSmakrMascotConfig,
 } from "@/lib/officialSmakrMascot";
-import { FOOD_PIN_SVG_MAP, isCustomFoodIcon, resolveCustomIconKey } from "@/components/food/FoodIcons";
+import {
+  FOOD_PIN_SVG_MAP,
+  isCustomFoodIcon,
+  resolveCustomIconKey,
+  FILTER_CATEGORY_WEBP,
+} from "@/components/food/FoodIcons";
 import { resolveEntityTaxonomy } from "@/lib/taxonomy";
 import { getIconDisplay } from "@/lib/iconRegistry";
 import { formatDistance } from "@/lib/math";
@@ -639,7 +644,7 @@ export function MapRadarView() {
   // Floating "Pick of the Week" badge attached to the mascot marker
   const buildWeeklyBadge = useCallback((): HTMLDivElement => {
     const badge = document.createElement("div");
-    badge.textContent = "✦ Smakr Pick";
+    badge.textContent = "Smakr Pick";
     Object.assign(badge.style, {
       position: "absolute",
       bottom: "calc(100% - 2px)",
@@ -647,16 +652,17 @@ export function MapRadarView() {
       transform: "translateX(-50%)",
       background: "#e84a27",
       color: "#ffffff",
+      fontFamily: "var(--font-comico, sans-serif)",
       fontSize: "9px",
       fontWeight: "700",
-      letterSpacing: "0.01em",
+      letterSpacing: "0.02em",
       whiteSpace: "nowrap",
-      padding: "2px 6px",
+      padding: "2px 7px",
       borderRadius: "999px",
-      border: "1px solid rgba(255,255,255,0.55)",
+      border: "none",
       boxShadow: "0 2px 8px rgba(232, 74, 39, 0.35)",
       pointerEvents: "none",
-      zIndex: "60",
+      zIndex: "9999",
     } as Partial<CSSStyleDeclaration>);
     return badge;
   }, []);
@@ -744,30 +750,15 @@ export function MapRadarView() {
     const bustHeight = Math.round(Math.min(92, Math.max(56, (currentZoom - 10) * 9 + 44)));
     const bustWidth = Math.round(bustHeight * 0.82);
 
-    // Screen edge-detection: flip to right side if pin is within 110px of screen left edge
-    const screenPoint = map.project([lng, lat]);
-    const isNearLeftEdge = screenPoint.x < 110;
-
     const updateInnerPlacement = (inner: HTMLElement, badge: HTMLElement) => {
-      if (isNearLeftEdge) {
-        // Mirrored: stand on the right of puck (+21px) pointing left into puck's right rim
-        const leftOffset = 21 - Math.round(0.058 * bustWidth);
-        const topOffset = -7 - Math.round(0.519 * bustHeight);
-        inner.style.left = `${leftOffset}px`;
-        inner.style.top = `${topOffset}px`;
-        inner.style.transform = "scaleX(-1)";
-        inner.style.transformOrigin = "center center";
-        badge.style.transform = "translateX(-50%) scaleX(-1)";
-      } else {
-        // Default: stand on the left of puck (-21px) pointing right into puck's left rim
-        const leftOffset = -21 - Math.round(0.942 * bustWidth);
-        const topOffset = -7 - Math.round(0.519 * bustHeight);
-        inner.style.left = `${leftOffset}px`;
-        inner.style.top = `${topOffset}px`;
-        inner.style.transform = "none";
-        inner.style.transformOrigin = "center center";
-        badge.style.transform = "translateX(-50%)";
-      }
+      // Statically stand on the left of puck (-21px) pointing right into puck's left rim
+      const leftOffset = -21 - Math.round(0.942 * bustWidth);
+      const topOffset = -7 - Math.round(0.519 * bustHeight);
+      inner.style.left = `${leftOffset}px`;
+      inner.style.top = `${topOffset}px`;
+      inner.style.transform = "none";
+      inner.style.transformOrigin = "center center";
+      badge.style.transform = "translateX(-50%)";
     };
 
     if (!weeklyMarkerRef.current) {
@@ -783,11 +774,13 @@ export function MapRadarView() {
       root.style.margin = "0";
       root.style.padding = "0";
       root.style.pointerEvents = "none";
+      root.style.zIndex = "9999";
 
       const inner = document.createElement("div");
       inner.className =
         "weekly-pick-bust-inner relative flex flex-col items-center group cursor-pointer select-none pointer-events-auto transition-transform duration-200";
       inner.style.position = "absolute";
+      inner.style.zIndex = "9999";
 
       const badge = buildWeeklyBadge();
       inner.appendChild(badge);
@@ -839,12 +832,14 @@ export function MapRadarView() {
       root.style.margin = "0";
       root.style.padding = "0";
       root.style.pointerEvents = "none";
+      root.style.zIndex = "9999";
       root.innerHTML = "";
 
       const inner = document.createElement("div");
       inner.className =
         "weekly-pick-bust-inner relative flex flex-col items-center group cursor-pointer select-none pointer-events-auto transition-transform duration-200";
       inner.style.position = "absolute";
+      inner.style.zIndex = "9999";
 
       const badge = buildWeeklyBadge();
       inner.appendChild(badge);
@@ -1286,6 +1281,10 @@ export function MapRadarView() {
     const taxonomy = resolveEntityTaxonomy(selectedVenue);
     const spotKindSvg = (FOOD_PIN_SVG_MAP[taxonomy.spotKind] || FOOD_PIN_SVG_MAP.restaurant)
       .replace('width="20" height="20"', 'width="18" height="18"');
+    const filterWebp = FILTER_CATEGORY_WEBP[taxonomy.group.id] || FILTER_CATEGORY_WEBP[taxonomy.dishCategory];
+    const headerFilterIconHtml = filterWebp
+      ? `<img src="${filterWebp}" width="22" height="22" style="object-fit:contain;display:block;" alt="${taxonomy.group.shortLabel}"/>`
+      : `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" style="display:block;"><path d="M12 4.5c-4.4 0-8 3.6-8 8v1h16v-1c0-4.4-3.6-8-8-8z" fill="#FAF7F2" stroke="#181615" stroke-width="1.6"/><circle cx="12" cy="3.5" r="1.3" fill="#E84A27"/><path d="M2.5 16.5h19" stroke="#181615" stroke-width="1.8" stroke-linecap="round"/><path d="M7 19.5h10" stroke="#E84A27" stroke-width="1.5" stroke-linecap="round"/></svg>`;
     const dishDisplay = getIconDisplay(taxonomy.dishCategory);
     const dishIconHtml =
       dishDisplay.type === "webp"
@@ -1343,17 +1342,19 @@ export function MapRadarView() {
           z-index: 10;
         ">✕</button>
 
-        <!-- Header: Spot-Kind Icon + Spot Type Label + Neighborhood -->
+        <!-- Header: Filter Tag Icon + Food Category Label (Address removed) -->
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:7px;padding-bottom:5px;border-bottom:1px solid rgba(24,22,21,0.06);padding-right:24px;">
-          <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:rgba(232,74,39,0.1);color:#e84a27;flex-shrink:0;">
-            ${spotKindSvg}
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:rgba(232,74,39,0.08);flex-shrink:0;">
+            ${headerFilterIconHtml}
           </span>
           <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:#e84a27;font-family:var(--font-comico, sans-serif);">
-            ${taxonomy.spotLabel}
+            ${taxonomy.group.shortLabel || taxonomy.dishLabel}
           </span>
-          <span style="font-size:10.5px;color:#78716c;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-            · ${addressText} ${selectedVenue.price_level ? `· ${selectedVenue.price_level}` : ""}
-          </span>
+          ${selectedVenue.price_level ? `
+            <span style="font-size:10px;color:#78716c;font-weight:700;">
+              · ${selectedVenue.price_level}
+            </span>
+          ` : ""}
         </div>
 
         <div style="display: flex; gap: 10px; align-items: center;">
@@ -1368,52 +1369,49 @@ export function MapRadarView() {
             border: 1px solid rgba(24, 22, 21, 0.08);
           ">
             <img src="${displayImage}" alt="${selectedVenue.name}" style="width: 100%; height: 100%; object-fit: cover;" />
-            ${
-              isWeeklyPickVenue && weeklyPick.price_nok
-                ? `<span style="
-                    position: absolute;
-                    bottom: 3px;
-                    right: 3px;
-                    background: #E84A27;
-                    color: #FFFFFF;
-                    font-size: 8.5px;
-                    font-weight: 800;
-                    padding: 1px 4.5px;
-                    border-radius: 5px;
-                    box-shadow: 0 2px 5px rgba(232, 74, 39, 0.32);
-                  ">${weeklyPick.price_nok} kr</span>`
-                : ""
-            }
           </div>
 
           <div style="flex: 1; min-width: 0;">
-            <div style="
-              font-family: var(--font-comico, sans-serif);
-              font-size: 14.5px;
-              color: #181615;
-              font-weight: bold;
-              white-space: nowrap;
-              overflow: hidden;
-              text-overflow: ellipsis;
-            ">
-              ${selectedVenue.name}
+            ${
+              isWeeklyPickVenue
+                ? `<div style="margin-bottom: 2px;">
+                    <span style="
+                      background: #E84A27;
+                      color: #FFFFFF;
+                      font-family: var(--font-comico, sans-serif);
+                      font-size: 9px;
+                      font-weight: bold;
+                      letter-spacing: 0.04em;
+                      text-transform: uppercase;
+                      padding: 1.5px 6.5px;
+                      border-radius: 999px;
+                      display: inline-block;
+                      border: none;
+                    ">Smakr Pick</span>
+                  </div>`
+                : ""
+            }
+
+            <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 6px;">
+              <span style="
+                font-family: var(--font-comico, sans-serif);
+                font-size: 14.5px;
+                color: #181615;
+                font-weight: bold;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              ">
+                ${selectedVenue.name}
+              </span>
+              ${
+                signaturePrice
+                  ? `<span style="font-size: 11px; font-weight: 800; color: #e84a27; flex-shrink: 0; font-family: var(--font-comico, sans-serif);">${signaturePrice}</span>`
+                  : ""
+              }
             </div>
 
             <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px; flex-wrap: wrap;">
-              ${
-                isWeeklyPickVenue
-                  ? `<span style="
-                      background: #E84A27;
-                      color: #FFFFFF;
-                      font-size: 8.5px;
-                      font-weight: 800;
-                      letter-spacing: 0.04em;
-                      text-transform: uppercase;
-                      padding: 1px 6px;
-                      border-radius: 999px;
-                    ">✦ Smakr Pick</span>`
-                  : ""
-              }
               <span style="
                 background: #181615;
                 color: #ffffff;
@@ -1449,11 +1447,10 @@ export function MapRadarView() {
             ${
               signatureDishName
                 ? `<div style="display:flex;align-items:center;gap:4px;margin-top:4px;padding:2px 6px;border-radius:8px;background:rgba(255,255,255,0.7);border:1px solid rgba(24,22,21,0.08);">
-                    <span style="display:inline-flex;align-items:center;flex-shrink:0;">${dishIconHtml}</span>
+                    <span style="display:inline-flex;align-items:center;flex-shrink:0;">${filterWebp ? `<img src="${filterWebp}" width="16" height="16" style="object-fit:contain;display:inline-block;" alt="${taxonomy.group.shortLabel}"/>` : dishIconHtml}</span>
                     <span style="font-size:10px;font-weight:700;color:#181615;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">
                       ${signatureDishName}
                     </span>
-                    ${signaturePrice ? `<span style="font-size:9.5px;font-weight:800;color:#e84a27;flex-shrink:0;">${signaturePrice}</span>` : ""}
                   </div>`
                 : ""
             }
