@@ -14,7 +14,7 @@ export function FeedEmptyState({ className = "" }: { className?: string }) {
   const currentUser = useCityPulseStore((s) => s.currentUser);
   const mascotConfig = useCityPulseStore((s) => s.mascotConfig);
   const totalPosts = useCityPulseStore((s) => s.foodPosts.length);
-  const setFeedCategory = useCityPulseStore((s) => s.setFeedCategory);
+  const resetAllFilters = useCityPulseStore((s) => s.resetAllFilters);
   const spotTypeFilter = useCityPulseStore((s) => s.filters.spot_type);
   const setSpotTypeFilter = useCityPulseStore((s) => s.setSpotTypeFilter);
   const setFeedMode = useCityPulseStore((s) => s.setFeedMode);
@@ -67,10 +67,7 @@ export function FeedEmptyState({ className = "" }: { className?: string }) {
         {/* Only relevant when dishes exist but the active filters hide them. */}
         {totalPosts > 0 && (
           <button
-            onClick={() => {
-              setSpotTypeFilter("all");
-              setFeedCategory("all");
-            }}
+            onClick={() => resetAllFilters()}
             className="inline-flex items-center px-4 py-2.5 rounded-2xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-semibold transition-colors"
           >
             Show all dishes

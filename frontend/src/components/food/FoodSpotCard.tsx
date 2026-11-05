@@ -12,6 +12,7 @@ import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import { formatOsloLocation } from "@/lib/location";
 import { FEED_BLUR_DARK } from "@/lib/feedImages";
 import { SmakrFoodIcon, SMAKR_ICON_SVG_BODIES, resolveCustomIconKey } from "@/components/food/FoodIcons";
+import { resolveEntityTaxonomy } from "@/lib/taxonomy";
 
 interface FoodSpotCardProps {
   venue: Venue;
@@ -22,80 +23,7 @@ interface FoodSpotCardProps {
   topDishName?: string | null;
 }
 
-function resolveFoodCategoryAndIcon(venue: Venue, topDish?: string | null): {
-  label: string;
-  emoji: string;
-} {
-  const text = `${venue.name} ${topDish || ""} ${(venue.signature_dishes || []).join(" ")}`.toLowerCase();
 
-  if (text.includes("yum cha") || text.includes("dim sum") || text.includes("dumpling") || text.includes("gyoza") || text.includes("wonton") || text.includes("momo")) {
-    return { label: "Dim Sum & Dumplings", emoji: "🥟" };
-  }
-  if (text.includes("bao") || text.includes("steamed bun")) {
-    return { label: "Bao Buns", emoji: "🥠" };
-  }
-  if (text.includes("ramen") || text.includes("noodle") || text.includes("udon") || text.includes("soba")) {
-    return { label: "Ramen & Noodles", emoji: "🍜" };
-  }
-  if (text.includes("pho") || text.includes("bánh mì") || text.includes("banh mi") || text.includes("vietnamese")) {
-    return { label: "Pho & Vietnamese", emoji: "🍲" };
-  }
-  if (text.includes("burger") || text.includes("smash")) {
-    return { label: "Burgers", emoji: "🍔" };
-  }
-  if (text.includes("pizza") || text.includes("pizzeria")) {
-    return { label: "Pizza", emoji: "🍕" };
-  }
-  if (text.includes("taco") || text.includes("birria") || text.includes("carnitas") || text.includes("mexican")) {
-    return { label: "Tacos & Mexican", emoji: "🌮" };
-  }
-  if (venue.food_category === "k_chicken" || venue.icon === "k_chicken" || text.includes("k-chicken") || text.includes("yangnyeom")) {
-    return { label: "K-Chicken", emoji: "🍗" };
-  }
-  if (venue.food_category === "cinnamon_roll" || venue.icon === "cinnamon_roll" || text.includes("cinnamon") || text.includes("kanelbolle")) {
-    return { label: "Cinnamon Roll", emoji: "🥮" };
-  }
-  if (venue.icon === "croissant" || (venue.food_category as string) === "croissant" || text.includes("croissant")) {
-    return { label: "Croissant", emoji: "🥐" };
-  }
-  if (venue.food_category === "naan" || venue.icon === "naan") {
-    return { label: "Naan & Flatbread", emoji: "🫓" };
-  }
-  if (text.includes("fried chicken") || text.includes("korean") || text.includes("wings")) {
-    return { label: "Fried Chicken", emoji: "🍗" };
-  }
-  if (text.includes("kebab") || text.includes("shawarma") || text.includes("falafel")) {
-    return { label: "Kebab & Street Food", emoji: "🥙" };
-  }
-  if (text.includes("indian") || text.includes("curry") || text.includes("masala") || text.includes("tandoori")) {
-    return { label: "Indian & Curry", emoji: "🍛" };
-  }
-  if (text.includes("mandi") || text.includes("kabsa") || text.includes("yemeni")) {
-    return { label: "Mandi & Rice", emoji: "🍚" };
-  }
-  if (text.includes("matcha") || text.includes("sencha") || text.includes("hojicha")) {
-    return { label: "Matcha & Tea", emoji: "🍵" };
-  }
-  if (text.includes("bakery") || text.includes("bakeri") || text.includes("croissant") || text.includes("bolle") || text.includes("pastry")) {
-    return { label: "Bakery", emoji: "🥐" };
-  }
-  if (text.includes("coffee") || text.includes("kaffe") || text.includes("espresso") || text.includes("roaster") || text.includes("kaffebar")) {
-    return { label: "Specialty Coffee", emoji: "☕" };
-  }
-  if (text.includes("sushi") || text.includes("sashimi") || text.includes("raw bar") || text.includes("seafood")) {
-    return { label: "Sushi & Seafood", emoji: "🍣" };
-  }
-  if (text.includes("pasta") || text.includes("trattoria") || text.includes("italian")) {
-    return { label: "Pasta & Italian", emoji: "🍝" };
-  }
-
-  const catDef = FOOD_CATEGORIES.find((c) => c.id === venue.food_category);
-  if (catDef && catDef.id !== "all") {
-    return { label: catDef.label, emoji: venue.icon || catDef.emoji };
-  }
-
-  return { label: "Oslo Spot", emoji: venue.icon || "🍽️" };
-}
 
 export const FoodSpotCard = React.memo(function FoodSpotCard({
   venue,
@@ -158,10 +86,8 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
     }
   };
 
-  const categoryDef = FOOD_CATEGORIES.find((c) => c.id === venue.food_category);
   const signature = venue.signature_dishes && venue.signature_dishes.length > 0 ? venue.signature_dishes[0] : null;
-
-  const categoryInfo = resolveFoodCategoryAndIcon(venue, topDishName || signature);
+  const taxonomy = resolveEntityTaxonomy(venue);
   const hasGoogleRating = typeof venue.google_rating === "number" && venue.google_rating > 0;
 
   const handleClick = () => {
@@ -246,7 +172,7 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
               if (customKey) {
                 return <SmakrFoodIcon name={customKey} className="w-16 h-16 object-contain" />;
               }
-              return <span className="text-4xl">{categoryInfo.emoji || "🍽️"}</span>;
+              return <SmakrFoodIcon name={taxonomy.spotKind} className="w-16 h-16 object-contain" />;
             })()}
           </div>
         )}
@@ -281,8 +207,8 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
         {/* Line 1: Category Icon/Name + Refined Status Pill */}
         <div className="flex items-center justify-between gap-1.5 min-w-0">
           <span className="text-[11px] font-semibold text-[#e84a27] uppercase tracking-wider flex items-center gap-1 font-comico truncate">
-            <SmakrFoodIcon name={resolveCustomIconKey(venue.icon) || resolveCustomIconKey(venue.food_category) || (venue.icon && SMAKR_ICON_SVG_BODIES[venue.icon] ? venue.icon : (venue.food_category || "all"))} className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">{categoryInfo.label}</span>
+            <SmakrFoodIcon name={taxonomy.spotKind} className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">{taxonomy.spotLabel}</span>
           </span>
 
           <div className="flex items-center gap-1 shrink-0">
@@ -346,7 +272,7 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
             ) : (
               <span className="text-xs font-bold text-[#181615] dark:text-zinc-200 truncate flex items-center gap-1">
                 <span className="text-[#e84a27]">✦</span>
-                <span className="truncate">{signature || categoryInfo.label}</span>
+                <span className="truncate">{signature || taxonomy.dishCategory || taxonomy.spotLabel}</span>
               </span>
             )}
           </div>

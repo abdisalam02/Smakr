@@ -24,6 +24,7 @@ import { UtensilsCrossed, Plus, Map as MapIcon, LayoutGrid } from "lucide-react"
 import { motion, AnimatePresence } from "motion/react";
 import type { FoodPost, Venue, WeeklyPick } from "@/types";
 import { isVisibleInFeed, getPopupUrgencyScore, isPopupVenue } from "@/lib/popupUtils";
+import { resolveEntityTaxonomy } from "@/lib/taxonomy";
 
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? useLayoutEffect : useEffect;
@@ -127,6 +128,10 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   }, [foodPosts]);
   const isHydratingData = useCityPulseStore((state) => state.isHydratingData);
   const currentCategory = useCityPulseStore((state) => state.feedCategory);
+  const selectedGroup = useCityPulseStore((state) => state.selectedGroup);
+  const selectedDishCategory = useCityPulseStore((state) => state.selectedDishCategory);
+  const selectedCuisine = useCityPulseStore((state) => state.selectedCuisine);
+  const resetAllFilters = useCityPulseStore((state) => state.resetAllFilters);
   const feedMode = useCityPulseStore((state) => state.feedMode);
   const setFeedMode = useCityPulseStore((state) => state.setFeedMode);
   const selectedDietary = useCityPulseStore((state) => state.selectedDietary);
@@ -176,9 +181,35 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
         if (post.is_published === false || post.is_archived === true) return false;
       }
 
-      if (currentCategory !== "all" && post.category !== currentCategory) {
+      const linkedVenue = venueById.get(post.spot_id);
+      const postTax = resolveEntityTaxonomy(linkedVenue, post);
+
+      // Taxonomy filtering: Child dish category, Parent group, or legacy Category
+      if (selectedDishCategory) {
+        if (
+          postTax.dishCategory !== selectedDishCategory &&
+          post.category !== selectedDishCategory
+        ) {
+          return false;
+        }
+      } else if (selectedGroup) {
+        if (postTax.group.id !== selectedGroup) {
+          return false;
+        }
+      } else if (currentCategory !== "all") {
+        if (
+          post.category !== currentCategory &&
+          postTax.dishCategory !== currentCategory
+        ) {
+          return false;
+        }
+      }
+
+      // Cuisine filter (from expanded filter drawer)
+      if (selectedCuisine && !(postTax.cuisines as string[]).includes(selectedCuisine)) {
         return false;
       }
+
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchName = post.dish_name.toLowerCase().includes(q);
@@ -186,8 +217,6 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
         const matchTags = post.taste_tags.some((t) => t.toLowerCase().includes(q));
         if (!matchName && !matchSpot && !matchTags) return false;
       }
-
-      const linkedVenue = venueById.get(post.spot_id);
 
       // Exclude expired pop-ups (>7 days after closing)
       if (!isVisibleInFeed(linkedVenue)) return false;
@@ -252,6 +281,9 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   }, [
     foodPosts,
     currentCategory,
+    selectedGroup,
+    selectedDishCategory,
+    selectedCuisine,
     searchQuery,
     selectedDietary,
     mapNeighborhood,
@@ -287,10 +319,32 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
         // Staff Picks only
         if (staffPicksOnly && !venue.is_official_pick) return false;
 
-        if (currentCategory !== "all") {
-          if (venue.food_category !== currentCategory) {
+        const venueTax = resolveEntityTaxonomy(venue);
+
+        // Taxonomy filtering: Child dish category, Parent group, or legacy Category
+        if (selectedDishCategory) {
+          if (
+            venueTax.dishCategory !== selectedDishCategory &&
+            venue.food_category !== selectedDishCategory
+          ) {
             return false;
           }
+        } else if (selectedGroup) {
+          if (venueTax.group.id !== selectedGroup) {
+            return false;
+          }
+        } else if (currentCategory !== "all") {
+          if (
+            venue.food_category !== currentCategory &&
+            venueTax.dishCategory !== currentCategory
+          ) {
+            return false;
+          }
+        }
+
+        // Cuisine filter (from expanded filter drawer)
+        if (selectedCuisine && !(venueTax.cuisines as string[]).includes(selectedCuisine)) {
+          return false;
         }
         if (searchQuery.trim()) {
           const q = searchQuery.toLowerCase();
@@ -332,6 +386,9 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   }, [
     venues,
     currentCategory,
+    selectedGroup,
+    selectedDishCategory,
+    selectedCuisine,
     searchQuery,
     selectedDietary,
     mapNeighborhood,
@@ -1089,7 +1146,10 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                     <div className="py-12 text-center text-xs text-zinc-500 space-y-2">
                       <p>No food spots found for this category.</p>
                       <button
-                        onClick={() => setFeedCategory("all")}
+                        onClick={() => {
+                          setFeedCategory("all");
+                          resetAllFilters();
+                        }}
                         className="px-3 py-1 rounded-lg bg-zinc-100 text-zinc-800 text-xs font-medium"
                       >
                         Show all

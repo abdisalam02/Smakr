@@ -35,6 +35,7 @@ import { getPopupStatus, getPopupMeta, isPopupVenue } from "@/lib/popupUtils";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import { formatOsloLocation } from "@/lib/location";
 import { SmakrFoodIcon, isCustomFoodIcon, resolveCustomIconKey } from "@/components/food/FoodIcons";
+import { resolveEntityTaxonomy } from "@/lib/taxonomy";
 import { ExpandableReviewText } from "./ExpandableReviewText";
 import { FEED_BLUR_DARK } from "@/lib/feedImages";
 
@@ -243,16 +244,15 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
 
         {/* Category + dietary pills */}
         <div className="flex items-center gap-1.5 flex-wrap px-4 pb-2.5">
-          <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-1 rounded-full bg-[#e84a27]/10 text-[#e84a27] border border-[#e84a27]/20 inline-flex items-center gap-1">
-            {(() => {
-              const customKey = resolveCustomIconKey(venue.icon) || resolveCustomIconKey(venue.food_category);
-              if (customKey) {
-                return <SmakrFoodIcon name={customKey} className="w-3.5 h-3.5 object-contain" />;
-              }
-              return <span>{venue.icon || categoryDef?.emoji || "🍽️"}</span>;
-            })()}
-            <span>{categoryDef?.label || venue.food_category || "Food Spot"}</span>
-          </span>
+          {(() => {
+            const taxonomy = resolveEntityTaxonomy(venue);
+            return (
+              <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-1 rounded-full bg-[#e84a27]/10 text-[#e84a27] border border-[#e84a27]/20 inline-flex items-center gap-1">
+                <SmakrFoodIcon name={taxonomy.spotKind} className="w-3.5 h-3.5 object-contain" />
+                <span>{taxonomy.spotLabel}</span>
+              </span>
+            );
+          })()}
 
           {venue.price_level && (
             <span className="text-[10px] font-mono font-bold px-2 py-1 rounded-full bg-[var(--surface-raised)] text-zinc-600 border border-[var(--surface-border)]">

@@ -32,6 +32,8 @@ import {
   getOfficialSmakrMascotConfig,
 } from "@/lib/officialSmakrMascot";
 import { FOOD_PIN_SVG_MAP, isCustomFoodIcon, resolveCustomIconKey } from "@/components/food/FoodIcons";
+import { resolveEntityTaxonomy } from "@/lib/taxonomy";
+import { getIconDisplay } from "@/lib/iconRegistry";
 import { formatDistance } from "@/lib/math";
 import { getDirectionsUrl } from "@/lib/location";
 import { getPopupStatus, getPopupUrgencyLabel } from "@/lib/popupUtils";
@@ -234,6 +236,7 @@ function createAquarellePinElement(
   const isLowStock = kitchenStatus === "low_stock";
   const isSoldOut = kitchenStatus === "sold_out";
 
+  const taxonomy = resolveEntityTaxonomy(venue);
   const categoryKey = venue.food_category || "all";
   const rawIcon = venue.icon ? String(venue.icon).replace(/[<>&"']/g, "").trim() : "";
   const customKey = resolveCustomIconKey(rawIcon) || resolveCustomIconKey(categoryKey);
@@ -247,7 +250,7 @@ function createAquarellePinElement(
     : venue.spot_type === "food_truck"
     ? "🚚"
     : venue.spot_type === "popup"
-    ? "🎪"
+    ? "✨"
     : "";
   const pinGlyph = curatedIcon
     ? `<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;font-size:20px;line-height:1;text-align:center;font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif;transform:translateY(0.5px);">${curatedIcon}</span>`
@@ -548,8 +551,6 @@ export function MapRadarView() {
 
     // Filter venues based on craving category, neighborhood & open status
     const visibleVenues = currentVenues.filter((venue) => {
-      if (currentWeeklyVenueId && venue.id === currentWeeklyVenueId) return false;
-
       // Suppress pins for ended pop-ups in grace period or expired pop-ups
       const popupStatus = getPopupStatus(venue);
       if (popupStatus.hideMapPin) return false;
@@ -728,97 +729,151 @@ export function MapRadarView() {
     flyToTarget(lng, lat, 15.6, "weekly-pick");
   }, [setSelectedVenue, flyToTarget]);
 
-  // Anchor the official Smakr mascot exclusively to the Weekly Pick.
+  // Anchor the official Smakr pointing mascot bust exclusively to the Weekly Pick (beside venue pin).
   const renderWeeklyMarker = useCallback(() => {
     const map = mapInstance.current;
     if (!map || !isMapReadyRef.current) return;
 
     const state = useCityPulseStore.getState();
     const pick = state.weeklyPick;
-    const config = getOfficialSmakrMascotConfig();
     const [lng, lat] = pick.coords;
     if (typeof lng !== "number" || typeof lat !== "number") return;
 
-    function buildWeeklyElement(): HTMLDivElement {
-      const root = document.createElement("div");
-      root.className =
-        "relative flex flex-col items-center group cursor-pointer select-none pointer-events-auto";
-      root.appendChild(buildWeeklyBadge());
-      const circle = document.createElement("div");
-      circle.className =
-        "relative w-11 h-11 rounded-full border-2 border-[#E84A27] shadow-[0_0_0_2px_#FFFFFF,0_6px_16px_rgba(232,74,39,0.35)] bg-[#FAF7F2] overflow-hidden flex items-center justify-center transition-transform duration-150 group-hover:scale-110";
-      if (pick.mascot_avatar_url) {
-        const img = document.createElement("img");
-        img.src = pick.mascot_avatar_url;
-        img.alt = "✦ Smakr Pick";
-        img.className = "w-full h-full object-cover object-top block pointer-events-none";
-        circle.appendChild(img);
+    // Relative sizing formula based on map zoom level
+    const currentZoom = map.getZoom();
+    const bustHeight = Math.round(Math.min(92, Math.max(56, (currentZoom - 10) * 9 + 44)));
+    const bustWidth = Math.round(bustHeight * 0.82);
+
+    // Screen edge-detection: flip to right side if pin is within 110px of screen left edge
+    const screenPoint = map.project([lng, lat]);
+    const isNearLeftEdge = screenPoint.x < 110;
+
+    const updateInnerPlacement = (inner: HTMLElement, badge: HTMLElement) => {
+      if (isNearLeftEdge) {
+        // Mirrored: stand on the right of puck (+21px) pointing left into puck's right rim
+        const leftOffset = 21 - Math.round(0.058 * bustWidth);
+        const topOffset = -7 - Math.round(0.519 * bustHeight);
+        inner.style.left = `${leftOffset}px`;
+        inner.style.top = `${topOffset}px`;
+        inner.style.transform = "scaleX(-1)";
+        inner.style.transformOrigin = "center center";
+        badge.style.transform = "translateX(-50%) scaleX(-1)";
       } else {
-        const svgStr = buildMascotSVGString(config, false, 44, 44).replace(
-          /<g data-layer="ambience">[\s\S]*?<\/g>/g,
-          ""
-        );
-        circle.innerHTML = svgStr;
-        const svg = circle.querySelector("svg");
-        if (svg) {
-          svg.setAttribute("viewBox", "32 10 212 212");
-          svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-          svg.style.width = "100%";
-          svg.style.height = "100%";
-          svg.style.display = "block";
-        }
+        // Default: stand on the left of puck (-21px) pointing right into puck's left rim
+        const leftOffset = -21 - Math.round(0.942 * bustWidth);
+        const topOffset = -7 - Math.round(0.519 * bustHeight);
+        inner.style.left = `${leftOffset}px`;
+        inner.style.top = `${topOffset}px`;
+        inner.style.transform = "none";
+        inner.style.transformOrigin = "center center";
+        badge.style.transform = "translateX(-50%)";
       }
-      root.appendChild(circle);
-      return root;
-    }
+    };
 
     if (!weeklyMarkerRef.current) {
-      const el = buildWeeklyElement();
-      el.addEventListener("click", (e) => {
+      // Root element is owned by MapLibre for GPS projection: MUST be absolute top:0 left:0
+      // NEVER set style.transform on root!
+      const root = document.createElement("div");
+      root.className = "maplibregl-marker weekly-pick-marker-root";
+      root.style.position = "absolute";
+      root.style.top = "0";
+      root.style.left = "0";
+      root.style.width = "0px";
+      root.style.height = "0px";
+      root.style.margin = "0";
+      root.style.padding = "0";
+      root.style.pointerEvents = "none";
+
+      const inner = document.createElement("div");
+      inner.className =
+        "weekly-pick-bust-inner relative flex flex-col items-center group cursor-pointer select-none pointer-events-auto transition-transform duration-200";
+      inner.style.position = "absolute";
+
+      const badge = buildWeeklyBadge();
+      inner.appendChild(badge);
+
+      const bustContainer = document.createElement("div");
+      bustContainer.style.width = `${bustWidth}px`;
+      bustContainer.style.height = `${bustHeight}px`;
+      bustContainer.style.position = "relative";
+      bustContainer.style.filter = "drop-shadow(0 6px 14px rgba(24, 22, 21, 0.22))";
+
+      bustContainer.innerHTML = `
+        <img
+          src="/mascot/smakr-pick-pointing.svg"
+          alt="Smakr Pick"
+          width="${bustWidth}"
+          height="${bustHeight}"
+          style="display:block; width:100%; height:100%; object-fit:contain; pointer-events:none;"
+        />
+      `;
+
+      inner.appendChild(bustContainer);
+      updateInnerPlacement(inner, badge);
+
+      inner.addEventListener("click", (e) => {
         e.stopPropagation();
         void openWeeklyVenue();
       });
 
+      root.appendChild(inner);
+
       const marker = new maplibregl.Marker({
-        element: el,
-        anchor: "bottom",
+        element: root,
+        anchor: "center",
       })
         .setLngLat([lng, lat])
         .addTo(map);
 
       weeklyMarkerRef.current = marker;
     } else {
-      const el = weeklyMarkerRef.current.getElement();
-      el.innerHTML = "";
-      el.className =
-        "relative flex flex-col items-center group cursor-pointer select-none pointer-events-auto";
-      el.appendChild(buildWeeklyBadge());
-      const circle = document.createElement("div");
-      circle.className =
-        "relative w-11 h-11 rounded-full border-2 border-[#E84A27] shadow-[0_0_0_2px_#FFFFFF,0_6px_16px_rgba(232,74,39,0.35)] bg-[#FAF7F2] overflow-hidden flex items-center justify-center transition-transform duration-150 group-hover:scale-110";
-      if (pick.mascot_avatar_url) {
-        const img = document.createElement("img");
-        img.src = pick.mascot_avatar_url;
-        img.alt = "✦ Smakr Pick";
-        img.className = "w-full h-full object-cover object-top block pointer-events-none";
-        circle.appendChild(img);
-      } else {
-        const svgStr = buildMascotSVGString(config, false, 44, 44).replace(
-          /<g data-layer="ambience">[\s\S]*?<\/g>/g,
-          ""
-        );
-        circle.innerHTML = svgStr;
-        const svg = circle.querySelector("svg");
-        if (svg) {
-          svg.setAttribute("viewBox", "32 10 212 212");
-          svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-          svg.style.width = "100%";
-          svg.style.height = "100%";
-          svg.style.display = "block";
-        }
-      }
-      el.appendChild(circle);
+      // Re-anchor to freshest coordinates and update inner offsets without touching root.style.transform
       weeklyMarkerRef.current.setLngLat([lng, lat]);
+      const root = weeklyMarkerRef.current.getElement();
+      root.className = "maplibregl-marker weekly-pick-marker-root";
+      root.style.position = "absolute";
+      root.style.top = "0";
+      root.style.left = "0";
+      root.style.width = "0px";
+      root.style.height = "0px";
+      root.style.margin = "0";
+      root.style.padding = "0";
+      root.style.pointerEvents = "none";
+      root.innerHTML = "";
+
+      const inner = document.createElement("div");
+      inner.className =
+        "weekly-pick-bust-inner relative flex flex-col items-center group cursor-pointer select-none pointer-events-auto transition-transform duration-200";
+      inner.style.position = "absolute";
+
+      const badge = buildWeeklyBadge();
+      inner.appendChild(badge);
+
+      const bustContainer = document.createElement("div");
+      bustContainer.style.width = `${bustWidth}px`;
+      bustContainer.style.height = `${bustHeight}px`;
+      bustContainer.style.position = "relative";
+      bustContainer.style.filter = "drop-shadow(0 6px 14px rgba(24, 22, 21, 0.22))";
+
+      bustContainer.innerHTML = `
+        <img
+          src="/mascot/smakr-pick-pointing.svg"
+          alt="Smakr Pick"
+          width="${bustWidth}"
+          height="${bustHeight}"
+          style="display:block; width:100%; height:100%; object-fit:contain; pointer-events:none;"
+        />
+      `;
+
+      inner.appendChild(bustContainer);
+      updateInnerPlacement(inner, badge);
+
+      inner.addEventListener("click", (e) => {
+        e.stopPropagation();
+        void openWeeklyVenue();
+      });
+
+      root.appendChild(inner);
     }
   }, [buildWeeklyBadge, openWeeklyVenue]);
 
@@ -926,6 +981,7 @@ export function MapRadarView() {
         const el = userLocationMarkerRef.current.getElement();
         if (el) applyPuckZoomScale(el, z, mapContainer.current?.clientWidth);
       }
+      renderWeeklyMarker();
     });
 
     // After a large pan / pitch, force a repaint so no canvas region is left
@@ -933,6 +989,7 @@ export function MapRadarView() {
     // `moveend`, which recurses/loops and can leave the canvas half-rendered.
     map.on("moveend", () => {
       map.triggerRepaint();
+      renderWeeklyMarker();
       if (process.env.NODE_ENV !== "production") {
         const c = map.getCenter();
         console.info("[locate] camera settled", {
@@ -1226,17 +1283,32 @@ export function MapRadarView() {
       ? weeklyPick.dish_image || imageUrl
       : imageUrl;
 
+    const taxonomy = resolveEntityTaxonomy(selectedVenue);
+    const spotKindSvg = (FOOD_PIN_SVG_MAP[taxonomy.spotKind] || FOOD_PIN_SVG_MAP.restaurant)
+      .replace('width="20" height="20"', 'width="18" height="18"');
+    const dishDisplay = getIconDisplay(taxonomy.dishCategory);
+    const dishIconHtml =
+      dishDisplay.type === "webp"
+        ? `<img src="${dishDisplay.value}" width="18" height="18" style="object-fit:contain;display:inline-block;" alt="${dishDisplay.label}"/>`
+        : `<span style="display:inline-flex;width:18px;height:18px;">${dishDisplay.value}</span>`;
+    const signatureDishName = isWeeklyPickVenue
+      ? weeklyPick.dish_name
+      : (selectedVenue.signature_dishes && selectedVenue.signature_dishes[0]) || "";
+    const signaturePrice = isWeeklyPickVenue && weeklyPick.price_nok
+      ? `${weeklyPick.price_nok} kr`
+      : "";
+
     popupNode.innerHTML = `
       <div style="
-        background: rgba(250, 247, 242, 0.92);
+        background: rgba(250, 247, 242, 0.94);
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
         border: 1px solid ${isWeeklyPickVenue ? "rgba(232, 74, 39, 0.35)" : "rgba(255, 255, 255, 0.65)"};
         border-radius: 18px;
         box-shadow: 0 12px 32px rgba(24, 22, 21, 0.16);
         padding: 10px;
-        width: 280px;
-        max-width: 86vw;
+        width: 290px;
+        max-width: 88vw;
         position: relative;
         font-family: inherit;
         animation: smakrPopupEnter 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -1249,8 +1321,8 @@ export function MapRadarView() {
         </style>
         <button id="smakr-popup-close-btn" style="
           position: absolute;
-          top: 6px;
-          right: 6px;
+          top: 8px;
+          right: 8px;
           width: 20px;
           height: 20px;
           border-radius: 50%;
@@ -1264,6 +1336,19 @@ export function MapRadarView() {
           justify-content: center;
           z-index: 10;
         ">✕</button>
+
+        <!-- Header: Spot-Kind Icon + Spot Type Label + Neighborhood -->
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:7px;padding-bottom:5px;border-bottom:1px solid rgba(24,22,21,0.06);padding-right:24px;">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:rgba(232,74,39,0.1);color:#e84a27;flex-shrink:0;">
+            ${spotKindSvg}
+          </span>
+          <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:#e84a27;font-family:var(--font-comico, sans-serif);">
+            ${taxonomy.spotLabel}
+          </span>
+          <span style="font-size:10.5px;color:#78716c;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            · ${addressText} ${selectedVenue.price_level ? `· ${selectedVenue.price_level}` : ""}
+          </span>
+        </div>
 
         <div style="display: flex; gap: 10px; align-items: center;">
           <div style="
@@ -1304,7 +1389,6 @@ export function MapRadarView() {
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
-              padding-right: 22px;
             ">
               ${selectedVenue.name}
             </div>
@@ -1354,6 +1438,21 @@ export function MapRadarView() {
               </span>
               ${distanceText ? `<span style="font-size: 9.5px; color: #059669; font-weight: 600;">· ${distanceText}</span>` : ""}
             </div>
+
+            <!-- Signature Dish Chip -->
+            ${
+              signatureDishName
+                ? `<div style="display:flex;align-items:center;gap:4px;margin-top:4px;padding:2px 6px;border-radius:8px;background:rgba(255,255,255,0.7);border:1px solid rgba(24,22,21,0.08);">
+                    <span style="display:inline-flex;align-items:center;flex-shrink:0;">${dishIconHtml}</span>
+                    <span style="font-size:10px;font-weight:700;color:#181615;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">
+                      ${signatureDishName}
+                    </span>
+                    ${signaturePrice ? `<span style="font-size:9.5px;font-weight:800;color:#e84a27;flex-shrink:0;">${signaturePrice}</span>` : ""}
+                  </div>`
+                : ""
+            }
+          </div>
+        </div>
 
             <div style="
               font-size: 10.5px;

@@ -1,6 +1,14 @@
 "use client";
 
 import React from "react";
+import {
+  ICON_REGISTRY,
+  resolveIconEntry,
+  getIconDisplay,
+  EMOJI_TO_STABLE_KEY,
+} from "@/lib/iconRegistry";
+
+export { ICON_REGISTRY, resolveIconEntry, getIconDisplay };
 
 /**
  * Smakr Duotone Gastronomy Icon System (Oslo Food Radar)
@@ -116,6 +124,11 @@ export const SMAKR_ICON_SVG_BODIES: Record<string, string> = {
   spicy: `<path d="M14.5 3.5C13.5 5 12.5 5.5 11.5 6" stroke="#4E8752" stroke-width="1.8"/><path d="M11 6C6 8 4 13 6 17.5C7.5 20.5 11 21 13.5 19.5C17.5 17 19.5 12 18 7.5C16.8 6.2 13.5 5.8 11 6Z" fill="#E84A27" stroke="#181615" stroke-width="1.8"/><path d="M13.5 7C14.5 9.5 14 13 11.5 16" stroke="#FAF7F2" stroke-width="1.5" stroke-linecap="round"/>`,
 
   // SPOT TYPES & VENUES
+  restaurant: ICON_REGISTRY.restaurant.svg!,
+  cafe: ICON_REGISTRY.cafe.svg!,
+  street_stall: ICON_REGISTRY.street_stall.svg!,
+  food_hall: ICON_REGISTRY.food_hall.svg!,
+  dessert_shop: ICON_REGISTRY.dessert_shop.svg!,
   storefront: `<path d="M3 9.5L4.5 4.5H19.5L21 9.5V10.5C21 11.6 20.1 12.5 19 12.5C17.9 12.5 17 11.6 17 10.5C17 11.6 16.1 12.5 15 12.5C13.9 12.5 13 11.6 13 10.5C13 11.6 12.1 12.5 11 12.5C9.9 12.5 9 11.6 9 10.5C9 11.6 8.1 12.5 7 12.5C5.9 12.5 5 11.6 5 10.5C5 11.6 4.1 12.5 3 12.5V9.5Z" fill="#FAF7F2" stroke="#181615" stroke-width="1.8" stroke-linejoin="round"/><path d="M4 12.5V19.5C4 20.1 4.4 20.5 5 20.5H19C19.6 20.5 20 20.1 20 19.5V12.5" stroke="#181615" stroke-width="1.6"/><path d="M9 20.5V15H15V20.5" stroke="#E84A27" stroke-width="1.6" stroke-linejoin="round" fill="#FAF7F2"/><path d="M7 7.5L8 10M12 7.5V10M17 7.5L16 10" stroke="#E84A27" stroke-width="1.3" stroke-linecap="round"/>`,
 
   food_truck: `<path d="M2.5 7C2.5 5.9 3.4 5 4.5 5H15.5V15.5H2.5V7Z" fill="#FAF7F2" stroke="#181615" stroke-width="1.8" stroke-linejoin="round"/><path d="M15.5 8H19L21.5 12V15.5H15.5V8Z" fill="#FAF7F2" stroke="#181615" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 8H12V12H5V8Z" fill="#E84A27" stroke="#181615" stroke-width="1.4"/><circle cx="6.5" cy="18" r="2.2" fill="#FAF7F2" stroke="#181615" stroke-width="1.6"/><circle cx="6.5" cy="18" r="0.8" fill="#E84A27"/><circle cx="17.5" cy="18" r="2.2" fill="#FAF7F2" stroke="#181615" stroke-width="1.6"/><circle cx="17.5" cy="18" r="0.8" fill="#E84A27"/><path d="M9 16H15M2.5 16H4.2M20 16H21.5" stroke="#181615" stroke-width="1.6" stroke-linecap="round"/>`,
@@ -147,6 +160,17 @@ SMAKR_ICON_SVG_BODIES.wine_bar = SMAKR_ICON_SVG_BODIES.natural_wine;
 SMAKR_ICON_SVG_BODIES.mandi_rice = SMAKR_ICON_SVG_BODIES.indian;
 SMAKR_ICON_SVG_BODIES.middle_eastern = SMAKR_ICON_SVG_BODIES.kebab;
 SMAKR_ICON_SVG_BODIES.outdoor_park = SMAKR_ICON_SVG_BODIES.park;
+
+/**
+ * Filter-bar specific hand-drawn sketchbook artwork (used on filter pills and drawer only, never overwriting spot icons)
+ */
+export const FILTER_CATEGORY_WEBP: Record<string, string> = {
+  pastries_bakery: "/icons/filters/pastries_bakery.webp",
+  breads: "/icons/filters/breads.webp",
+  coffee_tea: "/icons/filters/coffee_tea.webp",
+  noodles_soup: "/icons/filters/noodles_soup.webp",
+  dumplings_buns: "/icons/filters/dumplings_buns.webp",
+};
 
 export const CUSTOM_VECTOR_ICONS = new Set([
   "k_chicken",
@@ -185,6 +209,10 @@ export function resolveCustomIconKey(nameOrEmoji?: string | null): string | null
   const clean = raw.toLowerCase().replace(/[\s-]/g, "_");
   if (CUSTOM_VECTOR_ICONS.has(clean)) {
     return clean;
+  }
+  const entry = resolveIconEntry(nameOrEmoji);
+  if (entry?.webp) {
+    return entry.id;
   }
   return null;
 }
@@ -249,7 +277,25 @@ export function SmakrFoodIcon({
   monochrome = false,
 }: SmakrFoodIconProps) {
   const key = normalizeSmakrIconName(name);
-  let body = SMAKR_ICON_SVG_BODIES[key] || SMAKR_ICON_SVG_BODIES.all;
+
+  // If a filter WebP asset is available and not in monochrome mode, render the rich hand-drawn filter icon
+  const webpUrl = FILTER_CATEGORY_WEBP[key] || FILTER_CATEGORY_WEBP[name];
+  if (webpUrl && !monochrome) {
+    return (
+      <img
+        src={webpUrl}
+        alt={title || name}
+        className={`${className} object-contain`}
+        loading="lazy"
+        decoding="async"
+      />
+    );
+  }
+
+  let body =
+    SMAKR_ICON_SVG_BODIES[key] ||
+    ICON_REGISTRY[key]?.svg ||
+    SMAKR_ICON_SVG_BODIES.all;
 
   // In monochrome mode, replace ink stroke with currentColor
   if (monochrome) {

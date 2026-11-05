@@ -13,6 +13,7 @@ import {
 import { SmakrMascotRig } from "@/components/studio/SmakrMascotRig";
 import { EditWeeklyDropModal } from "@/components/admin/EditWeeklyDropModal";
 import { FEED_BLUR_DARK } from "@/lib/feedImages";
+import { useCollapseOnFeedScroll } from "@/hooks/useCollapseOnFeedScroll";
 import type { MascotConfig } from "@/types/mascot";
 
 const MemoizedMascotBust = React.memo(function MemoizedMascotBust({
@@ -110,7 +111,12 @@ export function MascotWeeklyDrop({
   const weekChip = (weeklyPick.week_label || "This Week").replace(/\s*pick$/i, "").trim();
   const weekNumber = weekChip.replace(/[^0-9]/g, "") || "41";
 
-  const isScrolledDown = false;
+  const isScrolledDown = useCollapseOnFeedScroll({
+    threshold: 20,
+    isExpanded,
+    ignoreSelector: "[data-weekly-drop-drawer]",
+    onCollapse: () => setIsExpanded(false),
+  });
 
   // Auto-collapse when sheet transitions to peek
   useEffect(() => {
@@ -278,6 +284,7 @@ export function MascotWeeklyDrop({
         {isExpanded && (
           <motion.div
             key="smakr-weekly-drop-panel"
+            data-weekly-drop-drawer="true"
             initial={{ height: 0, opacity: 0, y: -6, scale: 0.985 }}
             animate={{ height: "auto", opacity: 1, y: 0, scale: 1 }}
             exit={{ height: 0, opacity: 0, y: -6, scale: 0.985 }}

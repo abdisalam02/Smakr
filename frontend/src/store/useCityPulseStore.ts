@@ -119,6 +119,10 @@ interface PulseStoreState {
   selectedAvatar: AvatarOption;
   mapNeighborhood: Neighborhood;
   selectedDietary: DietaryTag[];
+  selectedGroup: string | null;
+  selectedDishCategory: string | null;
+  selectedSpotKind: string | null;
+  selectedCuisine: string | null;
   mascotConfig: MascotConfig;
   weeklyPick: WeeklyPick;
 
@@ -152,6 +156,11 @@ interface PulseStoreState {
   setFeedCategory: (category: FoodCategory) => void;
   setMapNeighborhood: (neighborhood: Neighborhood) => void;
   toggleDietary: (tag: DietaryTag) => void;
+  setSelectedGroup: (group: string | null) => void;
+  setSelectedDishCategory: (category: string | null) => void;
+  setSelectedSpotKind: (kind: string | null) => void;
+  setSelectedCuisine: (cuisine: string | null) => void;
+  resetAllFilters: () => void;
   updateMascotConfig: (updates: Partial<MascotConfig>) => void;
   resetMascotConfig: () => void;
   /** Hydrate the mascot from the server profile without scheduling a write-back. */
@@ -259,6 +268,10 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
   selectedAvatar: "lordicon_barista",
   mapNeighborhood: "all",
   selectedDietary: [],
+  selectedGroup: null,
+  selectedDishCategory: null,
+  selectedSpotKind: null,
+  selectedCuisine: null,
   mascotConfig: DEFAULT_MASCOT_CONFIG,
   weeklyPick: DEFAULT_WEEKLY_PICK,
 
@@ -353,6 +366,26 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
         selectedDietary,
         filters: { ...state.filters, dietary: selectedDietary },
       };
+    }),
+
+  setSelectedGroup: (selectedGroup) => set({ selectedGroup }),
+
+  setSelectedDishCategory: (selectedDishCategory) => set({ selectedDishCategory }),
+
+  setSelectedSpotKind: (selectedSpotKind) => set({ selectedSpotKind }),
+
+  setSelectedCuisine: (selectedCuisine) => set({ selectedCuisine }),
+
+  resetAllFilters: () =>
+    set({
+      filters: INITIAL_FILTERS,
+      feedCategory: "all",
+      mapCategory: "all",
+      selectedDietary: [],
+      selectedGroup: null,
+      selectedDishCategory: null,
+      selectedSpotKind: null,
+      selectedCuisine: null,
     }),
 
   updateMascotConfig: (updates) =>
@@ -673,7 +706,14 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
       filters: { ...state.filters, ...newFilters },
     })),
 
-  resetFilters: () => set({ filters: INITIAL_FILTERS }),
+  resetFilters: () =>
+    set({
+      filters: INITIAL_FILTERS,
+      selectedGroup: null,
+      selectedDishCategory: null,
+      selectedSpotKind: null,
+      selectedCuisine: null,
+    }),
 
   setQuickEditPost: (post) => set({ quickEditPost: post }),
 

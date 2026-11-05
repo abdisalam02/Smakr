@@ -1,78 +1,29 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState, useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
-import { DietaryTag, FoodCategory, SpotType } from "@/types";
-import { ChevronDown, ChevronUp, SlidersHorizontal, RotateCcw, Bookmark } from "lucide-react";
 import {
-  SmakrFoodIcon,
-  TicketStubIcon,
-  StorefrontIcon,
-  FoodTruckIcon,
-} from "@/components/food/FoodIcons";
-
-type Pill =
-  | { kind: "category"; id: FoodCategory; label: string }
-  | { kind: "dietary"; id: DietaryTag; label: string };
-
-const PILLS: Pill[] = [
-  { kind: "category", id: "all", label: "All" },
-  { kind: "category", id: "dumplings", label: "Dumplings" },
-  { kind: "category", id: "coffee", label: "Coffee & Drinks" },
-  { kind: "category", id: "matcha", label: "Matcha" },
-  { kind: "category", id: "bakery", label: "Bakeries" },
-  { kind: "category", id: "sourdough", label: "Sourdough" },
-  { kind: "category", id: "ramen", label: "Ramen" },
-  { kind: "category", id: "tacos", label: "Tacos" },
-  { kind: "category", id: "boba", label: "Boba" },
-  { kind: "category", id: "pasta", label: "Pasta" },
-  { kind: "category", id: "burger", label: "Burgers" },
-  { kind: "category", id: "fried_chicken", label: "Fried Chicken" },
-  { kind: "category", id: "kbbq", label: "Korean BBQ" },
-  { kind: "category", id: "kebab", label: "Kebab" },
-  { kind: "category", id: "vietnamese", label: "Vietnamese" },
-  { kind: "category", id: "indian", label: "Indian" },
-  { kind: "dietary", id: "vegan", label: "Vegan" },
-  { kind: "dietary", id: "halal", label: "Halal" },
-  { kind: "dietary", id: "gluten_free", label: "Gluten-Free" },
-  { kind: "category", id: "pizza", label: "Pizza" },
-  { kind: "category", id: "nordic_seafood", label: "Nordic Seafood" },
-  { kind: "category", id: "street_food", label: "Street Food" },
-  { kind: "category", id: "sushi", label: "Sushi" },
-  { kind: "category", id: "brunch", label: "Brunch" },
-  { kind: "category", id: "gelato", label: "Gelato" },
-  { kind: "category", id: "dessert", label: "Sweets" },
-  { kind: "category", id: "drinks", label: "Bars" },
-  { kind: "category", id: "natural_wine", label: "Natural Wine" },
-];
-
-const CUISINES: { id: FoodCategory; label: string }[] = [
-  { id: "dumplings", label: "Dumplings" },
-  { id: "bao", label: "Bao" },
-  { id: "ramen", label: "Ramen" },
-  { id: "tacos", label: "Tacos" },
-  { id: "pizza", label: "Pizza" },
-  { id: "burger", label: "Burgers" },
-  { id: "fried_chicken", label: "Fried Chicken" },
-  { id: "kbbq", label: "Korean BBQ" },
-  { id: "kebab", label: "Kebab" },
-  { id: "vietnamese", label: "Vietnamese" },
-  { id: "indian", label: "Indian" },
-  { id: "bakery", label: "Bakery" },
-  { id: "sourdough", label: "Sourdough" },
-  { id: "coffee", label: "Coffee" },
-  { id: "matcha", label: "Matcha" },
-  { id: "boba", label: "Boba" },
-  { id: "sushi", label: "Sushi" },
-  { id: "nordic_seafood", label: "Nordic Seafood" },
-  { id: "pasta", label: "Pasta" },
-  { id: "brunch", label: "Brunch" },
-  { id: "gelato", label: "Gelato" },
-  { id: "dessert", label: "Dessert" },
-  { id: "drinks", label: "Bars" },
-  { id: "natural_wine", label: "Natural Wine" },
-];
+  FOOD_GROUPS,
+  SPOT_KINDS,
+  CUISINES,
+  resolveEntityTaxonomy,
+  type FoodGroupId,
+  type SpotKind,
+  type CuisineId,
+} from "@/lib/taxonomy";
+import { SmakrFoodIcon } from "@/components/food/FoodIcons";
+import { useCollapseOnFeedScroll } from "@/hooks/useCollapseOnFeedScroll";
+import { isVisibleInFeed } from "@/lib/popupUtils";
+import type { DietaryTag } from "@/types";
+import {
+  SlidersHorizontal,
+  ChevronDown,
+  ChevronUp,
+  RotateCcw,
+  Bookmark,
+  Sparkles,
+} from "lucide-react";
 
 interface FeedFilterBarProps {
   compact?: boolean;
@@ -81,10 +32,18 @@ interface FeedFilterBarProps {
 export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const filterScrollRef = React.useRef<HTMLDivElement>(null);
-  const isUserTouchingRef = React.useRef<boolean>(false);
-  const touchStartXRef = React.useRef<number>(0);
-  const touchStartYRef = React.useRef<number>(0);
+  // Auto-collapse drawer on feed scroll anywhere
+  useCollapseOnFeedScroll({
+    threshold: 20,
+    isExpanded,
+    ignoreSelector: "[data-filter-drawer]",
+    onCollapse: () => setIsExpanded(false),
+  });
+
+  const filterScrollRef = useRef<HTMLDivElement>(null);
+  const isUserTouchingRef = useRef<boolean>(false);
+  const touchStartXRef = useRef<number>(0);
+  const touchStartYRef = useRef<number>(0);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     isUserTouchingRef.current = true;
@@ -101,7 +60,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
     if (!el) return;
     const deltaX = e.touches[0].clientX - touchStartXRef.current;
     const deltaY = Math.abs(e.touches[0].clientY - touchStartYRef.current);
-    // User pulls/flings to the right while at the left boundary -> open filters accordion
+    // User pulls toward the right at the left boundary -> open filters drawer
     if (el.scrollLeft <= 5 && deltaX > 30 && deltaY < 30) {
       if (!isExpanded) setIsExpanded(true);
     }
@@ -114,8 +73,26 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
     }
   };
 
+  // Store selections
+  const venues = useCityPulseStore((state) => state.venues);
+  const foodPosts = useCityPulseStore((state) => state.foodPosts);
+  const feedMode = useCityPulseStore((state) => state.feedMode);
+
   const currentCategory = useCityPulseStore((state) => state.feedCategory);
   const setFeedCategory = useCityPulseStore((state) => state.setFeedCategory);
+
+  const selectedGroup = useCityPulseStore((state) => state.selectedGroup);
+  const setSelectedGroup = useCityPulseStore((state) => state.setSelectedGroup);
+
+  const selectedDishCategory = useCityPulseStore((state) => state.selectedDishCategory);
+  const setSelectedDishCategory = useCityPulseStore((state) => state.setSelectedDishCategory);
+
+  const selectedSpotKind = useCityPulseStore((state) => state.selectedSpotKind);
+  const setSelectedSpotKind = useCityPulseStore((state) => state.setSelectedSpotKind);
+
+  const selectedCuisine = useCityPulseStore((state) => state.selectedCuisine);
+  const setSelectedCuisine = useCityPulseStore((state) => state.setSelectedCuisine);
+
   const selectedDietary = useCityPulseStore((state) => state.selectedDietary);
   const toggleDietary = useCityPulseStore((state) => state.toggleDietary);
 
@@ -133,31 +110,151 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
   const savedPostIds = useCityPulseStore((state) => state.savedPostIds);
 
   const openNow = useCityPulseStore((state) => state.filters.open_now);
+  const currentUser = useCityPulseStore((state) => state.currentUser);
   const setFilters = useCityPulseStore((state) => state.setFilters);
-  const resetFilters = useCityPulseStore((state) => state.resetFilters);
+  const resetAllFilters = useCityPulseStore((state) => state.resetAllFilters);
 
-  // Active filters count (excluding category all)
-  const activeExtraFiltersCount =
-    (spotTypeFilter && spotTypeFilter !== "all" ? 1 : 0) +
-    (priceTierFilter ? 1 : 0) +
-    (staffPicksOnly ? 1 : 0) +
-    (savedOnly ? 1 : 0) +
-    (openNow ? 1 : 0) +
-    selectedDietary.length;
+  // Derive counts per parent group on full dataset (venues in places mode, posts in food mode)
+  const groupCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const group of FOOD_GROUPS) {
+      counts[group.id] = 0;
+    }
+
+    if (feedMode === "places") {
+      for (const venue of venues) {
+        if (!isVisibleInFeed(venue)) continue;
+        const tax = resolveEntityTaxonomy(venue);
+        counts[tax.group.id] = (counts[tax.group.id] || 0) + 1;
+      }
+    } else {
+      const venueMap = new Map(venues.map((v) => [v.id, v]));
+      for (const post of foodPosts) {
+        if (currentUser?.role !== "admin") {
+          if (post.is_published === false || post.is_archived === true) continue;
+        }
+        const linkedVenue = venueMap.get(post.spot_id);
+        if (!isVisibleInFeed(linkedVenue)) continue;
+        const tax = resolveEntityTaxonomy(linkedVenue, post);
+        counts[tax.group.id] = (counts[tax.group.id] || 0) + 1;
+      }
+    }
+
+    return counts;
+  }, [venues, foodPosts, feedMode, currentUser]);
+
+  // Total items count
+  const totalItemCount = useMemo(() => {
+    if (feedMode === "places") {
+      return venues.filter((v) => isVisibleInFeed(v)).length;
+    }
+    const venueMap = new Map(venues.map((v) => [v.id, v]));
+    return foodPosts.filter((p) => {
+      if (currentUser?.role !== "admin") {
+        if (p.is_published === false || p.is_archived === true) return false;
+      }
+      return isVisibleInFeed(venueMap.get(p.spot_id));
+    }).length;
+  }, [venues, foodPosts, feedMode, currentUser]);
+
+  // Non-empty parent groups sorted by count descending, then alphabetical
+  const nonZeroGroups = useMemo(() => {
+    return FOOD_GROUPS.filter((g) => (groupCounts[g.id] || 0) > 0).sort((a, b) => {
+      const diff = (groupCounts[b.id] || 0) - (groupCounts[a.id] || 0);
+      if (diff !== 0) return diff;
+      return a.label.localeCompare(b.label);
+    });
+  }, [groupCounts]);
+
+  // Active filter count
+  const activeExtraFiltersCount = useMemo(() => {
+    return (
+      (selectedGroup ? 1 : 0) +
+      (selectedDishCategory ? 1 : 0) +
+      (selectedSpotKind ? 1 : 0) +
+      (selectedCuisine ? 1 : 0) +
+      (spotTypeFilter && spotTypeFilter !== "all" ? 1 : 0) +
+      (priceTierFilter ? 1 : 0) +
+      (staffPicksOnly ? 1 : 0) +
+      (savedOnly ? 1 : 0) +
+      (openNow ? 1 : 0) +
+      selectedDietary.length
+    );
+  }, [
+    selectedGroup,
+    selectedDishCategory,
+    selectedSpotKind,
+    selectedCuisine,
+    spotTypeFilter,
+    priceTierFilter,
+    staffPicksOnly,
+    savedOnly,
+    openNow,
+    selectedDietary,
+  ]);
 
   const hasAnyActiveFilter =
     activeExtraFiltersCount > 0 || currentCategory !== "all";
 
-  const handleResetAll = () => {
-    resetFilters();
+  const handleSelectAll = () => {
+    resetAllFilters();
+    setSelectedGroup(null);
+    setSelectedDishCategory(null);
+    setSelectedSpotKind(null);
+    setSelectedCuisine(null);
     setFeedCategory("all");
     setSpotTypeFilter("all");
-    setPriceTierFilter(null);
+    filterScrollRef.current?.scrollTo({ left: 0, behavior: "smooth" });
   };
+
+  const handleSelectGroup = (groupId: FoodGroupId | null) => {
+    if (selectedGroup === groupId) {
+      handleSelectAll();
+    } else {
+      // Clear spot kind (e.g. Pop-up) when switching to a category group
+      setSelectedSpotKind(null);
+      setSpotTypeFilter("all");
+      setSelectedGroup(groupId);
+      setSelectedDishCategory(null);
+      setFeedCategory("all");
+    }
+  };
+
+  const handleSelectChildCategory = (childCat: string) => {
+    if (selectedDishCategory === childCat) {
+      setSelectedDishCategory(null);
+      setFeedCategory("all");
+    } else {
+      setSelectedDishCategory(childCat);
+      setFeedCategory("all");
+    }
+  };
+
+  const handleSelectSpotKind = (kind: SpotKind) => {
+    if (selectedSpotKind === kind) {
+      handleSelectAll();
+    } else {
+      // Clear category groups when selecting a quick spot-kind pill like Pop-ups
+      setSelectedGroup(null);
+      setSelectedDishCategory(null);
+      setFeedCategory("all");
+      setSelectedSpotKind(kind);
+      setSpotTypeFilter(kind === "popup" ? "popup" : kind === "food_truck" ? "food_truck" : "restaurant");
+    }
+  };
+
+  const handleSelectCuisine = (cuisineId: CuisineId) => {
+    setSelectedCuisine(selectedCuisine === cuisineId ? null : cuisineId);
+  };
+
+  // Find currently selected group definition
+  const activeGroupDef = useMemo(() => {
+    return FOOD_GROUPS.find((g) => g.id === selectedGroup) || null;
+  }, [selectedGroup]);
 
   return (
     <div className="w-full max-w-full min-w-0 bg-transparent border-b border-black/[0.06] dark:border-white/[0.08]">
-      {/* Horizontal Pill Row with Inline Trigger */}
+      {/* ── TOP HORIZONTAL STRIP (W1–W3: Non-empty only, count desc, short & honest) ── */}
       <div
         ref={filterScrollRef}
         onScroll={handleFilterScroll}
@@ -168,21 +265,22 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
           compact ? "py-1.5" : "py-2"
         }`}
       >
-        {/* [ ⚡ Filters ▾ ] Accordion Toggle Pill with snap-start */}
+        {/* [ ⚡ Filters ▾ ] Trigger with active badge (stays clean neutral; never turns black) */}
         <button
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}
           aria-expanded={isExpanded}
-          className={`snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all select-none active:scale-95 ${
-            isExpanded || activeExtraFiltersCount > 0
-              ? "bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 border-zinc-950 dark:border-white shadow-xs"
-              : "bg-white dark:bg-white/10 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-white/15 hover:bg-zinc-100 dark:hover:bg-white/15"
+          aria-label="Toggle filter drawer"
+          className={`snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-colors select-none active:scale-95 cursor-pointer ${
+            isExpanded
+              ? "bg-zinc-100 dark:bg-white/15 text-zinc-900 dark:text-white border-zinc-300 dark:border-white/30 shadow-xs"
+              : "bg-white dark:bg-white/10 text-zinc-800 dark:text-zinc-200 border-zinc-200/80 dark:border-white/15 hover:bg-zinc-100 dark:hover:bg-white/15"
           }`}
         >
           <SlidersHorizontal className="w-3.5 h-3.5" />
           <span>Filters</span>
           {activeExtraFiltersCount > 0 && (
-            <span className="w-4 h-4 rounded-full bg-[#e84a27] text-white text-[10px] font-bold flex items-center justify-center">
+            <span className="w-4 h-4 rounded-full bg-[#e84a27] text-white text-[10px] font-bold flex items-center justify-center shrink-0">
               {activeExtraFiltersCount}
             </span>
           )}
@@ -193,130 +291,358 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
           )}
         </button>
 
-        {/* Horizontal Category & Dietary Pills */}
-        <div className="flex items-center gap-1.5 min-w-max">
-          {/* Functional Saved (N) Hit-List Filter Pill */}
-          <button
-            type="button"
-            onClick={() => {
-              if (spotTypeFilter === "popup") setSpotTypeFilter("all");
-              toggleSavedOnly();
-            }}
-            aria-pressed={Boolean(savedOnly)}
-            className={`snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-colors duration-100 select-none active:scale-95 ${
-              savedOnly
-                ? "text-white border-transparent font-semibold shadow-xs bg-[#e84a27]"
-                : "bg-white/80 dark:bg-white/5 text-zinc-600 dark:text-zinc-300 border-zinc-200/70 dark:border-white/10 hover:bg-white dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-white font-medium"
-            }`}
-          >
-            <Bookmark className={`w-3.5 h-3.5 ${savedOnly ? "fill-white text-white" : "text-amber-500 fill-amber-500/20"}`} />
-            <span className="tracking-tight whitespace-nowrap">
-              Saved{savedPostIds.size > 0 ? ` (${savedPostIds.size})` : ""}
-            </span>
-          </button>
-
-          {/* First-Class Pop-ups & Residencies Channel Pill */}
-          <button
-            type="button"
-            onClick={() => {
-              if (savedOnly) toggleSavedOnly();
-              if (spotTypeFilter === "popup") {
-                setSpotTypeFilter("all");
-              } else {
-                // Clear any specific category when turning Pop-ups on
-                setFeedCategory("all");
-                setSpotTypeFilter("popup");
-              }
-            }}
-            aria-pressed={spotTypeFilter === "popup"}
-            className={`snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-colors duration-100 select-none active:scale-95 ${
-              spotTypeFilter === "popup"
-                ? "text-white border-transparent font-bold shadow-xs bg-[#e84a27]"
-                : "bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-300 border-zinc-200/70 dark:border-white/10 hover:bg-white dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-white font-medium"
-            }`}
-          >
-            <TicketStubIcon className={`w-3.5 h-3.5 ${spotTypeFilter === "popup" ? "text-white" : "text-[#e84a27]"}`} />
-            <span className="tracking-tight whitespace-nowrap font-comico text-[11px] tracking-wide">Pop-ups</span>
-          </button>
-
-          {PILLS.map((pill) => {
-            const isActive =
-              !savedOnly &&
-              (pill.kind === "category"
-                ? currentCategory === pill.id
-                : selectedDietary.includes(pill.id));
-
-            return (
-              <button
-                key={`${pill.kind}-${pill.id}`}
-                onClick={() => {
-                  if (savedOnly) toggleSavedOnly();
-                  // When clicking any category, clear the popup filter
-                  if (spotTypeFilter === "popup") {
-                    setSpotTypeFilter("all");
-                  }
-                  if (pill.kind === "category") {
-                    if (pill.id === "all") {
-                      setFeedCategory("all");
-                    } else {
-                      setFeedCategory(currentCategory === pill.id ? "all" : pill.id);
-                    }
-                  } else {
-                    toggleDietary(pill.id);
-                  }
-                }}
-                aria-pressed={isActive}
-                className={`snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border transition-all duration-200 ease-out select-none active:scale-95 ${
-                  isActive
-                    ? "text-white border-transparent font-semibold shadow-sm scale-[1.02]"
-                    : "bg-white/80 dark:bg-white/5 text-zinc-600 dark:text-zinc-300 border-zinc-200/70 dark:border-white/10 hover:bg-white dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-white font-medium"
-                }`}
-                style={isActive ? { backgroundColor: "#e84a27" } : undefined}
-              >
-                <SmakrFoodIcon
-                  name={pill.id}
-                  className="w-3.5 h-3.5 shrink-0"
-                  monochrome={isActive}
+        {/* 'All' Base Pill (Shares smooth active layoutId sliding pill) */}
+        {(() => {
+          const isAllActive =
+            !selectedGroup &&
+            (currentCategory === "all" || !currentCategory) &&
+            !selectedSpotKind &&
+            selectedDietary.length === 0;
+          return (
+            <button
+              key="filter-pill-all"
+              type="button"
+              onClick={handleSelectAll}
+              className="relative snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border border-zinc-200/70 dark:border-white/10 select-none active:scale-95 cursor-pointer bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 transition-colors duration-200"
+            >
+              {isAllActive && (
+                <motion.div
+                  layoutId="feed-filter-active-pill"
+                  className="absolute inset-0 rounded-full bg-[#e84a27] shadow-xs"
+                  transition={{ type: "spring", stiffness: 320, damping: 28, mass: 0.8 }}
                 />
-                <span className="tracking-tight whitespace-nowrap">{pill.label}</span>
-              </button>
-            );
-          })}
-        </div>
+              )}
+              <span className={`relative z-10 flex items-center gap-1.5 transition-colors duration-200 ${isAllActive ? "text-white font-bold" : "font-medium text-zinc-700 dark:text-zinc-200"}`}>
+                <SmakrFoodIcon name="all" className="w-3.5 h-3.5 shrink-0" monochrome={isAllActive} />
+                <span>All</span>
+                <span className={`text-[10px] font-mono ${isAllActive ? "text-white/90" : "text-zinc-400"}`}>
+                  ({totalItemCount})
+                </span>
+              </span>
+            </button>
+          );
+        })()}
+
+        {/* Saved (N) Pill (Visible only when user has saved spots) */}
+        {savedPostIds.size > 0 && (
+          <button
+            key="filter-pill-saved"
+            type="button"
+            onClick={toggleSavedOnly}
+            className={`snap-start shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold border transition-colors select-none active:scale-95 cursor-pointer ${
+              savedOnly
+                ? "bg-[#181615] dark:bg-white text-white dark:text-zinc-950 border-[#181615] dark:border-white shadow-xs"
+                : "bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 border-zinc-200/70 dark:border-white/10"
+            }`}
+          >
+            <Bookmark className={`w-3 h-3 ${savedOnly ? "fill-current" : ""}`} />
+            <span>Saved</span>
+            <span className="text-[10px] font-mono opacity-80">({savedPostIds.size})</span>
+          </button>
+        )}
+
+        {/* Pop-ups Quick Pill (Only if popup items exist) */}
+        {venues.some((v) => v.spot_type === "popup" || v.spot_type === "pop_up") && (() => {
+          const isPopupActive = selectedSpotKind === "popup";
+          return (
+            <button
+              key="filter-pill-popup"
+              type="button"
+              onClick={() => handleSelectSpotKind("popup")}
+              className="relative snap-start shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold border border-zinc-200/70 dark:border-white/10 select-none active:scale-95 cursor-pointer bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 transition-colors duration-200"
+            >
+              {isPopupActive && (
+                <motion.div
+                  layoutId="feed-filter-active-pill"
+                  className="absolute inset-0 rounded-full bg-[#e84a27] shadow-xs"
+                  transition={{ type: "spring", stiffness: 320, damping: 28, mass: 0.8 }}
+                />
+              )}
+              <span className={`relative z-10 flex items-center gap-1 transition-colors duration-200 ${isPopupActive ? "text-white font-bold" : "font-medium text-zinc-700 dark:text-zinc-200"}`}>
+                <SmakrFoodIcon name="popup" className="w-3.5 h-3.5 shrink-0" monochrome={isPopupActive} />
+                <span>Pop-ups</span>
+              </span>
+            </button>
+          );
+        })()}
+
+        {/* Non-empty Parent Group Pills (Shared layoutId active pill gliding smoothly) */}
+        {nonZeroGroups.map((group) => {
+          const isSelected = selectedGroup === group.id;
+          const count = groupCounts[group.id] || 0;
+
+          return (
+            <button
+              key={group.id}
+              type="button"
+              onClick={() => handleSelectGroup(group.id)}
+              className="relative snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border border-zinc-200/70 dark:border-white/10 select-none active:scale-95 cursor-pointer bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 transition-colors duration-200"
+            >
+              {isSelected && (
+                <motion.div
+                  layoutId="feed-filter-active-pill"
+                  className="absolute inset-0 rounded-full bg-[#e84a27] shadow-xs"
+                  transition={{ type: "spring", stiffness: 320, damping: 28, mass: 0.8 }}
+                />
+              )}
+              <span className={`relative z-10 flex items-center gap-1.5 transition-colors duration-200 ${isSelected ? "text-white font-bold" : "font-medium text-zinc-700 dark:text-zinc-200"}`}>
+                <SmakrFoodIcon
+                  name={group.id}
+                  className="w-3.5 h-3.5 shrink-0"
+                  monochrome={isSelected}
+                />
+                <span className="tracking-tight whitespace-nowrap">{group.shortLabel}</span>
+                <span className={`text-[10px] font-mono ${isSelected ? "text-white/90" : "text-zinc-400"}`}>
+                  ({count})
+                </span>
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Compact Animated Inline Filter Drawer (<155px height, never hidden by bottom nav) */}
+      {/* ── EXPANDED FILTER DRAWER (W4–W8: Large icon slider, subcategories, diet & spot kinds) ── */}
       <AnimatePresence initial={false}>
         {isExpanded && (
           <motion.div
             key="smakr-filter-drawer"
+            data-filter-drawer="true"
             initial={{ height: 0, opacity: 0, y: -4 }}
             animate={{ height: "auto", opacity: 1, y: 0 }}
             exit={{ height: 0, opacity: 0, y: -4 }}
             transition={{ type: "spring", stiffness: 380, damping: 32, mass: 0.65 }}
-            className="w-full overflow-hidden border-t border-black/[0.06] dark:border-white/[0.08] bg-[#f7f4ed]/98 dark:bg-[#151413]/98"
+            className="w-full overflow-hidden border-t border-black/[0.06] dark:border-white/[0.08] bg-[#FAF7F2] dark:bg-[#151413]"
           >
-            <div className="px-3.5 py-2.5 space-y-2">
-              {/* Row 1: Quick Status & Price Tier + Reset */}
-              <div className="flex flex-wrap items-center justify-between gap-1.5">
+            <div className="px-3.5 py-3 space-y-3.5">
+              {/* Header: Title, Active Count & Reset */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold font-comico uppercase tracking-wider text-[#181615] dark:text-white">
+                    Filter by Craving & Spot
+                  </span>
+                  {activeExtraFiltersCount > 0 && (
+                    <span className="px-2 py-0.5 rounded-full bg-[#e84a27] text-white text-[10px] font-bold">
+                      {activeExtraFiltersCount} active
+                    </span>
+                  )}
+                </div>
+
+                {hasAnyActiveFilter && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resetAllFilters();
+                      setSelectedGroup(null);
+                      setSelectedDishCategory(null);
+                      setSelectedSpotKind(null);
+                      setSelectedCuisine(null);
+                    }}
+                    className="flex items-center gap-1 text-[11px] text-[#e84a27] hover:underline font-bold transition-colors cursor-pointer"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Reset</span>
+                  </button>
+                )}
+              </div>
+
+              {/* ── SECTION 1: Large Parent Group Slider (W4 & W6) ── */}
+              <div>
+                <div className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-1.5">
+                  Food Categories (Tap to explore dishes)
+                </div>
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 snap-x">
+                  {FOOD_GROUPS.map((group) => {
+                    const isSelected = selectedGroup === group.id;
+                    const count = groupCounts[group.id] || 0;
+
+                    return (
+                      <button
+                        key={group.id}
+                        type="button"
+                        onClick={() => handleSelectGroup(group.id)}
+                        className={`snap-start shrink-0 w-[68px] sm:w-[74px] p-2 rounded-2xl flex flex-col items-center justify-center gap-1 border transition-all active:scale-95 cursor-pointer ${
+                          isSelected
+                            ? "bg-[#e84a27] text-white border-[#e84a27] shadow-md ring-2 ring-[#e84a27]/30"
+                            : count > 0
+                            ? "bg-white dark:bg-white/5 text-zinc-800 dark:text-zinc-200 border-zinc-200/80 dark:border-white/10 hover:border-[#e84a27]/50"
+                            : "bg-zinc-100/60 dark:bg-white/5 text-zinc-400 border-zinc-200/40 opacity-50"
+                        }`}
+                      >
+                        <div className="w-10 h-10 flex items-center justify-center">
+                          <SmakrFoodIcon
+                            name={group.id}
+                            className="w-9 h-9 object-contain"
+                            monochrome={isSelected}
+                          />
+                        </div>
+                        <span className="text-[10.5px] font-bold text-center leading-tight line-clamp-1">
+                          {group.shortLabel}
+                        </span>
+                        <span
+                          className={`text-[9.5px] font-mono ${
+                            isSelected ? "text-white/90" : "text-zinc-400"
+                          }`}
+                        >
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* ── SECTION 2: Sub-Categories Reveal (W13) ── */}
+              <AnimatePresence>
+                {activeGroupDef && activeGroupDef.childCategories.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden bg-white/70 dark:bg-white/5 p-2.5 rounded-2xl border border-[#e84a27]/20"
+                  >
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-[#e84a27] mb-1.5 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" />
+                      <span>{activeGroupDef.label} Dishes:</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {activeGroupDef.childCategories.map((child) => {
+                        const isChildActive = selectedDishCategory === child;
+                        const label = child
+                          .split("_")
+                          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                          .join(" ");
+
+                        return (
+                          <button
+                            key={child}
+                            type="button"
+                            onClick={() => handleSelectChildCategory(child)}
+                            className={`px-2.5 py-1 rounded-xl text-[11px] font-bold border flex items-center gap-1 transition-all active:scale-95 cursor-pointer ${
+                              isChildActive
+                                ? "bg-[#e84a27] text-white border-[#e84a27] shadow-xs"
+                                : "bg-white dark:bg-stone-800 text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-white/10 hover:border-[#e84a27]/40"
+                            }`}
+                          >
+                            <SmakrFoodIcon name={child} className="w-3.5 h-3.5 shrink-0" monochrome={isChildActive} />
+                            <span>{label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* ── SECTION 3: Spot Kinds (Axis 1: 9 Staple Venue Types) ── */}
+              <div>
+                <div className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-1.5">
+                  Spot Type (Venue Kind)
+                </div>
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                  {SPOT_KINDS.filter((spot) => spot.id !== "street_stall").map((spot) => {
+                    const isActive = selectedSpotKind === spot.id;
+                    return (
+                      <button
+                        key={spot.id}
+                        type="button"
+                        onClick={() => handleSelectSpotKind(spot.id)}
+                        className={`shrink-0 min-h-[44px] px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
+                          isActive
+                            ? "bg-[#181615] dark:bg-white text-white dark:text-[#181615] border-[#181615] dark:border-white shadow-xs"
+                            : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-white/10 hover:border-zinc-400"
+                        }`}
+                      >
+                        <SmakrFoodIcon name={spot.id} className="w-4 h-4 shrink-0" monochrome={isActive} />
+                        <span>{spot.shortLabel}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* ── SECTION 4: Dietary Badges (Axis 4: Custom Vector Icons) ── */}
+              <div>
+                <div className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-1.5">
+                  Dietary Preferences
+                </div>
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                  {(["halal", "vegan", "vegetarian", "gluten_free", "spicy"] as const).map((diet) => {
+                    const isActive = selectedDietary.includes(diet);
+                    const dietLabels: Record<DietaryTag, string> = {
+                      halal: "Halal",
+                      vegan: "Vegan",
+                      vegetarian: "Vegetarian",
+                      gluten_free: "Gluten-Free",
+                      spicy: "Spicy",
+                    };
+
+                    return (
+                      <button
+                        key={diet}
+                        type="button"
+                        onClick={() => toggleDietary(diet)}
+                        className={`shrink-0 min-h-[44px] px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
+                          isActive
+                            ? "bg-[#4E8752] text-white border-[#4E8752] shadow-xs"
+                            : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-white/10 hover:border-[#4E8752]/40"
+                        }`}
+                      >
+                        <SmakrFoodIcon name={diet} className="w-4 h-4 shrink-0" monochrome={isActive} />
+                        <span>{dietLabels[diet]}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* ── SECTION 5: Regional Cuisines (Axis 3: Flag-Free Glyphs) ── */}
+              <div>
+                <div className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-1.5">
+                  Regional Cuisines
+                </div>
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                  {CUISINES.map((cuisine) => {
+                    const isActive = selectedCuisine === cuisine.id;
+                    return (
+                      <button
+                        key={cuisine.id}
+                        type="button"
+                        onClick={() => handleSelectCuisine(cuisine.id)}
+                        className={`shrink-0 px-2.5 py-1 rounded-xl text-[11px] font-semibold border flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
+                          isActive
+                            ? "bg-[#e84a27] text-white border-[#e84a27] font-bold shadow-xs"
+                            : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-white/10 hover:border-[#e84a27]/30"
+                        }`}
+                      >
+                        <SmakrFoodIcon name={cuisine.glyph} className="w-3.5 h-3.5 shrink-0" monochrome={isActive} />
+                        <span>{cuisine.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* ── SECTION 6: Quick Status & Price Tiers ── */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-black/[0.06] dark:border-white/[0.08]">
                 <div className="flex flex-wrap items-center gap-1.5">
                   <button
                     type="button"
                     onClick={() => setFilters({ open_now: !openNow })}
-                    className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border flex items-center gap-1 transition-all active:scale-95 ${
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
                       openNow
                         ? "bg-[#4E8752] text-white border-[#4E8752] font-bold shadow-xs"
                         : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-white/10"
                     }`}
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                    <span className="w-2 h-2 rounded-full bg-current" />
                     <span>Open Now</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={toggleStaffPicksOnly}
-                    className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border flex items-center gap-1 transition-all active:scale-95 ${
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
                       staffPicksOnly
                         ? "bg-[#e84a27] text-white border-[#e84a27] font-bold shadow-xs"
                         : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-white/10"
@@ -335,7 +661,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                           key={tier}
                           type="button"
                           onClick={() => setPriceTierFilter(isActive ? null : tier)}
-                          className={`px-2 py-0.5 rounded-full text-[11px] font-mono font-bold transition-all ${
+                          className={`px-2.5 py-0.5 rounded-full text-xs font-mono font-bold transition-all cursor-pointer ${
                             isActive
                               ? "bg-[#181615] dark:bg-white text-white dark:text-zinc-950 shadow-xs"
                               : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
@@ -348,77 +674,6 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                     })}
                   </div>
                 </div>
-
-                {hasAnyActiveFilter && (
-                  <button
-                    type="button"
-                    onClick={handleResetAll}
-                    className="flex items-center gap-1 text-[11px] text-[#e84a27] hover:underline font-bold transition-colors"
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                    <span>Reset</span>
-                  </button>
-                )}
-              </div>
-
-              {/* Row 2: Spot Format */}
-              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 shrink-0 mr-0.5">
-                  Spot
-                </span>
-                {[
-                  { id: "all" as const, label: "All", icon: "all" },
-                  { id: "restaurant" as const, label: "Sit-down", icon: "storefront" },
-                  { id: "food_truck" as const, label: "Food Truck", icon: "food_truck" },
-                  { id: "popup" as const, label: "Pop-ups", icon: "popup" },
-                ].map((st) => {
-                  const isActive = (spotTypeFilter || "all") === st.id;
-                  return (
-                    <button
-                      key={st.id}
-                      type="button"
-                      onClick={() => setSpotTypeFilter(isActive && st.id !== "all" ? "all" : st.id)}
-                      className={`shrink-0 px-2.5 py-1 rounded-full text-[11px] font-medium border flex items-center gap-1 transition-all active:scale-95 ${
-                        isActive
-                          ? "bg-[#e84a27] text-white border-[#e84a27] font-bold shadow-xs"
-                          : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-white/10"
-                      }`}
-                    >
-                      <SmakrFoodIcon name={st.icon} className="w-3 h-3 shrink-0" monochrome={isActive} />
-                      <span>{st.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Row 3: Dietary Tags */}
-              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 shrink-0 mr-0.5">
-                  Diet
-                </span>
-                {[
-                  { id: "halal" as const, label: "Halal" },
-                  { id: "vegan" as const, label: "Vegan" },
-                  { id: "vegetarian" as const, label: "Vegetarian" },
-                  { id: "gluten_free" as const, label: "Gluten-Free" },
-                ].map((d) => {
-                  const isActive = selectedDietary.includes(d.id);
-                  return (
-                    <button
-                      key={d.id}
-                      type="button"
-                      onClick={() => toggleDietary(d.id)}
-                      className={`shrink-0 px-2.5 py-1 rounded-full text-[11px] font-medium border flex items-center gap-1 transition-all active:scale-95 ${
-                        isActive
-                          ? "bg-[#4E8752] text-white border-[#4E8752] font-bold shadow-xs"
-                          : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-white/10"
-                      }`}
-                    >
-                      <SmakrFoodIcon name={d.id} className="w-3 h-3 shrink-0" monochrome={isActive} />
-                      <span>{d.label}</span>
-                    </button>
-                  );
-                })}
               </div>
             </div>
           </motion.div>
