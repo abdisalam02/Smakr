@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { motion } from "motion/react";
 import { FoodCategoryBar } from "./FoodCategoryBar";
 import { FoodPostCard } from "./FoodPostCard";
 import { FoodSpotCard } from "./FoodSpotCard";
@@ -74,6 +75,24 @@ export function FoodFeed() {
 
     return true;
   });
+
+  const [visibleCount, setVisibleCount] = useState(6);
+  useEffect(() => {
+    if (filteredPosts.length <= 6) {
+      setVisibleCount(filteredPosts.length);
+      return;
+    }
+    // Frame 1: Render the first 5 cards immediately so the filter click & entrance animation run at 120fps
+    setVisibleCount(5);
+    // Frame 2 (after first paint): Mount the remaining off-screen cards without blocking the animation
+    const raf = requestAnimationFrame(() => {
+      const timer = setTimeout(() => {
+        setVisibleCount(filteredPosts.length);
+      }, 90);
+      return () => clearTimeout(timer);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [currentCategory, filteredPosts.length]);
 
   const filteredVenues = venues
     .filter((venue) => {
@@ -165,9 +184,22 @@ export function FoodFeed() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
-              {filteredPosts.map((post) => (
-                <FoodPostCard key={post.id} post={post} />
-              ))}
+              {filteredPosts.slice(0, visibleCount).map((post, index) =>
+                index < 5 ? (
+                  <motion.div
+                    key={post.id}
+                    initial={{ opacity: 0, y: 18, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ type: "spring", stiffness: 420, damping: 32, delay: index * 0.035 }}
+                  >
+                    <FoodPostCard post={post} index={index} />
+                  </motion.div>
+                ) : (
+                  <div key={post.id}>
+                    <FoodPostCard post={post} index={index} />
+                  </div>
+                )
+              )}
             </div>
           )
         ) : (

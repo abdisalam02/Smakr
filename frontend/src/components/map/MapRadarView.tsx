@@ -85,27 +85,49 @@ function applyPinState(root: HTMLElement, isSelected: boolean) {
   root.dataset.selected = isSelected ? "1" : "0";
   root.style.zIndex = isSelected ? "35" : "15";
   const visual = root.querySelector<HTMLElement>(".pin-visual");
-  if (visual) visual.style.transform = isSelected ? "scale(1.16)" : "scale(1.0)";
+  if (visual) visual.style.transform = isSelected ? "scale(1.14)" : "scale(1.0)";
   const puck = root.querySelector<HTMLElement>(".smakr-map-puck");
   const iconContainer = root.querySelector<HTMLElement>(".smakr-puck-icon");
   const arrow = root.querySelector<HTMLElement>(".smakr-puck-arrow");
   const isPopup = root.dataset.isPopup === "1";
   if (puck) {
-    if (isSelected) {
-      puck.style.background = isPopup ? "#FFFFFF" : "rgba(255, 250, 244, 0.88)";
-      puck.style.border = isPopup ? "2.5px solid #E84A27" : "2px solid #E84A27";
-      puck.style.boxShadow = "0 0 0 4px rgba(232, 74, 39, 0.22), 0 6px 16px rgba(232, 74, 39, 0.30)";
+    if (isPopup) {
+      if (isSelected) {
+        puck.style.background = "#FFFFFF";
+        puck.style.border = "1.5px solid #E84A27";
+        puck.style.boxShadow = "0 0 0 3px rgba(232, 74, 39, 0.18), 0 6px 16px rgba(232, 74, 39, 0.20)";
+      } else {
+        puck.style.background = "#FAF7F2";
+        puck.style.border = "1.5px solid rgba(232, 74, 39, 0.65)";
+        puck.style.boxShadow = "0 3px 8px rgba(24, 22, 21, 0.12)";
+      }
     } else {
-      puck.style.background = isPopup ? "#FAF7F2" : "rgba(255, 252, 247, 0.74)";
-      puck.style.border = isPopup ? "2px solid #E84A27" : "1.5px solid rgba(255, 255, 255, 0.92)";
-      puck.style.boxShadow = isPopup ? "0 4px 12px rgba(232, 74, 39, 0.22)" : "0 3px 10px rgba(24, 22, 21, 0.14)";
+      puck.style.background = "transparent";
+      puck.style.border = "none";
+      puck.style.borderRadius = "0";
+      puck.style.boxShadow = "none";
+      puck.style.overflow = "visible";
     }
   }
   if (iconContainer) {
-    iconContainer.style.filter = "none";
+    if (isPopup) {
+      iconContainer.style.filter = "none";
+    } else if (isSelected) {
+      iconContainer.style.width = "42px";
+      iconContainer.style.height = "42px";
+      iconContainer.style.filter = "url(#smakr-diecut-selected)";
+    } else {
+      iconContainer.style.width = "38px";
+      iconContainer.style.height = "38px";
+      iconContainer.style.filter = "url(#smakr-diecut-default)";
+    }
   }
   if (arrow) {
-    arrow.style.borderTopColor = isSelected ? "#E84A27" : isPopup ? "#E84A27" : "rgba(24, 22, 21, 0.55)";
+    if (isPopup) {
+      arrow.style.borderTopColor = "#E84A27";
+    } else {
+      arrow.style.borderTopColor = isSelected ? "#E84A27" : "#FAF7F2";
+    }
   }
 }
 
@@ -225,12 +247,13 @@ function createAquarellePinElement(
   root.style.position = "absolute";
   root.style.top = "0";
   root.style.left = "0";
-  root.style.width = "40px";
-  root.style.height = "48px";
+  root.style.width = "52px";
+  root.style.height = "60px";
   root.style.margin = "0";
   root.style.padding = "0";
   root.style.cursor = "pointer";
   root.style.userSelect = "none";
+  root.style.overflow = "visible";
 
   const isPopup = venue.spot_type === "popup";
   root.dataset.isPopup = isPopup ? "1" : "0";
@@ -258,8 +281,8 @@ function createAquarellePinElement(
     ? "✨"
     : "";
   const pinGlyph = curatedIcon
-    ? `<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;font-size:20px;line-height:1;text-align:center;font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif;transform:translateY(0.5px);">${curatedIcon}</span>`
-    : iconSvg.replace('width="20" height="20"', 'width="22" height="22"');
+    ? `<span style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;font-size:28px;line-height:1;text-align:center;font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif;transform:translateY(0.5px);">${curatedIcon}</span>`
+    : iconSvg.replace(/width="\d+"/g, 'width="38"').replace(/height="\d+"/g, 'height="38"');
 
   const inner = document.createElement("div");
   inner.className = "pin-visual";
@@ -347,39 +370,50 @@ function createAquarellePinElement(
     `;
   } else {
     inner.innerHTML = `
-      <!-- Warm Translucent Glass Map Puck (34x34px, centered glyph, no muddy grey shadow) -->
+      <!-- Die-Cut Floating Dish Silhouette Pin (38px/42px, clean contour stroke + delicate orange rim, no edge clipping) -->
       ${haloHtml}
       <div class="smakr-map-puck" style="
-        width: 34px;
-        height: 34px;
-        border-radius: 9999px;
-        background: rgba(255, 252, 247, 0.74);
-        backdrop-filter: blur(8px) saturate(140%);
-        -webkit-backdrop-filter: blur(8px) saturate(140%);
-        border: 1.5px solid rgba(255, 255, 255, 0.92);
-        box-shadow: 0 3px 10px rgba(24, 22, 21, 0.14);
+        width: 48px;
+        height: 48px;
+        padding: 4px;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        overflow: visible !important;
         display: grid;
         place-items: center;
-        padding: 0;
         position: relative;
-        transition: transform 150ms cubic-bezier(0.22, 1, 0.36, 1), background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        transition: transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
         cursor: pointer;
       ">
         ${kitchenBadgeHtml}
-        <div class="smakr-puck-icon" style="width:22px;height:22px;display:grid;place-items:center;line-height:1;margin:0;padding:0;">
+        <div class="smakr-puck-icon" style="
+          width: 38px;
+          height: 38px;
+          display: grid;
+          place-items: center;
+          line-height: 1;
+          margin: 0;
+          padding: 0;
+          overflow: visible !important;
+          filter: url(#smakr-diecut-default);
+          transition: filter 0.2s ease, width 0.15s ease, height 0.15s ease;
+        ">
           ${pinGlyph}
         </div>
-        <!-- Subtle pointer triangle -->
+        <!-- Downward pointer arrow beneath the floating icon -->
         <div class="smakr-puck-arrow" style="
           position: absolute;
-          bottom: -4.5px;
+          bottom: -4px;
           left: 50%;
           transform: translateX(-50%);
           width: 0;
           height: 0;
-          border-left: 4px solid transparent;
-          border-right: 4px solid transparent;
-          border-top: 4.5px solid rgba(24, 22, 21, 0.55);
+          border-left: 4.5px solid transparent;
+          border-right: 4.5px solid transparent;
+          border-top: 5px solid #FAF7F2;
+          filter: drop-shadow(0 2px 3px rgba(24,22,21,0.28));
           transition: border-top-color 0.2s ease;
         "></div>
       </div>
@@ -425,6 +459,10 @@ export function MapRadarView() {
   const venuePopupRef = useRef<maplibregl.Popup | null>(null);
   const isMapReadyRef = useRef(false);
   const [isMapReady, setIsMapReady] = useState(false);
+  // Future Map Filter slot
+  const [isMapFilterOpen, setIsMapFilterOpen] = useState(false);
+  void isMapFilterOpen;
+  void setIsMapFilterOpen;
 
   // Fast, responsive Streets v2 default
   const [activeTheme, setActiveTheme] = useState<"streets" | "dataviz" | "aquarelle">("streets");
@@ -1579,6 +1617,47 @@ export function MapRadarView() {
 
   return (
     <div className="relative w-full h-full min-h-[500px] flex-1 overflow-hidden bg-[var(--background,#f6f3ee)]">
+      {/* Shared SVG Die-Cut Sticker Filters for Map Markers */}
+      <svg width="0" height="0" style={{ position: "absolute", pointerEvents: "none", overflow: "visible" }} aria-hidden="true">
+        <defs>
+          {/* Default Unselected Sticker Outline (#FAF7F2 Warm Cream, 1.8px stroke + subtle ground shadow) */}
+          <filter id="smakr-diecut-default" x="-35%" y="-35%" width="170%" height="170%">
+            <feMorphology in="SourceAlpha" operator="dilate" radius="1.8" result="dilated" />
+            <feFlood floodColor="#FAF7F2" result="strokeColor" />
+            <feComposite in="strokeColor" in2="dilated" operator="in" result="stroke" />
+            <feDropShadow in="stroke" dx="0" dy="2.5" stdDeviation="1.8" floodColor="#181615" floodOpacity="0.30" result="shadow" />
+            <feMerge>
+              <feMergeNode in="shadow" />
+              <feMergeNode in="stroke" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+
+          {/* Selected Active Sticker Outline: Solid Cream Inner Stroke + Thin Delicate Orange Outer Rim + Warm Glow */}
+          <filter id="smakr-diecut-selected" x="-45%" y="-45%" width="190%" height="190%">
+            {/* Thin delicate outer orange rim (~0.7px outer whisper) */}
+            <feMorphology in="SourceAlpha" operator="dilate" radius="2.5" result="dilatedOuter" />
+            <feFlood floodColor="#E84A27" floodOpacity="0.75" result="orangeColor" />
+            <feComposite in="orangeColor" in2="dilatedOuter" operator="in" result="orangeRim" />
+            {/* Soft warm orange elevation halo */}
+            <feDropShadow in="orangeRim" dx="0" dy="2.5" stdDeviation="2.4" floodColor="#E84A27" floodOpacity="0.32" result="orangeGlow" />
+
+            {/* Clean solid warm cream (#FAF7F2) inner sticker stroke (1.8px) */}
+            <feMorphology in="SourceAlpha" operator="dilate" radius="1.8" result="dilatedInner" />
+            <feFlood floodColor="#FAF7F2" result="whiteColor" />
+            <feComposite in="whiteColor" in2="dilatedInner" operator="in" result="whiteStroke" />
+
+            {/* Merge: Glow -> Thin Orange Rim -> Solid Cream Stroke -> Original Graphic */}
+            <feMerge>
+              <feMergeNode in="orangeGlow" />
+              <feMergeNode in="orangeRim" />
+              <feMergeNode in="whiteStroke" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+      </svg>
+
       {/* Map Canvas — kept mounted (opacity only) so MapLibre can measure it */}
       <div
         ref={mapContainer}
@@ -1594,7 +1673,7 @@ export function MapRadarView() {
       />
 
       {/* Style Switcher Pills (Bottom-left on desktop only, completely clear of filters and feed) */}
-      <div className="hidden lg:flex absolute left-4 bottom-6 z-20 items-center gap-1 p-1 rounded-xl bg-white/95 backdrop-blur-md border border-zinc-200 shadow-md text-xs">
+      <div className="hidden lg:flex absolute left-4 bottom-6 z-20 items-center gap-1 p-1 rounded-xl bg-[#FAF7F2]/55 dark:bg-[#181615]/55 backdrop-blur-md border border-white/40 shadow-sm text-xs">
         <button
           onClick={() => setActiveTheme("streets")}
           className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${

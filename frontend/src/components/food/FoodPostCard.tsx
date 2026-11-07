@@ -8,6 +8,12 @@ import { FoodPost, Venue } from "@/types";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { setPostLike, setPostSave } from "@/lib/supabase/data";
 import { OfficialSmakrMascot } from "@/lib/officialSmakrMascot";
+import {
+  openPeepsConfigFromPreset,
+  buildOpenPeepsDataUri,
+  ensureBustAvatarSvg,
+  type OpenPeepsPresetId,
+} from "@/lib/onboardingAvatar";
 import { getPopupStatus, getPopupMeta } from "@/lib/popupUtils";
 import { formatOsloLocation } from "@/lib/location";
 import { getDistanceInMeters, formatDistance } from "@/lib/math";
@@ -311,6 +317,49 @@ export const FoodPostCard = React.memo(function FoodPostCard({
     flyToSpot(post.spot_coords, post.spot_id);
   };
 
+  const avatarSrc = React.useMemo(() => {
+    const rawUrl = post.author?.avatar_url;
+    // Strict Rule: NEVER render a legacy Micah / head-only SVG with a background box!
+    // Check if the resolved avatar string contains explicit "open-peeps-bust" and is NOT a Micah avatar
+    if (
+      rawUrl &&
+      rawUrl.includes("open-peeps-bust") &&
+      !rawUrl.includes("micah") &&
+      !rawUrl.includes("360 360")
+    ) {
+      let raw = rawUrl.trim();
+      if (raw.startsWith("data:image/svg+xml")) {
+        const commaIdx = raw.indexOf(",");
+        if (commaIdx > 0) {
+          const payload = raw.slice(commaIdx + 1);
+          try {
+            raw = raw.includes(";base64,") ? atob(payload) : decodeURIComponent(payload);
+          } catch {
+            // Keep raw if decoding fails
+          }
+        }
+      }
+      // Strip any solid background <rect> so every avatar is a clean die-cut upper-body bust
+      raw = raw.replace(/<rect[^>]*?(?:width="100%"|width="360"|width="704")[^>]*?>/gi, "");
+      // Guarantee bright high-contrast shirt against dark card (#181615)
+      raw = raw.replace(/fill="#(?:262e33|181615|1f2937|111827|000000|241c16)"/gi, 'fill="#e84a27"');
+      // Adjust viewBox to show prominent torso and shoulders
+      raw = raw.replace('viewBox="80 36 544 688"', 'viewBox="80 60 544 670"');
+      return raw.startsWith("data:") ? raw : "data:image/svg+xml;charset=utf-8," + encodeURIComponent(raw);
+    }
+
+    // Otherwise ALWAYS generate a clean transparent Open Peeps Upper-Body Bust (head + neck + sweater torso, zero background square)
+    const presets: OpenPeepsPresetId[] = ["male1", "male2", "female1", "female2"];
+    const seedStr = post.author?.handle || (post as any).user_handle || (post as any).user_id || post.id || "guest";
+    let hash = 0;
+    for (let i = 0; i < seedStr.length; i++) {
+      hash = (hash << 5) - hash + seedStr.charCodeAt(i);
+      hash |= 0;
+    }
+    const chosenPreset = presets[Math.abs(hash) % presets.length];
+    return buildOpenPeepsDataUri(openPeepsConfigFromPreset(chosenPreset));
+  }, [post.author?.avatar_url, post.author?.handle, post.id]);
+
   const handleCardClick = () => {
     if (isPopup && !hasConfirmedLocation) {
       handleOpenDetails();
@@ -323,7 +372,6 @@ export const FoodPostCard = React.memo(function FoodPostCard({
     <motion.article
       style={{ contain: "layout paint style" }}
       onClick={handleCardClick}
-      onDoubleClick={handleDoubleTap}
       className={`group relative w-full rounded-[26px] overflow-hidden border bg-[#181615] shadow-md hover:shadow-xl transition-shadow duration-300 cursor-pointer select-none ${
         isSelected ? "ring-2 ring-[#E84A27]" : ""
       } ${
@@ -556,13 +604,13 @@ export const FoodPostCard = React.memo(function FoodPostCard({
           )}
 
           {/* Dish Title (Capitalized) */}
-          <h3 className="font-bold text-lg sm:text-xl leading-snug drop-shadow-sm text-white line-clamp-1 capitalize">
+          <h3 className="text-[22px] sm:text-[24px] font-extrabold tracking-tight leading-[1.12] text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)] line-clamp-1 capitalize">
             {post.dish_name}
           </h3>
 
           {/* Venue & Location (Clean neighborhood & walking distance) */}
-          <div className="text-xs font-medium text-zinc-300 drop-shadow-sm mt-0.5 flex items-center gap-1.5 flex-wrap">
-            <MapPin className="w-3 h-3 text-[#e84a27] shrink-0" />
+          <div className="text-[13.5px] font-semibold text-white/95 drop-shadow-xs mt-1 flex items-center gap-1.5 flex-wrap">
+            <MapPin className="w-[15px] h-[15px] text-[#e84a27] shrink-0" />
             <span className="font-semibold text-white">{post.spot_name}</span>
             {isPopup && (
               <span
@@ -573,15 +621,6 @@ export const FoodPostCard = React.memo(function FoodPostCard({
                 }`}
               >
                 Pop-Up
-              </span>
-            )}
-            {isVerifiedKitchen && (
-              <span
-                className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-full bg-emerald-500/25 border border-emerald-400/40 text-[9.5px] text-emerald-300 font-bold"
-                title="Verified Kitchen"
-              >
-                <span>✓</span>
-                <span>Verified</span>
               </span>
             )}
             <span className="text-zinc-400">·</span>
@@ -609,37 +648,25 @@ export const FoodPostCard = React.memo(function FoodPostCard({
             </div>
           )}
 
-          {/* Concise Dish-Specific Smakr Verdict (✦ Quote Only — Permanent spots only; removed for popups) */}
-          {!isPopup && dishVerdict && (
-            <div className="bg-black/60 border border-white/15 rounded-xl px-2.5 py-1.5 my-2 max-w-[96%]">
-              <p className="text-[11px] text-zinc-100 leading-snug line-clamp-2">
-                <span className="text-[#E84A27] font-bold not-italic mr-1">✦</span>
-                <span className="italic">&ldquo;{dishVerdict}&rdquo;</span>
-              </p>
-            </div>
-          )}
-
           {/* Author & Interactive Foodie Reactions Footer */}
           <div className="flex items-center justify-between gap-1.5 pt-1 mt-0.5 flex-wrap">
-            {/* Left: Author Avatar + @handle */}
+            {/* Left: Author Avatar Bust + @handle */}
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="w-6 h-6 rounded-full bg-[#FAF7F2] border border-white/25 overflow-hidden shrink-0 flex items-center justify-center">
-                {isNiwacheAdmin ? (
-                  <OfficialSmakrMascot size={24} />
-                ) : post.author?.avatar_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
+              {isNiwacheAdmin ? (
+                <div className="w-11 h-12 shrink-0 flex items-end justify-center drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)] select-none overflow-visible -my-1">
+                  <OfficialSmakrMascot size={44} />
+                </div>
+              ) : (
+                <div className="w-11 h-12 shrink-0 flex items-end justify-center drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)] select-none overflow-visible -my-1">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={post.author.avatar_url}
-                    alt={post.author.handle || "author"}
-                    className="w-full h-full rounded-full object-cover"
+                    src={avatarSrc}
+                    alt={post.author?.handle || "author"}
+                    className="w-full h-full object-contain pointer-events-none"
                   />
-                ) : (
-                  <span className="w-full h-full rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold text-zinc-900">
-                    {(post.author?.name || "U")[0]}
-                  </span>
-                )}
-              </span>
-              <span className="text-[11px] font-semibold text-zinc-200 truncate max-w-[90px]">
+                </div>
+              )}
+              <span className="text-[11.5px] font-semibold text-zinc-200 truncate max-w-[90px]">
                 {post.author?.handle?.startsWith("@") ? post.author.handle : `@${post.author?.handle || "smak"}`}
               </span>
             </div>
@@ -653,7 +680,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
                   e.stopPropagation();
                   handleToggleLike();
                 }}
-                className={`h-9 px-3 rounded-full text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer ${
+                className={`relative before:absolute before:-inset-2 before:content-[''] touch-manipulation h-9 px-3 rounded-full text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer ${
                   isLiked
                     ? "bg-[#E84A27] border border-[#FF7A5C] text-white shadow-[0_4px_12px_rgba(232,74,39,0.4)]"
                     : "bg-[#181615]/75 border border-white/20 text-[#FAF7F2] hover:bg-[#181615]"
@@ -669,25 +696,36 @@ export const FoodPostCard = React.memo(function FoodPostCard({
               <button
                 type="button"
                 onClick={handleShareDish}
-                className="h-9 w-9 rounded-full bg-[#181615]/75 hover:bg-[#181615] border border-white/20 text-[#FAF7F2] active:scale-90 transition-all flex items-center justify-center cursor-pointer shrink-0"
+                className="relative before:absolute before:-inset-2 before:content-[''] touch-manipulation h-9 w-9 rounded-full bg-[#181615]/75 hover:bg-[#181615] border border-white/20 text-[#FAF7F2] active:scale-90 transition-all flex items-center justify-center cursor-pointer shrink-0"
                 title="Send 'Spise her?' to a friend"
                 aria-label="Share dish"
               >
                 <Send className="w-3.5 h-3.5 stroke-[2] -translate-x-[0.5px] translate-y-[0.5px]" />
               </button>
 
-              {/* Action 3: [Map ↗] Flight Button (ONLY if location is confirmed) or [Details ↗] */}
+              {/* Action 3: Tactile Frosted Glass [Map ↗] Button */}
               {hasConfirmedLocation ? (
                 <button
                   type="button"
-                  onClick={handleFlyToRadar}
-                  className="h-9 px-3.5 rounded-full bg-[#FAF7F2] text-[#181615] border-2 border-[#181615] shadow-[0_2px_0_#181615] hover:bg-[#E84A27] hover:text-white hover:border-[#181615] active:translate-y-[1px] active:shadow-none transition-all text-xs font-extrabold flex items-center gap-1 cursor-pointer shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleFlyToRadar(e);
+                  }}
+                  style={{
+                    backgroundColor: "rgba(250, 247, 242, 0.78)",
+                    backdropFilter: "blur(14px) saturate(160%)",
+                    WebkitBackdropFilter: "blur(14px) saturate(160%)",
+                    border: "1px solid rgba(255, 255, 255, 0.85)",
+                    color: "#181615",
+                    boxShadow: "0 4px 14px rgba(0, 0, 0, 0.25)",
+                  }}
+                  className="relative before:absolute before:-inset-2 before:content-[''] touch-manipulation h-9 px-3.5 rounded-full active:scale-95 transition-transform duration-100 text-xs font-black flex items-center gap-1.5 cursor-pointer shrink-0"
                   title="Locate on map"
                   aria-label="Locate on map"
                 >
-                  <Compass className="w-3.5 h-3.5 stroke-[2.2]" />
-                  <span>Map</span>
-                  <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <Compass className="w-3.5 h-3.5 stroke-[2.4]" style={{ color: "#181615" }} />
+                  <span className="font-extrabold tracking-tight" style={{ color: "#181615" }}>Map</span>
+                  <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.8]" style={{ color: "#181615" }} />
                 </button>
               ) : isPopup ? (
                 <button

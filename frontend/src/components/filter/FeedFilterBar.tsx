@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useMemo, useState, useRef } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import React, { useMemo, useState, useRef, useCallback } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import {
   FOOD_GROUPS,
@@ -43,35 +43,127 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
   });
 
   const filterScrollRef = useRef<HTMLDivElement>(null);
-  const isUserTouchingRef = useRef<boolean>(false);
+  const drawerCategoriesScrollRef = useRef<HTMLDivElement>(null);
+
+  // Exact Top-Strip "Left Yoink" dual-trigger glitch (both open and close)
+  const lastYoinkAtRef = useRef<number>(0);
   const touchStartXRef = useRef<number>(0);
   const touchStartYRef = useRef<number>(0);
+  const touchStartScrollLeftRef = useRef<number>(0);
+  const isTouchingStripRef = useRef<boolean>(false);
+  const hasYoinkedThisTouchRef = useRef<boolean>(false);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    isUserTouchingRef.current = true;
+  const triggerYoinkToggle = useCallback(() => {
+    const now = Date.now();
+    if (now - lastYoinkAtRef.current < 420) return; // debounce so it toggles cleanly once per gesture
+    lastYoinkAtRef.current = now;
+    hasYoinkedThisTouchRef.current = true;
+    setIsExpanded((prev) => !prev);
+  }, []);
+
+  const handleStripTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    isTouchingStripRef.current = true;
+    hasYoinkedThisTouchRef.current = false;
     touchStartXRef.current = e.touches[0].clientX;
     touchStartYRef.current = e.touches[0].clientY;
+    touchStartScrollLeftRef.current = el.scrollLeft;
   };
 
-  const handleTouchEnd = () => {
-    isUserTouchingRef.current = false;
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    const el = filterScrollRef.current;
-    if (!el) return;
+  const handleStripTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!isTouchingStripRef.current || hasYoinkedThisTouchRef.current) return;
+    const el = e.currentTarget;
     const deltaX = e.touches[0].clientX - touchStartXRef.current;
     const deltaY = Math.abs(e.touches[0].clientY - touchStartYRef.current);
-    // User pulls toward the right at the left boundary -> open filters drawer
-    if (el.scrollLeft <= 5 && deltaX > 30 && deltaY < 30) {
-      if (!isExpanded) setIsExpanded(true);
+
+    // Trigger if user pulls rightward (deltaX > 18) while at/near the left edge (scrollLeft <= 10)
+    if (el.scrollLeft <= 10 && deltaX > 18 && deltaY < 30) {
+      triggerYoinkToggle();
     }
   };
 
-  const handleFilterScroll = (e: React.UIEvent<HTMLDivElement>) => {
+  const handleStripScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
-    if (isUserTouchingRef.current && el.scrollLeft <= 4 && !isExpanded) {
-      setIsExpanded(true);
+    // Original "glitch" behavior: if user was scrolled right (touchStartScrollLeft > 12)
+    // and drags/scrolls all the way back into the left edge (scrollLeft <= 3) while touching:
+    if (
+      isTouchingStripRef.current &&
+      !hasYoinkedThisTouchRef.current &&
+      touchStartScrollLeftRef.current > 12 &&
+      el.scrollLeft <= 3
+    ) {
+      triggerYoinkToggle();
+    }
+  };
+
+  const handleStripTouchEnd = () => {
+    isTouchingStripRef.current = false;
+    hasYoinkedThisTouchRef.current = false;
+  };
+
+  // Directional capture drag locking for the open filter sheet (interactive 1:1 drag-up with feed pull)
+  const [dragOffsetY, setDragOffsetY] = useState(0);
+  const [isDraggingDrawer, setIsDraggingDrawer] = useState(false);
+  const drawerSheetRef = useRef<HTMLDivElement>(null);
+  const drawerNaturalHeightRef = useRef<number>(240);
+  const drawerStartYRef = useRef<number>(0);
+  const drawerStartXRef = useRef<number>(0);
+  const drawerStartTimeRef = useRef<number>(0);
+  const isVerticalDragRef = useRef<boolean>(false);
+  const isSuppressingClickRef = useRef<boolean>(false);
+
+  const handleDrawerTouchStartCapture = (e: React.TouchEvent<HTMLDivElement>) => {
+    drawerNaturalHeightRef.current = drawerSheetRef.current?.offsetHeight || 240;
+    drawerStartYRef.current = e.touches[0].clientY;
+    drawerStartXRef.current = e.touches[0].clientX;
+    drawerStartTimeRef.current = Date.now();
+    isVerticalDragRef.current = false;
+  };
+
+  const handleDrawerTouchMoveCapture = (e: React.TouchEvent<HTMLDivElement>) => {
+    const touch = e.touches[0];
+    const dy = touch.clientY - drawerStartYRef.current;
+    const dx = touch.clientX - drawerStartXRef.current;
+
+    if (!isVerticalDragRef.current) {
+      // If horizontal row scrolling dominates, abort vertical sheet drag
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 6) {
+        return;
+      }
+      // If vertical movement dominates, lock into vertical sheet drag
+      if (Math.abs(dy) > 6 && Math.abs(dy) > Math.abs(dx) * 1.15) {
+        isVerticalDragRef.current = true;
+        setIsDraggingDrawer(true);
+      }
+    }
+
+    if (isVerticalDragRef.current) {
+      e.stopPropagation();
+      const maxUpward = drawerNaturalHeightRef.current;
+      // Allow 1:1 physical dragging upward (dy < 0, clamped with rubber-band resistance when pulling down)
+      const offset = dy < 0 ? Math.max(-maxUpward, dy) : Math.min(28, dy * 0.25);
+      setDragOffsetY(offset);
+    }
+  };
+
+  const handleDrawerTouchEndCapture = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (isVerticalDragRef.current) {
+      e.stopPropagation();
+      isSuppressingClickRef.current = true;
+      setTimeout(() => {
+        isSuppressingClickRef.current = false;
+      }, 140);
+
+      const touchDuration = Math.max(1, Date.now() - drawerStartTimeRef.current);
+      const velocityY = dragOffsetY / touchDuration;
+
+      // Close if pulled up past threshold or flicked upward
+      if (dragOffsetY < -36 || velocityY < -0.25) {
+        setIsExpanded(false);
+      }
+      setDragOffsetY(0);
+      setIsDraggingDrawer(false);
+      isVerticalDragRef.current = false;
     }
   };
 
@@ -116,18 +208,25 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
   const setFilters = useCityPulseStore((state) => state.setFilters);
   const resetAllFilters = useCityPulseStore((state) => state.resetAllFilters);
 
-  // Derive counts per parent group on full dataset (venues in places mode, posts in food mode)
-  const groupCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
+  // Derive counts per parent group and child dish categories on full dataset
+  const { groupCounts, childCategoryCounts } = useMemo(() => {
+    const gCounts: Record<string, number> = {};
+    const cCounts: Record<string, number> = {};
     for (const group of FOOD_GROUPS) {
-      counts[group.id] = 0;
+      gCounts[group.id] = 0;
+      for (const child of group.childCategories) {
+        cCounts[child] = 0;
+      }
     }
 
     if (feedMode === "places") {
       for (const venue of venues) {
         if (!isVisibleInFeed(venue)) continue;
         const tax = resolveEntityTaxonomy(venue);
-        counts[tax.group.id] = (counts[tax.group.id] || 0) + 1;
+        gCounts[tax.group.id] = (gCounts[tax.group.id] || 0) + 1;
+        if (tax.dishCategory) {
+          cCounts[tax.dishCategory] = (cCounts[tax.dishCategory] || 0) + 1;
+        }
       }
     } else {
       const venueMap = new Map(venues.map((v) => [v.id, v]));
@@ -138,11 +237,14 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
         const linkedVenue = venueMap.get(post.spot_id);
         if (!isVisibleInFeed(linkedVenue)) continue;
         const tax = resolveEntityTaxonomy(linkedVenue, post);
-        counts[tax.group.id] = (counts[tax.group.id] || 0) + 1;
+        gCounts[tax.group.id] = (gCounts[tax.group.id] || 0) + 1;
+        if (tax.dishCategory) {
+          cCounts[tax.dishCategory] = (cCounts[tax.dishCategory] || 0) + 1;
+        }
       }
     }
 
-    return counts;
+    return { groupCounts: gCounts, childCategoryCounts: cCounts };
   }, [venues, foodPosts, feedMode, currentUser]);
 
   // Total items count
@@ -245,6 +347,9 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
     } else {
       setSelectedDishCategory(childCat);
       setFeedCategory("all");
+      setTimeout(() => {
+        setIsExpanded(false);
+      }, 160);
     }
   };
 
@@ -271,16 +376,25 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
     return FOOD_GROUPS.find((g) => g.id === selectedGroup) || null;
   }, [selectedGroup]);
 
+  // Non-empty child categories for active group
+  const activeChildren = useMemo(() => {
+    if (!activeGroupDef) return [];
+    return activeGroupDef.childCategories.filter(
+      (child) => (childCategoryCounts[child] || 0) > 0 || selectedDishCategory === child
+    );
+  }, [activeGroupDef, childCategoryCounts, selectedDishCategory]);
+
   return (
     <div data-filter-bar className="w-full max-w-full min-w-0 bg-transparent border-b border-black/[0.06] dark:border-white/[0.08]">
       {/* ── TOP HORIZONTAL STRIP (W1–W3: Non-empty only, count desc, short & honest) ── */}
       <div
         ref={filterScrollRef}
-        onScroll={handleFilterScroll}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        className={`w-full max-w-full overflow-x-auto no-scrollbar px-3 snap-x snap-mandatory flex items-center gap-1.5 ${
+        onTouchStart={handleStripTouchStart}
+        onTouchMove={handleStripTouchMove}
+        onTouchEnd={handleStripTouchEnd}
+        onScroll={handleStripScroll}
+        style={{ touchAction: "pan-x" }}
+        className={`w-full max-w-full overflow-x-auto no-scrollbar px-3 flex items-center gap-1.5 ${
           compact ? "py-1.5" : "py-2"
         }`}
       >
@@ -290,7 +404,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
           onClick={() => setIsExpanded(!isExpanded)}
           aria-expanded={isExpanded}
           aria-label="Toggle filter drawer"
-          className={`snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-colors select-none active:scale-95 cursor-pointer ${
+          className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-colors select-none active:scale-95 cursor-pointer ${
             isExpanded
               ? "bg-zinc-100 dark:bg-white/15 text-zinc-900 dark:text-white border-zinc-300 dark:border-white/30 shadow-xs"
               : "bg-white dark:bg-white/10 text-zinc-800 dark:text-zinc-200 border-zinc-200/80 dark:border-white/15 hover:bg-zinc-100 dark:hover:bg-white/15"
@@ -323,7 +437,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
               key="filter-pill-all"
               type="button"
               onClick={handleSelectAll}
-              className="relative snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border border-zinc-200/70 dark:border-white/10 select-none active:scale-95 cursor-pointer bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 transition-colors duration-200"
+              className="relative shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border border-zinc-200/70 dark:border-white/10 select-none active:scale-95 cursor-pointer bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 transition-colors duration-200"
             >
               {isAllActive && (
                 <motion.div
@@ -349,7 +463,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
             key="filter-pill-saved"
             type="button"
             onClick={handleSelectSaved}
-            className="relative snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border border-zinc-200/70 dark:border-white/10 select-none active:scale-95 cursor-pointer bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 transition-colors duration-200"
+            className="relative shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border border-zinc-200/70 dark:border-white/10 select-none active:scale-95 cursor-pointer bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 transition-colors duration-200"
           >
             {savedOnly && (
               <motion.div
@@ -380,7 +494,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
               key="filter-pill-popup"
               type="button"
               onClick={() => handleSelectSpotKind("popup")}
-              className="relative snap-start shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold border border-zinc-200/70 dark:border-white/10 select-none active:scale-95 cursor-pointer bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 transition-colors duration-200"
+              className="relative shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold border border-zinc-200/70 dark:border-white/10 select-none active:scale-95 cursor-pointer bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 transition-colors duration-200"
             >
               {isPopupActive && (
                 <motion.div
@@ -407,7 +521,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
               key={group.id}
               type="button"
               onClick={() => handleSelectGroup(group.id)}
-              className="relative snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border border-zinc-200/70 dark:border-white/10 select-none active:scale-95 cursor-pointer bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 transition-colors duration-200"
+              className="relative shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border border-zinc-200/70 dark:border-white/10 select-none active:scale-95 cursor-pointer bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 transition-colors duration-200"
             >
               {isSelected && (
                 <motion.div
@@ -419,7 +533,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
               <span className={`relative z-10 flex items-center gap-1.5 transition-colors duration-200 ${isSelected ? "text-white font-bold" : "font-medium text-zinc-700 dark:text-zinc-200"}`}>
                 <SmakrFoodIcon
                   name={group.id}
-                  className={`w-3.5 h-3.5 shrink-0 ${isSelected ? "brightness-0 invert" : ""}`}
+                  className="w-3.5 h-3.5 shrink-0"
                 />
                 <span className="tracking-tight whitespace-nowrap">{group.shortLabel}</span>
                 <span className={`text-[10px] font-mono ${isSelected ? "text-white/90" : "text-zinc-400"}`}>
@@ -431,144 +545,167 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
         })}
       </div>
 
-      {/* ── EXPANDED FILTER DRAWER (W4–W8: Large icon slider, subcategories, diet & spot kinds) ── */}
-      <AnimatePresence initial={false}>
-        {isExpanded && (
-          <motion.div
-            key="smakr-filter-drawer"
-            data-filter-drawer="true"
-            initial={{ height: 0, opacity: 0, y: -4 }}
-            animate={{ height: "auto", opacity: 1, y: 0 }}
-            exit={{ height: 0, opacity: 0, y: -4 }}
-            transition={{ type: "spring", stiffness: 380, damping: 32, mass: 0.65 }}
-            className="w-full overflow-hidden border-t border-black/[0.06] dark:border-white/[0.08] bg-[#FAF7F2] dark:bg-[#151413]"
+      {/* ── EXPANDED FILTER DRAWER (60fps CSS Grid Accordion + 1:1 Feed-Pull Drag-Up) ── */}
+      <div
+        data-filter-drawer="true"
+        className={`grid transition-[grid-template-rows,opacity] duration-260 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0 pointer-events-none"
+        }`}
+      >
+        <div className="overflow-hidden min-h-0">
+          <div
+            ref={drawerSheetRef}
+            onTouchStartCapture={handleDrawerTouchStartCapture}
+            onTouchMoveCapture={handleDrawerTouchMoveCapture}
+            onTouchEndCapture={handleDrawerTouchEndCapture}
+            onClickCapture={(e) => {
+              if (isSuppressingClickRef.current) {
+                e.stopPropagation();
+                e.preventDefault();
+              }
+            }}
+            style={{
+              transform: dragOffsetY !== 0 ? `translate3d(0, ${dragOffsetY}px, 0)` : undefined,
+              marginBottom: dragOffsetY < 0 ? `${dragOffsetY}px` : undefined,
+              transition: isDraggingDrawer
+                ? "none"
+                : "transform 240ms cubic-bezier(0.22,1,0.36,1), margin-bottom 240ms cubic-bezier(0.22,1,0.36,1)",
+            }}
+            className="w-full border-t border-black/[0.06] dark:border-white/[0.08] bg-[#FAF7F2] dark:bg-[#151413] px-3.5 pt-2 pb-2.5 space-y-2.5 select-none touch-pan-y"
           >
-            <div className="px-3.5 py-3 space-y-3.5">
-              {/* Header: Title, Active Count & Reset */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold font-comico uppercase tracking-wider text-[#181615] dark:text-white">
-                    Filter by Craving & Spot
-                  </span>
-                  {activeExtraFiltersCount > 0 && (
-                    <span className="px-2 py-0.5 rounded-full bg-[#e84a27] text-white text-[10px] font-bold">
-                      {activeExtraFiltersCount} active
+                {/* Header: Compact Row (Categories + active on left, Reset on right) */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold font-comico uppercase tracking-wider text-[#181615] dark:text-white">
+                      Categories
                     </span>
+                    {activeExtraFiltersCount > 0 && (
+                      <span className="px-2 py-0.5 rounded-full bg-[#e84a27] text-white text-[10px] font-bold">
+                        {activeExtraFiltersCount} active
+                      </span>
+                    )}
+                  </div>
+
+                  {hasAnyActiveFilter && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        resetAllFilters();
+                        setSelectedGroup(null);
+                        setSelectedDishCategory(null);
+                        setSelectedSpotKind(null);
+                        setSelectedCuisine(null);
+                      }}
+                      className="flex items-center gap-1 text-[11px] text-[#e84a27] hover:underline font-bold transition-colors cursor-pointer"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Reset</span>
+                    </button>
                   )}
                 </div>
 
-                {hasAnyActiveFilter && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      resetAllFilters();
-                      setSelectedGroup(null);
-                      setSelectedDishCategory(null);
-                      setSelectedSpotKind(null);
-                      setSelectedCuisine(null);
-                    }}
-                    className="flex items-center gap-1 text-[11px] text-[#e84a27] hover:underline font-bold transition-colors cursor-pointer"
+                {/* ── SECTION 1: Floating Enlarged Category Icons ── */}
+                <div>
+                  <div
+                    ref={drawerCategoriesScrollRef}
+                    className="flex items-center gap-2.5 overflow-x-auto no-scrollbar py-1 snap-x"
                   >
-                    <RotateCcw className="w-3 h-3" />
-                    <span>Reset</span>
-                  </button>
-                )}
-              </div>
+                    {FOOD_GROUPS.map((group) => {
+                      const isSelected = selectedGroup === group.id;
+                      const count = groupCounts[group.id] || 0;
 
-              {/* ── SECTION 1: Large Parent Group Slider (W4 & W6) ── */}
-              <div>
-                <div className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-1.5">
-                  Food Categories (Tap to explore dishes)
-                </div>
-                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 snap-x">
-                  {FOOD_GROUPS.map((group) => {
-                    const isSelected = selectedGroup === group.id;
-                    const count = groupCounts[group.id] || 0;
-
-                    return (
-                      <button
-                        key={group.id}
-                        type="button"
-                        onClick={() => handleSelectGroup(group.id)}
-                        className={`snap-start shrink-0 w-[68px] sm:w-[74px] p-2 rounded-2xl flex flex-col items-center justify-center gap-1 border transition-all active:scale-95 cursor-pointer ${
-                          isSelected
-                            ? "bg-[#e84a27] text-white border-[#e84a27] shadow-md ring-2 ring-[#e84a27]/30"
-                            : count > 0
-                            ? "bg-white dark:bg-white/5 text-zinc-800 dark:text-zinc-200 border-zinc-200/80 dark:border-white/10 hover:border-[#e84a27]/50"
-                            : "bg-zinc-100/60 dark:bg-white/5 text-zinc-400 border-zinc-200/40 opacity-50"
-                        }`}
-                      >
-                        <div className="w-10 h-10 flex items-center justify-center">
-                          <SmakrFoodIcon
-                            name={group.id}
-                            className={`w-9 h-9 object-contain ${isSelected ? "brightness-0 invert" : ""}`}
-                          />
-                        </div>
-                        <span className="text-[10.5px] font-bold text-center leading-tight line-clamp-1">
-                          {group.shortLabel}
-                        </span>
-                        <span
-                          className={`text-[9.5px] font-mono ${
-                            isSelected ? "text-white/90" : "text-zinc-400"
+                      return (
+                        <button
+                          key={group.id}
+                          type="button"
+                          onClick={() => handleSelectGroup(group.id)}
+                          className={`snap-start shrink-0 flex flex-col items-center justify-start gap-1 p-1 select-none active:scale-95 cursor-pointer transition-all ${
+                            count === 0 && !isSelected ? "opacity-40" : ""
                           }`}
                         >
-                          {count}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* ── SECTION 2: Sub-Categories Reveal (W13) ── */}
-              <AnimatePresence>
-                {activeGroupDef && activeGroupDef.childCategories.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="overflow-hidden bg-white/70 dark:bg-white/5 p-2.5 rounded-2xl border border-[#e84a27]/20"
-                  >
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-[#e84a27] mb-1.5 flex items-center gap-1">
-                      <Sparkles className="w-3 h-3" />
-                      <span>{activeGroupDef.label} Dishes:</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {activeGroupDef.childCategories.map((child) => {
-                        const isChildActive = selectedDishCategory === child;
-                        const label = child
-                          .split("_")
-                          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-                          .join(" ");
-
-                        return (
-                          <button
-                            key={child}
-                            type="button"
-                            onClick={() => handleSelectChildCategory(child)}
-                            className={`px-2.5 py-1 rounded-xl text-[11px] font-bold border flex items-center gap-1 transition-all active:scale-95 cursor-pointer ${
-                              isChildActive
-                                ? "bg-[#e84a27] text-white border-[#e84a27] shadow-xs"
-                                : "bg-white dark:bg-stone-800 text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-white/10 hover:border-[#e84a27]/40"
+                          <div
+                            className={`w-11 h-11 relative rounded-full flex items-center justify-center transition-all duration-200 ${
+                              isSelected
+                                ? "bg-[#e84a27]/12 ring-2 ring-[#e84a27]/25 scale-108"
+                                : "hover:scale-105"
                             }`}
                           >
-                            <SmakrFoodIcon name={child} className={`w-3.5 h-3.5 shrink-0 ${isChildActive ? "brightness-0 invert" : ""}`} />
-                            <span>{label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* ── SECTION 3: Dietary Badges (Directly Visible) ── */}
-              <div>
-                <div className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 mb-1.5">
-                  Dietary Preferences
+                            <SmakrFoodIcon
+                              name={group.id}
+                              className="w-11 h-11 object-contain drop-shadow-xs"
+                            />
+                          </div>
+                          <span
+                            className={`text-[10.5px] font-bold text-center leading-tight line-clamp-1 transition-colors ${
+                              isSelected ? "text-[#e84a27]" : "text-zinc-800 dark:text-zinc-200"
+                            }`}
+                          >
+                            {group.shortLabel}
+                          </span>
+                          <span
+                            className={`text-[9.5px] font-mono px-1.5 py-0.2 rounded-full transition-colors ${
+                              isSelected
+                                ? "bg-[#e84a27]/15 text-[#e84a27] font-bold"
+                                : "text-zinc-400"
+                            }`}
+                          >
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+
+                {/* ── SECTION 2: Single-Row Non-Empty Sub-Categories ── */}
+                <AnimatePresence>
+                  {activeGroupDef && (activeChildren.length > 1 || (activeChildren.length > 0 && selectedDishCategory)) && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.18 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+                        {activeChildren.map((child) => {
+                          const isChildActive = selectedDishCategory === child;
+                          const label = child
+                            .split("_")
+                            .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                            .join(" ");
+
+                          return (
+                            <button
+                              key={child}
+                              type="button"
+                              onClick={() => handleSelectChildCategory(child)}
+                              className={`shrink-0 px-2.5 py-1 rounded-xl text-[11px] font-bold border flex items-center gap-1 transition-all active:scale-95 cursor-pointer ${
+                                isChildActive
+                                  ? "bg-[#e84a27] text-white border-[#e84a27] shadow-xs"
+                                  : "bg-white dark:bg-stone-800 text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-white/10 hover:border-[#e84a27]/40"
+                              }`}
+                            >
+                              <SmakrFoodIcon name={child} className="w-3.5 h-3.5 shrink-0" />
+                              <span>{label}</span>
+                              {childCategoryCounts[child] > 0 && (
+                                <span className={`text-[10px] font-mono ${isChildActive ? "text-white/80" : "text-zinc-400"}`}>
+                                  ({childCategoryCounts[child]})
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* ── SECTION 3: Dietary Badges (Inline "Diet" Label) ── */}
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 pr-1 shrink-0 select-none">
+                    Diet
+                  </span>
                   {(["halal", "vegan", "vegetarian", "gluten_free", "spicy"] as const).map((diet) => {
                     const isActive = selectedDietary.includes(diet);
                     const dietLabels: Record<DietaryTag, string> = {
@@ -584,7 +721,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                         key={diet}
                         type="button"
                         onClick={() => toggleDietary(diet)}
-                        className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
+                        className={`shrink-0 px-2.5 py-1 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
                           isActive
                             ? "bg-[#4E8752] text-white border-[#4E8752] shadow-xs"
                             : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-white/10 hover:border-[#4E8752]/40"
@@ -596,32 +733,61 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                     );
                   })}
                 </div>
-              </div>
 
-              {/* ── SECTION 4: Spot Type Dropdown (Toggles Horizontal Slider) ── */}
-              <div className="rounded-2xl border border-zinc-200/70 dark:border-white/10 bg-white/60 dark:bg-white/5 overflow-hidden transition-all">
-                <button
-                  type="button"
-                  onClick={() => setIsSpotTypeOpen(!isSpotTypeOpen)}
-                  className="w-full px-3 py-2 flex items-center justify-between text-left cursor-pointer active:scale-[0.99] transition-transform select-none"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                      Spot Type (Venue Kind)
-                    </span>
-                    {selectedSpotKind && (
-                      <span className="px-2 py-0.5 rounded-full bg-[#e84a27] text-white text-[10px] font-bold">
-                        {SPOT_KINDS.find((s) => s.id === selectedSpotKind)?.shortLabel || selectedSpotKind}
-                      </span>
-                    )}
-                  </div>
-                  <ChevronDown
-                    className={`w-4 h-4 text-zinc-400 transition-transform duration-200 ${
-                      isSpotTypeOpen ? "rotate-180" : ""
+                {/* ── SECTION 4 & 5: Compact Side-by-Side Dropdowns (Solid Orange When Active) ── */}
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Spot Type Pill Trigger */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSpotTypeOpen(!isSpotTypeOpen);
+                      if (!isSpotTypeOpen) setIsCuisinesOpen(false);
+                    }}
+                    className={`h-8 px-3 rounded-xl border flex items-center justify-between text-xs font-bold transition-all cursor-pointer select-none active:scale-95 ${
+                      isSpotTypeOpen || selectedSpotKind
+                        ? "bg-[#E84A27] text-white border-[#E84A27] shadow-xs"
+                        : "bg-white/70 dark:bg-white/5 border-zinc-200/80 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
                     }`}
-                  />
-                </button>
+                  >
+                    <span className="truncate">
+                      {selectedSpotKind
+                        ? SPOT_KINDS.find((s) => s.id === selectedSpotKind)?.shortLabel || selectedSpotKind
+                        : "Spot Type"}
+                    </span>
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${
+                        isSpotTypeOpen ? "rotate-180 text-white" : selectedSpotKind ? "text-white" : "text-zinc-400"
+                      }`}
+                    />
+                  </button>
 
+                  {/* Cuisines Pill Trigger */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCuisinesOpen(!isCuisinesOpen);
+                      if (!isCuisinesOpen) setIsSpotTypeOpen(false);
+                    }}
+                    className={`h-8 px-3 rounded-xl border flex items-center justify-between text-xs font-bold transition-all cursor-pointer select-none active:scale-95 ${
+                      isCuisinesOpen || selectedCuisine
+                        ? "bg-[#E84A27] text-white border-[#E84A27] shadow-xs"
+                        : "bg-white/70 dark:bg-white/5 border-zinc-200/80 dark:border-white/10 text-zinc-700 dark:text-zinc-200"
+                    }`}
+                  >
+                    <span className="truncate">
+                      {selectedCuisine
+                        ? CUISINES.find((c) => c.id === selectedCuisine)?.label || selectedCuisine
+                        : "Cuisines"}
+                    </span>
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${
+                        isCuisinesOpen ? "rotate-180 text-white" : selectedCuisine ? "text-white" : "text-zinc-400"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Revealed horizontal strips directly underneath */}
                 <AnimatePresence>
                   {isSpotTypeOpen && (
                     <motion.div
@@ -629,9 +795,9 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.18 }}
-                      className="overflow-hidden border-t border-zinc-200/60 dark:border-white/10 p-2.5 pt-2"
+                      className="overflow-hidden"
                     >
-                      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
                         {SPOT_KINDS.filter((spot) => spot.id !== "street_stall").map((spot) => {
                           const isActive = selectedSpotKind === spot.id;
                           return (
@@ -639,13 +805,13 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                               key={spot.id}
                               type="button"
                               onClick={() => handleSelectSpotKind(spot.id)}
-                              className={`shrink-0 min-h-[42px] px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
+                              className={`shrink-0 px-2.5 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
                                 isActive
-                                  ? "bg-[#181615] dark:bg-white text-white dark:text-[#181615] border-[#181615] dark:border-white shadow-xs"
+                                  ? "bg-[#E84A27] text-white border-[#E84A27] shadow-xs"
                                   : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-white/10 hover:border-zinc-400"
                               }`}
                             >
-                              <SmakrFoodIcon name={spot.id} className="w-4 h-4 shrink-0" monochrome={isActive} />
+                              <SmakrFoodIcon name={spot.id} className="w-3.5 h-3.5 shrink-0" monochrome={false} />
                               <span>{spot.shortLabel}</span>
                             </button>
                           );
@@ -653,43 +819,15 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                       </div>
                     </motion.div>
                   )}
-                </AnimatePresence>
-              </div>
-
-              {/* ── SECTION 5: Regional Cuisines Dropdown (Toggles Horizontal Slider) ── */}
-              <div className="rounded-2xl border border-zinc-200/70 dark:border-white/10 bg-white/60 dark:bg-white/5 overflow-hidden transition-all">
-                <button
-                  type="button"
-                  onClick={() => setIsCuisinesOpen(!isCuisinesOpen)}
-                  className="w-full px-3 py-2 flex items-center justify-between text-left cursor-pointer active:scale-[0.99] transition-transform select-none"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                      Regional Cuisines
-                    </span>
-                    {selectedCuisine && (
-                      <span className="px-2 py-0.5 rounded-full bg-[#e84a27] text-white text-[10px] font-bold">
-                        {CUISINES.find((c) => c.id === selectedCuisine)?.label || selectedCuisine}
-                      </span>
-                    )}
-                  </div>
-                  <ChevronDown
-                    className={`w-4 h-4 text-zinc-400 transition-transform duration-200 ${
-                      isCuisinesOpen ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
-
-                <AnimatePresence>
                   {isCuisinesOpen && (
                     <motion.div
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.18 }}
-                      className="overflow-hidden border-t border-zinc-200/60 dark:border-white/10 p-2.5 pt-2"
+                      className="overflow-hidden"
                     >
-                      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
                         {CUISINES.map((cuisine) => {
                           const isActive = selectedCuisine === cuisine.id;
                           return (
@@ -699,11 +837,11 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                               onClick={() => handleSelectCuisine(cuisine.id)}
                               className={`shrink-0 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold border flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
                                 isActive
-                                  ? "bg-[#e84a27] text-white border-[#e84a27] font-bold shadow-xs"
+                                  ? "bg-[#E84A27] text-white border-[#E84A27] font-bold shadow-xs"
                                   : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-white/10 hover:border-[#e84a27]/30"
                               }`}
                             >
-                              <SmakrFoodIcon name={cuisine.glyph} className="w-3.5 h-3.5 shrink-0" monochrome={isActive} />
+                              <SmakrFoodIcon name={cuisine.glyph} className="w-3.5 h-3.5 shrink-0" monochrome={false} />
                               <span>{cuisine.label}</span>
                             </button>
                           );
@@ -712,64 +850,73 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </div>
 
-              {/* ── SECTION 6: Quick Status & Price Tiers ── */}
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-black/[0.06] dark:border-white/[0.08]">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setFilters({ open_now: !openNow })}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
-                      openNow
-                        ? "bg-[#4E8752] text-white border-[#4E8752] font-bold shadow-xs"
-                        : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-white/10"
-                    }`}
-                  >
-                    <span className="w-2 h-2 rounded-full bg-current" />
-                    <span>Open Now</span>
-                  </button>
+                {/* ── SECTION 6: Quick Status & Price Tiers ── */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-black/[0.06] dark:border-white/[0.08]">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setFilters({ open_now: !openNow })}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
+                        openNow
+                          ? "bg-[#4E8752] text-white border-[#4E8752] font-bold shadow-xs"
+                          : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-white/10"
+                      }`}
+                    >
+                      <span className="w-2 h-2 rounded-full bg-current" />
+                      <span>Open Now</span>
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={toggleStaffPicksOnly}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
-                      staffPicksOnly
-                        ? "bg-[#e84a27] text-white border-[#e84a27] font-bold shadow-xs"
-                        : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-white/10"
-                    }`}
-                  >
-                    <span>✦</span>
-                    <span>Smakr Picks</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={toggleStaffPicksOnly}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
+                        staffPicksOnly
+                          ? "bg-[#e84a27] text-white border-[#e84a27] font-bold shadow-xs"
+                          : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-white/10"
+                      }`}
+                    >
+                      <span>✦</span>
+                      <span>Smakr Picks</span>
+                    </button>
 
-                  {/* Price Tier Segmented Pill */}
-                  <div className="flex items-center gap-0.5 bg-white dark:bg-white/5 p-0.5 rounded-full border border-zinc-200 dark:border-white/10">
-                    {(["$", "$$", "$$$"] as const).map((tier) => {
-                      const isActive = priceTierFilter === tier;
-                      return (
-                        <button
-                          key={tier}
-                          type="button"
-                          onClick={() => setPriceTierFilter(isActive ? null : tier)}
-                          className={`px-2.5 py-0.5 rounded-full text-xs font-mono font-bold transition-all cursor-pointer ${
-                            isActive
-                              ? "bg-[#181615] dark:bg-white text-white dark:text-zinc-950 shadow-xs"
-                              : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
-                          }`}
-                          title={`Price range ${tier}`}
-                        >
-                          {tier}
-                        </button>
-                      );
-                    })}
+                    {/* Price Tier Segmented Pill */}
+                    <div className="flex items-center gap-0.5 bg-white dark:bg-white/5 p-0.5 rounded-full border border-zinc-200 dark:border-white/10">
+                      {(["$", "$$", "$$$"] as const).map((tier) => {
+                        const isActive = priceTierFilter === tier;
+                        return (
+                          <button
+                            key={tier}
+                            type="button"
+                            onClick={() => setPriceTierFilter(isActive ? null : tier)}
+                            className={`px-2.5 py-0.5 rounded-full text-xs font-mono font-bold transition-all cursor-pointer ${
+                              isActive
+                                ? "bg-[#181615] dark:bg-white text-white dark:text-zinc-950 shadow-xs"
+                                : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+                            }`}
+                            title={`Price range ${tier}`}
+                          >
+                            {tier}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
+                </div>
+
+                {/* Bottom Tap & Drag-to-Close Handle */}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setIsExpanded(false)}
+                  aria-label="Tap or drag up to close filters"
+                  className="w-full pt-1.5 pb-1 flex flex-col items-center justify-center cursor-pointer active:opacity-60 transition-opacity select-none"
+                >
+                  <div className="w-10 h-1.5 rounded-full bg-stone-300/90 dark:bg-stone-600/90 hover:bg-[#E84A27] transition-colors" />
                 </div>
               </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
+          </div>
+        </div>
+      );
+    }

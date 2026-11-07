@@ -279,22 +279,18 @@ export function MascotWeeklyDrop({
         </div>
       )}
 
-      {/* ── Expanded spotlight card underneath (smooth spring accordion) ── */}
-      <AnimatePresence initial={false}>
-        {isExpanded && (
-          <motion.div
-            key="smakr-weekly-drop-panel"
-            data-weekly-drop-drawer="true"
-            initial={{ height: 0, opacity: 0, y: -6, scale: 0.985 }}
-            animate={{ height: "auto", opacity: 1, y: 0, scale: 1 }}
-            exit={{ height: 0, opacity: 0, y: -6, scale: 0.985 }}
-            transition={{ type: "spring", stiffness: 380, damping: 32, mass: 0.68 }}
-            className="overflow-hidden"
-          >
-            <div className="pt-2.5 pb-0.5">
-              <div
-                className="w-full max-w-full mx-auto relative overflow-hidden rounded-3xl bg-[#FAF7F2] dark:bg-[#181615] border border-[#181615]/10 dark:border-white/10 shadow-xl p-3 sm:p-3.5 space-y-2.5"
-              >
+      {/* ── Expanded spotlight card underneath (smooth 60fps CSS Grid accordion) ── */}
+      <div
+        data-weekly-drop-drawer="true"
+        className={`grid transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden ${
+          isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0 pointer-events-none"
+        }`}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div className="pt-2.5 pb-0.5">
+            <div
+              className="w-full max-w-full mx-auto relative overflow-hidden rounded-3xl bg-[#FAF7F2] dark:bg-[#181615] border border-[#181615]/10 dark:border-white/10 shadow-xl p-3 sm:p-3.5 space-y-2.5"
+            >
             {/* ROW 1: Mascot on Left + Clean Speech Bubble with ✦ SMAKR PICK on Right */}
             <div className="flex gap-2.5 sm:gap-3 items-stretch">
               {/* Mascot Anchor Box (Warm Pedestal Box, Unclipped Afro) */}
@@ -405,11 +401,10 @@ export function MascotWeeklyDrop({
                 </div>
               </div>
             </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+        </div>
+      </div>
+    </div>
 
       <EditWeeklyDropModal
         isOpen={isEditModalOpen}

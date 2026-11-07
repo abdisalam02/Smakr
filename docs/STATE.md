@@ -23,8 +23,8 @@ Updated: 2026-11-02
 - No other open items recorded in this handoff.
 
 ## Recent (max 5, one line each)
-- 2026-11-05 — Aligned map cards to feed filter icons & clean placeholder cloche, and re-tagged Em Oi to Noodles; tsc clean
-- 2026-11-05 — Statically anchored mascot on left (z:9999), revamped map card header & Smakr Pick line, and unified Saved pill; tsc clean
-- 2026-11-05 — Made spot type & regional sections collapsible dropdowns revealing horizontal icon sliders; tsc clean
-- 2026-11-05 — Decoupled feed/spots scroll state, armed filter drawer collapse with grace period, and matched map popup buttons to card width; tsc clean
-- 2026-11-05 — Fixed category filter feed zero-state: wired taxonomy group & child matching so pill counts match displayed dishes; tsc clean
+- 2026-11-07 — Executed Prompt 1: streamlined filter sheet, floating silhouette map pins, freed feed mascot; tsc clean
+- 2026-11-07 — Executed Prompt 2: solid map die-cut stroke, clip mask sheet, bust fallbacks, 3-tier cascade, 60fps accordion; tsc clean
+- 2026-11-07 — Padded map icons 16px, radial SVG die-cut filter, 60fps feed-pull accordion, bust avatars, instant nav switch; tsc clean
+- 2026-11-07 — Isolated pizza & pasta pins, dual-layer selected rim, frosted Map button, yoink gesture, 120fps nav switch; tsc clean
+- 2026-11-07 — Refined delicate orange pin hue, normalized pizza/pasta scale, high-contrast sweater busts, 0ms tab switch; tsc clean

@@ -367,7 +367,7 @@ export const DEFAULT_OPEN_PEEPS_CONFIG: OpenPeepsConfig = {
   faceExpression: "smile",
   accessories: "none",
   facialHair: "none",
-  clothingColor: "262e33",
+  clothingColor: "e84a27",
   hatColor: "e84a27",
 };
 
@@ -697,9 +697,14 @@ function injectBustTorso(svg: string, shirtHex: string, skinHex: string): string
   if (svg.includes('data-layer="open-peeps-bust"')) return svg;
   const closeIdx = svg.lastIndexOf("</svg>");
   if (closeIdx < 0) return svg;
+  // High-contrast protection: prevent dark shirts from vanishing on dark cards (#181615)
+  const normShirt = shirtHex.replace(/^#/, "").toLowerCase();
+  const safeShirt = ["262e33", "181615", "1f2937", "000000", "111827", "241c16"].includes(normShirt)
+    ? "e84a27"
+    : normShirt;
   const bustMarkup = `
     <g data-layer="open-peeps-bust" transform="translate(0 0)">
-      <path d="M168 725 C176 620 232 574 300 568 L404 568 C472 574 528 620 536 725 Z" fill="#${shirtHex}" stroke="#181615" stroke-width="12" stroke-linejoin="round"/>
+      <path d="M168 725 C176 620 232 574 300 568 L404 568 C472 574 528 620 536 725 Z" fill="#${safeShirt}" stroke="#181615" stroke-width="12" stroke-linejoin="round"/>
       <path d="M294 566 C318 604 386 604 410 566" fill="#${skinHex}" stroke="#181615" stroke-width="10" stroke-linecap="round"/>
       <path d="M254 624 L254 720 M450 624 L450 720" stroke="#181615" stroke-width="8" stroke-linecap="round" opacity="0.55"/>
     </g>
@@ -707,7 +712,7 @@ function injectBustTorso(svg: string, shirtHex: string, skinHex: string): string
   const firstGroupIdx = svg.search(/<g[\s>]/);
   if (firstGroupIdx > 0) {
     return (
-      svg.slice(0, firstGroupIdx).replace('viewBox="0 0 704 704"', 'viewBox="80 36 544 688"') +
+      svg.slice(0, firstGroupIdx).replace('viewBox="0 0 704 704"', 'viewBox="80 60 544 670"') +
       bustMarkup +
       svg.slice(firstGroupIdx)
     );
@@ -737,6 +742,8 @@ export function ensureBustAvatarSvg(
       }
     }
   }
+  // Strip solid background rects from legacy avatars
+  raw = raw.replace(/<rect[^>]*?(?:width="100%"|width="360"|width="704")[^>]*?>/gi, "");
   return injectBustTorso(raw, normHex(shirtHex, "e84a27"), normHex(skinHex, "ffdbb4"));
 }
 

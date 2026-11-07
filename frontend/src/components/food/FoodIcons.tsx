@@ -139,19 +139,21 @@ export const SMAKR_ICON_SVG_BODIES: Record<string, string> = {
 };
 
 // High-craft optimized icon assets (< 10 KB WebP, instant rendering)
-SMAKR_ICON_SVG_BODIES.k_chicken = `<image href="/icons/food/fried_chicken.webp" x="0" y="0" width="24" height="24" preserveAspectRatio="xMidYMid meet"/>`;
-SMAKR_ICON_SVG_BODIES.fried_chicken = `<image href="/icons/food/fried_chicken.webp" x="0" y="0" width="24" height="24" preserveAspectRatio="xMidYMid meet"/>`;
-SMAKR_ICON_SVG_BODIES.bakery = `<image href="/icons/food/bakery.webp" x="0" y="0" width="24" height="24" preserveAspectRatio="xMidYMid meet"/>`;
-SMAKR_ICON_SVG_BODIES.croissant = `<image href="/icons/food/bakery.webp" x="0" y="0" width="24" height="24" preserveAspectRatio="xMidYMid meet"/>`;
-SMAKR_ICON_SVG_BODIES.cinnamon_roll = `<image href="/icons/food/cinnamon_roll.webp" x="0" y="0" width="24" height="24" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.k_chicken = `<image href="/icons/food/fried_chicken.webp" x="-2" y="-2" width="28" height="28" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.fried_chicken = `<image href="/icons/food/fried_chicken.webp" x="-2" y="-2" width="28" height="28" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.bakery = `<image href="/icons/food/bakery.webp" x="-2" y="-2" width="28" height="28" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.croissant = `<image href="/icons/food/bakery.webp" x="-2" y="-2" width="28" height="28" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.cinnamon_roll = `<image href="/icons/food/cinnamon_roll.webp" x="-2" y="-2" width="28" height="28" preserveAspectRatio="xMidYMid meet"/>`;
 SMAKR_ICON_SVG_BODIES.kanelbolle = SMAKR_ICON_SVG_BODIES.cinnamon_roll;
-SMAKR_ICON_SVG_BODIES.naan = `<image href="/icons/food/naan.webp" x="0" y="0" width="24" height="24" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.naan = `<image href="/icons/food/naan.webp" x="-2" y="-2" width="28" height="28" preserveAspectRatio="xMidYMid meet"/>`;
 SMAKR_ICON_SVG_BODIES.flatbread = SMAKR_ICON_SVG_BODIES.naan;
-SMAKR_ICON_SVG_BODIES.pizza = `<image href="/icons/food/pizza.webp" x="0" y="0" width="24" height="24" preserveAspectRatio="xMidYMid meet"/>`;
-SMAKR_ICON_SVG_BODIES.coffee = `<image href="/icons/food/coffee.webp" x="0" y="0" width="24" height="24" preserveAspectRatio="xMidYMid meet"/>`;
-SMAKR_ICON_SVG_BODIES.banh_mi = `<image href="/icons/food/banh_mi.webp" x="0" y="0" width="24" height="24" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.pizza = `<image href="/icons/food/pizza.webp" x="-3.5" y="-3.5" width="31" height="31" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.pasta = `<image href="/icons/food/pasta.webp" x="-3.5" y="-3.5" width="31" height="31" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.pizza_pasta = SMAKR_ICON_SVG_BODIES.pizza;
+SMAKR_ICON_SVG_BODIES.coffee = `<image href="/icons/food/coffee.webp" x="-2" y="-2" width="28" height="28" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.banh_mi = `<image href="/icons/food/banh_mi.webp" x="-2" y="-2" width="28" height="28" preserveAspectRatio="xMidYMid meet"/>`;
 SMAKR_ICON_SVG_BODIES.vietnamese = SMAKR_ICON_SVG_BODIES.banh_mi;
-SMAKR_ICON_SVG_BODIES.ramen = `<image href="/icons/food/ramen.webp" x="0" y="0" width="24" height="24" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.ramen = `<image href="/icons/food/ramen.webp" x="-2" y="-2" width="28" height="28" preserveAspectRatio="xMidYMid meet"/>`;
 SMAKR_ICON_SVG_BODIES.pho = SMAKR_ICON_SVG_BODIES.vietnamese;
 SMAKR_ICON_SVG_BODIES.curry = SMAKR_ICON_SVG_BODIES.indian;
 SMAKR_ICON_SVG_BODIES.pop_up = SMAKR_ICON_SVG_BODIES.popup;
@@ -210,6 +212,8 @@ export const CUSTOM_VECTOR_ICONS = new Set([
   "cinnamon_roll",
   "kanelbolle",
   "pizza",
+  "pasta",
+  "pizza_pasta",
   "coffee",
   "banh_mi",
   "vietnamese",
@@ -218,6 +222,7 @@ export const CUSTOM_VECTOR_ICONS = new Set([
 
 export const EMOJI_TO_CUSTOM_ICON: Record<string, string> = {
   "🍕": "pizza",
+  "🍝": "pasta",
   "☕": "coffee",
   "🍜": "ramen",
   "🍗": "k_chicken",
@@ -261,10 +266,10 @@ export function normalizeSmakrIconName(name: string): string {
 /**
  * Returns a standalone, self-contained SVG string for MapLibre GL radar markers and HTML injections.
  */
-export function getFoodPinSvg(categoryOrTag: string, width = 22, height = 22): string {
+export function getFoodPinSvg(categoryOrTag: string, width = 34, height = 34): string {
   const key = normalizeSmakrIconName(categoryOrTag);
   const body = SMAKR_ICON_SVG_BODIES[key] || SMAKR_ICON_SVG_BODIES.all;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${width}" height="${height}" fill="none">${body}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -4 32 32" width="${width}" height="${height}" fill="none" style="overflow:visible !important; display:block;">${body}</svg>`;
 }
 
 /**
