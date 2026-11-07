@@ -606,11 +606,8 @@ export const FoodPostCard = React.memo(function FoodPostCard({
             </div>
           )}
 
-          {/* Dish Title (Refined Plus Jakarta Sans editorial proportions) */}
-          <h3
-            style={{ fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif" }}
-            className="text-[19px] sm:text-[21px] font-bold tracking-tight leading-[1.18] text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)] line-clamp-1 capitalize"
-          >
+          {/* Dish Title (Comico brand font — food title only, not location) */}
+          <h3 className="font-comico font-black text-[21px] sm:text-[23px] tracking-wide leading-[1.15] text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] line-clamp-1 capitalize">
             {post.dish_name}
           </h3>
 

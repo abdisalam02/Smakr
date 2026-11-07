@@ -45,17 +45,41 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
   const filterScrollRef = useRef<HTMLDivElement>(null);
   const drawerCategoriesScrollRef = useRef<HTMLDivElement>(null);
 
-  // Exact Top-Strip "Left Yoink" dual-trigger glitch (both open and close)
+  // Elastic rubber-band "Left Yoink" on the top horizontal filter strip (open & close)
   const lastYoinkAtRef = useRef<number>(0);
   const touchStartXRef = useRef<number>(0);
   const touchStartYRef = useRef<number>(0);
   const touchStartScrollLeftRef = useRef<number>(0);
+  const leftEdgeAnchorXRef = useRef<number | null>(null);
+  const currentElasticPullXRef = useRef<number>(0);
   const isTouchingStripRef = useRef<boolean>(false);
   const hasYoinkedThisTouchRef = useRef<boolean>(false);
+  const filterBtnRef = useRef<HTMLButtonElement>(null);
+
+  const applyStripElasticPull = useCallback((pullX: number, animate = false) => {
+    const stripEl = filterScrollRef.current;
+    const btnEl = filterBtnRef.current;
+    if (!stripEl) return;
+
+    const springTransition = animate
+      ? "transform 320ms cubic-bezier(0.18, 1.35, 0.4, 1)"
+      : "none";
+
+    stripEl.style.transition = springTransition;
+    stripEl.style.transform = pullX > 0 ? `translate3d(${pullX.toFixed(1)}px, 0, 0)` : "translate3d(0, 0, 0)";
+
+    if (btnEl) {
+      btnEl.style.transition = springTransition;
+      const scale = pullX > 0 ? 1 + Math.min(0.12, pullX / 260) : 1;
+      const extraX = pullX > 0 ? pullX * 0.25 : 0;
+      btnEl.style.transform =
+        pullX > 0 ? `translate3d(${extraX.toFixed(1)}px, 0, 0) scale(${scale.toFixed(3)})` : "";
+    }
+  }, []);
 
   const triggerYoinkToggle = useCallback(() => {
     const now = Date.now();
-    if (now - lastYoinkAtRef.current < 420) return; // debounce so it toggles cleanly once per gesture
+    if (now - lastYoinkAtRef.current < 420) return;
     lastYoinkAtRef.current = now;
     hasYoinkedThisTouchRef.current = true;
     setIsExpanded((prev) => !prev);
@@ -68,40 +92,73 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
     touchStartXRef.current = e.touches[0].clientX;
     touchStartYRef.current = e.touches[0].clientY;
     touchStartScrollLeftRef.current = el.scrollLeft;
+    leftEdgeAnchorXRef.current = el.scrollLeft <= 2 ? e.touches[0].clientX : null;
+    currentElasticPullXRef.current = 0;
+    applyStripElasticPull(0, false);
   };
 
   const handleStripTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (!isTouchingStripRef.current || hasYoinkedThisTouchRef.current) return;
+    if (!isTouchingStripRef.current) return;
     const el = e.currentTarget;
-    const deltaX = e.touches[0].clientX - touchStartXRef.current;
+    const clientX = e.touches[0].clientX;
     const deltaY = Math.abs(e.touches[0].clientY - touchStartYRef.current);
 
-    // Trigger if user pulls rightward (deltaX > 18) while at/near the left edge (scrollLeft <= 10)
-    if (el.scrollLeft <= 10 && deltaX > 18 && deltaY < 30) {
-      triggerYoinkToggle();
+    if (el.scrollLeft <= 2) {
+      if (leftEdgeAnchorXRef.current === null) {
+        leftEdgeAnchorXRef.current = clientX;
+      }
+      const rawOverscroll = clientX - leftEdgeAnchorXRef.current;
+      if (rawOverscroll > 0 && deltaY < 36) {
+        // Tactile rubber-band curve: pulls out smoothly up to ~44px
+        const elasticX = Math.min(46, Math.pow(rawOverscroll, 0.78) * 1.65);
+        currentElasticPullXRef.current = elasticX;
+        applyStripElasticPull(elasticX, false);
+      } else {
+        currentElasticPullXRef.current = 0;
+        applyStripElasticPull(0, false);
+      }
+    } else {
+      leftEdgeAnchorXRef.current = null;
+      if (currentElasticPullXRef.current !== 0) {
+        currentElasticPullXRef.current = 0;
+        applyStripElasticPull(0, false);
+      }
     }
   };
 
   const handleStripScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
-    // Original "glitch" behavior: if user was scrolled right (touchStartScrollLeft > 12)
-    // and drags/scrolls all the way back into the left edge (scrollLeft <= 3) while touching:
+    // When scrolling fast from right back into the left wall (scrollLeft hits 0),
+    // give a subtle elastic bounce and toggle!
     if (
       isTouchingStripRef.current &&
       !hasYoinkedThisTouchRef.current &&
-      touchStartScrollLeftRef.current > 12 &&
-      el.scrollLeft <= 3
+      touchStartScrollLeftRef.current > 18 &&
+      el.scrollLeft <= 1
     ) {
-      triggerYoinkToggle();
+      if (leftEdgeAnchorXRef.current === null) {
+        leftEdgeAnchorXRef.current = touchStartXRef.current;
+      }
     }
   };
 
   const handleStripTouchEnd = () => {
+    const pulled = currentElasticPullXRef.current;
     isTouchingStripRef.current = false;
+    leftEdgeAnchorXRef.current = null;
+    currentElasticPullXRef.current = 0;
+
+    // Yoink back elastically with spring physics
+    applyStripElasticPull(0, true);
+
+    // If the user stretched the elastic band past threshold, toggle the filter drawer
+    if (pulled >= 16 && !hasYoinkedThisTouchRef.current) {
+      triggerYoinkToggle();
+    }
     hasYoinkedThisTouchRef.current = false;
   };
 
-  // Imperative 120fps drag-to-close engine (0 React re-renders during drag, 1:1 feed pull)
+  // Imperative 120fps drag-to-close engine (0 React re-renders during drag, single clean close)
   const drawerClipRef = useRef<HTMLDivElement>(null);
   const drawerSheetRef = useRef<HTMLDivElement>(null);
   const drawerNaturalHeightRef = useRef<number>(240);
@@ -120,7 +177,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
 
     const h = drawerNaturalHeightRef.current || sheetEl.offsetHeight || 240;
     const transition = animate
-      ? "height 200ms cubic-bezier(0.22,1,0.36,1), transform 200ms cubic-bezier(0.22,1,0.36,1)"
+      ? "height 190ms cubic-bezier(0.22,1,0.36,1), transform 190ms cubic-bezier(0.22,1,0.36,1)"
       : "none";
 
     clipEl.style.transition = transition;
@@ -147,7 +204,9 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
   }, []);
 
   useEffect(() => {
-    resetDrawerInlineStyles();
+    if (isExpanded) {
+      resetDrawerInlineStyles();
+    }
   }, [isExpanded, resetDrawerInlineStyles]);
 
   const handleDrawerTouchStartCapture = (e: React.TouchEvent<HTMLDivElement>) => {
@@ -214,16 +273,18 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
     const h = drawerNaturalHeightRef.current || 240;
 
     if (offset < -32 || velocityY < -0.22) {
+      // Animate clipEl smoothly from current dragged height to 0px first,
+      // then flip isExpanded=false while keeping height=0px (resetting only on next open)
+      // so there is never a competing grid transition or second close!
       applyDrawerDragTransform(-h, true);
       setTimeout(() => {
         setIsExpanded(false);
-        resetDrawerInlineStyles();
-      }, 190);
+      }, 185);
     } else {
       applyDrawerDragTransform(0, true);
       setTimeout(() => {
         resetDrawerInlineStyles();
-      }, 210);
+      }, 200);
     }
   };
 
@@ -523,14 +584,16 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
         onTouchStart={handleStripTouchStart}
         onTouchMove={handleStripTouchMove}
         onTouchEnd={handleStripTouchEnd}
+        onTouchCancel={handleStripTouchEnd}
         onScroll={handleStripScroll}
-        style={{ touchAction: "pan-x" }}
+        style={{ touchAction: "pan-x", willChange: "transform" }}
         className={`w-full max-w-full overflow-x-auto no-scrollbar px-3 flex items-center gap-1.5 ${
           compact ? "py-1.5" : "py-2"
         }`}
       >
-        {/* [ ⚡ Filters ▾ ] Trigger with active badge (stays clean neutral; never turns black) */}
+        {/* [ ⚡ Filters ▾ ] Trigger with active badge (elastic yoink anchor) */}
         <button
+          ref={filterBtnRef}
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}
           aria-expanded={isExpanded}
