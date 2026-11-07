@@ -17,7 +17,8 @@ import {
 import { getPopupStatus, getPopupMeta } from "@/lib/popupUtils";
 import { formatOsloLocation } from "@/lib/location";
 import { getDistanceInMeters, formatDistance } from "@/lib/math";
-import { FEED_BLUR_DARK } from "@/lib/feedImages";
+
+const LOADED_FEED_IMAGES = new Set<string>();
 
 interface FoodPostCardProps {
   post: FoodPost;
@@ -109,7 +110,9 @@ export const FoodPostCard = React.memo(function FoodPostCard({
   const isVerifiedKitchen = Boolean(kStatus?.verified_kitchen);
 
   const [showHeart, setShowHeart] = useState(false);
-  const [imgReady, setImgReady] = useState(false);
+  const [imgReady, setImgReady] = useState(() =>
+    Boolean(post.image_url && LOADED_FEED_IMAGES.has(post.image_url))
+  );
 
   const locationInfo = formatOsloLocation(
     post.spot_address || linkedVenue?.address,
@@ -428,7 +431,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
       </svg>
 
       {/* Full-Bleed Photography Hero Container */}
-      <div className="relative w-full aspect-[4/3] min-h-[320px] overflow-hidden bg-zinc-900">
+      <div className="relative w-full aspect-[4/3] min-h-[320px] overflow-hidden bg-[#E8E0D2] dark:bg-[#24201D]">
         <Image
           src={
             post.image_url?.startsWith("/api/places/photos") && !post.image_url.includes("w=")
@@ -439,18 +442,19 @@ export const FoodPostCard = React.memo(function FoodPostCard({
           fill
           unoptimized={post.image_url?.startsWith("/") || post.image_url?.startsWith("data:")}
           priority={priority || (typeof index === "number" && index < 4)}
-          loading={priority || (typeof index === "number" && index < 4) ? undefined : "lazy"}
+          loading={priority || (typeof index === "number" && index < 6) ? "eager" : "lazy"}
           decoding="async"
-          onLoad={() => setImgReady(true)}
-          placeholder="blur"
-          blurDataURL={FEED_BLUR_DARK}
-          className="object-cover w-full opacity-90 transition-transform duration-700 ease-out group-hover:scale-105"
+          onLoad={() => {
+            if (post.image_url) LOADED_FEED_IMAGES.add(post.image_url);
+            setImgReady(true);
+          }}
+          className="object-cover w-full opacity-100 transition-transform duration-700 ease-out group-hover:scale-105"
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 600px"
         />
 
         <div
           aria-hidden="true"
-          className={`smakr-shimmer absolute inset-0 pointer-events-none transition-opacity duration-500 ${
+          className={`smakr-shimmer absolute inset-0 pointer-events-none transition-opacity duration-150 ${
             imgReady ? "opacity-0" : "opacity-100"
           }`}
         />

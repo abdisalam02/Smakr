@@ -1028,7 +1028,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                                   : "bg-white dark:bg-white/5 text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-white/10 hover:border-[#e84a27]/30"
                               }`}
                             >
-                              <SmakrFoodIcon name={cuisine.glyph} className="w-3.5 h-3.5 shrink-0" monochrome={false} />
+                              <SmakrFoodIcon name={cuisine.glyph} className="w-4 h-4 shrink-0 overflow-visible" monochrome={false} />
                               <span>{cuisine.label}</span>
                             </button>
                           );

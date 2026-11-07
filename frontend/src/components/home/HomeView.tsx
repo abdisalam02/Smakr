@@ -49,20 +49,12 @@ const MapRadarView = dynamic(
   }
 );
 
-function getCardInitial(totalCount: number) {
-  if (totalCount === 1) return { opacity: 0, scale: 0.94, y: 12 };
-  if (totalCount <= 5) return { opacity: 0, scale: 0.96, y: 8 };
-  return { opacity: 0, scale: 0.97, y: 6 };
+function getCardInitial(_totalCount: number) {
+  return { opacity: 1, scale: 0.985, y: 10 };
 }
 
-function getCardTransition(index: number, totalCount: number) {
-  if (totalCount === 1) {
-    return { type: "spring" as const, stiffness: 360, damping: 28, mass: 0.7 };
-  }
-  if (totalCount <= 5) {
-    return { type: "spring" as const, stiffness: 400, damping: 30, mass: 0.65, delay: index * 0.04 };
-  }
-  return { type: "spring" as const, stiffness: 440, damping: 32, mass: 0.6, delay: index < 4 ? index * 0.02 : 0 };
+function getCardTransition(_index: number, _totalCount: number) {
+  return { type: "spring" as const, stiffness: 460, damping: 34, mass: 0.6 };
 }
 
 export interface HomeInitialData {
@@ -876,7 +868,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                             key={post.id}
                             initial={getCardInitial(filteredPosts.length)}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.14 } }}
+                            exit={{ opacity: 0, transition: { duration: 0.08 } }}
                             transition={getCardTransition(index, filteredPosts.length)}
                           >
                             <FoodPostCard
@@ -1113,7 +1105,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                         key={post.id}
                         initial={getCardInitial(filteredPosts.length)}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.14 } }}
+                        exit={{ opacity: 0, transition: { duration: 0.08 } }}
                         transition={getCardTransition(index, filteredPosts.length)}
                       >
                         <FoodPostCard

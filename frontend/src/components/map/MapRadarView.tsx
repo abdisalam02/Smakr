@@ -140,7 +140,8 @@ function buildUserAvatarPuckElement(
   // MapLibre MUST exclusively own the root's `style.transform` (translate3d).
   // All zoom/viewport scaling is applied strictly to the inner `.puck-scale` child.
   const root = document.createElement("div");
-  root.className = "select-none pointer-events-none z-40";
+  root.className = "select-none pointer-events-auto cursor-pointer group";
+  root.style.zIndex = "60";
 
   const container = document.createElement("div");
   container.className =
@@ -148,10 +149,12 @@ function buildUserAvatarPuckElement(
   container.style.transformOrigin = "bottom center";
   container.style.willChange = "transform";
 
-  // Free-standing Open Peeps Bust Sticker (compact proportions matching 34px map pins)
+  // Free-standing Open Peeps Bust Sticker (prominent 44x52px proportions)
   const charContainer = document.createElement("div");
   charContainer.className =
-    "relative w-9 h-11 flex items-end justify-center overflow-visible";
+    "relative flex items-end justify-center overflow-visible";
+  charContainer.style.width = "44px";
+  charContainer.style.height = "52px";
   // Crisp white die-cut vinyl sticker outline + soft elevation shadow
   charContainer.style.filter =
     "drop-shadow(1.5px 0 0 #FFFFFF) drop-shadow(-1.5px 0 0 #FFFFFF) drop-shadow(0 1.5px 0 #FFFFFF) drop-shadow(0 -1.5px 0 #FFFFFF) drop-shadow(0 3px 6px rgba(0, 0, 0, 0.22))";
@@ -192,11 +195,12 @@ function buildUserAvatarPuckElement(
     renderSvgInto(buildOpenPeepsSvg(getOrCreateGuestOpenPeepsConfig()), false);
   }
 
-  // Compact frosted "● YOU" pill anchored at the bottom waist of the bust
+  // Tactile editorial collar stamp anchored across the bust chest
   const badge = document.createElement("div");
   badge.className =
-    "puck-badge -mt-1.5 relative z-20 bg-[#FAF7F2]/95 backdrop-blur-md text-[#181615] font-extrabold text-[7.5px] tracking-wider uppercase leading-none px-1.5 py-0.5 rounded-full shadow-sm border border-emerald-500/40 whitespace-nowrap flex items-center gap-1";
-  badge.innerHTML = `<span style="width:4.5px;height:4.5px;border-radius:9999px;background:#10B981;box-shadow:0 0 5px #10B981;display:inline-block;"></span><span>YOU</span>`;
+    "puck-badge -mt-2.5 relative z-20 bg-[#181615] text-[#FAF7F2] font-extrabold text-[9px] tracking-[0.08em] uppercase leading-none px-2 py-1 rounded-full shadow-[0_3px_8px_rgba(0,0,0,0.35)] border-[1.5px] border-[#FAF7F2] whitespace-nowrap flex items-center gap-1 -rotate-2 group-hover:scale-105 group-active:scale-95 transition-transform";
+  badge.style.fontFamily = "var(--font-comico), sans-serif";
+  badge.innerHTML = `<span style="width:5px;height:5px;border-radius:9999px;background:#10B981;box-shadow:0 0 6px #10B981;display:inline-block;"></span><span>YOU</span>`;
 
   // Glowing emerald GPS radar pulse dot directly beneath the bust
   const gpsDotWrapper = document.createElement("div");
@@ -223,16 +227,15 @@ function buildUserAvatarPuckElement(
 
 /**
  * Calibrated zoom + viewport-responsive scale:
- * - Scaled to match the 34px map pin pucks and 38px Smakr Pick marker.
+ * - Keeps the user's "YOU" avatar prominent even when zoomed out.
  */
 function applyPuckZoomScale(rootEl: HTMLElement, zoom: number, containerWidth?: number) {
   const scaleEl = rootEl.querySelector<HTMLElement>(".puck-scale") ?? rootEl;
-  // Scaled from 0.72 (zoomed out) to 0.94 (zoomed in street level)
-  const zoomScale = Math.max(0.70, Math.min(0.94, 0.70 + Math.max(0, zoom - 12) * 0.055));
+  const zoomScale = Math.max(0.92, Math.min(1.12, 0.92 + Math.max(0, zoom - 12) * 0.05));
   const width =
     containerWidth ??
     (typeof window !== "undefined" ? window.innerWidth : 400);
-  const viewportFactor = width < 420 ? 0.92 : width > 960 ? 1.0 : 0.96;
+  const viewportFactor = width < 420 ? 0.94 : width > 960 ? 1.0 : 0.97;
   const finalScale = zoomScale * viewportFactor;
   scaleEl.style.transform = `scale(${finalScale.toFixed(3)})`;
 }
@@ -240,7 +243,8 @@ function applyPuckZoomScale(rootEl: HTMLElement, zoom: number, containerWidth?: 
 function createAquarellePinElement(
   venue: Venue,
   isSelected: boolean,
-  onClick: () => void
+  onClick: () => void,
+  overrideIconKey?: string | null
 ): HTMLDivElement {
   const root = document.createElement("div");
   root.className = "maplibregl-marker";
@@ -265,11 +269,17 @@ function createAquarellePinElement(
   const isSoldOut = kitchenStatus === "sold_out";
 
   const taxonomy = resolveEntityTaxonomy(venue);
-  const categoryKey = venue.food_category || "all";
-  const rawIcon = venue.icon ? String(venue.icon).replace(/[<>&"']/g, "").trim() : "";
-  const customKey = resolveCustomIconKey(rawIcon) || resolveCustomIconKey(categoryKey);
+  const categoryKey = overrideIconKey || venue.food_category || taxonomy.dishCategory || "all";
+  const rawIcon =
+    !overrideIconKey && venue.icon
+      ? String(venue.icon).replace(/[<>&"']/g, "").trim()
+      : "";
+  const customKey =
+    (overrideIconKey ? resolveCustomIconKey(overrideIconKey) : null) ||
+    resolveCustomIconKey(rawIcon) ||
+    resolveCustomIconKey(categoryKey);
   const isCustomVectorKey = Boolean(customKey);
-  const iconKey = customKey || rawIcon || categoryKey;
+  const iconKey = customKey || overrideIconKey || rawIcon || categoryKey;
   const iconSvg = FOOD_PIN_SVG_MAP[iconKey] || FOOD_PIN_SVG_MAP[categoryKey] || FOOD_PIN_SVG_MAP.all;
   const curatedIcon = isCustomVectorKey
     ? ""
@@ -467,10 +477,22 @@ export function MapRadarView() {
   // Fast, responsive Streets v2 default
   const [activeTheme, setActiveTheme] = useState<"streets" | "dataviz" | "aquarelle">("streets");
   const venues = useCityPulseStore((state) => state.venues);
+  const foodPosts = useCityPulseStore((state) => state.foodPosts);
   const selectedVenue = useCityPulseStore((state) => state.selectedVenue);
   const setSelectedVenue = useCityPulseStore((state) => state.setSelectedVenue);
   const setIsVenueDetailModalOpen = useCityPulseStore((state) => state.setIsVenueDetailModalOpen);
   const mapCategory = useCityPulseStore((state) => state.mapCategory);
+  const feedCategory = useCityPulseStore((state) => state.feedCategory);
+  const selectedGroup = useCityPulseStore((state) => state.selectedGroup);
+  const selectedDishCategory = useCityPulseStore((state) => state.selectedDishCategory);
+  const selectedSpotKind = useCityPulseStore((state) => state.selectedSpotKind);
+  const selectedCuisine = useCityPulseStore((state) => state.selectedCuisine);
+  const selectedDietary = useCityPulseStore((state) => state.selectedDietary);
+  const spotTypeFilter = useCityPulseStore((state) => state.filters.spot_type);
+  const priceTierFilter = useCityPulseStore((state) => state.filters.price_tier);
+  const staffPicksOnly = useCityPulseStore((state) => state.filters.staff_picks_only);
+  const savedOnly = useCityPulseStore((state) => state.filters.saved_only);
+  const savedPostIds = useCityPulseStore((state) => state.savedPostIds);
   const mapNeighborhood = useCityPulseStore((state) => state.mapNeighborhood);
   const openNow = useCityPulseStore((state) => state.filters.open_now);
   const mapCenter = useCityPulseStore((state) => state.mapCenter);
@@ -583,24 +605,135 @@ export function MapRadarView() {
     const map = mapInstance.current;
     if (!map || !isMapReadyRef.current) return;
 
-    const currentVenues = useCityPulseStore.getState().venues;
-    const currentSelectedId = useCityPulseStore.getState().selectedVenue?.id;
-    const currentMapCategory = useCityPulseStore.getState().mapCategory;
-    const currentNeighborhood = useCityPulseStore.getState().mapNeighborhood;
-    const currentOpenNow = useCityPulseStore.getState().filters.open_now;
-    // The Weekly Pick venue is represented by the "Smakr Pick" mascot marker, so
-    // its own food pin is suppressed to avoid stacking two pins in one place.
-    const currentWeeklyVenueId = useCityPulseStore.getState().weeklyPick.venue_id;
+    const state = useCityPulseStore.getState();
+    const currentVenues = state.venues;
+    const currentPosts = state.foodPosts;
+    const currentSelectedId = state.selectedVenue?.id;
+    const currentMapCategory = state.mapCategory;
+    const currentFeedCategory = state.feedCategory;
+    const currentGroup = state.selectedGroup;
+    const currentDishCat = state.selectedDishCategory;
+    const currentSpotKind = state.selectedSpotKind;
+    const currentCuisine = state.selectedCuisine;
+    const currentDietary = state.selectedDietary;
+    const currentSpotType = state.filters.spot_type;
+    const currentPriceTier = state.filters.price_tier;
+    const currentStaffPicks = state.filters.staff_picks_only;
+    const currentSavedOnly = state.filters.saved_only;
+    const currentSavedIds = state.savedPostIds;
+    const currentNeighborhood = state.mapNeighborhood;
+    const currentOpenNow = state.filters.open_now;
 
-    // Filter venues based on craving category, neighborhood & open status
+    // Group posts by spot_id for fast O(1) venue-level dish matching
+    const postsByVenueId = new Map<string, typeof currentPosts>();
+    for (const p of currentPosts) {
+      if (p.is_archived || p.is_published === false) continue;
+      const list = postsByVenueId.get(p.spot_id);
+      if (list) list.push(p);
+      else postsByVenueId.set(p.spot_id, [p]);
+    }
+
+    const overrideIconByVenueId = new Map<string, string>();
+
+    // Filter venues based on all 7 active store filter axes
     const visibleVenues = currentVenues.filter((venue) => {
       // Suppress pins for ended pop-ups in grace period or expired pop-ups
       const popupStatus = getPopupStatus(venue);
       if (popupStatus.hideMapPin) return false;
 
-      if (currentMapCategory !== "all") {
-        if (venue.food_category !== currentMapCategory) return false;
+      const venuePosts = postsByVenueId.get(venue.id) ?? [];
+      const venueTax = resolveEntityTaxonomy(venue);
+
+      // 1. Taxonomy: Child dish category, Parent group, or legacy Category
+      if (currentDishCat) {
+        const venueMatches =
+          venueTax.dishCategory === currentDishCat ||
+          venue.food_category === currentDishCat;
+        const matchingPost = venuePosts.find((p) => {
+          const pTax = resolveEntityTaxonomy(venue, p);
+          return pTax.dishCategory === currentDishCat || p.category === currentDishCat;
+        });
+        if (!venueMatches && !matchingPost) return false;
+        overrideIconByVenueId.set(venue.id, currentDishCat);
+      } else if (currentGroup) {
+        const venueMatches = venueTax.group.id === currentGroup;
+        const matchingPost = venuePosts.find(
+          (p) => resolveEntityTaxonomy(venue, p).group.id === currentGroup
+        );
+        if (!venueMatches && !matchingPost) return false;
+        const matchedDishKey = matchingPost
+          ? resolveEntityTaxonomy(venue, matchingPost).dishCategory || matchingPost.category
+          : venueTax.dishCategory || venue.food_category;
+        if (matchedDishKey) {
+          overrideIconByVenueId.set(venue.id, matchedDishKey);
+        }
+      } else if (currentMapCategory !== "all" || currentFeedCategory !== "all") {
+        const activeCat =
+          currentFeedCategory !== "all" ? currentFeedCategory : currentMapCategory;
+        const venueMatches =
+          venue.food_category === activeCat || venueTax.dishCategory === activeCat;
+        const matchingPost = venuePosts.find(
+          (p) =>
+            p.category === activeCat ||
+            resolveEntityTaxonomy(venue, p).dishCategory === activeCat
+        );
+        if (!venueMatches && !matchingPost) return false;
       }
+
+      // 2. Spot Kind / Spot Type
+      if (currentSpotKind && venueTax.spotKind !== currentSpotKind) {
+        return false;
+      }
+      if (currentSpotType && currentSpotType !== "all") {
+        const vType = venue.spot_type || "restaurant";
+        if (vType !== currentSpotType) return false;
+      }
+
+      // 3. Cuisine
+      if (currentCuisine) {
+        const venueHasCuisine = (venueTax.cuisines as string[]).includes(currentCuisine);
+        const postHasCuisine = venuePosts.some((p) =>
+          (resolveEntityTaxonomy(venue, p).cuisines as string[]).includes(currentCuisine)
+        );
+        if (!venueHasCuisine && !postHasCuisine) return false;
+      }
+
+      // 4. Dietary
+      if (currentDietary.length > 0) {
+        const vTags = venue.dietary_tags ?? [];
+        const venueMatchesDiet = currentDietary.every((t) => vTags.includes(t));
+        const postMatchesDiet = venuePosts.some((p) => {
+          const pTags = p.dietary_tags ?? vTags;
+          return currentDietary.every((t) => pTags.includes(t));
+        });
+        if (!venueMatchesDiet && !postMatchesDiet) return false;
+      }
+
+      // 5. Price Tier
+      if (currentPriceTier) {
+        const venueMatchesPrice = venue.price_level === currentPriceTier;
+        const postMatchesPrice = venuePosts.some((p) => {
+          if (p.price_tier === currentPriceTier) return true;
+          if (typeof p.price_nok === "number" && p.price_nok > 0) {
+            const tier = p.price_nok <= 120 ? "$" : p.price_nok <= 250 ? "$$" : "$$$";
+            return tier === currentPriceTier;
+          }
+          return false;
+        });
+        if (!venueMatchesPrice && !postMatchesPrice) return false;
+      }
+
+      // 6. Staff Picks & Saved
+      if (currentStaffPicks) {
+        const postPicked = venuePosts.some((p) => p.is_official_pick);
+        if (!venue.is_official_pick && !postPicked) return false;
+      }
+      if (currentSavedOnly) {
+        const postSaved = venuePosts.some((p) => currentSavedIds.has(p.id));
+        if (!currentSavedIds.has(venue.id) && !postSaved) return false;
+      }
+
+      // 7. Neighborhood & Open Now
       if (
         currentNeighborhood !== "all" &&
         venue.neighborhood !== currentNeighborhood
@@ -632,7 +765,8 @@ export function MapRadarView() {
       const isSelected = currentSelectedId === venue.id;
       const popupStatus = getPopupStatus(venue);
       const kitchenStatus = venue.kitchen_status?.status ?? "normal";
-      const pinKey = `${venue.icon ?? ""}|${venue.spot_type ?? ""}|${popupStatus.status}|${kitchenStatus}|${venue.food_category}|${venue.name}|${venue.popup_end_date ?? ""}`;
+      const overrideIconKey = overrideIconByVenueId.get(venue.id) ?? null;
+      const pinKey = `${venue.icon ?? ""}|${venue.spot_type ?? ""}|${popupStatus.status}|${kitchenStatus}|${venue.food_category}|${venue.name}|${venue.popup_end_date ?? ""}|${overrideIconKey ?? ""}`;
 
       let existing = markerPoolRef.current.get(venue.id);
       if (existing && existing.rootEl.dataset.pinKey !== pinKey) {
@@ -665,7 +799,7 @@ export function MapRadarView() {
         flyToTarget(current.longitude, current.latitude, 15.5, "venue-pin");
       };
 
-      const el = createAquarellePinElement(venue, isSelected, handleSelect);
+      const el = createAquarellePinElement(venue, isSelected, handleSelect, overrideIconKey);
       el.dataset.pinKey = pinKey;
 
       const marker = new maplibregl.Marker({
@@ -700,7 +834,7 @@ export function MapRadarView() {
       border: "none",
       boxShadow: "0 2px 8px rgba(232, 74, 39, 0.35)",
       pointerEvents: "none",
-      zIndex: "9999",
+      zIndex: "45",
     } as Partial<CSSStyleDeclaration>);
     return badge;
   }, []);
@@ -783,20 +917,71 @@ export function MapRadarView() {
     const [lng, lat] = pick.coords;
     if (typeof lng !== "number" || typeof lat !== "number") return;
 
-    // Relative sizing formula based on map zoom level
+    // Check if any filter is active and whether the Weekly Pick venue passes the active filter
+    const hasActiveFilter =
+      Boolean(state.selectedDishCategory) ||
+      Boolean(state.selectedGroup) ||
+      state.mapCategory !== "all" ||
+      state.feedCategory !== "all" ||
+      Boolean(state.selectedSpotKind) ||
+      Boolean(state.selectedCuisine) ||
+      state.selectedDietary.length > 0 ||
+      Boolean(state.filters.spot_type && state.filters.spot_type !== "all") ||
+      Boolean(state.filters.price_tier) ||
+      Boolean(state.filters.staff_picks_only) ||
+      Boolean(state.filters.saved_only) ||
+      state.mapNeighborhood !== "all" ||
+      Boolean(state.filters.open_now);
+
+    if (hasActiveFilter) {
+      const pickPoolEntry = markerPoolRef.current.get(pick.venue_id);
+      const isPickVenueVisible = pickPoolEntry
+        ? pickPoolEntry.rootEl.style.display !== "none"
+        : false;
+      if (!isPickVenueVisible) {
+        if (weeklyMarkerRef.current) {
+          weeklyMarkerRef.current.getElement().style.display = "none";
+        }
+        return;
+      }
+    }
+
+    // Relative sizing formula based on map zoom level (scales down gracefully when zoomed out)
     const currentZoom = map.getZoom();
-    const bustHeight = Math.round(Math.min(92, Math.max(56, (currentZoom - 10) * 9 + 44)));
+    const bustHeight = Math.round(
+      Math.min(88, Math.max(38, (currentZoom - 10.5) * 11 + 38))
+    );
     const bustWidth = Math.round(bustHeight * 0.82);
 
-    const updateInnerPlacement = (inner: HTMLElement, badge: HTMLElement) => {
-      // Statically stand on the left of puck (-21px) pointing right into puck's left rim
-      const leftOffset = -21 - Math.round(0.942 * bustWidth);
+    // Screen-space collision avoidance against the user's "YOU" avatar marker
+    let placeRight = false;
+    if (state.userLocation) {
+      try {
+        const youPt = map.project([state.userLocation.lon, state.userLocation.lat]);
+        const pickPt = map.project([lng, lat]);
+        if (Math.hypot(youPt.x - pickPt.x, youPt.y - pickPt.y) < 58) {
+          placeRight = youPt.x < pickPt.x;
+        }
+      } catch {}
+    }
+
+    const updateInnerPlacement = (
+      inner: HTMLElement,
+      badge: HTMLElement,
+      imgEl?: HTMLImageElement | null
+    ) => {
+      const leftOffset = placeRight
+        ? 21
+        : -21 - Math.round(0.942 * bustWidth);
       const topOffset = -7 - Math.round(0.519 * bustHeight);
       inner.style.left = `${leftOffset}px`;
       inner.style.top = `${topOffset}px`;
       inner.style.transform = "none";
       inner.style.transformOrigin = "center center";
       badge.style.transform = "translateX(-50%)";
+      if (imgEl) {
+        imgEl.style.transform = placeRight ? "scaleX(-1)" : "none";
+      }
     };
 
     if (!weeklyMarkerRef.current) {
@@ -812,13 +997,14 @@ export function MapRadarView() {
       root.style.margin = "0";
       root.style.padding = "0";
       root.style.pointerEvents = "none";
-      root.style.zIndex = "9999";
+      root.style.zIndex = "45";
+      root.style.display = "block";
 
       const inner = document.createElement("div");
       inner.className =
         "weekly-pick-bust-inner relative flex flex-col items-center group cursor-pointer select-none pointer-events-auto transition-transform duration-200";
       inner.style.position = "absolute";
-      inner.style.zIndex = "9999";
+      inner.style.zIndex = "45";
 
       const badge = buildWeeklyBadge();
       inner.appendChild(badge);
@@ -840,7 +1026,7 @@ export function MapRadarView() {
       `;
 
       inner.appendChild(bustContainer);
-      updateInnerPlacement(inner, badge);
+      updateInnerPlacement(inner, badge, bustContainer.querySelector("img"));
 
       inner.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -870,14 +1056,15 @@ export function MapRadarView() {
       root.style.margin = "0";
       root.style.padding = "0";
       root.style.pointerEvents = "none";
-      root.style.zIndex = "9999";
+      root.style.zIndex = "45";
+      root.style.display = "block";
       root.innerHTML = "";
 
       const inner = document.createElement("div");
       inner.className =
         "weekly-pick-bust-inner relative flex flex-col items-center group cursor-pointer select-none pointer-events-auto transition-transform duration-200";
       inner.style.position = "absolute";
-      inner.style.zIndex = "9999";
+      inner.style.zIndex = "45";
 
       const badge = buildWeeklyBadge();
       inner.appendChild(badge);
@@ -899,7 +1086,7 @@ export function MapRadarView() {
       `;
 
       inner.appendChild(bustContainer);
-      updateInnerPlacement(inner, badge);
+      updateInnerPlacement(inner, badge, bustContainer.querySelector("img"));
 
       inner.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -1080,10 +1267,31 @@ export function MapRadarView() {
     };
   }, []);
 
-  // 2. Re-render / filter markers when venues or filters change (selection decoupled)
+  // 2. Re-render / filter markers when venues or any active store filter changes (selection decoupled)
   useEffect(() => {
     renderMarkers();
-  }, [venues, mapCategory, mapNeighborhood, openNow, weeklyPick.venue_id, renderMarkers]);
+    renderWeeklyMarker();
+  }, [
+    venues,
+    foodPosts,
+    mapCategory,
+    feedCategory,
+    selectedGroup,
+    selectedDishCategory,
+    selectedSpotKind,
+    selectedCuisine,
+    selectedDietary,
+    spotTypeFilter,
+    priceTierFilter,
+    staffPicksOnly,
+    savedOnly,
+    savedPostIds,
+    mapNeighborhood,
+    openNow,
+    weeklyPick.venue_id,
+    renderMarkers,
+    renderWeeklyMarker,
+  ]);
 
   // 2.1 Decoupled O(1) selection highlight update — never loops or rebuilds markers
   useEffect(() => {
@@ -1230,6 +1438,7 @@ export function MapRadarView() {
     // If marker already exists and avatar identity has not changed, just update position smoothly
     if (userLocationMarkerRef.current && lastAvatarSigRef.current === avatarSig) {
       userLocationMarkerRef.current.setLngLat([lon, lat]);
+      renderWeeklyMarker();
       return;
     }
 
@@ -1247,6 +1456,19 @@ export function MapRadarView() {
     );
     applyPuckZoomScale(el, map.getZoom());
 
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const latestLoc = useCityPulseStore.getState().userLocation;
+      const targetLon = latestLoc ? latestLoc.lon : lon;
+      const targetLat = latestLoc ? latestLoc.lat : lat;
+      map.flyTo({
+        center: [targetLon, targetLat],
+        zoom: Math.max(map.getZoom(), 15.2),
+        duration: 650,
+        essential: true,
+      });
+    });
+
     const marker = new maplibregl.Marker({
       element: el,
       anchor: "bottom",
@@ -1255,6 +1477,7 @@ export function MapRadarView() {
       .addTo(map);
 
     userLocationMarkerRef.current = marker;
+    renderWeeklyMarker();
   }, [
     userLocation,
     currentUser?.avatar_url,

@@ -102,6 +102,7 @@ export function VenueBottomSheet() {
   const sheetRef = React.useRef<HTMLDivElement>(null);
   const contentScrollRef = React.useRef<HTMLDivElement>(null);
   const isDraggingRef = React.useRef(false);
+  const isSwipeClosingRef = React.useRef(false);
   const dragStartYRef = React.useRef(0);
   const currentYRef = React.useRef(0);
   const lastTouchYRef = React.useRef(0);
@@ -109,6 +110,12 @@ export function VenueBottomSheet() {
   const currentVelocityRef = React.useRef(0);
   const isContentPullingRef = React.useRef(false);
   const contentTouchStartYRef = React.useRef<number | null>(null);
+
+  useEffect(() => {
+    if (isVenueDetailModalOpen) {
+      isSwipeClosingRef.current = false;
+    }
+  }, [isVenueDetailModalOpen]);
 
   // Shared venue data: posts, recommended meals, reactions, likes & saves
   const {
@@ -227,13 +234,7 @@ export function VenueBottomSheet() {
   const handleClose = React.useCallback(() => {
     setIsVenueDetailModalOpen(false);
     setBottomSheetOpen(false);
-    // Clear selectedVenue after the 360ms slide-down animation finishes
-    setTimeout(() => {
-      if (!useCityPulseStore.getState().isVenueDetailModalOpen) {
-        setSelectedVenue(null);
-      }
-    }, 360);
-  }, [setIsVenueDetailModalOpen, setSelectedVenue, setBottomSheetOpen]);
+  }, [setIsVenueDetailModalOpen, setBottomSheetOpen]);
 
   // Keyboard Escape dismiss
   useEffect(() => {
@@ -293,15 +294,16 @@ export function VenueBottomSheet() {
     const finalY = currentYRef.current;
     const velocity = currentVelocityRef.current;
 
-    // Fast flick down or pulled down > 55px closes the sheet!
-    if (finalY > 55 || velocity > 0.28) {
+    // Fast flick down or pulled down > 48px closes the sheet!
+    if (finalY > 48 || velocity > 0.24) {
+      isSwipeClosingRef.current = true;
       if (sheetRef.current) {
-        sheetRef.current.style.transition = "transform 0.38s cubic-bezier(0.16, 1, 0.3, 1)";
-        sheetRef.current.style.transform = "translate3d(0, 100%, 0)";
+        sheetRef.current.style.transition = "transform 190ms cubic-bezier(0.22, 1, 0.36, 1)";
+        sheetRef.current.style.transform = "translate3d(0, 105%, 0)";
       }
       setTimeout(() => {
         handleClose();
-      }, 350);
+      }, 185);
     } else {
       if (sheetRef.current) {
         sheetRef.current.style.transition = "transform 0.38s cubic-bezier(0.16, 1, 0.3, 1)";
@@ -361,14 +363,15 @@ export function VenueBottomSheet() {
       const pullDown = endY - contentTouchStartYRef.current;
       const velocity = currentVelocityRef.current;
 
-      if (pullDown > 55 || velocity > 0.3) {
+      if (pullDown > 48 || velocity > 0.24) {
+        isSwipeClosingRef.current = true;
         if (sheetRef.current) {
-          sheetRef.current.style.transition = "transform 0.38s cubic-bezier(0.16, 1, 0.3, 1)";
-          sheetRef.current.style.transform = "translate3d(0, 100%, 0)";
+          sheetRef.current.style.transition = "transform 190ms cubic-bezier(0.22, 1, 0.36, 1)";
+          sheetRef.current.style.transform = "translate3d(0, 105%, 0)";
         }
         setTimeout(() => {
           handleClose();
-        }, 350);
+        }, 185);
       } else {
         if (sheetRef.current) {
           sheetRef.current.style.transition = "transform 0.38s cubic-bezier(0.16, 1, 0.3, 1)";
@@ -393,13 +396,7 @@ export function VenueBottomSheet() {
       {/* DEDICATED FULL-SCREEN SLIDE-UP DRAWER (View Details / Menu & Vibes)     */}
       {/* Dimmed backdrop, 0.38s cubic-bezier easing matching feed modal, fluid pull */}
       {/* ======================================================================= */}
-      <AnimatePresence
-        onExitComplete={() => {
-          if (!useCityPulseStore.getState().isVenueDetailModalOpen) {
-            setSelectedVenue(null);
-          }
-        }}
-      >
+      <AnimatePresence>
         {isVenueDetailModalOpen && selectedVenue && (
           <div className="fixed inset-0 z-50 flex flex-col justify-end pointer-events-auto">
             {/* Dimmed backdrop overlay that fades in and dismisses the drawer when tapped */}
@@ -407,7 +404,7 @@ export function VenueBottomSheet() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
               onClick={handleClose}
               className="fixed inset-0 bg-black/15 cursor-pointer"
             />
@@ -417,7 +414,11 @@ export function VenueBottomSheet() {
               ref={sheetRef}
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
-              exit={{ y: "100%" }}
+              exit={
+                isSwipeClosingRef.current
+                  ? { opacity: 0, transition: { duration: 0.01 } }
+                  : { y: "100%", transition: { duration: 0.22, ease: [0.22, 1, 0.36, 1] } }
+              }
               transition={{ duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
               style={{
                 contain: "layout style",

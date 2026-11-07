@@ -139,10 +139,10 @@ export const SMAKR_ICON_SVG_BODIES: Record<string, string> = {
 };
 
 // High-craft optimized icon assets (< 10 KB WebP, instant rendering, normalized 26x26 footprint)
-SMAKR_ICON_SVG_BODIES.k_chicken = `<image href="/icons/food/fried_chicken.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.k_chicken = `<image href="/icons/food/k_chicken.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
 SMAKR_ICON_SVG_BODIES.fried_chicken = `<image href="/icons/food/fried_chicken.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
-SMAKR_ICON_SVG_BODIES.bakery = `<image href="/icons/food/bakery.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
-SMAKR_ICON_SVG_BODIES.croissant = `<image href="/icons/food/bakery.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.bakery = `<image href="/icons/food/croissant.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.croissant = `<image href="/icons/food/croissant.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
 SMAKR_ICON_SVG_BODIES.cinnamon_roll = `<image href="/icons/food/cinnamon_roll.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
 SMAKR_ICON_SVG_BODIES.kanelbolle = SMAKR_ICON_SVG_BODIES.cinnamon_roll;
 SMAKR_ICON_SVG_BODIES.naan = `<image href="/icons/food/naan.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
@@ -164,10 +164,10 @@ SMAKR_ICON_SVG_BODIES.middle_eastern = SMAKR_ICON_SVG_BODIES.kebab;
 SMAKR_ICON_SVG_BODIES.outdoor_park = SMAKR_ICON_SVG_BODIES.park;
 
 /**
- * Filter-bar specific hand-drawn sketchbook artwork (used on filter pills and drawer only, never overwriting spot icons)
+ * Strict lookup for the 13 Parent Group Filter Icons (/icons/filters/*.webp)
+ * Never contains individual dish keys so individual dish icons are never overwritten.
  */
-export const FILTER_CATEGORY_WEBP: Record<string, string> = {
-  // All 13 canonical Food Groups
+export const GROUP_FILTER_WEBP: Record<string, string> = {
   pastries_bakery: "/icons/filters/pastries_bakery.webp",
   breads: "/icons/filters/breads.webp",
   coffee_tea: "/icons/filters/coffee_tea.webp",
@@ -181,25 +181,45 @@ export const FILTER_CATEGORY_WEBP: Record<string, string> = {
   sweets_frozen: "/icons/filters/sweets_frozen.webp",
   drinks_bars: "/icons/filters/drinks_bars.webp",
   brunch: "/icons/filters/brunch.webp",
+};
 
-  // Child category aliases
-  sandwich: "/icons/filters/sandwiches_handhelds.webp",
-  burger: "/icons/filters/sandwiches_handhelds.webp",
-  tacos: "/icons/filters/sandwiches_handhelds.webp",
-  pizza: "/icons/filters/pizza_pasta.webp",
-  pasta: "/icons/filters/pizza_pasta.webp",
-  k_chicken: "/icons/filters/chicken_grill.webp",
-  fried_chicken: "/icons/filters/chicken_grill.webp",
-  curry: "/icons/filters/rice_bowls.webp",
-  indian: "/icons/filters/rice_bowls.webp",
-  mandi_rice: "/icons/filters/rice_bowls.webp",
-  sushi: "/icons/filters/seafood.webp",
-  gelato: "/icons/filters/sweets_frozen.webp",
-  dessert: "/icons/filters/sweets_frozen.webp",
-  natural_wine: "/icons/filters/drinks_bars.webp",
-  wine: "/icons/filters/drinks_bars.webp",
-  drinks: "/icons/filters/drinks_bars.webp",
-  breakfast: "/icons/filters/brunch.webp",
+/**
+ * Strict lookup for Individual Dish Icons (/icons/food/*.webp)
+ */
+export const DISH_ICON_WEBP: Record<string, string> = {
+  pizza: "/icons/food/pizza.webp",
+  pasta: "/icons/food/pasta.webp",
+  k_chicken: "/icons/food/k_chicken.webp",
+  fried_chicken: "/icons/food/fried_chicken.webp",
+  coffee: "/icons/food/coffee.webp",
+  iced_coffee: "/icons/food/coffee.webp",
+  ramen: "/icons/food/ramen.webp",
+  croissant: "/icons/food/croissant.webp",
+  bakery: "/icons/food/croissant.webp",
+  cinnamon_roll: "/icons/food/cinnamon_roll.webp",
+  kanelbolle: "/icons/food/cinnamon_roll.webp",
+  naan: "/icons/food/naan.webp",
+  flatbread: "/icons/food/naan.webp",
+  banh_mi: "/icons/food/banh_mi.webp",
+  vietnamese: "/icons/food/vietnamese.webp",
+  breakfast: "/icons/food/breakfast.webp",
+  burger: "/icons/food/burger.webp",
+  curry: "/icons/food/curry.webp",
+  dessert: "/icons/food/dessert.webp",
+  drinks: "/icons/food/drinks.webp",
+  gelato: "/icons/food/gelato.webp",
+  indian: "/icons/food/indian.webp",
+  mandi_rice: "/icons/food/mandi_rice.webp",
+  natural_wine: "/icons/food/natural_wine.webp",
+  nordic_seafood: "/icons/food/nordic_seafood.webp",
+  street_food: "/icons/food/street_food.webp",
+  sushi: "/icons/food/sushi.webp",
+  tacos: "/icons/food/tacos.webp",
+};
+
+export const FILTER_CATEGORY_WEBP: Record<string, string> = {
+  ...GROUP_FILTER_WEBP,
+  ...DISH_ICON_WEBP,
 };
 
 export const CUSTOM_VECTOR_ICONS = new Set([
