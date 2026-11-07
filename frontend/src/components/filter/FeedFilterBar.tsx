@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useRef, useCallback } from "react";
+import React, { useMemo, useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import {
@@ -101,70 +101,175 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
     hasYoinkedThisTouchRef.current = false;
   };
 
-  // Directional capture drag locking for the open filter sheet (interactive 1:1 drag-up with feed pull)
-  const [dragOffsetY, setDragOffsetY] = useState(0);
-  const [isDraggingDrawer, setIsDraggingDrawer] = useState(false);
+  // Imperative 120fps drag-to-close engine (0 React re-renders during drag, 1:1 feed pull)
+  const drawerClipRef = useRef<HTMLDivElement>(null);
   const drawerSheetRef = useRef<HTMLDivElement>(null);
   const drawerNaturalHeightRef = useRef<number>(240);
   const drawerStartYRef = useRef<number>(0);
   const drawerStartXRef = useRef<number>(0);
   const drawerStartTimeRef = useRef<number>(0);
+  const currentOffsetYRef = useRef<number>(0);
   const isVerticalDragRef = useRef<boolean>(false);
   const isSuppressingClickRef = useRef<boolean>(false);
+  const rafIdRef = useRef<number>(0);
+
+  const applyDrawerDragTransform = useCallback((offsetY: number, animate = false) => {
+    const clipEl = drawerClipRef.current;
+    const sheetEl = drawerSheetRef.current;
+    if (!clipEl || !sheetEl) return;
+
+    const h = drawerNaturalHeightRef.current || sheetEl.offsetHeight || 240;
+    const transition = animate
+      ? "height 200ms cubic-bezier(0.22,1,0.36,1), transform 200ms cubic-bezier(0.22,1,0.36,1)"
+      : "none";
+
+    clipEl.style.transition = transition;
+    sheetEl.style.transition = transition;
+
+    // Resizing clipEl.style.height in document flow pulls the feed below it 1:1 at 120fps
+    const nextHeight = Math.max(0, h + offsetY);
+    clipEl.style.height = `${nextHeight}px`;
+    sheetEl.style.transform = `translate3d(0, ${offsetY}px, 0)`;
+  }, []);
+
+  const resetDrawerInlineStyles = useCallback(() => {
+    const clipEl = drawerClipRef.current;
+    const sheetEl = drawerSheetRef.current;
+    if (clipEl) {
+      clipEl.style.transition = "";
+      clipEl.style.height = "";
+    }
+    if (sheetEl) {
+      sheetEl.style.transition = "";
+      sheetEl.style.transform = "";
+    }
+    currentOffsetYRef.current = 0;
+  }, []);
+
+  useEffect(() => {
+    resetDrawerInlineStyles();
+  }, [isExpanded, resetDrawerInlineStyles]);
 
   const handleDrawerTouchStartCapture = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!isExpanded) return;
+    if (rafIdRef.current) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = 0;
+    }
     drawerNaturalHeightRef.current = drawerSheetRef.current?.offsetHeight || 240;
     drawerStartYRef.current = e.touches[0].clientY;
     drawerStartXRef.current = e.touches[0].clientX;
     drawerStartTimeRef.current = Date.now();
+    currentOffsetYRef.current = 0;
     isVerticalDragRef.current = false;
   };
 
   const handleDrawerTouchMoveCapture = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!isExpanded) return;
     const touch = e.touches[0];
     const dy = touch.clientY - drawerStartYRef.current;
     const dx = touch.clientX - drawerStartXRef.current;
 
     if (!isVerticalDragRef.current) {
-      // If horizontal row scrolling dominates, abort vertical sheet drag
+      // If horizontal row scrolling dominates, let the horizontal strip scroll naturally
       if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 6) {
         return;
       }
-      // If vertical movement dominates, lock into vertical sheet drag
-      if (Math.abs(dy) > 6 && Math.abs(dy) > Math.abs(dx) * 1.15) {
+      // Lock into vertical sheet drag as soon as vertical movement exceeds 5px
+      if (Math.abs(dy) > 5 && Math.abs(dy) > Math.abs(dx)) {
         isVerticalDragRef.current = true;
-        setIsDraggingDrawer(true);
       }
     }
 
     if (isVerticalDragRef.current) {
       e.stopPropagation();
-      const maxUpward = drawerNaturalHeightRef.current;
-      // Allow 1:1 physical dragging upward (dy < 0, clamped with rubber-band resistance when pulling down)
-      const offset = dy < 0 ? Math.max(-maxUpward, dy) : Math.min(28, dy * 0.25);
-      setDragOffsetY(offset);
+      const maxUpward = drawerNaturalHeightRef.current || 240;
+      const offset = dy < 0 ? Math.max(-maxUpward, dy) : Math.min(24, dy * 0.2);
+      currentOffsetYRef.current = offset;
+
+      if (!rafIdRef.current) {
+        rafIdRef.current = requestAnimationFrame(() => {
+          rafIdRef.current = 0;
+          applyDrawerDragTransform(currentOffsetYRef.current, false);
+        });
+      }
+    }
+  };
+
+  const finishDrawerDrag = () => {
+    if (!isVerticalDragRef.current) return;
+    if (rafIdRef.current) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = 0;
+    }
+    isVerticalDragRef.current = false;
+    isSuppressingClickRef.current = true;
+    setTimeout(() => {
+      isSuppressingClickRef.current = false;
+    }, 150);
+
+    const offset = currentOffsetYRef.current;
+    const duration = Math.max(1, Date.now() - drawerStartTimeRef.current);
+    const velocityY = offset / duration;
+    const h = drawerNaturalHeightRef.current || 240;
+
+    if (offset < -32 || velocityY < -0.22) {
+      applyDrawerDragTransform(-h, true);
+      setTimeout(() => {
+        setIsExpanded(false);
+        resetDrawerInlineStyles();
+      }, 190);
+    } else {
+      applyDrawerDragTransform(0, true);
+      setTimeout(() => {
+        resetDrawerInlineStyles();
+      }, 210);
     }
   };
 
   const handleDrawerTouchEndCapture = (e: React.TouchEvent<HTMLDivElement>) => {
     if (isVerticalDragRef.current) {
       e.stopPropagation();
-      isSuppressingClickRef.current = true;
-      setTimeout(() => {
-        isSuppressingClickRef.current = false;
-      }, 140);
-
-      const touchDuration = Math.max(1, Date.now() - drawerStartTimeRef.current);
-      const velocityY = dragOffsetY / touchDuration;
-
-      // Close if pulled up past threshold or flicked upward
-      if (dragOffsetY < -36 || velocityY < -0.25) {
-        setIsExpanded(false);
-      }
-      setDragOffsetY(0);
-      setIsDraggingDrawer(false);
-      isVerticalDragRef.current = false;
+      finishDrawerDrag();
     }
+  };
+
+  const handleDrawerMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isExpanded || e.button !== 0) return;
+    drawerNaturalHeightRef.current = drawerSheetRef.current?.offsetHeight || 240;
+    drawerStartYRef.current = e.clientY;
+    drawerStartXRef.current = e.clientX;
+    drawerStartTimeRef.current = Date.now();
+    currentOffsetYRef.current = 0;
+    isVerticalDragRef.current = false;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const dy = moveEvent.clientY - drawerStartYRef.current;
+      const dx = moveEvent.clientX - drawerStartXRef.current;
+      if (!isVerticalDragRef.current) {
+        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 6) return;
+        if (Math.abs(dy) > 5 && Math.abs(dy) > Math.abs(dx)) {
+          isVerticalDragRef.current = true;
+        }
+      }
+      if (isVerticalDragRef.current) {
+        const maxUpward = drawerNaturalHeightRef.current || 240;
+        const offset = dy < 0 ? Math.max(-maxUpward, dy) : Math.min(24, dy * 0.2);
+        currentOffsetYRef.current = offset;
+        applyDrawerDragTransform(offset, false);
+      }
+    };
+
+    const onMouseUp = () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+      if (isVerticalDragRef.current) {
+        finishDrawerDrag();
+      }
+    };
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
   };
 
   // Store selections
@@ -301,14 +406,22 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
     activeExtraFiltersCount > 0 || currentCategory !== "all";
 
   const handleSelectAll = () => {
-    resetAllFilters();
-    setSelectedGroup(null);
-    setSelectedDishCategory(null);
-    setSelectedSpotKind(null);
-    setSelectedCuisine(null);
-    setFeedCategory("all");
-    setSpotTypeFilter("all");
-    setFilters({ saved_only: false });
+    useCityPulseStore.setState((state) => ({
+      selectedGroup: null,
+      selectedDishCategory: null,
+      selectedSpotKind: null,
+      selectedCuisine: null,
+      selectedDietary: [],
+      feedCategory: "all",
+      filters: {
+        ...state.filters,
+        spot_type: "all",
+        price_tier: null,
+        staff_picks_only: false,
+        saved_only: false,
+        open_now: false,
+      },
+    }));
     filterScrollRef.current?.scrollTo({ left: 0, behavior: "smooth" });
   };
 
@@ -316,13 +429,18 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
     if (savedOnly) {
       handleSelectAll();
     } else {
-      setSelectedGroup(null);
-      setSelectedDishCategory(null);
-      setSelectedSpotKind(null);
-      setSelectedCuisine(null);
-      setFeedCategory("all");
-      setSpotTypeFilter("all");
-      setFilters({ saved_only: true });
+      useCityPulseStore.setState((state) => ({
+        selectedGroup: null,
+        selectedDishCategory: null,
+        selectedSpotKind: null,
+        selectedCuisine: null,
+        feedCategory: "all",
+        filters: {
+          ...state.filters,
+          spot_type: "all",
+          saved_only: true,
+        },
+      }));
     }
   };
 
@@ -330,23 +448,32 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
     if (selectedGroup === groupId) {
       handleSelectAll();
     } else {
-      // Clear spot kind (e.g. Pop-up) and saved filter when switching to a category group
-      setSelectedSpotKind(null);
-      setSpotTypeFilter("all");
-      setFilters({ saved_only: false });
-      setSelectedGroup(groupId);
-      setSelectedDishCategory(null);
-      setFeedCategory("all");
+      // Single atomic Zustand update (eliminates 6-dispatch filter click stutter)
+      useCityPulseStore.setState((state) => ({
+        selectedSpotKind: null,
+        selectedGroup: groupId,
+        selectedDishCategory: null,
+        feedCategory: "all",
+        filters: {
+          ...state.filters,
+          spot_type: "all",
+          saved_only: false,
+        },
+      }));
     }
   };
 
   const handleSelectChildCategory = (childCat: string) => {
     if (selectedDishCategory === childCat) {
-      setSelectedDishCategory(null);
-      setFeedCategory("all");
+      useCityPulseStore.setState({
+        selectedDishCategory: null,
+        feedCategory: "all",
+      });
     } else {
-      setSelectedDishCategory(childCat);
-      setFeedCategory("all");
+      useCityPulseStore.setState({
+        selectedDishCategory: childCat,
+        feedCategory: "all",
+      });
       setTimeout(() => {
         setIsExpanded(false);
       }, 160);
@@ -357,13 +484,17 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
     if (selectedSpotKind === kind) {
       handleSelectAll();
     } else {
-      // Clear category groups and saved filter when selecting a quick spot-kind pill like Pop-ups
-      setSelectedGroup(null);
-      setSelectedDishCategory(null);
-      setFeedCategory("all");
-      setFilters({ saved_only: false });
-      setSelectedSpotKind(kind);
-      setSpotTypeFilter(kind === "popup" ? "popup" : kind === "food_truck" ? "food_truck" : "restaurant");
+      useCityPulseStore.setState((state) => ({
+        selectedGroup: null,
+        selectedDishCategory: null,
+        feedCategory: "all",
+        selectedSpotKind: kind,
+        filters: {
+          ...state.filters,
+          saved_only: false,
+          spot_type: kind === "popup" ? "popup" : kind === "food_truck" ? "food_truck" : "restaurant",
+        },
+      }));
     }
   };
 
@@ -545,33 +676,28 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
         })}
       </div>
 
-      {/* ── EXPANDED FILTER DRAWER (60fps CSS Grid Accordion + 1:1 Feed-Pull Drag-Up) ── */}
+      {/* ── EXPANDED FILTER DRAWER (120fps CSS Grid Accordion + Imperative 1:1 Feed-Pull Drag-Up) ── */}
       <div
         data-filter-drawer="true"
-        className={`grid transition-[grid-template-rows,opacity] duration-260 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+        className={`grid transition-[grid-template-rows,opacity] duration-240 ease-[cubic-bezier(0.22,1,0.36,1)] ${
           isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0 pointer-events-none"
         }`}
       >
-        <div className="overflow-hidden min-h-0">
+        <div ref={drawerClipRef} className="overflow-hidden min-h-0">
           <div
             ref={drawerSheetRef}
             onTouchStartCapture={handleDrawerTouchStartCapture}
             onTouchMoveCapture={handleDrawerTouchMoveCapture}
             onTouchEndCapture={handleDrawerTouchEndCapture}
+            onTouchCancelCapture={handleDrawerTouchEndCapture}
+            onMouseDown={handleDrawerMouseDown}
             onClickCapture={(e) => {
               if (isSuppressingClickRef.current) {
                 e.stopPropagation();
                 e.preventDefault();
               }
             }}
-            style={{
-              transform: dragOffsetY !== 0 ? `translate3d(0, ${dragOffsetY}px, 0)` : undefined,
-              marginBottom: dragOffsetY < 0 ? `${dragOffsetY}px` : undefined,
-              transition: isDraggingDrawer
-                ? "none"
-                : "transform 240ms cubic-bezier(0.22,1,0.36,1), margin-bottom 240ms cubic-bezier(0.22,1,0.36,1)",
-            }}
-            className="w-full border-t border-black/[0.06] dark:border-white/[0.08] bg-[#FAF7F2] dark:bg-[#151413] px-3.5 pt-2 pb-2.5 space-y-2.5 select-none touch-pan-y"
+            className="w-full border-t border-black/[0.06] dark:border-white/[0.08] bg-[#FAF7F2] dark:bg-[#151413] px-3.5 pt-2 pb-2.5 space-y-2.5 select-none touch-pan-x cursor-grab active:cursor-grabbing"
           >
                 {/* Header: Compact Row (Categories + active on left, Reset on right) */}
                 <div className="flex items-center justify-between">
@@ -657,49 +783,47 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                   </div>
                 </div>
 
-                {/* ── SECTION 2: Single-Row Non-Empty Sub-Categories ── */}
-                <AnimatePresence>
-                  {activeGroupDef && (activeChildren.length > 1 || (activeChildren.length > 0 && selectedDishCategory)) && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.18 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
-                        {activeChildren.map((child) => {
-                          const isChildActive = selectedDishCategory === child;
-                          const label = child
-                            .split("_")
-                            .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-                            .join(" ");
+                {/* ── SECTION 2: Single-Row Non-Empty Sub-Categories (Zero-Reflow CSS Grid Transition) ── */}
+                <div
+                  className={`grid transition-[grid-template-rows,opacity] duration-180 ease-out ${
+                    activeGroupDef && (activeChildren.length > 1 || (activeChildren.length > 0 && selectedDishCategory))
+                      ? "grid-rows-[1fr] opacity-100"
+                      : "grid-rows-[0fr] opacity-0 pointer-events-none"
+                  }`}
+                >
+                  <div className="overflow-hidden min-h-0">
+                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+                      {activeChildren.map((child) => {
+                        const isChildActive = selectedDishCategory === child;
+                        const label = child
+                          .split("_")
+                          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                          .join(" ");
 
-                          return (
-                            <button
-                              key={child}
-                              type="button"
-                              onClick={() => handleSelectChildCategory(child)}
-                              className={`shrink-0 px-2.5 py-1 rounded-xl text-[11px] font-bold border flex items-center gap-1 transition-all active:scale-95 cursor-pointer ${
-                                isChildActive
-                                  ? "bg-[#e84a27] text-white border-[#e84a27] shadow-xs"
-                                  : "bg-white dark:bg-stone-800 text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-white/10 hover:border-[#e84a27]/40"
-                              }`}
-                            >
-                              <SmakrFoodIcon name={child} className="w-3.5 h-3.5 shrink-0" />
-                              <span>{label}</span>
-                              {childCategoryCounts[child] > 0 && (
-                                <span className={`text-[10px] font-mono ${isChildActive ? "text-white/80" : "text-zinc-400"}`}>
-                                  ({childCategoryCounts[child]})
-                                </span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                        return (
+                          <button
+                            key={child}
+                            type="button"
+                            onClick={() => handleSelectChildCategory(child)}
+                            className={`shrink-0 px-2.5 py-1 rounded-xl text-[11px] font-bold border flex items-center gap-1 transition-all active:scale-95 cursor-pointer ${
+                              isChildActive
+                                ? "bg-[#e84a27] text-white border-[#e84a27] shadow-xs"
+                                : "bg-white dark:bg-stone-800 text-zinc-700 dark:text-zinc-200 border-zinc-200/80 dark:border-white/10 hover:border-[#e84a27]/40"
+                            }`}
+                          >
+                            <SmakrFoodIcon name={child} className="w-3.5 h-3.5 shrink-0" />
+                            <span>{label}</span>
+                            {childCategoryCounts[child] > 0 && (
+                              <span className={`text-[10px] font-mono ${isChildActive ? "text-white/80" : "text-zinc-400"}`}>
+                                ({childCategoryCounts[child]})
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
 
                 {/* ── SECTION 3: Dietary Badges (Inline "Diet" Label) ── */}
                 <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">

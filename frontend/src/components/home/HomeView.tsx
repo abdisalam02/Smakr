@@ -434,24 +434,8 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
 
   const activeCategoryDef = FOOD_CATEGORIES.find((c) => c.id === currentCategory) || FOOD_CATEGORIES[0];
 
-  // Progressive render count for 120fps All (21) entrance cascade
-  const [visiblePostsCount, setVisiblePostsCount] = useState(6);
-  useEffect(() => {
-    if (filteredPosts.length <= 6) {
-      setVisiblePostsCount(filteredPosts.length);
-      return;
-    }
-    // Frame 1: Render the first 5 cards immediately so the filter click runs at 120fps
-    setVisiblePostsCount(5);
-    // Frame 2 (after paint): Mount remaining off-screen cards
-    const raf = requestAnimationFrame(() => {
-      const timer = setTimeout(() => {
-        setVisiblePostsCount(filteredPosts.length);
-      }, 90);
-      return () => clearTimeout(timer);
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [currentCategory, filteredPosts.length]);
+  // Render all filtered cards stably without 2-frame unmount/remount flicker on filter click
+  const visiblePostsCount = filteredPosts.length;
 
   // Screen height tracker for accurate bottom sheet snap points
   const [sheetHeight, setSheetHeight] = useState<number>(700);

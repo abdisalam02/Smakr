@@ -37,7 +37,7 @@ export function FoodViewSlider({
   return (
     <nav
       aria-label="Feed mode navigation"
-      className={`pointer-events-auto select-none bg-[#FAF7F2]/65 dark:bg-[#181615]/65 backdrop-blur-md border border-white/40 rounded-full p-1.5 shadow-sm flex items-center gap-1 ${className}`}
+      className={`pointer-events-auto select-none bg-[#FAF7F2]/38 dark:bg-[#181615]/42 backdrop-blur-xl backdrop-saturate-150 border border-white/55 shadow-[0_8px_24px_rgba(24,22,21,0.14)] rounded-full p-1.5 flex items-center gap-1 ${className}`}
       style={{
         WebkitTouchCallout: "none",
         WebkitUserSelect: "none",

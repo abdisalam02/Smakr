@@ -694,9 +694,16 @@ function recolorFacialHair(svg: string, color: string): string {
 }
 
 function injectBustTorso(svg: string, shirtHex: string, skinHex: string): string {
-  if (svg.includes('data-layer="open-peeps-bust"')) return svg;
-  const closeIdx = svg.lastIndexOf("</svg>");
-  if (closeIdx < 0) return svg;
+  // Always unwrap DiceBear's viewboxMask so head/face paths are never masked out by rect stripping
+  const unmaskedSvg = svg
+    .replace(/<mask[^>]*id="viewboxMask"[^>]*>[\s\S]*?<\/mask>/gi, "")
+    .replace(/\s*mask="url\(#viewboxMask\)"/gi, "");
+
+  if (unmaskedSvg.includes('data-layer="open-peeps-bust"')) {
+    return unmaskedSvg.replace(/viewBox="[^"]+"/, 'viewBox="64 20 576 710"');
+  }
+  const closeIdx = unmaskedSvg.lastIndexOf("</svg>");
+  if (closeIdx < 0) return unmaskedSvg;
   // High-contrast protection: prevent dark shirts from vanishing on dark cards (#181615)
   const normShirt = shirtHex.replace(/^#/, "").toLowerCase();
   const safeShirt = ["262e33", "181615", "1f2937", "000000", "111827", "241c16"].includes(normShirt)
@@ -709,15 +716,15 @@ function injectBustTorso(svg: string, shirtHex: string, skinHex: string): string
       <path d="M254 624 L254 720 M450 624 L450 720" stroke="#181615" stroke-width="8" stroke-linecap="round" opacity="0.55"/>
     </g>
   `;
-  const firstGroupIdx = svg.search(/<g[\s>]/);
+  const firstGroupIdx = unmaskedSvg.search(/<g[\s>]/);
   if (firstGroupIdx > 0) {
     return (
-      svg.slice(0, firstGroupIdx).replace('viewBox="0 0 704 704"', 'viewBox="80 60 544 670"') +
+      unmaskedSvg.slice(0, firstGroupIdx).replace(/viewBox="[^"]+"/, 'viewBox="64 20 576 710"') +
       bustMarkup +
-      svg.slice(firstGroupIdx)
+      unmaskedSvg.slice(firstGroupIdx)
     );
   }
-  return svg;
+  return unmaskedSvg;
 }
 
 /**
@@ -742,8 +749,11 @@ export function ensureBustAvatarSvg(
       }
     }
   }
-  // Strip solid background rects from legacy avatars
-  raw = raw.replace(/<rect[^>]*?(?:width="100%"|width="360"|width="704")[^>]*?>/gi, "");
+  // Unwrap viewboxMask first, then strip solid background rects from legacy avatars
+  raw = raw
+    .replace(/<mask[^>]*id="viewboxMask"[^>]*>[\s\S]*?<\/mask>/gi, "")
+    .replace(/\s*mask="url\(#viewboxMask\)"/gi, "")
+    .replace(/<rect[^>]*?(?:width="100%"|width="360")[^>]*?>/gi, "");
   return injectBustTorso(raw, normHex(shirtHex, "e84a27"), normHex(skinHex, "ffdbb4"));
 }
 

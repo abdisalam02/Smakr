@@ -138,22 +138,22 @@ export const SMAKR_ICON_SVG_BODIES: Record<string, string> = {
   park: `<path d="M12 3.5C8.8 3.5 6.5 5.8 6.5 8.8C6.5 10.2 7.2 11.5 8.2 12.4C7.2 13.2 6.5 14.5 6.5 16C6.5 18.2 8.3 20 10.5 20H13.5C15.7 20 17.5 18.2 17.5 16C17.5 14.5 16.8 13.2 15.8 12.4C16.8 11.5 17.5 10.2 17.5 8.8C17.5 5.8 15.2 3.5 12 3.5Z" fill="#FAF7F2" stroke="#181615" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 9V20" stroke="#E84A27" stroke-width="1.8" stroke-linecap="round"/><path d="M12 13L15 11M12 16L9.5 14.5" stroke="#E84A27" stroke-width="1.5" stroke-linecap="round"/><path d="M4 20.5H20" stroke="#181615" stroke-width="1.8" stroke-linecap="round"/>`,
 };
 
-// High-craft optimized icon assets (< 10 KB WebP, instant rendering)
-SMAKR_ICON_SVG_BODIES.k_chicken = `<image href="/icons/food/fried_chicken.webp" x="-2" y="-2" width="28" height="28" preserveAspectRatio="xMidYMid meet"/>`;
-SMAKR_ICON_SVG_BODIES.fried_chicken = `<image href="/icons/food/fried_chicken.webp" x="-2" y="-2" width="28" height="28" preserveAspectRatio="xMidYMid meet"/>`;
-SMAKR_ICON_SVG_BODIES.bakery = `<image href="/icons/food/bakery.webp" x="-2" y="-2" width="28" height="28" preserveAspectRatio="xMidYMid meet"/>`;
-SMAKR_ICON_SVG_BODIES.croissant = `<image href="/icons/food/bakery.webp" x="-2" y="-2" width="28" height="28" preserveAspectRatio="xMidYMid meet"/>`;
-SMAKR_ICON_SVG_BODIES.cinnamon_roll = `<image href="/icons/food/cinnamon_roll.webp" x="-2" y="-2" width="28" height="28" preserveAspectRatio="xMidYMid meet"/>`;
+// High-craft optimized icon assets (< 10 KB WebP, instant rendering, normalized 26x26 footprint)
+SMAKR_ICON_SVG_BODIES.k_chicken = `<image href="/icons/food/fried_chicken.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.fried_chicken = `<image href="/icons/food/fried_chicken.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.bakery = `<image href="/icons/food/bakery.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.croissant = `<image href="/icons/food/bakery.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.cinnamon_roll = `<image href="/icons/food/cinnamon_roll.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
 SMAKR_ICON_SVG_BODIES.kanelbolle = SMAKR_ICON_SVG_BODIES.cinnamon_roll;
-SMAKR_ICON_SVG_BODIES.naan = `<image href="/icons/food/naan.webp" x="-2" y="-2" width="28" height="28" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.naan = `<image href="/icons/food/naan.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
 SMAKR_ICON_SVG_BODIES.flatbread = SMAKR_ICON_SVG_BODIES.naan;
-SMAKR_ICON_SVG_BODIES.pizza = `<image href="/icons/food/pizza.webp" x="-3.5" y="-3.5" width="31" height="31" preserveAspectRatio="xMidYMid meet"/>`;
-SMAKR_ICON_SVG_BODIES.pasta = `<image href="/icons/food/pasta.webp" x="-3.5" y="-3.5" width="31" height="31" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.pizza = `<image href="/icons/food/pizza.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.pasta = `<image href="/icons/food/pasta.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
 SMAKR_ICON_SVG_BODIES.pizza_pasta = SMAKR_ICON_SVG_BODIES.pizza;
-SMAKR_ICON_SVG_BODIES.coffee = `<image href="/icons/food/coffee.webp" x="-2" y="-2" width="28" height="28" preserveAspectRatio="xMidYMid meet"/>`;
-SMAKR_ICON_SVG_BODIES.banh_mi = `<image href="/icons/food/banh_mi.webp" x="-2" y="-2" width="28" height="28" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.coffee = `<image href="/icons/food/coffee.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.banh_mi = `<image href="/icons/food/banh_mi.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
 SMAKR_ICON_SVG_BODIES.vietnamese = SMAKR_ICON_SVG_BODIES.banh_mi;
-SMAKR_ICON_SVG_BODIES.ramen = `<image href="/icons/food/ramen.webp" x="-2" y="-2" width="28" height="28" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.ramen = `<image href="/icons/food/ramen.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
 SMAKR_ICON_SVG_BODIES.pho = SMAKR_ICON_SVG_BODIES.vietnamese;
 SMAKR_ICON_SVG_BODIES.curry = SMAKR_ICON_SVG_BODIES.indian;
 SMAKR_ICON_SVG_BODIES.pop_up = SMAKR_ICON_SVG_BODIES.popup;

@@ -281,7 +281,7 @@ function createAquarellePinElement(
     ? "✨"
     : "";
   const pinGlyph = curatedIcon
-    ? `<span style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;font-size:28px;line-height:1;text-align:center;font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif;transform:translateY(0.5px);">${curatedIcon}</span>`
+    ? `<svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" viewBox="-4 -4 32 32" style="overflow:visible !important; display:block;"><text x="12" y="13" font-size="21" text-anchor="middle" dominant-baseline="central" style="font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif; user-select:none;">${curatedIcon}</text></svg>`
     : iconSvg.replace(/width="\d+"/g, 'width="38"').replace(/height="\d+"/g, 'height="38"');
 
   const inner = document.createElement("div");
