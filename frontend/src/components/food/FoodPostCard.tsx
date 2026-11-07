@@ -606,8 +606,11 @@ export const FoodPostCard = React.memo(function FoodPostCard({
             </div>
           )}
 
-          {/* Dish Title (Capitalized) */}
-          <h3 className="text-[22px] sm:text-[24px] font-extrabold tracking-tight leading-[1.12] text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)] line-clamp-1 capitalize">
+          {/* Dish Title (Refined Plus Jakarta Sans editorial proportions) */}
+          <h3
+            style={{ fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif" }}
+            className="text-[19px] sm:text-[21px] font-bold tracking-tight leading-[1.18] text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)] line-clamp-1 capitalize"
+          >
             {post.dish_name}
           </h3>
 
@@ -706,7 +709,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
                 <Send className="w-3.5 h-3.5 stroke-[2] -translate-x-[0.5px] translate-y-[0.5px]" />
               </button>
 
-              {/* Action 3: Translucent Glass [Map ↗] Window with Oslo Radar Texture */}
+              {/* Action 3: Clean Solid Cream [Map ↗] Button */}
               {hasConfirmedLocation ? (
                 <button
                   type="button"
@@ -714,33 +717,13 @@ export const FoodPostCard = React.memo(function FoodPostCard({
                     e.stopPropagation();
                     handleFlyToRadar(e);
                   }}
-                  style={{
-                    backgroundColor: "rgba(24, 22, 21, 0.28)",
-                    backdropFilter: "blur(10px) saturate(140%)",
-                    WebkitBackdropFilter: "blur(10px) saturate(140%)",
-                    border: "1px solid rgba(255, 255, 255, 0.45)",
-                    boxShadow: "0 4px 14px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255,255,255,0.25)",
-                  }}
-                  className="relative overflow-hidden before:absolute before:-inset-2 before:content-[''] touch-manipulation h-9 px-3.5 rounded-full active:scale-95 transition-transform duration-100 text-xs font-black flex items-center gap-1.5 cursor-pointer shrink-0 group/mapbtn"
+                  className="relative before:absolute before:-inset-2 before:content-[''] touch-manipulation h-9 px-3.5 rounded-full bg-[#FAF7F2] hover:bg-white text-[#181615] border border-[#181615]/15 shadow-sm active:scale-95 transition-transform duration-100 text-xs font-extrabold flex items-center gap-1.5 cursor-pointer shrink-0"
                   title="Locate on map"
                   aria-label="Locate on map"
                 >
-                  {/* Subtle Translucent Oslo Street-Grid & Fjord Contour Layer */}
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 88 36"
-                    className="absolute inset-0 w-full h-full pointer-events-none opacity-45"
-                    preserveAspectRatio="xMidYMid slice"
-                  >
-                    <rect width="88" height="36" fill="#EDE7DC" fillOpacity="0.28" />
-                    <path d="M56 0 C60 12, 52 24, 64 36 L88 36 L88 0 Z" fill="#9BC9E8" fillOpacity="0.42" />
-                    <path d="M0 10 L88 24 M18 0 L34 36 M52 0 L42 36 M0 28 L66 6" stroke="#FAF7F2" strokeWidth="1.6" strokeOpacity="0.55" fill="none" />
-                    <path d="M12 0 L72 36" stroke="#F6C26B" strokeWidth="2.2" strokeOpacity="0.65" fill="none" />
-                    <circle cx="62" cy="18" r="3" fill="#E84A27" stroke="#FAF7F2" strokeWidth="1.2" />
-                  </svg>
-                  <Compass className="relative z-10 w-3.5 h-3.5 stroke-[2.4] text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]" />
-                  <span className="relative z-10 font-extrabold tracking-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">Map</span>
-                  <ArrowUpRight className="relative z-10 w-3.5 h-3.5 stroke-[2.8] text-[#FF8A65] drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]" />
+                  <Compass className="w-3.5 h-3.5 stroke-[2.4] text-[#181615]" />
+                  <span className="font-extrabold tracking-tight text-[#181615]">Map</span>
+                  <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.8] text-[#E84A27]" />
                 </button>
               ) : isPopup ? (
                 <button

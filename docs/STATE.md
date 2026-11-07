@@ -23,8 +23,8 @@ Updated: 2026-11-02
 - No other open items recorded in this handoff.
 
 ## Recent (max 5, one line each)
-- 2026-11-07 — Executed Prompt 2: solid map die-cut stroke, clip mask sheet, bust fallbacks, 3-tier cascade, 60fps accordion; tsc clean
 - 2026-11-07 — Padded map icons 16px, radial SVG die-cut filter, 60fps feed-pull accordion, bust avatars, instant nav switch; tsc clean
 - 2026-11-07 — Isolated pizza & pasta pins, dual-layer selected rim, frosted Map button, yoink gesture, 120fps nav switch; tsc clean
 - 2026-11-07 — Refined delicate orange pin hue, normalized pizza/pasta scale, high-contrast sweater busts, 0ms tab switch; tsc clean
 - 2026-11-07 — Fixed viewboxMask headless avatar bug, normalized 38px SVG map pins, 120fps imperative filter drag, atomic filter dispatch, radar Map pill; tsc clean
+- 2026-11-07 — Fixed bottom nav phantom clicks & solid cream bg, solid cream Map pill, Plus Jakarta Sans card titles, top sheet drag, 35% smaller map pins; tsc clean

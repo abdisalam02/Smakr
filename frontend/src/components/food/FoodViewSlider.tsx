@@ -37,7 +37,11 @@ export function FoodViewSlider({
   return (
     <nav
       aria-label="Feed mode navigation"
-      className={`pointer-events-auto select-none bg-[#FAF7F2]/38 dark:bg-[#181615]/42 backdrop-blur-xl backdrop-saturate-150 border border-white/55 shadow-[0_8px_24px_rgba(24,22,21,0.14)] rounded-full p-1.5 flex items-center gap-1 ${className}`}
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+      onTouchEnd={(e) => e.stopPropagation()}
+      className={`pointer-events-auto select-none bg-[#FAF7F2] dark:bg-[#181615] border border-[#181615]/12 dark:border-white/15 shadow-[0_8px_24px_rgba(24,22,21,0.18)] rounded-full p-1.5 flex items-center gap-1 ${className}`}
       style={{
         WebkitTouchCallout: "none",
         WebkitUserSelect: "none",
@@ -48,11 +52,11 @@ export function FoodViewSlider({
       {/* 1. Dishes Tab */}
       <button
         type="button"
-        onPointerDown={(e) => {
-          if (e.pointerType === "mouse" && e.button !== 0) return;
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
           handleSelectMode("food");
         }}
-        onClick={() => handleSelectMode("food")}
         aria-label="View Dishes Feed"
         aria-pressed={isFeedActive}
         className={`relative z-10 flex items-center justify-center rounded-full text-[13px] font-bold cursor-pointer outline-none border-0 select-none transition-all duration-200 active:scale-95 h-10 ${
@@ -68,7 +72,7 @@ export function FoodViewSlider({
             transition={{ type: "spring", stiffness: 480, damping: 32, mass: 0.5 }}
           />
         )}
-        <span className="flex items-center gap-1.5 shrink-0">
+        <span className="flex items-center gap-1.5 shrink-0 pointer-events-none">
           <Utensils className="w-4 h-4 shrink-0" />
           <span
             className={`flex items-center gap-1.5 whitespace-nowrap overflow-hidden transition-[max-width,opacity] duration-220 ease-[cubic-bezier(0.22,1,0.36,1)] ${
@@ -85,29 +89,29 @@ export function FoodViewSlider({
         </span>
       </button>
 
-      {/* Prominent Add (+) Button (Centered, 0ms Instant Touch Feedback) */}
+      {/* Prominent Add (+) Button */}
       <button
         type="button"
-        onPointerDown={(e) => {
-          if (e.pointerType === "mouse" && e.button !== 0) return;
-          requestAnimationFrame(() => openCreateDish());
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          openCreateDish();
         }}
-        onClick={openCreateDish}
         title="Log a Dish"
         aria-label="Log a Dish"
         className="relative z-20 w-10 h-10 rounded-full bg-[#181615] dark:bg-white text-white dark:text-[#181615] flex items-center justify-center shadow-md cursor-pointer shrink-0 outline-none border-0 transition-transform duration-75 active:scale-90 hover:scale-105"
       >
-        <Plus className="w-4 h-4 stroke-[2.4]" />
+        <Plus className="w-4 h-4 stroke-[2.4] pointer-events-none" />
       </button>
 
       {/* 2. Spots Tab */}
       <button
         type="button"
-        onPointerDown={(e) => {
-          if (e.pointerType === "mouse" && e.button !== 0) return;
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
           handleSelectMode("places");
         }}
-        onClick={() => handleSelectMode("places")}
         aria-label="View Food Spots"
         aria-pressed={isSpotsActive}
         className={`relative z-10 flex items-center justify-center rounded-full text-[13px] font-bold cursor-pointer outline-none border-0 select-none transition-all duration-200 active:scale-95 h-10 ${
@@ -123,7 +127,7 @@ export function FoodViewSlider({
             transition={{ type: "spring", stiffness: 480, damping: 32, mass: 0.5 }}
           />
         )}
-        <span className="flex items-center gap-1.5 shrink-0">
+        <span className="flex items-center gap-1.5 shrink-0 pointer-events-none">
           <Store className="w-4 h-4 shrink-0" />
           <span
             className={`flex items-center gap-1.5 whitespace-nowrap overflow-hidden transition-[max-width,opacity] duration-220 ease-[cubic-bezier(0.22,1,0.36,1)] ${

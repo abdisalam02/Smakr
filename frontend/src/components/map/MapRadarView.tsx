@@ -113,12 +113,12 @@ function applyPinState(root: HTMLElement, isSelected: boolean) {
     if (isPopup) {
       iconContainer.style.filter = "none";
     } else if (isSelected) {
-      iconContainer.style.width = "42px";
-      iconContainer.style.height = "42px";
+      iconContainer.style.width = "28px";
+      iconContainer.style.height = "28px";
       iconContainer.style.filter = "url(#smakr-diecut-selected)";
     } else {
-      iconContainer.style.width = "38px";
-      iconContainer.style.height = "38px";
+      iconContainer.style.width = "25px";
+      iconContainer.style.height = "25px";
       iconContainer.style.filter = "url(#smakr-diecut-default)";
     }
   }
@@ -247,8 +247,8 @@ function createAquarellePinElement(
   root.style.position = "absolute";
   root.style.top = "0";
   root.style.left = "0";
-  root.style.width = "52px";
-  root.style.height = "60px";
+  root.style.width = "34px";
+  root.style.height = "40px";
   root.style.margin = "0";
   root.style.padding = "0";
   root.style.cursor = "pointer";
@@ -281,8 +281,8 @@ function createAquarellePinElement(
     ? "✨"
     : "";
   const pinGlyph = curatedIcon
-    ? `<svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" viewBox="-4 -4 32 32" style="overflow:visible !important; display:block;"><text x="12" y="13" font-size="21" text-anchor="middle" dominant-baseline="central" style="font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif; user-select:none;">${curatedIcon}</text></svg>`
-    : iconSvg.replace(/width="\d+"/g, 'width="38"').replace(/height="\d+"/g, 'height="38"');
+    ? `<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="-4 -4 32 32" style="overflow:visible !important; display:block;"><text x="12" y="13" font-size="21" text-anchor="middle" dominant-baseline="central" style="font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif; user-select:none;">${curatedIcon}</text></svg>`
+    : iconSvg.replace(/width="\d+"/g, 'width="25"').replace(/height="\d+"/g, 'height="25"');
 
   const inner = document.createElement("div");
   inner.className = "pin-visual";
@@ -370,12 +370,12 @@ function createAquarellePinElement(
     `;
   } else {
     inner.innerHTML = `
-      <!-- Die-Cut Floating Dish Silhouette Pin (38px/42px, clean contour stroke + delicate orange rim, no edge clipping) -->
+      <!-- Die-Cut Floating Dish Silhouette Pin (25px/28px, 35% reduced size, clean contour stroke) -->
       ${haloHtml}
       <div class="smakr-map-puck" style="
-        width: 48px;
-        height: 48px;
-        padding: 4px;
+        width: 32px;
+        height: 32px;
+        padding: 3px;
         background: transparent !important;
         border: none !important;
         border-radius: 0 !important;
@@ -389,8 +389,8 @@ function createAquarellePinElement(
       ">
         ${kitchenBadgeHtml}
         <div class="smakr-puck-icon" style="
-          width: 38px;
-          height: 38px;
+          width: 25px;
+          height: 25px;
           display: grid;
           place-items: center;
           line-height: 1;
@@ -405,14 +405,14 @@ function createAquarellePinElement(
         <!-- Downward pointer arrow beneath the floating icon -->
         <div class="smakr-puck-arrow" style="
           position: absolute;
-          bottom: -4px;
+          bottom: -3px;
           left: 50%;
           transform: translateX(-50%);
           width: 0;
           height: 0;
-          border-left: 4.5px solid transparent;
-          border-right: 4.5px solid transparent;
-          border-top: 5px solid #FAF7F2;
+          border-left: 3.5px solid transparent;
+          border-right: 3.5px solid transparent;
+          border-top: 4px solid #FAF7F2;
           filter: drop-shadow(0 2px 3px rgba(24,22,21,0.28));
           transition: border-top-color 0.2s ease;
         "></div>

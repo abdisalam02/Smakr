@@ -1020,12 +1020,10 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
               {/* Grab pill */}
               <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-zinc-600 mx-auto mb-1 hover:bg-zinc-400 transition-colors" />
 
-              {/* Smakr Feed header + Weekly Drop capsule */}
+              {/* Smakr Feed header + Weekly Drop capsule (touches bubble up so top sheet area drags smoothly) */}
               <div
                 onClick={(e) => e.stopPropagation()}
-                onTouchStart={(e) => e.stopPropagation()}
-                onTouchMove={(e) => e.stopPropagation()}
-                className="cursor-default"
+                className="cursor-grab active:cursor-grabbing"
               >
                 <MascotWeeklyDrop
                   compact
