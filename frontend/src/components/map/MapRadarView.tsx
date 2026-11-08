@@ -1643,9 +1643,11 @@ export function MapRadarView() {
 
         <!-- Header: Flag + ONE Main Tag (e.g. 🇮🇳 INDIAN, 🇻🇳 VIETNAMESE, 🇯🇵 MATCHA) + Price Level -->
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:7px;padding-bottom:5px;border-bottom:1px solid rgba(24,22,21,0.06);padding-right:24px;">
-          <span style="display:inline-flex;align-items:center;justify-content:center;font-size:15px;line-height:1;flex-shrink:0;">
-            ${venueBadge.flag}
-          </span>
+          ${venueBadge.flag ? `
+            <span style="display:inline-flex;align-items:center;justify-content:center;font-size:14px;line-height:1;flex-shrink:0;">
+              ${venueBadge.flag}
+            </span>
+          ` : ""}
           <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:#e84a27;font-family:var(--font-comico, sans-serif);">
             ${venueBadge.mainTag}
           </span>
