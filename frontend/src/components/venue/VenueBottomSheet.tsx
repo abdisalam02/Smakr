@@ -21,7 +21,7 @@ import {
   ZoomIn,
 } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, useMotionValue, animate } from "motion/react";
 import { useVenueDetail } from "@/hooks/useVenueDetail";
 import { formatDistance } from "@/lib/math";
 import { FoodPost, ReviewItem } from "@/types";
@@ -98,11 +98,11 @@ export function VenueBottomSheet() {
     } catch {}
   };
 
-  // Direct GPU-accelerated touch sheet refs and trackers (matching HomeView feed modal)
+  // Direct GPU-accelerated touch sheet refs and trackers (unified with Framer Motion useMotionValue)
   const sheetRef = React.useRef<HTMLDivElement>(null);
   const contentScrollRef = React.useRef<HTMLDivElement>(null);
+  const sheetY = useMotionValue(0);
   const isDraggingRef = React.useRef(false);
-  const isSwipeClosingRef = React.useRef(false);
   const dragStartYRef = React.useRef(0);
   const currentYRef = React.useRef(0);
   const lastTouchYRef = React.useRef(0);
@@ -113,9 +113,9 @@ export function VenueBottomSheet() {
 
   useEffect(() => {
     if (isVenueDetailModalOpen) {
-      isSwipeClosingRef.current = false;
+      sheetY.set(0);
     }
-  }, [isVenueDetailModalOpen]);
+  }, [isVenueDetailModalOpen, sheetY]);
 
   // Shared venue data: posts, recommended meals, reactions, likes & saves
   const {
@@ -249,7 +249,7 @@ export function VenueBottomSheet() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isVenueDetailModalOpen, zoomImage, handleClose]);
 
-  // 1. Header grab bar touch drag handlers (direct GPU transform, fluid 0.38s ease)
+  // 1. Header grab bar touch drag handlers (unified Framer Motion sheetY pipeline)
   const handleHeaderTouchStart = (e: React.TouchEvent) => {
     const startY = e.touches[0].clientY;
     isDraggingRef.current = true;
@@ -258,10 +258,6 @@ export function VenueBottomSheet() {
     lastTouchTimeRef.current = Date.now();
     currentVelocityRef.current = 0;
     currentYRef.current = 0;
-
-    if (sheetRef.current) {
-      sheetRef.current.style.transition = "none";
-    }
   };
 
   const handleHeaderTouchMove = (e: React.TouchEvent) => {
@@ -275,16 +271,9 @@ export function VenueBottomSheet() {
     lastTouchYRef.current = currentTouchY;
     lastTouchTimeRef.current = now;
 
-    // Pull down moves 1:1; pull up has rubber-band resistance
-    let nextY = delta;
-    if (nextY < 0) {
-      nextY = nextY * 0.22;
-    }
-
+    const nextY = Math.max(0, delta);
     currentYRef.current = nextY;
-    if (sheetRef.current) {
-      sheetRef.current.style.transform = `translate3d(0, ${nextY}px, 0)`;
-    }
+    sheetY.set(nextY);
   };
 
   const handleHeaderTouchEnd = () => {
@@ -294,21 +283,11 @@ export function VenueBottomSheet() {
     const finalY = currentYRef.current;
     const velocity = currentVelocityRef.current;
 
-    // Fast flick down or pulled down > 48px closes the sheet!
-    if (finalY > 48 || velocity > 0.24) {
-      isSwipeClosingRef.current = true;
-      if (sheetRef.current) {
-        sheetRef.current.style.transition = "transform 190ms cubic-bezier(0.22, 1, 0.36, 1)";
-        sheetRef.current.style.transform = "translate3d(0, 105%, 0)";
-      }
-      setTimeout(() => {
-        handleClose();
-      }, 185);
+    // Fast flick down or pulled down > 45px closes immediately (0ms delay, single Framer Motion exit)
+    if (finalY > 45 || velocity > 0.22) {
+      handleClose();
     } else {
-      if (sheetRef.current) {
-        sheetRef.current.style.transition = "transform 0.38s cubic-bezier(0.16, 1, 0.3, 1)";
-        sheetRef.current.style.transform = "translate3d(0, 0, 0)";
-      }
+      animate(sheetY, 0, { type: "spring", stiffness: 440, damping: 34 });
     }
   };
 
@@ -334,9 +313,6 @@ export function VenueBottomSheet() {
       if (pullDown > 6) {
         isContentPullingRef.current = true;
         isDraggingRef.current = true;
-        if (sheetRef.current) {
-          sheetRef.current.style.transition = "none";
-        }
 
         const now = Date.now();
         const timeDelta = Math.max(1, now - lastTouchTimeRef.current);
@@ -344,15 +320,15 @@ export function VenueBottomSheet() {
         lastTouchYRef.current = currentY;
         lastTouchTimeRef.current = now;
 
-        currentYRef.current = pullDown;
-        if (sheetRef.current) {
-          sheetRef.current.style.transform = `translate3d(0, ${pullDown}px, 0)`;
-        }
+        const nextY = Math.max(0, pullDown);
+        currentYRef.current = nextY;
+        sheetY.set(nextY);
       }
     } else {
       if (isContentPullingRef.current) {
         isContentPullingRef.current = false;
         isDraggingRef.current = false;
+        sheetY.set(0);
       }
     }
   };
@@ -363,20 +339,10 @@ export function VenueBottomSheet() {
       const pullDown = endY - contentTouchStartYRef.current;
       const velocity = currentVelocityRef.current;
 
-      if (pullDown > 48 || velocity > 0.24) {
-        isSwipeClosingRef.current = true;
-        if (sheetRef.current) {
-          sheetRef.current.style.transition = "transform 190ms cubic-bezier(0.22, 1, 0.36, 1)";
-          sheetRef.current.style.transform = "translate3d(0, 105%, 0)";
-        }
-        setTimeout(() => {
-          handleClose();
-        }, 185);
+      if (pullDown > 45 || velocity > 0.22) {
+        handleClose();
       } else {
-        if (sheetRef.current) {
-          sheetRef.current.style.transition = "transform 0.38s cubic-bezier(0.16, 1, 0.3, 1)";
-          sheetRef.current.style.transform = "translate3d(0, 0, 0)";
-        }
+        animate(sheetY, 0, { type: "spring", stiffness: 440, damping: 34 });
       }
     }
     contentTouchStartYRef.current = null;
@@ -409,18 +375,20 @@ export function VenueBottomSheet() {
               className="fixed inset-0 bg-black/15 cursor-pointer"
             />
 
-            {/* Slidable Card container with smooth slide-up matching feed modal */}
+            {/* Slidable Card container with unified useMotionValue drag & exit */}
             <motion.div
               ref={sheetRef}
               initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={
-                isSwipeClosingRef.current
-                  ? { opacity: 0, transition: { duration: 0.01 } }
-                  : { y: "100%", transition: { duration: 0.22, ease: [0.22, 1, 0.36, 1] } }
-              }
-              transition={{ duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
+              animate={{
+                y: 0,
+                transition: { type: "spring", stiffness: 420, damping: 36, mass: 0.75 },
+              }}
+              exit={{
+                y: "100%",
+                transition: { duration: 0.2, ease: [0.22, 1, 0.36, 1] },
+              }}
               style={{
+                y: sheetY,
                 contain: "layout style",
               }}
               className="relative z-10 w-full h-[88dvh] max-h-[90vh] bg-[#FAF7F2] dark:bg-[#181615] lg:bg-[#FAF7F2]/95 lg:backdrop-blur-sm rounded-t-3xl border-t border-[#181615]/10 dark:border-white/10 shadow-2xl flex flex-col overflow-hidden will-change-transform smakr-bottom-sheet"

@@ -152,16 +152,40 @@ SMAKR_ICON_SVG_BODIES.pasta = `<image href="/icons/food/pasta.webp" x="-1" y="-1
 SMAKR_ICON_SVG_BODIES.pizza_pasta = SMAKR_ICON_SVG_BODIES.pizza;
 SMAKR_ICON_SVG_BODIES.coffee = `<image href="/icons/food/coffee.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
 SMAKR_ICON_SVG_BODIES.banh_mi = `<image href="/icons/food/banh_mi.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
-SMAKR_ICON_SVG_BODIES.vietnamese = SMAKR_ICON_SVG_BODIES.banh_mi;
 SMAKR_ICON_SVG_BODIES.ramen = `<image href="/icons/food/ramen.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
-SMAKR_ICON_SVG_BODIES.pho = SMAKR_ICON_SVG_BODIES.vietnamese;
-SMAKR_ICON_SVG_BODIES.curry = SMAKR_ICON_SVG_BODIES.indian;
+SMAKR_ICON_SVG_BODIES.matcha = `<image href="/icons/food/matcha.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.mandi_rice = `<image href="/icons/food/mandi_rice.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.cheesesteak = `<image href="/icons/food/cheesesteak.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.pancakes = `<image href="/icons/food/pancakes.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.dumplings = `<image href="/icons/food/dumplings.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.tacos = `<image href="/icons/food/tacos.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.taco = SMAKR_ICON_SVG_BODIES.tacos;
+SMAKR_ICON_SVG_BODIES.burger = `<image href="/icons/food/burger.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.sushi = `<image href="/icons/food/sushi.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.curry = `<image href="/icons/food/curry.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.indian = SMAKR_ICON_SVG_BODIES.curry;
+SMAKR_ICON_SVG_BODIES.vietnamese = `<image href="/icons/food/vietnamese.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.pho = `<image href="/icons/food/vietnamese.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.street_food = `<image href="/icons/food/street_food.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.rice_bowls = SMAKR_ICON_SVG_BODIES.mandi_rice;
+SMAKR_ICON_SVG_BODIES.dim_sum = SMAKR_ICON_SVG_BODIES.dumplings;
+SMAKR_ICON_SVG_BODIES.gyoza = SMAKR_ICON_SVG_BODIES.dumplings;
+SMAKR_ICON_SVG_BODIES.pancake = SMAKR_ICON_SVG_BODIES.pancakes;
+
+// Distinct Handcrafted Vector Art for standalone specialties
+SMAKR_ICON_SVG_BODIES.cardamom_bun = `<ellipse cx="12" cy="13.5" rx="7.5" ry="6" fill="#FAF7F2" stroke="#181615" stroke-width="1.7"/><path d="M6.5 13C8 10 11 8.5 14 9C16.5 9.5 17.5 11.5 17 14" stroke="#E84A27" stroke-width="1.8" stroke-linecap="round"/><path d="M7.5 16C9.5 17.5 13 17.5 16 15" stroke="#181615" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="11.5" r="0.9" fill="#181615"/><circle cx="14" cy="11" r="0.9" fill="#181615"/><circle cx="12" cy="14" r="0.9" fill="#181615"/>`;
+SMAKR_ICON_SVG_BODIES.bibimbap = `<path d="M4 11C4 16.5 7.5 19.5 12 19.5C16.5 19.5 20 16.5 20 11H4Z" fill="#181615" stroke="#181615" stroke-width="1.5"/><ellipse cx="12" cy="11" rx="8" ry="3.5" fill="#FAF7F2" stroke="#181615" stroke-width="1.4"/><path d="M6 10.5C7.5 9.5 9 10 9.5 11" stroke="#4E8752" stroke-width="1.8" stroke-linecap="round"/><path d="M14.5 11C15 10 16.5 9.5 18 10.5" stroke="#8C1402" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="11" r="2.2" fill="#E84A27" stroke="#181615" stroke-width="1.1"/>`;
+SMAKR_ICON_SVG_BODIES.poke = `<path d="M4 11.5C4 16.8 7.5 19.8 12 19.8C16.5 19.8 20 16.8 20 11.5H4Z" fill="#FAF7F2" stroke="#181615" stroke-width="1.7" stroke-linejoin="round"/><ellipse cx="12" cy="11.5" rx="8" ry="3.2" fill="#FAF7F2" stroke="#181615" stroke-width="1.4"/><rect x="7.5" y="9" width="3.2" height="3" rx="0.8" fill="#E84A27" stroke="#181615" stroke-width="1"/><rect x="13" y="9.5" width="3.2" height="3" rx="0.8" fill="#E84A27" stroke="#181615" stroke-width="1"/><circle cx="11.5" cy="9.5" r="1.2" fill="#4E8752"/><circle cx="10" cy="12.5" r="1.1" fill="#4E8752"/>`;
+SMAKR_ICON_SVG_BODIES.shawarma = `<path d="M7 5.5L17 5.5L15 19.5L9 19.5Z" fill="#FAF7F2" stroke="#181615" stroke-width="1.7" stroke-linejoin="round"/><path d="M7 5.5C7 4.2 9.2 3.2 12 3.2C14.8 3.2 17 4.2 17 5.5" fill="#FAF7F2" stroke="#181615" stroke-width="1.7"/><path d="M8 8.5C10 9.8 14 9.8 16 8.5" stroke="#E84A27" stroke-width="1.8" stroke-linecap="round"/><path d="M8.5 12C10.5 13.2 13.5 13.2 15.5 12" stroke="#4E8752" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="6" r="1.2" fill="#E84A27"/>`;
+
 SMAKR_ICON_SVG_BODIES.pop_up = SMAKR_ICON_SVG_BODIES.popup;
 SMAKR_ICON_SVG_BODIES.ticket_stub = SMAKR_ICON_SVG_BODIES.popup;
 SMAKR_ICON_SVG_BODIES.wine_bar = SMAKR_ICON_SVG_BODIES.natural_wine;
-SMAKR_ICON_SVG_BODIES.mandi_rice = SMAKR_ICON_SVG_BODIES.indian;
 SMAKR_ICON_SVG_BODIES.middle_eastern = SMAKR_ICON_SVG_BODIES.kebab;
 SMAKR_ICON_SVG_BODIES.outdoor_park = SMAKR_ICON_SVG_BODIES.park;
+SMAKR_ICON_SVG_BODIES.rice_bowls = SMAKR_ICON_SVG_BODIES.mandi_rice;
+SMAKR_ICON_SVG_BODIES.burrito_wrap = SMAKR_ICON_SVG_BODIES.shawarma;
+SMAKR_ICON_SVG_BODIES.dessert = SMAKR_ICON_SVG_BODIES.pancakes;
 
 /**
  * Strict lookup for the 13 Parent Group Filter Icons (/icons/filters/*.webp)
@@ -201,20 +225,24 @@ export const DISH_ICON_WEBP: Record<string, string> = {
   naan: "/icons/food/naan.webp",
   flatbread: "/icons/food/naan.webp",
   banh_mi: "/icons/food/banh_mi.webp",
-  vietnamese: "/icons/food/vietnamese.webp",
   breakfast: "/icons/food/breakfast.webp",
-  burger: "/icons/food/burger.webp",
-  curry: "/icons/food/curry.webp",
   dessert: "/icons/food/dessert.webp",
-  drinks: "/icons/food/drinks.webp",
   gelato: "/icons/food/gelato.webp",
-  indian: "/icons/food/indian.webp",
+  matcha: "/icons/food/matcha.webp",
+  matcha_cup: "/icons/food/matcha_cup.webp",
   mandi_rice: "/icons/food/mandi_rice.webp",
-  natural_wine: "/icons/food/natural_wine.webp",
-  nordic_seafood: "/icons/food/nordic_seafood.webp",
-  street_food: "/icons/food/street_food.webp",
-  sushi: "/icons/food/sushi.webp",
+  cheesesteak: "/icons/food/cheesesteak.webp",
+  pancakes: "/icons/food/pancakes.webp",
+  dumplings: "/icons/food/dumplings.webp",
   tacos: "/icons/food/tacos.webp",
+  taco: "/icons/food/tacos.webp",
+  burger: "/icons/food/burger.webp",
+  sushi: "/icons/food/sushi.webp",
+  curry: "/icons/food/curry.webp",
+  indian: "/icons/food/curry.webp",
+  vietnamese: "/icons/food/vietnamese.webp",
+  pho: "/icons/food/vietnamese.webp",
+  street_food: "/icons/food/street_food.webp",
 };
 
 export const FILTER_CATEGORY_WEBP: Record<string, string> = {
@@ -231,13 +259,32 @@ export const CUSTOM_VECTOR_ICONS = new Set([
   "croissant",
   "cinnamon_roll",
   "kanelbolle",
+  "cardamom_bun",
   "pizza",
   "pasta",
   "pizza_pasta",
   "coffee",
   "banh_mi",
   "vietnamese",
+  "pho",
   "ramen",
+  "burger",
+  "tacos",
+  "sushi",
+  "nordic_seafood",
+  "curry",
+  "indian",
+  "mandi_rice",
+  "bibimbap",
+  "poke",
+  "kebab",
+  "shawarma",
+  "cheesesteak",
+  "pancakes",
+  "dumplings",
+  "matcha",
+  "street_food",
+  "dessert",
 ]);
 
 export const EMOJI_TO_CUSTOM_ICON: Record<string, string> = {
@@ -251,6 +298,17 @@ export const EMOJI_TO_CUSTOM_ICON: Record<string, string> = {
   "🫓": "naan",
   "🥖": "banh_mi",
   "🥪": "banh_mi",
+  "🍔": "burger",
+  "🌮": "tacos",
+  "🍣": "sushi",
+  "🍛": "curry",
+  "🥙": "kebab",
+  "🥞": "pancakes",
+  "🥟": "dumplings",
+  "🍵": "matcha",
+  "🥩": "cheesesteak",
+  "🍚": "mandi_rice",
+  "🌯": "shawarma",
 };
 
 export function resolveCustomIconKey(nameOrEmoji?: string | null): string | null {
@@ -260,11 +318,15 @@ export function resolveCustomIconKey(nameOrEmoji?: string | null): string | null
     return EMOJI_TO_CUSTOM_ICON[raw];
   }
   const clean = raw.toLowerCase().replace(/[\s-]/g, "_");
-  if (CUSTOM_VECTOR_ICONS.has(clean)) {
+  if (
+    CUSTOM_VECTOR_ICONS.has(clean) ||
+    clean in DISH_ICON_WEBP ||
+    clean in SMAKR_ICON_SVG_BODIES
+  ) {
     return clean;
   }
   const entry = resolveIconEntry(nameOrEmoji);
-  if (entry?.webp) {
+  if (entry?.webp || entry?.svg) {
     return entry.id;
   }
   return null;
@@ -471,6 +533,19 @@ export const OutdoorParkIcon = ({ className = "w-4 h-4" }: IconProps) => (
 );
 export const WineBarIcon = ({ className = "w-4 h-4" }: IconProps) => (
   <SmakrFoodIcon name="natural_wine" className={className} />
+);
+
+export const MandiRiceIcon = ({ className = "w-4 h-4" }: IconProps) => (
+  <SmakrFoodIcon name="mandi_rice" className={className} />
+);
+export const CheesesteakIcon = ({ className = "w-4 h-4" }: IconProps) => (
+  <SmakrFoodIcon name="cheesesteak" className={className} />
+);
+export const PancakesIcon = ({ className = "w-4 h-4" }: IconProps) => (
+  <SmakrFoodIcon name="pancakes" className={className} />
+);
+export const DumplingsIcon = ({ className = "w-4 h-4" }: IconProps) => (
+  <SmakrFoodIcon name="dumplings" className={className} />
 );
 
 // Dietary Badges

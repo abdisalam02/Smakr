@@ -298,6 +298,7 @@ export const ICON_REGISTRY: Record<string, IconEntry> = {
     id: "matcha",
     kind: "dish",
     label: "Matcha Latte",
+    webp: "/icons/food/matcha.webp",
     parent: "coffee_tea",
     svg: `<path d="M3.5 10.5C3.5 16.2 7.2 19.8 12 19.8C16.8 19.8 20.5 16.2 20.5 10.5H3.5Z" fill="#FAF7F2" stroke="#181615" stroke-width="1.8" stroke-linejoin="round"/><ellipse cx="12" cy="10.5" rx="8.5" ry="3" fill="#4E8752" stroke="#181615" stroke-width="1.5"/><path d="M8.5 10.5C9.8 9.6 11.5 11.4 13.5 10.2C14.5 9.7 15.2 10.3 15.8 10.7" stroke="#FAF7F2" stroke-width="1.3" stroke-linecap="round"/>`,
   },
@@ -396,8 +397,25 @@ export const ICON_REGISTRY: Record<string, IconEntry> = {
     id: "mandi_rice",
     kind: "dish",
     label: "Mandi Rice",
+    webp: "/icons/food/mandi_rice.webp",
     parent: "rice_bowls",
     svg: `<path d="M3 13C3 17.5 7 20 12 20C17 20 21 17.5 21 13H3Z" fill="#FAF7F2" stroke="#181615" stroke-width="1.8"/><path d="M6 13c2-2 4-2 6 0s4 2 6 0" stroke="#E84A27" stroke-width="2"/><ellipse cx="12" cy="9.5" rx="3.5" ry="2" fill="#E84A27"/>`,
+  },
+  cheesesteak: {
+    id: "cheesesteak",
+    kind: "dish",
+    label: "Philly Cheesesteak",
+    webp: "/icons/food/cheesesteak.webp",
+    parent: "sandwiches_handhelds",
+    aliases: ["philly_cheesesteak", "steak_sandwich", "hoagie"],
+  },
+  pancakes: {
+    id: "pancakes",
+    kind: "dish",
+    label: "Soufflé Pancakes",
+    webp: "/icons/food/pancakes.webp",
+    parent: "sweets_frozen",
+    aliases: ["souffle_pancakes", "fluffy_pancakes", "pancake"],
   },
   dumplings: {
     id: "dumplings",
@@ -510,6 +528,8 @@ export const EMOJI_TO_STABLE_KEY: Record<string, string> = {
   "🍛": "indian",
   "🍚": "mandi_rice",
   "🍲": "pho",
+  "🥞": "pancakes",
+  "🥩": "cheesesteak",
 };
 
 /** Alias map for old keys & alternate spellings */

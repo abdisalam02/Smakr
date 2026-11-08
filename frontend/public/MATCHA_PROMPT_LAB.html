@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smakr Icon Studio — Prompt Research Lab</title>
+  <style>
+    :root {
+      --bg: #F7F5F0;
+      --card-bg: #FFFFFF;
+      --paprika: #E84A27;
+      --espresso: #1E1A17;
+      --muted: #6E6862;
+      --border: #E5DFC9;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--espresso);
+      margin: 0;
+      padding: 32px 24px;
+    }
+    .header {
+      max-width: 1300px;
+      margin: 0 auto 32px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      letter-spacing: -0.5px;
+    }
+    p.lead {
+      color: var(--muted);
+      margin: 0;
+      font-size: 15px;
+    }
+    .section-title {
+      font-size: 20px;
+      margin: 40px 0 20px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 24px;
+      max-width: 1300px;
+      margin: 0 auto;
+    }
+    .card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+      display: flex;
+      flex-direction: column;
+    }
+    .card.favorite {
+      border: 2px solid var(--paprika);
+      box-shadow: 0 6px 16px rgba(232, 74, 39, 0.12);
+    }
+    .img-wrap {
+      background: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      border-bottom: 1px solid var(--border);
+      height: 290px;
+    }
+    .img-wrap img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    .body {
+      padding: 20px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+    .badge-watercolor { background: #E8F5E9; color: #2E7D32; }
+    .badge-realism { background: #FFF3E0; color: #D84315; }
+    .badge-fav { background: #E84A27; color: #FFFFFF; }
+    .badge-togo { background: #E0F2FE; color: #0369A1; }
+    .badge-legal { background: #EDE9FE; color: #6D28D9; }
+    h3 {
+      margin: 0 0 10px;
+      font-size: 17px;
+    }
+    .prompt-box {
+      background: #F9F8F5;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #333;
+      white-space: pre-wrap;
+      max-height: 150px;
+      overflow-y: auto;
+      margin-top: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🍽️ Smakr Icon Studio — Prompt Research Lab</h1>
+    <p class="lead">De-AI-ifying icon generation pipeline using Nano Banana 2 Lite. Comparing Realism (Map Go-To) vs. Sketchbook Watercolor (Filter Dropdown).</p>
+  </div>
+
+  <div class="header">
+
+    <!-- PANCAKES SECTION -->
+    <div class="section-title">🥞 Japanese Souffle Cloud Pancakes (Var 23 & 24)</div>
+    <div class="grid">
+      <!-- Var 23 Realism -->
+      <div class="card favorite">
+        <div class="img-wrap"><img src="/test-icons/var_23_pancakes_realism.png" alt="Var 23"></div>
+        <div class="body">
+          <div><span class="badge badge-fav">⭐ Map Pin Realism</span> <span class="badge badge-legal">Copyright-Safe</span> <span class="badge badge-realism">Terracotta Plate</span></div>
+          <h3>Var 23: Souffle Cloud Pancakes Realism (Map Go-To)</h3>
+          <p style="font-size:13px; color:#666; margin-top:0;">Towering stack of two fluffy souffle cloud pancakes, melting butter, dripping maple syrup, berries on terracotta-rimmed ceramic.</p>
+          <div class="prompt-box">Transform this reference photo into an entirely ORIGINAL, legally distinct culinary food icon.
+Do NOT replicate the original photo's composition, pitcher pour, or background.
+New original composition:
+- Food: A towering stack of two jiggly, ultra-fluffy Japanese souffle cloud pancakes with golden toasted tops and airy custard-like souffle edges.
+- Toppings: A melting pat of whipped golden salted butter on top, warm amber maple syrup oozing and dripping down the sides, garnished with fresh wild blueberries, sliced ripe strawberries, and a dusting of powdered sugar.
+- Vessel: Served on a handcrafted artisan cream stoneware plate with an exposed toasted terracotta rim.
+- Perspective: 35-degree isometric hero view showing the dramatic fluffy pancake height and depth.
+- Tactile Realism: Fluffy sponge texture, glistening syrup drips, natural soft morning window light.
+- Isolated on a crisp pure solid white background with a soft subtle contact shadow underneath.</div>
+        </div>
+      </div>
+
+      <!-- Var 24 Watercolor -->
+      <div class="card">
+        <div class="img-wrap"><img src="/test-icons/var_24_pancakes_watercolor.png" alt="Var 24"></div>
+        <div class="body">
+          <div><span class="badge badge-watercolor">Filter Dropdown Watercolor</span> <span class="badge badge-watercolor">Sepia Ink Wobble</span></div>
+          <h3>Var 24: Souffle Pancakes Sketchbook Watercolor</h3>
+          <p style="font-size:13px; color:#666; margin-top:0;">Vintage culinary sketchbook watercolor with fine sepia dip-pen linework, warm golden butter and amber syrup washes on 300gsm paper tooth.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SOUP DUMPLINGS SECTION -->
+    <div class="section-title">🥟 Bamboo Steamer Soup Dumplings (Xiao Long Bao) (Var 25 & 26)</div>
+    <div class="grid">
+      <!-- Var 25 Realism -->
+      <div class="card favorite">
+        <div class="img-wrap"><img src="/test-icons/var_25_dumplings_realism.png" alt="Var 25"></div>
+        <div class="body">
+          <div><span class="badge badge-fav">⭐ Map Pin Realism</span> <span class="badge badge-legal">Copyright-Safe</span> <span class="badge badge-realism">Steamer & Sauce</span></div>
+          <h3>Var 25: Bamboo Steamer Soup Dumplings Realism (Map Go-To)</h3>
+          <p style="font-size:13px; color:#666; margin-top:0;">Woven bamboo steamer with leaning lid, 4 pleated soup dumplings (Xiao Long Bao) with translucent dough, chili oil & ginger dipping dish.</p>
+          <div class="prompt-box">Transform this reference photo into an entirely ORIGINAL, legally distinct culinary food icon.
+Do NOT replicate the exact photo's arrangement or dark table.
+New original composition:
+- Vessel: A traditional blonde woven bamboo steamer basket with its woven lid leaning gracefully against the side.
+- Food: 4 delicately pleated soup dumplings (Xiao Long Bao) nestled inside on perforated parchment paper, showing translucent dough stretched gently over rich savory broth and meat filling.
+- Accents: Accompanied by a small rustic white ceramic sauce dish filled with dark aged vinegar, ginger matchsticks, and aromatic red chili oil.
+- Perspective: 40-degree tabletop isometric angle showing the steamer depth, dumplings, and dipping dish.
+- Tactile Realism: Woven bamboo textures, delicate dumpling pleats, glistening chili oil, natural soft daylight.
+- Isolated on a crisp pure solid white background with a subtle soft contact shadow underneath.</div>
+        </div>
+      </div>
+
+      <!-- Var 26 Watercolor -->
+      <div class="card">
+        <div class="img-wrap"><img src="/test-icons/var_26_dumplings_watercolor.png" alt="Var 26"></div>
+        <div class="body">
+          <div><span class="badge badge-watercolor">Filter Dropdown Watercolor</span> <span class="badge badge-watercolor">Sepia Ink Wobble</span></div>
+          <h3>Var 26: Steamer Dumplings Sketchbook Watercolor</h3>
+          <p style="font-size:13px; color:#666; margin-top:0;">Hand-drawn Asian culinary travel sketchbook style with sepia ink contours, delicate translucent dumpling washes, and chili oil droplets.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRANSFORMED ORIGINAL DESIGNS -->
+    <div class="section-title">✨ Transformed & Copyright-Safe Realism (Mandi & Cheesesteak)</div>
+    <div class="grid">
+      <!-- Var 21 Transformed Mandi -->
+      <div class="card favorite">
+        <div class="img-wrap"><img src="/icons/food/mandi_rice.webp" alt="Mandi Rice Cutout"></div>
+        <div class="body">
+          <div><span class="badge badge-fav">⭐ SAVED AS MAP PIN</span> <span class="badge badge-legal">/icons/food/mandi_rice.webp</span></div>
+          <h3>Var 21: Transformed Mandi Platter (Turquoise Stoneware)</h3>
+          <p style="font-size:13px; color:#666; margin-top:0;">Transformed into an oval turquoise reactive stoneware dish (not a round bronze tray). Single hero roasted chicken quarter, ruby pomegranate seeds, toasted pine nuts, grilled Meyer lemon. Transparent 512x512 WebP.</p>
+        </div>
+      </div>
+
+      <!-- Var 22 Transformed Cheesesteak -->
+      <div class="card favorite">
+        <div class="img-wrap"><img src="/icons/food/cheesesteak.webp" alt="Cheesesteak Cutout"></div>
+        <div class="body">
+          <div><span class="badge badge-fav">⭐ SAVED AS MAP PIN</span> <span class="badge badge-legal">/icons/food/cheesesteak.webp</span></div>
+          <h3>Var 22: Transformed Halved Cheesesteak Hero</h3>
+          <p style="font-size:13px; color:#666; margin-top:0;">Transformed from single vertical sub to an angled cut cross-section with one half propped against the other. Toasted sesame hoagie, oozing cheese webbing, charred peppers & shaved ribeye. Transparent 512x512 WebP.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- MATCHA WINNERS SECTION -->
+    <div class="section-title">🍵 Matcha Winners (Saved in System)</div>
+    <div class="grid">
+      <div class="card favorite">
+        <div class="img-wrap" style="background: #FAF7F2;"><img src="/icons/food/matcha.webp" alt="Matcha Map Pin"></div>
+        <div class="body">
+          <div><span class="badge badge-fav">⭐ SAVED AS MAP PIN</span> <span class="badge badge-togo">Lid Cutout Repaired</span></div>
+          <h3>Matcha Map Pin Icon (/icons/food/matcha.webp)</h3>
+          <p style="font-size:13px; color:#666; margin-top:0;">Lid cutout repaired! The white specular reflection on the plastic lid is now 100% preserved with zero holes or missing chunks. 512x512 transparent WebP.</p>
+        </div>
+      </div>
+
+      <div class="card favorite">
+        <div class="img-wrap" style="background: #FAF7F2;"><img src="/icons/food/matcha_cup.webp" alt="Matcha Filter Dropdown"></div>
+        <div class="body">
+          <div><span class="badge badge-fav">⭐ SAVED FOR DROPDOWN</span> <span class="badge badge-watercolor">/icons/food/matcha_cup.webp</span></div>
+          <h3>Matcha Filter Dropdown Icon (/icons/food/matcha_cup.webp)</h3>
+          <p style="font-size:13px; color:#666; margin-top:0;">Cozy ceramic mug of matcha latte with heart latte art, bamboo whisk beside it. 512x512 transparent WebP.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

@@ -17,9 +17,9 @@ interface PresetConfig {
 const PRESETS: Record<PresetKey, PresetConfig> = {
   k_chicken: {
     label: "K-Chicken (3 Wings)",
-    iconFile: "/food-svgs/k-chicken.svg",
+    iconFile: "/food-svgs/recraft-true-horiz-3.svg",
     pieces: [
-      { id: "k_chicken_main", label: "K-Chicken (Active with Sesame & Scallions)", file: "/food-svgs/k-chicken.svg", x: 0, y: 0, rot: 0, scale: 0.95 },
+      { id: "k_chicken_main", label: "K-Chicken (Recraft True Horizontal Vector)", file: "/food-svgs/recraft-true-horiz-3.svg", x: 0, y: 0, rot: 0, scale: 0.95 },
       { id: "left", label: "Left wing piece", file: "/food-svgs/recraft-left-wing-flat.svg", x: -160, y: 130, rot: -80, scale: 0.75 },
       { id: "right", label: "Drumette piece", file: "/food-svgs/recraft-right-drumette.svg", x: 140, y: 90, rot: 46, scale: 0.75 },
       { id: "center", label: "Top tender piece", file: "/food-svgs/recraft-center-flat.svg", x: -10, y: -60, rot: 37, scale: 0.85 }
@@ -104,6 +104,8 @@ export default function FoodIconStudioPage() {
   const [sel, setSel] = useState<string>(PRESETS.k_chicken.pieces[0].id);
   const [bg, setBg] = useState("#FAF7F2");
   const [copied, setCopied] = useState(false);
+  const [baking, setBaking] = useState(false);
+  const [bakedMsg, setBakedMsg] = useState("");
   const drag = useRef<{ id: string; sx: number; sy: number; ox: number; oy: number } | null>(null);
 
   function loadPreset(key: PresetKey) {
@@ -155,6 +157,43 @@ export default function FoodIconStudioPage() {
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error("Failed to copy SVG:", err);
+    }
+  }
+
+  async function bakeWebp() {
+    setBaking(true);
+    setBakedMsg("");
+    try {
+      const parts: string[] = [];
+      for (const id of order) {
+        const p = pieces.find(x => x.id === id);
+        if (!p) continue;
+        const txt = await (await fetch(p.file)).text();
+        const vbMatch = txt.match(/viewBox="([^"]+)"/);
+        const vb = vbMatch ? vbMatch[1] : "0 0 520 520";
+        const inner = txt.replace(/^[\s\S]*?<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
+        parts.push(
+          `<g transform="translate(${p.x} ${p.y}) rotate(${p.rot}) scale(${p.scale})"><svg x="${-BASE / 2}" y="${-BASE / 2}" width="${BASE}" height="${BASE}" viewBox="${vb}">${inner}</svg></g>`
+        );
+      }
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-600 -400 1200 800">${parts.join("")}</svg>`;
+      const res = await fetch("/api/admin/save-studio-icon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: currentPreset, svg }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBakedMsg(`Saved! (${data.size} B)`);
+        setTimeout(() => setBakedMsg(""), 3000);
+      } else {
+        setBakedMsg(`Err: ${data.error}`);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setBakedMsg(`Err: ${msg}`);
+    } finally {
+      setBaking(false);
     }
   }
 
@@ -271,9 +310,16 @@ export default function FoodIconStudioPage() {
           ))}
           <button
             onClick={copySvg}
-            className="ml-auto rounded-lg bg-[#E84A27] hover:bg-[#d03d1b] px-3 py-1.5 font-bold text-white transition-colors"
+            className="rounded-lg bg-white/10 hover:bg-white/20 px-2.5 py-1.5 font-bold text-white transition-colors"
           >
-            {copied ? "Copied SVG!" : "Copy SVG"}
+            {copied ? "Copied!" : "Copy SVG"}
+          </button>
+          <button
+            onClick={bakeWebp}
+            disabled={baking}
+            className="rounded-lg bg-[#E84A27] hover:bg-[#d03d1b] disabled:opacity-50 px-2.5 py-1.5 font-bold text-white transition-colors"
+          >
+            {baking ? "Baking…" : bakedMsg || "Save & Bake WebP"}
           </button>
         </div>
 

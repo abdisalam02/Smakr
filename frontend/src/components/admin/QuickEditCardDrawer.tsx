@@ -243,39 +243,43 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
   const currentStatus = getPopupStatus(mockTempVenue);
 
   return (
-    <div className="fixed inset-0 z-[70] flex justify-end bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[70] flex justify-end bg-[#181615]/25 backdrop-blur-[2px] animate-in fade-in duration-200">
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Admin Quick Edit"
-        className="relative w-full max-w-lg h-full bg-[#181615] text-zinc-100 border-l border-white/10 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-200"
+        className="relative w-full max-w-lg h-full bg-[#FAF7F2] text-[#181615] border-l border-[#E6DDD0] shadow-[-12px_0_36px_rgba(24,22,21,0.14)] flex flex-col overflow-hidden animate-in slide-in-from-right duration-200"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-black/40">
-          <div>
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#E6DDD0] bg-[#FAF7F2]/95 backdrop-blur-md shrink-0">
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-[#e84a27] text-white">
-                Admin Quick-Edit
+              <span className="text-[10px] uppercase font-extrabold tracking-wider px-2.5 py-0.5 rounded-full bg-[#E84A27] text-white shadow-2xs">
+                ADMIN EDIT
               </span>
-              <span className="text-xs text-zinc-400 truncate max-w-[200px]">
+              <span className="text-xs font-semibold text-[#6B6459] truncate max-w-[220px]">
                 {post.spot_name}
               </span>
             </div>
-            <h2 className="text-base font-bold text-white mt-1">
-              Curate Spot & Dish
+            <h2
+              className="text-lg font-extrabold text-[#181615] tracking-tight mt-0.5"
+              style={{ fontFamily: "var(--font-comico), sans-serif" }}
+            >
+              Curate Spot &amp; Dish
             </h2>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+            className="w-8 h-8 rounded-full bg-[#181615]/6 hover:bg-[#181615]/12 text-[#181615] flex items-center justify-center transition-colors cursor-pointer shrink-0"
             aria-label="Close"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Scrollable Form Body */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-6 no-scrollbar">
+        <div className="flex-1 overflow-y-auto p-5 space-y-5 no-scrollbar">
           {/* Hero Image Section with VisualPhotoSwitcher */}
           <div className="space-y-2">
             <VisualPhotoSwitcher
@@ -294,33 +298,33 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
           </div>
 
           {/* Dish & Pricing */}
-          <div className="space-y-3 p-4 rounded-2xl bg-white/[0.03] border border-white/10">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-              Dish & Pricing
+          <div className="space-y-3.5 p-4 rounded-2xl bg-white/90 border border-[#E6DDD0] shadow-[0_2px_8px_rgba(24,22,21,0.04)]">
+            <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-[#6B6459]">
+              Dish &amp; Pricing
             </h3>
 
             <div>
-              <label className="text-[11px] text-zinc-400 mb-1 block">Dish Title</label>
+              <label className="text-[11px] font-bold text-[#6B6459] mb-1 block">Dish Title</label>
               <input
                 type="text"
                 value={dishName}
                 onChange={(e) => setDishName(e.target.value)}
                 placeholder="e.g. Handmade Spicy Bao"
-                className="w-full text-sm px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white font-medium focus:outline-hidden focus:border-[#e84a27]"
+                className="w-full text-sm font-semibold px-3 py-2 rounded-xl bg-[#FAF7F2] border border-[#D8CFC0] focus:border-[#E84A27] focus:ring-2 focus:ring-[#E84A27]/15 text-[#181615] placeholder:text-[#181615]/40 outline-none transition-all"
               />
             </div>
 
             {/* Strict Nullable Price with 1-Tap Clear */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-[11px] text-zinc-400">
-                  Exact Price in NOK <span className="text-zinc-500">(Optional)</span>
+                <label className="text-[11px] font-bold text-[#6B6459]">
+                  Exact Price in NOK <span className="font-normal text-[#6B6459]/75">(Optional)</span>
                 </label>
                 {priceNok !== "" && (
                   <button
                     type="button"
                     onClick={() => setPriceNok("")}
-                    className="text-[10px] text-rose-400 hover:text-rose-300 font-medium transition-colors"
+                    className="text-[10px] text-red-600 hover:text-red-700 font-bold transition-colors cursor-pointer"
                   >
                     ✕ Clear Price
                   </button>
@@ -328,27 +332,27 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
               </div>
               <div className="flex gap-2">
                 <div className="relative flex-1">
-                  <span className="absolute left-3 top-2.5 text-xs text-zinc-500">NOK</span>
+                  <span className="absolute left-3 top-2.5 text-xs font-bold text-[#6B6459]">NOK</span>
                   <input
                     type="number"
                     value={priceNok}
                     onChange={(e) => setPriceNok(e.target.value)}
                     placeholder="e.g. 145 (leave empty for none)"
-                    className="w-full text-sm pl-12 pr-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white font-mono focus:outline-hidden focus:border-[#e84a27]"
+                    className="w-full text-sm font-semibold pl-12 pr-3 py-2 rounded-xl bg-[#FAF7F2] border border-[#D8CFC0] focus:border-[#E84A27] focus:ring-2 focus:ring-[#E84A27]/15 text-[#181615] placeholder:text-[#181615]/40 font-mono outline-none transition-all"
                   />
                 </div>
 
                 {/* Price Tier Fallback */}
-                <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/10">
+                <div className="flex items-center gap-1 bg-[#FAF7F2] p-1 rounded-xl border border-[#D8CFC0]">
                   {(["$", "$$", "$$$"] as const).map((tier) => (
                     <button
                       key={tier}
                       type="button"
                       onClick={() => setPriceTier(priceTier === tier ? "" : tier)}
-                      className={`px-2.5 py-1 text-xs rounded-lg font-mono font-bold transition-all ${
+                      className={`px-2.5 py-1 text-xs rounded-lg font-mono transition-all cursor-pointer ${
                         priceTier === tier
-                          ? "bg-[#e84a27] text-white shadow-xs"
-                          : "text-zinc-400 hover:text-white"
+                          ? "bg-[#E84A27] text-white font-bold shadow-xs"
+                          : "bg-[#F3EDE2] hover:bg-[#EAE1D3] text-[#181615]/80 font-semibold"
                       }`}
                       title={`Fallback tier ${tier}`}
                     >
@@ -357,27 +361,27 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
                   ))}
                 </div>
               </div>
-              <p className="text-[10px] text-zinc-500 mt-1">
+              <p className="text-[10px] font-medium text-[#6B6459] mt-1">
                 If cleared, no phantom price badge renders. Price tier ($) displays only if set.
               </p>
             </div>
 
             {/* Unified Category & Map Pin Icon Selector */}
-            <div className="pt-1 border-t border-white/10">
-              <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="pt-2.5 border-t border-[#E6DDD0]">
+              <div className="flex items-center justify-between gap-2 mb-2.5">
                 <div>
-                  <label className="text-[11px] font-semibold text-zinc-300 block">
+                  <label className="text-[11px] font-extrabold uppercase tracking-wider text-[#6B6459] block">
                     Category &amp; Map Pin Icon
                   </label>
-                  <span className="text-[10px] text-zinc-500">
-                    Selecting a category syncs the pin icon, or customize from 95+ foodie emojis
+                  <span className="text-[10px] font-medium text-[#6B6459]">
+                    Pick a custom Smakr dish icon below, or browse the full catalog
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsIconPickerOpen(true)}
-                  className="shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#e84a27]/15 hover:bg-[#e84a27]/25 border border-[#e84a27]/35 text-xs font-bold text-[#FAF7F2] transition-all active:scale-95 cursor-pointer"
-                  title="Open 95+ Foodie Emoji Picker"
+                  className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#F3EDE2] hover:bg-[#EAE1D3] border border-[#E2D9C8] text-xs font-bold text-[#181615] transition-all active:scale-95 cursor-pointer shadow-2xs"
+                  title="Open Full Custom Art & Icon Catalog"
                 >
                   <span className="text-base leading-none flex items-center justify-center">
                     {isCustomFoodIcon(spotIcon) ? (
@@ -389,56 +393,90 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
                       "📍"
                     )}
                   </span>
-                  <span className="text-[#FF8A6C]">🎨 Customize Pin Emoji</span>
+                  <span className="text-[#E84A27]">All Icons ▸</span>
                 </button>
               </div>
-              <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto no-scrollbar">
-                {FOOD_CATEGORIES.filter((c) => c.id !== "all").map((cat) => (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => {
-                      setCategory(cat.id);
-                      setSpotIcon(cat.emoji);
-                    }}
-                    className={`px-2.5 py-1 text-xs rounded-full border transition-all flex items-center gap-1 cursor-pointer ${
-                      category === cat.id
-                        ? "bg-white text-zinc-950 font-bold border-white shadow-xs"
-                        : "bg-white/5 text-zinc-400 border-white/10 hover:text-white hover:bg-white/10"
-                    }`}
-                  >
-                    <span>{cat.emoji}</span>
-                    <span>{cat.label}</span>
-                  </button>
-                ))}
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 max-h-56 overflow-y-auto no-scrollbar pr-0.5">
+                {[
+                  { id: "k_chicken", cat: "k_chicken", label: "K-Chicken" },
+                  { id: "fried_chicken", cat: "fried_chicken", label: "Fried Chicken" },
+                  { id: "pizza", cat: "pizza", label: "Pizza" },
+                  { id: "pasta", cat: "pasta", label: "Pasta" },
+                  { id: "ramen", cat: "ramen", label: "Ramen" },
+                  { id: "coffee", cat: "coffee", label: "Coffee" },
+                  { id: "croissant", cat: "bakery", label: "Croissant" },
+                  { id: "cinnamon_roll", cat: "cinnamon_roll", label: "Kanelbolle" },
+                  { id: "naan", cat: "naan", label: "Garlic Naan" },
+                  { id: "banh_mi", cat: "vietnamese", label: "Bánh Mì" },
+                  { id: "burger", cat: "burger", label: "Burger" },
+                  { id: "tacos", cat: "tacos", label: "Tacos" },
+                  { id: "sushi", cat: "sushi", label: "Sushi" },
+                  { id: "curry", cat: "curry", label: "Curry" },
+                  { id: "mandi_rice", cat: "mandi_rice", label: "Mandi Rice" },
+                  { id: "dumplings", cat: "dumplings", label: "Dumplings" },
+                  { id: "bao", cat: "bao", label: "Bao Bun" },
+                  { id: "kebab", cat: "kebab", label: "Kebab" },
+                  { id: "matcha", cat: "matcha", label: "Matcha" },
+                  { id: "gelato", cat: "dessert", label: "Gelato" },
+                  { id: "dessert", cat: "dessert", label: "Dessert" },
+                  { id: "natural_wine", cat: "drinks", label: "Natty Wine" },
+                  { id: "nordic_seafood", cat: "sushi", label: "Seafood" },
+                  { id: "breakfast", cat: "bakery", label: "Brunch" },
+                ].map((item) => {
+                  const isActive =
+                    spotIcon === item.id ||
+                    (!spotIcon && category === item.id);
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        setCategory(item.id as FoodCategory);
+                        setSpotIcon(item.id);
+                      }}
+                      className={`px-2 py-1.5 text-[11px] rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer ${
+                        isActive
+                          ? "bg-[#E84A27] text-white border-[#E84A27] font-bold shadow-xs"
+                          : "bg-[#F3EDE2] hover:bg-[#EAE1D3] text-[#181615]/85 border-[#E2D9C8] font-semibold"
+                      }`}
+                    >
+                      <SmakrFoodIcon
+                        name={item.id}
+                        className="w-6 h-6 shrink-0 object-contain"
+                        monochrome={false}
+                      />
+                      <span className="truncate">{item.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
 
           {/* Spot Type & Pop-Up Residency */}
-          <div className="space-y-3 p-4 rounded-2xl bg-white/[0.03] border border-white/10">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-              Spot Type & Schedule
+          <div className="space-y-3.5 p-4 rounded-2xl bg-white/90 border border-[#E6DDD0] shadow-[0_2px_8px_rgba(24,22,21,0.04)]">
+            <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-[#6B6459]">
+              Spot Type &amp; Schedule
             </h3>
 
             {/* Spot Type Selector */}
             <div className="grid grid-cols-3 gap-2">
               {[
-                { type: "restaurant" as const, label: "Restaurant", icon: "🍽️" },
-                { type: "food_truck" as const, label: "Food Truck", icon: "🚚" },
-                { type: "popup" as const, label: "Pop-up", icon: "🎟️" },
+                { type: "restaurant" as const, label: "Restaurant", icon: "storefront" },
+                { type: "food_truck" as const, label: "Food Truck", icon: "food_truck" },
+                { type: "popup" as const, label: "Pop-up", icon: "popup" },
               ].map((item) => (
                 <button
                   key={item.type}
                   type="button"
                   onClick={() => setSpotType(item.type)}
-                  className={`py-2 px-2 rounded-xl text-xs font-bold border flex flex-col items-center gap-1 transition-all ${
+                  className={`py-2 px-2 rounded-xl text-xs border flex flex-col items-center gap-1 transition-all cursor-pointer ${
                     spotType === item.type
-                      ? "bg-[#e84a27] text-white border-[#e84a27] shadow-sm"
-                      : "bg-white/5 text-zinc-400 border-white/10 hover:bg-white/10 hover:text-white"
+                      ? "bg-[#E84A27] text-white border-[#E84A27] font-bold shadow-xs"
+                      : "bg-[#F3EDE2] hover:bg-[#EAE1D3] text-[#181615]/80 border-[#E2D9C8] font-semibold"
                   }`}
                 >
-                  <span className="text-lg">{item.icon}</span>
+                  <SmakrFoodIcon name={item.icon} className="w-5 h-5 object-contain" monochrome={false} />
                   <span>{item.label}</span>
                 </button>
               ))}
@@ -446,42 +484,42 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
 
             {/* Pop-up dates */}
             {spotType === "popup" && (
-              <div className="space-y-2 pt-2 border-t border-white/10 animate-in fade-in duration-150">
+              <div className="space-y-2.5 pt-2.5 border-t border-[#E6DDD0] animate-in fade-in duration-150">
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-[10px] text-zinc-400 block mb-1">
+                    <label className="text-[10px] font-bold text-[#6B6459] block mb-1">
                       Start Date
                     </label>
                     <input
                       type="date"
                       value={popupStartDate}
                       onChange={(e) => setPopupStartDate(e.target.value)}
-                      className="w-full text-xs px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white font-mono focus:outline-hidden"
+                      className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-xl bg-[#FAF7F2] border border-[#D8CFC0] focus:border-[#E84A27] focus:ring-2 focus:ring-[#E84A27]/15 text-[#181615] font-mono outline-none transition-all"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] text-zinc-400 block mb-1">
+                    <label className="text-[10px] font-bold text-[#6B6459] block mb-1">
                       End Date
                     </label>
                     <input
                       type="date"
                       value={popupEndDate}
                       onChange={(e) => setPopupEndDate(e.target.value)}
-                      className="w-full text-xs px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-white font-mono focus:outline-hidden"
+                      className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-xl bg-[#FAF7F2] border border-[#D8CFC0] focus:border-[#E84A27] focus:ring-2 focus:ring-[#E84A27]/15 text-[#181615] font-mono outline-none transition-all"
                     />
                   </div>
                 </div>
 
                 {/* Status Preview Badge */}
                 {currentStatus.label && (
-                  <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-300 flex items-center justify-between">
+                  <div className="p-2.5 rounded-xl bg-[#E84A27]/10 border border-[#E84A27]/25 text-[11px] font-semibold text-[#181615] flex items-center justify-between">
                     <span>Preview Badge:</span>
-                    <span className="font-bold px-2 py-0.5 rounded-full bg-amber-500 text-zinc-950">
+                    <span className="font-bold px-2.5 py-0.5 rounded-full bg-[#E84A27] text-white">
                       {currentStatus.label}
                     </span>
                   </div>
                 )}
-                <p className="text-[10px] text-zinc-500">
+                <p className="text-[10px] font-medium text-[#6B6459]">
                   Active pop-ups show urgency badges and pulse on the radar. Ended pop-ups remain visible for 7 days at 50% opacity, then auto-archive.
                 </p>
               </div>
@@ -489,16 +527,16 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
 
             {/* Food Truck schedule */}
             {spotType === "food_truck" && (
-              <div className="pt-2 border-t border-white/10 space-y-1.5 animate-in fade-in duration-150">
-                <label className="text-[11px] text-zinc-400 block">
-                  Location & Schedule Details
+              <div className="pt-2.5 border-t border-[#E6DDD0] space-y-1.5 animate-in fade-in duration-150">
+                <label className="text-[11px] font-bold text-[#6B6459] block">
+                  Location &amp; Schedule Details
                 </label>
                 <input
                   type="text"
                   value={locationSchedule}
                   onChange={(e) => setLocationSchedule(e.target.value)}
                   placeholder="e.g. Parked at Youngstorget Thurs–Sat 18:00–23:00"
-                  className="w-full text-xs px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-hidden focus:border-[#e84a27]"
+                  className="w-full text-xs font-semibold px-3 py-2 rounded-xl bg-[#FAF7F2] border border-[#D8CFC0] focus:border-[#E84A27] focus:ring-2 focus:ring-[#E84A27]/15 text-[#181615] placeholder:text-[#181615]/40 outline-none transition-all"
                 />
               </div>
             )}
@@ -507,18 +545,18 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
 
           {/* Feature #1: Kitchen Live Status & Magic Link */}
           {linkedVenue && (
-            <div className="space-y-3 p-4 rounded-2xl bg-white/[0.03] border border-white/10">
+            <div className="space-y-3.5 p-4 rounded-2xl bg-white/90 border border-[#E6DDD0] shadow-[0_2px_8px_rgba(24,22,21,0.04)]">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5">
                   <span className="text-base">👨‍🍳</span>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+                  <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-[#6B6459]">
                     Kitchen Live Status &amp; Magic Link
                   </h3>
                 </div>
                 <button
                   type="button"
                   onClick={handleCopyKitchenLink}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-orange-500/20 hover:bg-orange-500/30 text-[#FF8A6C] border border-orange-500/30 text-[11px] font-bold transition-all cursor-pointer"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#F3EDE2] hover:bg-[#EAE1D3] text-[#E84A27] border border-[#E2D9C8] text-[11px] font-bold transition-all cursor-pointer"
                   title="Copy zero-password mobile link to DM to restaurant"
                 >
                   <span>🔗</span>
@@ -538,10 +576,10 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
                     key={s.id}
                     type="button"
                     onClick={() => setKitchenStatus(s.id)}
-                    className={`py-2 px-2 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    className={`py-2 px-2 rounded-xl text-xs border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                       kitchenStatus === s.id
-                        ? "bg-[#e84a27] text-white border-[#e84a27] shadow-sm"
-                        : "bg-white/5 text-zinc-400 border-white/10 hover:bg-white/10 hover:text-white"
+                        ? "bg-[#E84A27] text-white border-[#E84A27] font-bold shadow-xs"
+                        : "bg-[#F3EDE2] hover:bg-[#EAE1D3] text-[#181615]/80 border-[#E2D9C8] font-semibold"
                     }`}
                   >
                     <span>{s.icon}</span>
@@ -553,10 +591,10 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
               {/* Kitchen Note */}
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <label className="text-[10px] text-zinc-400 block">
+                  <label className="text-[10px] font-bold text-[#6B6459] block">
                     Live Batch Note (optional)
                   </label>
-                  <span className="text-[9px] font-mono text-zinc-500">{kitchenBatchNote.length}/60</span>
+                  <span className="text-[9px] font-mono font-semibold text-[#6B6459]">{kitchenBatchNote.length}/60</span>
                 </div>
                 <input
                   type="text"
@@ -564,25 +602,25 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
                   value={kitchenBatchNote}
                   onChange={(e) => setKitchenBatchNote(e.target.value)}
                   placeholder="e.g. 30 cardamom buns warm from the oven at 12:30"
-                  className="w-full text-xs px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder-zinc-500 focus:outline-hidden focus:border-[#e84a27]"
+                  className="w-full text-xs font-semibold px-3 py-2 rounded-xl bg-[#FAF7F2] border border-[#D8CFC0] focus:border-[#E84A27] focus:ring-2 focus:ring-[#E84A27]/15 text-[#181615] placeholder:text-[#181615]/40 outline-none transition-all"
                 />
               </div>
 
-              <p className="text-[10px] text-zinc-500 leading-relaxed">
+              <p className="text-[10px] font-medium text-[#6B6459] leading-relaxed">
                 Send the Kitchen Magic Link to the restaurant so chefs can toggle fresh batches or sold-out status from their phones without any password.
               </p>
             </div>
           )}
 
           {/* Editorial Review & Rating */}
-          <div className="space-y-3 p-4 rounded-2xl bg-white/[0.03] border border-white/10">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-              Editorial & Rating
+          <div className="space-y-3.5 p-4 rounded-2xl bg-white/90 border border-[#E6DDD0] shadow-[0_2px_8px_rgba(24,22,21,0.04)]">
+            <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-[#6B6459]">
+              Editorial &amp; Rating
             </h3>
 
             <div>
               <div className="flex items-center justify-between gap-2 mb-1.5">
-                <label className="text-[11px] text-zinc-400 block">
+                <label className="text-[11px] font-bold text-[#6B6459] block">
                   Smakr Taste Note / Verdict
                 </label>
                 <button
@@ -614,7 +652,7 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
                       showToast("Could not auto-write note right now.");
                     }
                   }}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#e84a27]/15 hover:bg-[#e84a27]/25 border border-[#e84a27]/30 text-[#e84a27] text-[10px] font-bold transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#E84A27]/12 hover:bg-[#E84A27]/20 border border-[#E84A27]/30 text-[#E84A27] text-[10px] font-bold transition-colors cursor-pointer"
                 >
                   <Sparkles className="w-3 h-3" />
                   ✨ Auto-Write Note &amp; Price
@@ -625,12 +663,12 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
                 value={reviewText}
                 onChange={(e) => setReviewText(e.target.value)}
                 placeholder="Crisp pastry with velvety pistachio cream…"
-                className="w-full text-xs px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-hidden focus:border-[#e84a27]"
+                className="w-full text-xs font-semibold px-3 py-2 rounded-xl bg-[#FAF7F2] border border-[#D8CFC0] focus:border-[#E84A27] focus:ring-2 focus:ring-[#E84A27]/15 text-[#181615] placeholder:text-[#181615]/40 outline-none transition-all"
               />
 
               {linkedVenue?.curated_reviews && linkedVenue.curated_reviews.length > 0 && (
-                <div className="pt-2">
-                  <span className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider block mb-1.5">
+                <div className="pt-2.5">
+                  <span className="text-[10px] text-[#6B6459] font-extrabold uppercase tracking-wider block mb-1.5">
                     Pick from Google Reviews:
                   </span>
                   <div className="space-y-1.5 max-h-36 overflow-y-auto no-scrollbar">
@@ -642,12 +680,12 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
                           setReviewText(rev.text);
                           setRating(Math.round(rev.rating));
                         }}
-                        className="w-full text-left p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-colors cursor-pointer group"
+                        className="w-full text-left p-2.5 rounded-xl bg-[#FAF7F2] hover:bg-[#F3EDE2] border border-[#E2D9C8] transition-colors cursor-pointer group"
                       >
-                        <p className="text-[11px] text-zinc-300 italic line-clamp-2 group-hover:text-white">
+                        <p className="text-[11px] font-medium text-[#181615]/85 italic line-clamp-2 group-hover:text-[#181615]">
                           &ldquo;{rev.text}&rdquo;
                         </p>
-                        <span className="text-[9px] text-zinc-400 mt-0.5 block">
+                        <span className="text-[9px] font-bold text-[#6B6459] mt-0.5 block">
                           ★ {rev.rating} · {rev.author_name}
                         </span>
                       </button>
@@ -658,21 +696,21 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
             </div>
 
             <div>
-              <label className="text-[11px] text-zinc-400 mb-1 block">Star Rating</label>
+              <label className="text-[11px] font-bold text-[#6B6459] mb-1 block">Star Rating</label>
               <div className="flex items-center gap-2">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
                     key={star}
                     type="button"
                     onClick={() => setRating(star)}
-                    className={`text-xl transition-transform active:scale-125 ${
-                      star <= rating ? "text-amber-400" : "text-zinc-600"
+                    className={`text-xl transition-transform active:scale-125 cursor-pointer ${
+                      star <= rating ? "text-[#E84A27]" : "text-[#D8CFC0]"
                     }`}
                   >
                     ★
                   </button>
                 ))}
-                <span className="text-xs font-mono font-bold text-zinc-300 ml-2">
+                <span className="text-xs font-mono font-bold text-[#181615] ml-2">
                   {rating.toFixed(1)} / 5.0
                 </span>
               </div>
@@ -680,75 +718,75 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
           </div>
 
           {/* Status Controls */}
-          <div className="space-y-3 p-4 rounded-2xl bg-white/[0.03] border border-white/10">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-              Publishing & Status Controls
+          <div className="space-y-3.5 p-4 rounded-2xl bg-white/90 border border-[#E6DDD0] shadow-[0_2px_8px_rgba(24,22,21,0.04)]">
+            <h3 className="text-[11px] font-extrabold uppercase tracking-wider text-[#6B6459]">
+              Publishing &amp; Status Controls
             </h3>
 
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-xs font-medium text-white block">
+                <span className="text-xs font-bold text-[#181615] block">
                   Official Mascot Pick
                 </span>
-                <span className="text-[10px] text-zinc-500">
+                <span className="text-[10px] font-medium text-[#6B6459]">
                   Feature with Niwache badge in feed
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setIsOfficialPick(!isOfficialPick)}
-                className={`w-11 h-6 rounded-full transition-colors relative ${
-                  isOfficialPick ? "bg-[#e84a27]" : "bg-white/20"
+                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
+                  isOfficialPick ? "bg-[#E84A27]" : "bg-[#D8CFC0]"
                 }`}
               >
                 <div
-                  className={`w-4 h-4 rounded-full bg-white transition-transform absolute top-1 ${
+                  className={`w-4 h-4 rounded-full bg-white shadow-xs transition-transform absolute top-1 ${
                     isOfficialPick ? "right-1" : "left-1"
                   }`}
                 />
               </button>
             </div>
 
-            <div className="flex items-center justify-between pt-2 border-t border-white/10">
+            <div className="flex items-center justify-between pt-2.5 border-t border-[#E6DDD0]">
               <div>
-                <span className="text-xs font-medium text-white block">
+                <span className="text-xs font-bold text-[#181615] block">
                   Published in Feed
                 </span>
-                <span className="text-[10px] text-zinc-500">
+                <span className="text-[10px] font-medium text-[#6B6459]">
                   Muted dishes are hidden from public
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setIsPublished(!isPublished)}
-                className={`w-11 h-6 rounded-full transition-colors relative ${
-                  isPublished ? "bg-emerald-600" : "bg-white/20"
+                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
+                  isPublished ? "bg-emerald-600" : "bg-[#D8CFC0]"
                 }`}
               >
                 <div
-                  className={`w-4 h-4 rounded-full bg-white transition-transform absolute top-1 ${
+                  className={`w-4 h-4 rounded-full bg-white shadow-xs transition-transform absolute top-1 ${
                     isPublished ? "right-1" : "left-1"
                   }`}
                 />
               </button>
             </div>
 
-            <div className="flex items-center justify-between pt-2 border-t border-white/10">
+            <div className="flex items-center justify-between pt-2.5 border-t border-[#E6DDD0]">
               <div>
-                <span className="text-xs font-medium text-white block">
+                <span className="text-xs font-bold text-[#181615] block">
                   Archive Dish
                 </span>
-                <span className="text-[10px] text-zinc-500">
+                <span className="text-[10px] font-medium text-[#6B6459]">
                   Soft-archive from active queries
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setIsArchived(!isArchived)}
-                className={`px-3 py-1 rounded-xl text-xs font-semibold border transition-all ${
+                className={`px-3 py-1 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                   isArchived
-                    ? "bg-rose-500/20 text-rose-300 border-rose-500/30"
-                    : "bg-white/5 text-zinc-400 border-white/10 hover:text-rose-400"
+                    ? "bg-red-600/12 text-red-700 border-red-600/35"
+                    : "bg-[#F3EDE2] text-[#181615]/80 border-[#E2D9C8] hover:text-red-600 hover:border-red-600/30"
                 }`}
               >
                 {isArchived ? "Archived" : "Archive"}
@@ -758,11 +796,11 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 border-t border-white/10 bg-black/40 flex items-center justify-end gap-3">
+        <div className="px-5 py-3.5 border-t border-[#E6DDD0] bg-[#FAF7F2]/95 backdrop-blur-md flex items-center justify-end gap-3 shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+            className="px-4 py-2 rounded-full text-xs font-bold text-[#181615] bg-[#F3EDE2] hover:bg-[#EAE1D3] border border-[#E2D9C8] transition-colors cursor-pointer"
           >
             Cancel
           </button>
@@ -770,7 +808,7 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
             type="button"
             disabled={isSaving}
             onClick={handleSave}
-            className="flex items-center gap-2 px-5 py-2 rounded-xl bg-[#e84a27] hover:bg-[#d43f1e] text-white text-xs font-bold shadow-md transition-all active:scale-95 disabled:opacity-50"
+            className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#E84A27] hover:bg-[#d43f1d] active:scale-[0.98] text-white text-xs font-extrabold shadow-[0_4px_14px_rgba(232,74,39,0.3)] transition-all disabled:opacity-50 cursor-pointer"
           >
             <Check className="w-4 h-4" />
             <span>{isSaving ? "Saving…" : "Save Changes"}</span>
@@ -784,8 +822,9 @@ export function QuickEditCardDrawer({ post, onClose }: QuickEditCardDrawerProps)
           currentIcon={spotIcon || linkedVenue?.icon || (category as string)}
           onSelect={(iconKey, item) => {
             setSpotIcon(iconKey);
-            if (item?.category && item.category !== "all") {
-              setCategory(item.category as FoodCategory);
+            const selectedId = item?.id || iconKey;
+            if (selectedId && selectedId !== "all") {
+              setCategory(selectedId as FoodCategory);
             }
             setIsIconPickerOpen(false);
           }}

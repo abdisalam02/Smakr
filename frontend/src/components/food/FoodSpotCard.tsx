@@ -207,7 +207,10 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
         {/* Line 1: Category Icon/Name + Refined Status Pill */}
         <div className="flex items-center justify-between gap-1.5 min-w-0">
           <span className="text-[11px] font-semibold text-[#e84a27] uppercase tracking-wider flex items-center gap-1 font-comico truncate">
-            <SmakrFoodIcon name={taxonomy.spotKind} className="w-3.5 h-3.5 shrink-0" />
+            <SmakrFoodIcon
+              name={resolveCustomIconKey(venue.icon) || resolveCustomIconKey(venue.food_category) || taxonomy.spotKind}
+              className="w-3.5 h-3.5 shrink-0"
+            />
             <span className="truncate">{taxonomy.spotLabel}</span>
           </span>
 

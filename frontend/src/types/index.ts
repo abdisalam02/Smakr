@@ -29,6 +29,8 @@ export type FoodCategory =
   | "vietnamese"
   | "indian"
   | "mandi_rice"
+  | "cheesesteak"
+  | "pancakes"
   | "middle_eastern"
   | "sourdough"
   | "natural_wine"

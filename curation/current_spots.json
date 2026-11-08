@@ -1,0 +1,342 @@
+[
+  {
+    "id": "6952e7c0-1ae9-4865-b81b-272858404d95",
+    "name": "Digg Pizza - Grønland",
+    "spot_type": "restaurant",
+    "category": "Pizza",
+    "neighborhood": "Bjørvika",
+    "address": "Grønlandsleiret 1, 0190 Oslo, Norway",
+    "coords": [
+      10.762878,
+      59.9125805
+    ],
+    "price_level": "$$",
+    "google_rating": 4.9,
+    "google_reviews": 96,
+    "dishes": [],
+    "website": null
+  },
+  {
+    "id": "31fc5cc9-302a-448d-b79b-5d47e4c797fb",
+    "name": "Ochaya - The Matcha",
+    "spot_type": "restaurant",
+    "category": "Matcha",
+    "neighborhood": "sentrum",
+    "address": "Bernt Ankers gate 6a, 0183 Oslo, Norway",
+    "coords": [
+      10.7524851,
+      59.9158641
+    ],
+    "price_level": "$$",
+    "google_rating": 4.9,
+    "google_reviews": 229,
+    "dishes": [],
+    "website": null
+  },
+  {
+    "id": "9320b20c-eb48-4a41-a3d5-a5bb34a74488",
+    "name": "Daglig Brød",
+    "spot_type": "restaurant",
+    "category": "Bakery",
+    "neighborhood": "Bjørvika",
+    "address": "Alnafetgata 1B, 0192 Oslo, Norway",
+    "coords": [
+      10.7719982,
+      59.902419
+    ],
+    "price_level": "$",
+    "google_rating": 4.7,
+    "google_reviews": 112,
+    "dishes": [],
+    "website": null
+  },
+  {
+    "id": "58e4a775-e75a-4322-8b48-7ed325e19ec5",
+    "name": "Miso Ramen",
+    "spot_type": "restaurant",
+    "category": "Ramen",
+    "neighborhood": "sentrum",
+    "address": "Munkedamsveien 31, 0251 Oslo",
+    "coords": [
+      10.7264844,
+      59.9120956
+    ],
+    "price_level": "$$",
+    "google_rating": 4.4,
+    "google_reviews": 433,
+    "dishes": [],
+    "website": null
+  },
+  {
+    "id": "9d71ce5e-89c4-49e0-9da3-11b87a1087f0",
+    "name": "Lai Zai - Viet Street Food",
+    "spot_type": "restaurant",
+    "category": "vietnamese",
+    "neighborhood": "grunerlokka",
+    "address": "Thorvald Meyers gate 83A, 0552 Oslo, Norway",
+    "coords": [
+      10.7591497,
+      59.9198073
+    ],
+    "price_level": "$$",
+    "google_rating": 4.8,
+    "google_reviews": 198,
+    "dishes": [],
+    "website": null
+  },
+  {
+    "id": "4f717139-89a1-4180-9e5e-1d5b80896a67",
+    "name": "Em Oi!",
+    "spot_type": "restaurant",
+    "category": "Street Food",
+    "neighborhood": "Grønland",
+    "address": "Brugata 15, 0186 Oslo, Norway",
+    "coords": [
+      10.7571859,
+      59.9138482
+    ],
+    "price_level": "$$",
+    "google_rating": 4.7,
+    "google_reviews": null,
+    "dishes": [],
+    "website": null
+  },
+  {
+    "id": "29305b8b-4938-4989-81e3-4a18813be6cf",
+    "name": "Cocoa Café",
+    "spot_type": "restaurant",
+    "category": "Coffee",
+    "neighborhood": "sentrum",
+    "address": "Toftes Gate 48A, 0556 Oslo, Norway",
+    "coords": [
+      10.761301,
+      59.926034
+    ],
+    "price_level": "$$",
+    "google_rating": 4.4,
+    "google_reviews": 447,
+    "dishes": [],
+    "website": null
+  },
+  {
+    "id": "d25493ea-1659-4fa0-b7d3-7349d6b07349",
+    "name": "Kuro Oslo",
+    "spot_type": "restaurant",
+    "category": "Coffee",
+    "neighborhood": "sentrum",
+    "address": "Rathkes gate 9C, 0558 Oslo, Norway",
+    "coords": [
+      10.7632654,
+      59.9207964
+    ],
+    "price_level": "$$",
+    "google_rating": 4.7,
+    "google_reviews": 398,
+    "dishes": [],
+    "website": null
+  },
+  {
+    "id": "d0cd7f48-b5f5-40f6-81d9-dd18e7a831f7",
+    "name": "Yum Cha",
+    "spot_type": "restaurant",
+    "category": "dumplings",
+    "neighborhood": "Majorstuen",
+    "address": "Ole Vigs gate 24B, 0366 Oslo, Norway",
+    "coords": [
+      10.7189575,
+      59.9285521
+    ],
+    "price_level": "$$",
+    "google_rating": 4.3,
+    "google_reviews": 395,
+    "dishes": [],
+    "website": null
+  },
+  {
+    "id": "6c0c16d2-d919-4ec2-9834-dcd6aa9bc2a1",
+    "name": "Zam Zam avd HASLE",
+    "spot_type": "restaurant",
+    "category": "burrito_wrap",
+    "neighborhood": "sentrum",
+    "address": "Hovinveien 39, 0661 Oslo",
+    "coords": [
+      10.7913278,
+      59.9198946
+    ],
+    "price_level": "$$",
+    "google_rating": 4.7,
+    "google_reviews": 238,
+    "dishes": [],
+    "website": null
+  },
+  {
+    "id": "fc0775b3-cfe4-420d-ad0f-ffe0c50f8195",
+    "name": "Mandi House restaurant Oslo بيت المندي، ،yemeni restaurant",
+    "spot_type": "restaurant",
+    "category": "rice_bowls",
+    "neighborhood": "toyen",
+    "address": "Tøyengata 29, 0578 Oslo",
+    "coords": [
+      10.7680423,
+      59.9142087
+    ],
+    "price_level": "$$",
+    "google_rating": 4.6,
+    "google_reviews": 586,
+    "dishes": [],
+    "website": null
+  },
+  {
+    "id": "d8d80f28-7757-41bc-8b46-e64cbe103992",
+    "name": "U WAN SUM",
+    "spot_type": "popup",
+    "category": "Coffee",
+    "neighborhood": "sentrum",
+    "address": "Oslo, Norway",
+    "coords": [
+      10.7522,
+      59.9139
+    ],
+    "price_level": "$$",
+    "google_rating": null,
+    "google_reviews": null,
+    "dishes": [],
+    "website": null
+  },
+  {
+    "id": "579a51b3-ebb5-4638-a64c-8aed027563bd",
+    "name": "Dirty Taco",
+    "spot_type": "restaurant",
+    "category": "Food",
+    "neighborhood": "grunerlokka",
+    "address": "Olaf Ryes plass 9, 0552 Oslo",
+    "coords": [
+      10.7577829,
+      59.9235358
+    ],
+    "price_level": "$$",
+    "google_rating": 4.5,
+    "google_reviews": 78,
+    "dishes": [],
+    "website": null
+  },
+  {
+    "id": "a9bc2f3b-0714-4a12-863a-2517e9bab590",
+    "name": "Fuglen Coffee Roasters",
+    "spot_type": "restaurant",
+    "category": "Coffee",
+    "neighborhood": "sentrum",
+    "address": "St. Halvards gate 33, 0192 Oslo, Norway",
+    "coords": [
+      10.7746492,
+      59.9062171
+    ],
+    "price_level": "$$",
+    "google_rating": 4.6,
+    "google_reviews": 509,
+    "dishes": [],
+    "website": null
+  },
+  {
+    "id": "c0e5aaba-cddd-4897-a47f-b7af8c7e8986",
+    "name": "Masala Politics",
+    "spot_type": "restaurant",
+    "category": "naan",
+    "neighborhood": "sentrum",
+    "address": "Karl Johans gate 13, 0154 Oslo, Norway",
+    "coords": [
+      10.7446479,
+      59.9124739
+    ],
+    "price_level": "$$",
+    "google_rating": 4.5,
+    "google_reviews": 1660,
+    "dishes": [],
+    "website": null
+  },
+  {
+    "id": "40d7d83d-8686-47f0-9d78-727f535b5c32",
+    "name": "175°C K-fried",
+    "spot_type": "restaurant",
+    "category": "k_chicken",
+    "neighborhood": "sentrum",
+    "address": "Norway, Oslo, Vulkan, NO",
+    "coords": [
+      10.7519057,
+      59.9225201
+    ],
+    "price_level": "$$",
+    "google_rating": 4.8,
+    "google_reviews": 579,
+    "dishes": [],
+    "website": null
+  },
+  {
+    "id": "80c10c09-c945-4983-8dd2-3090cf3cc665",
+    "name": "Håndbakt Tøyen",
+    "spot_type": "restaurant",
+    "category": "Bakery",
+    "neighborhood": "sentrum",
+    "address": "Kjølberggata 21, 0653 Oslo, Norway",
+    "coords": [
+      10.778095,
+      59.9114936
+    ],
+    "price_level": "$$",
+    "google_rating": 4.3,
+    "google_reviews": 435,
+    "dishes": [],
+    "website": null
+  },
+  {
+    "id": "f137417c-d536-4a14-a169-8e2e5a6615fe",
+    "name": "Crave",
+    "spot_type": "restaurant",
+    "category": "Food",
+    "neighborhood": "Lillestrøm",
+    "address": "Voldgata 1, 2000 Lillestrøm, Norway",
+    "coords": [
+      11.048892,
+      59.9549195
+    ],
+    "price_level": "$$",
+    "google_rating": 4.7,
+    "google_reviews": 191,
+    "dishes": [],
+    "website": null
+  },
+  {
+    "id": "cea02b51-450d-45e7-b8d6-6c98435470b3",
+    "name": "Kveitemjøl",
+    "spot_type": "restaurant",
+    "category": "cinnamon_roll",
+    "neighborhood": "sentrum",
+    "address": "Fjordalléen 10, 0250 Oslo, Norway",
+    "coords": [
+      10.7251308,
+      59.9093407
+    ],
+    "price_level": "$$",
+    "google_rating": 4.4,
+    "google_reviews": 398,
+    "dishes": [],
+    "website": null
+  },
+  {
+    "id": "09bfa8ca-da77-4b62-b15e-e88b9674f561",
+    "name": "Stykke - Hasle",
+    "spot_type": "restaurant",
+    "category": "Pizza",
+    "neighborhood": "sentrum",
+    "address": "Bøkkerveien 11, 0579 Oslo, Norway",
+    "coords": [
+      10.7961609,
+      59.9273837
+    ],
+    "price_level": "$$",
+    "google_rating": 4.6,
+    "google_reviews": 303,
+    "dishes": [],
+    "website": null
+  }
+]

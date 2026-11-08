@@ -76,6 +76,20 @@ const PIN_SHADOW_SELECTED =
 const PIN_SHADOW_DEFAULT =
   "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.35)) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2))";
 
+function getMapMascotDimensions(zoom: number): { width: number; height: number } {
+  // Prominently sized mascot bust (~76px x 62px at default zoom 13.5) framing the 50px dish pin
+  const height = Math.round(Math.min(92, Math.max(56, (zoom - 10) * 9 + 44)));
+  const width = Math.round(height * 0.82);
+  return { width, height };
+}
+
+function getUserAvatarDimensions(zoom: number): { width: number; height: number } {
+  // Calibrated so user bust matches the visual head/torso volume of the Smakr mascot (~48px x 40px at zoom 13.5)
+  const height = Math.round(Math.min(58, Math.max(36, (zoom - 10) * 5 + 31)));
+  const width = Math.round(height * 0.82);
+  return { width, height };
+}
+
 /**
  * Updates a pin's selected/unselected visuals IN PLACE. Markers are created once
  * and only mutated afterwards, so store updates never tear down and rebuild the
@@ -90,6 +104,9 @@ function applyPinState(root: HTMLElement, isSelected: boolean) {
   const iconContainer = root.querySelector<HTMLElement>(".smakr-puck-icon");
   const arrow = root.querySelector<HTMLElement>(".smakr-puck-arrow");
   const isPopup = root.dataset.isPopup === "1";
+  const isWeeklyPick = root.dataset.isWeeklyPick === "1";
+  const baseIconPx = isWeeklyPick ? 42 : 37;
+  const selectedIconPx = isWeeklyPick ? 46 : 41;
   if (puck) {
     if (isPopup) {
       if (isSelected) {
@@ -113,12 +130,12 @@ function applyPinState(root: HTMLElement, isSelected: boolean) {
     if (isPopup) {
       iconContainer.style.filter = "none";
     } else if (isSelected) {
-      iconContainer.style.width = "35px";
-      iconContainer.style.height = "35px";
+      iconContainer.style.width = `${selectedIconPx}px`;
+      iconContainer.style.height = `${selectedIconPx}px`;
       iconContainer.style.filter = "url(#smakr-diecut-selected)";
     } else {
-      iconContainer.style.width = "31px";
-      iconContainer.style.height = "31px";
+      iconContainer.style.width = `${baseIconPx}px`;
+      iconContainer.style.height = `${baseIconPx}px`;
       iconContainer.style.filter = "url(#smakr-diecut-default)";
     }
   }
@@ -149,27 +166,23 @@ function buildUserAvatarPuckElement(
   container.style.transformOrigin = "bottom center";
   container.style.willChange = "transform";
 
-  // Free-standing Open Peeps Bust Sticker (prominent 44x52px proportions)
+  const initialDims = getUserAvatarDimensions(13.5);
+  // Free-standing Open Peeps Bust Sticker (synchronized with Smakr Pick dimensions)
   const charContainer = document.createElement("div");
   charContainer.className =
-    "relative flex items-end justify-center overflow-visible";
-  charContainer.style.width = "44px";
-  charContainer.style.height = "52px";
+    "puck-char relative flex items-end justify-center overflow-visible";
+  charContainer.style.width = `${initialDims.width}px`;
+  charContainer.style.height = `${initialDims.height}px`;
   // Crisp white die-cut vinyl sticker outline + soft elevation shadow
   charContainer.style.filter =
     "drop-shadow(1.5px 0 0 #FFFFFF) drop-shadow(-1.5px 0 0 #FFFFFF) drop-shadow(0 1.5px 0 #FFFFFF) drop-shadow(0 -1.5px 0 #FFFFFF) drop-shadow(0 3px 6px rgba(0, 0, 0, 0.22))";
 
-  const renderSvgInto = (svgStr: string, isMascotEngine = false) => {
+  const renderSvgInto = (svgStr: string, _isMascotEngine = false) => {
     const cleaned = svgStr.replace(/<g data-layer="ambience">[\s\S]*?<\/g>/g, "");
     charContainer.innerHTML = cleaned;
     const svgEl = charContainer.querySelector("svg");
     if (svgEl) {
-      if (isMascotEngine) {
-        svgEl.setAttribute("viewBox", "16 4 236 252");
-        svgEl.setAttribute("preserveAspectRatio", "xMidYMax meet");
-      } else {
-        svgEl.setAttribute("preserveAspectRatio", "xMidYMax meet");
-      }
+      svgEl.setAttribute("preserveAspectRatio", "xMidYMax meet");
       svgEl.style.width = "100%";
       svgEl.style.height = "100%";
       svgEl.style.display = "block";
@@ -177,30 +190,30 @@ function buildUserAvatarPuckElement(
     }
   };
 
-  if (useMascot) {
+  if (avatarConfig) {
+    renderSvgInto(buildOpenPeepsSvg(avatarConfig), false);
+  } else if (avatarUrl && avatarUrl.startsWith("data:image/svg+xml")) {
+    renderSvgInto(ensureBustAvatarSvg(avatarUrl), false);
+  } else if (useMascot) {
     renderSvgInto(
       buildMascotSVGString(
         mascotConfig ?? getOfficialSmakrMascotConfig(),
         false,
-        56,
-        64
+        MASCOT_VIEWBOX_WIDTH,
+        MASCOT_VIEWBOX_HEIGHT
       ),
       true
     );
-  } else if (avatarConfig) {
-    renderSvgInto(buildOpenPeepsSvg(avatarConfig), false);
-  } else if (avatarUrl && avatarUrl.startsWith("data:image/svg+xml")) {
-    renderSvgInto(ensureBustAvatarSvg(avatarUrl), false);
   } else {
     renderSvgInto(buildOpenPeepsSvg(getOrCreateGuestOpenPeepsConfig()), false);
   }
 
-  // Tactile editorial collar stamp anchored across the bust chest
+  // Subtle warm-paper editorial micro-pill
   const badge = document.createElement("div");
   badge.className =
-    "puck-badge -mt-2.5 relative z-20 bg-[#181615] text-[#FAF7F2] font-extrabold text-[9px] tracking-[0.08em] uppercase leading-none px-2 py-1 rounded-full shadow-[0_3px_8px_rgba(0,0,0,0.35)] border-[1.5px] border-[#FAF7F2] whitespace-nowrap flex items-center gap-1 -rotate-2 group-hover:scale-105 group-active:scale-95 transition-transform";
+    "puck-badge -mt-1.5 relative z-20 bg-[#FAF7F2]/95 backdrop-blur-xs text-[#181615]/85 font-bold text-[7.5px] tracking-[0.06em] uppercase leading-none px-1.5 py-0.5 rounded-full shadow-[0_1px_4px_rgba(24,22,21,0.14)] border border-[#181615]/12 whitespace-nowrap flex items-center gap-1 group-hover:scale-105 transition-transform";
   badge.style.fontFamily = "var(--font-comico), sans-serif";
-  badge.innerHTML = `<span style="width:5px;height:5px;border-radius:9999px;background:#10B981;box-shadow:0 0 6px #10B981;display:inline-block;"></span><span>YOU</span>`;
+  badge.innerHTML = `<span style="width:4px;height:4px;border-radius:9999px;background:#10B981;display:inline-block;"></span><span>You</span>`;
 
   // Glowing emerald GPS radar pulse dot directly beneath the bust
   const gpsDotWrapper = document.createElement("div");
@@ -226,33 +239,33 @@ function buildUserAvatarPuckElement(
 }
 
 /**
- * Calibrated zoom + viewport-responsive scale:
- * - Keeps the user's "YOU" avatar prominent even when zoomed out.
+ * Calibrated zoom-responsive scale for user avatar bust.
  */
-function applyPuckZoomScale(rootEl: HTMLElement, zoom: number, containerWidth?: number) {
+function applyPuckZoomScale(rootEl: HTMLElement, zoom: number, _containerWidth?: number) {
+  const { width, height } = getUserAvatarDimensions(zoom);
+  const charEl = rootEl.querySelector<HTMLElement>(".puck-char");
+  if (charEl) {
+    charEl.style.width = `${width}px`;
+    charEl.style.height = `${height}px`;
+  }
   const scaleEl = rootEl.querySelector<HTMLElement>(".puck-scale") ?? rootEl;
-  const zoomScale = Math.max(0.92, Math.min(1.12, 0.92 + Math.max(0, zoom - 12) * 0.05));
-  const width =
-    containerWidth ??
-    (typeof window !== "undefined" ? window.innerWidth : 400);
-  const viewportFactor = width < 420 ? 0.94 : width > 960 ? 1.0 : 0.97;
-  const finalScale = zoomScale * viewportFactor;
-  scaleEl.style.transform = `scale(${finalScale.toFixed(3)})`;
+  scaleEl.style.transform = "scale(1)";
 }
 
 function createAquarellePinElement(
   venue: Venue,
   isSelected: boolean,
   onClick: () => void,
-  overrideIconKey?: string | null
+  overrideIconKey?: string | null,
+  isWeeklyPickVenue = false
 ): HTMLDivElement {
   const root = document.createElement("div");
   root.className = "maplibregl-marker";
   root.style.position = "absolute";
   root.style.top = "0";
   root.style.left = "0";
-  root.style.width = "42px";
-  root.style.height = "48px";
+  root.style.width = isWeeklyPickVenue ? "52px" : "48px";
+  root.style.height = isWeeklyPickVenue ? "58px" : "54px";
   root.style.margin = "0";
   root.style.padding = "0";
   root.style.cursor = "pointer";
@@ -261,6 +274,7 @@ function createAquarellePinElement(
 
   const isPopup = venue.spot_type === "popup";
   root.dataset.isPopup = isPopup ? "1" : "0";
+  root.dataset.isWeeklyPick = isWeeklyPickVenue ? "1" : "0";
 
   const popupStatus = getPopupStatus(venue);
   const kitchenStatus = venue.kitchen_status?.status;
@@ -269,13 +283,17 @@ function createAquarellePinElement(
   const isSoldOut = kitchenStatus === "sold_out";
 
   const taxonomy = resolveEntityTaxonomy(venue);
-  const categoryKey = overrideIconKey || venue.food_category || taxonomy.dishCategory || "all";
+  const dishCustomKey = resolveCustomIconKey(taxonomy.dishCategory);
+  const explicitVenueIcon = venue.icon ? resolveCustomIconKey(venue.icon) : null;
+  const categoryKey = overrideIconKey || taxonomy.dishCategory || venue.food_category || "all";
   const rawIcon =
     !overrideIconKey && venue.icon
       ? String(venue.icon).replace(/[<>&"']/g, "").trim()
       : "";
   const customKey =
     (overrideIconKey ? resolveCustomIconKey(overrideIconKey) : null) ||
+    dishCustomKey ||
+    explicitVenueIcon ||
     resolveCustomIconKey(rawIcon) ||
     resolveCustomIconKey(categoryKey);
   const isCustomVectorKey = Boolean(customKey);
@@ -290,9 +308,13 @@ function createAquarellePinElement(
     : venue.spot_type === "popup"
     ? "✨"
     : "";
+  const pinIconPx = isWeeklyPickVenue ? 42 : 37;
+  const puckPx = isWeeklyPickVenue ? 50 : 46;
   const pinGlyph = curatedIcon
-    ? `<svg xmlns="http://www.w3.org/2000/svg" width="31" height="31" viewBox="-4 -4 32 32" style="overflow:visible !important; display:block;"><text x="12" y="13" font-size="21" text-anchor="middle" dominant-baseline="central" style="font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif; user-select:none;">${curatedIcon}</text></svg>`
-    : iconSvg.replace(/width="\d+"/g, 'width="31"').replace(/height="\d+"/g, 'height="31"');
+    ? `<svg xmlns="http://www.w3.org/2000/svg" width="${pinIconPx}" height="${pinIconPx}" viewBox="-4 -4 32 32" style="overflow:visible !important; display:block;"><text x="12" y="13" font-size="21" text-anchor="middle" dominant-baseline="central" style="font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif; user-select:none;">${curatedIcon}</text></svg>`
+    : iconSvg
+        .replace(/width="\d+"/g, `width="${pinIconPx}"`)
+        .replace(/height="\d+"/g, `height="${pinIconPx}"`);
 
   const inner = document.createElement("div");
   inner.className = "pin-visual";
@@ -380,12 +402,12 @@ function createAquarellePinElement(
     `;
   } else {
     inner.innerHTML = `
-      <!-- Die-Cut Floating Dish Silhouette Pin (31px/35px midway size, clean contour stroke) -->
+      <!-- Die-Cut Floating Dish Silhouette Pin (37px/41px size, clean contour stroke) -->
       ${haloHtml}
       <div class="smakr-map-puck" style="
-        width: 40px;
-        height: 40px;
-        padding: 3.5px;
+        width: ${puckPx}px;
+        height: ${puckPx}px;
+        padding: 4.5px;
         background: transparent !important;
         border: none !important;
         border-radius: 0 !important;
@@ -399,8 +421,8 @@ function createAquarellePinElement(
       ">
         ${kitchenBadgeHtml}
         <div class="smakr-puck-icon" style="
-          width: 31px;
-          height: 31px;
+          width: ${pinIconPx}px;
+          height: ${pinIconPx}px;
           display: grid;
           place-items: center;
           line-height: 1;
@@ -661,9 +683,10 @@ export function MapRadarView() {
           (p) => resolveEntityTaxonomy(venue, p).group.id === currentGroup
         );
         if (!venueMatches && !matchingPost) return false;
-        const matchedDishKey = matchingPost
+        const explicitIcon = venue.icon ? resolveCustomIconKey(venue.icon) : null;
+        const matchedDishKey = explicitIcon || (matchingPost
           ? resolveEntityTaxonomy(venue, matchingPost).dishCategory || matchingPost.category
-          : venueTax.dishCategory || venue.food_category;
+          : venueTax.dishCategory || venue.food_category);
         if (matchedDishKey) {
           overrideIconByVenueId.set(venue.id, matchedDishKey);
         }
@@ -761,12 +784,16 @@ export function MapRadarView() {
     });
 
     // 2. Reconcile or create markers for visible venues
+    const currentWeeklyVenueId = state.weeklyPick.venue_id;
     visibleVenues.forEach((venue) => {
       const isSelected = currentSelectedId === venue.id;
+      const isWeeklyPickVenue = venue.id === currentWeeklyVenueId;
       const popupStatus = getPopupStatus(venue);
       const kitchenStatus = venue.kitchen_status?.status ?? "normal";
       const overrideIconKey = overrideIconByVenueId.get(venue.id) ?? null;
-      const pinKey = `${venue.icon ?? ""}|${venue.spot_type ?? ""}|${popupStatus.status}|${kitchenStatus}|${venue.food_category}|${venue.name}|${venue.popup_end_date ?? ""}|${overrideIconKey ?? ""}`;
+      const venueTax = resolveEntityTaxonomy(venue);
+      const dishKey = resolveCustomIconKey(venueTax.dishCategory) || venueTax.dishCategory;
+      const pinKey = `${venue.icon ?? ""}|${dishKey}|${venue.spot_type ?? ""}|${popupStatus.status}|${kitchenStatus}|${venue.food_category}|${venue.name}|${venue.popup_end_date ?? ""}|${overrideIconKey ?? ""}|${isWeeklyPickVenue ? "1" : "0"}`;
 
       let existing = markerPoolRef.current.get(venue.id);
       if (existing && existing.rootEl.dataset.pinKey !== pinKey) {
@@ -799,7 +826,13 @@ export function MapRadarView() {
         flyToTarget(current.longitude, current.latitude, 15.5, "venue-pin");
       };
 
-      const el = createAquarellePinElement(venue, isSelected, handleSelect, overrideIconKey);
+      const el = createAquarellePinElement(
+        venue,
+        isSelected,
+        handleSelect,
+        overrideIconKey,
+        isWeeklyPickVenue
+      );
       el.dataset.pinKey = pinKey;
 
       const marker = new maplibregl.Marker({
@@ -946,12 +979,9 @@ export function MapRadarView() {
       }
     }
 
-    // Relative sizing formula based on map zoom level (scales down gracefully when zoomed out)
+    // Shared sizing formula with "YOU" bust so both busts match across all zoom levels
     const currentZoom = map.getZoom();
-    const bustHeight = Math.round(
-      Math.min(88, Math.max(38, (currentZoom - 10.5) * 11 + 38))
-    );
-    const bustWidth = Math.round(bustHeight * 0.82);
+    const { width: bustWidth, height: bustHeight } = getMapMascotDimensions(currentZoom);
 
     // Screen-space collision avoidance against the user's "YOU" avatar marker
     let placeRight = false;
@@ -970,10 +1000,12 @@ export function MapRadarView() {
       badge: HTMLElement,
       imgEl?: HTMLImageElement | null
     ) => {
+      // In smakr-pick-pointing.svg, index fingertip is at (0.9387 * width, 0.5145 * height).
+      // The 50px weekly pick puck radius is 25px, with inner food icon extending to radius 21px.
       const leftOffset = placeRight
-        ? 21
-        : -21 - Math.round(0.942 * bustWidth);
-      const topOffset = -7 - Math.round(0.519 * bustHeight);
+        ? 20 - Math.round(0.0613 * bustWidth)
+        : -20 - Math.round(0.9387 * bustWidth);
+      const topOffset = -Math.round(0.5145 * bustHeight) - 2;
       inner.style.left = `${leftOffset}px`;
       inner.style.top = `${topOffset}px`;
       inner.style.transform = "none";
@@ -1448,11 +1480,15 @@ export function MapRadarView() {
     }
 
     lastAvatarSigRef.current = avatarSig;
+    const hasCustomAvatar = Boolean(
+      currentUser?.avatar_config ||
+      (currentUser?.avatar_url && currentUser.avatar_url.startsWith("data:image/svg+xml"))
+    );
     const el = buildUserAvatarPuckElement(
       currentUser?.avatar_url,
       currentUser?.avatar_config,
       mascotConfig,
-      Boolean(isOfficial)
+      Boolean(isOfficial && !hasCustomAvatar)
     );
     applyPuckZoomScale(el, map.getZoom());
 

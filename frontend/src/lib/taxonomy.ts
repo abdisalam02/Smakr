@@ -97,7 +97,7 @@ export const FOOD_GROUPS: readonly FoodGroupDef[] = [
     label: "Sandwiches & Handhelds",
     shortLabel: "Sandwiches",
     heroIcon: "banh_mi",
-    childCategories: ["banh_mi", "burger", "tacos", "kebab_wrap", "street_sandwich", "street_food"],
+    childCategories: ["banh_mi", "burger", "tacos", "cheesesteak", "kebab_wrap", "street_sandwich", "street_food"],
   },
   {
     id: "pizza_pasta",
@@ -139,7 +139,7 @@ export const FOOD_GROUPS: readonly FoodGroupDef[] = [
     label: "Sweets & Frozen",
     shortLabel: "Sweets",
     heroIcon: "gelato",
-    childCategories: ["gelato", "dessert"],
+    childCategories: ["gelato", "dessert", "pancakes"],
   },
   {
     id: "drinks_bars",
@@ -273,7 +273,7 @@ export function resolveEntityTaxonomy(
   // 2. Resolve Dish Category & Food Group
   let dishCategory = "food";
   const postCat = p.category ? String(p.category).toLowerCase().trim() : "";
-  const venueCat = v.food_category ? String(v.food_category).toLowerCase().trim() : "";
+  const venueCat = (v.food_category || (v as any).category) ? String(v.food_category || (v as any).category).toLowerCase().trim() : "";
   const venueIcon = v.icon ? String(v.icon).toLowerCase().trim() : "";
 
   // Prioritize post category if available, then venue category or venue icon
@@ -282,8 +282,23 @@ export function resolveEntityTaxonomy(
   // Decouple Pho from Banh Mi: check textual clues in post title or venue signature dishes
   const allText = `${v.name || ""} ${p.dish_name || ""} ${(v.signature_dishes || []).join(" ")}`.toLowerCase();
 
-  // Em Oi and Vietnamese noodle eateries resolve to Noodles (noodles_soup)
+  // 1. Specific Spot & Signature Dish overrides
   if (
+    allText.includes("zam zam") ||
+    allText.includes("zamzam") ||
+    allText.includes("cheesesteak") ||
+    candidateCat === "cheesesteak"
+  ) {
+    dishCategory = "cheesesteak";
+  } else if (
+    allText.includes("lai zai") ||
+    allText.includes("laizai") ||
+    candidateCat === "banh_mi" ||
+    allText.includes("banh mi") ||
+    allText.includes("bánh mì")
+  ) {
+    dishCategory = "banh_mi";
+  } else if (
     allText.includes("em oi") ||
     allText.includes("êm ôi") ||
     allText.includes("pho") ||
@@ -296,8 +311,6 @@ export function resolveEntityTaxonomy(
     dishCategory = "pho";
   } else if (candidateCat === "ramen" || allText.includes("ramen")) {
     dishCategory = "ramen";
-  } else if (candidateCat === "banh_mi" || candidateCat === "vietnamese" || allText.includes("banh mi") || allText.includes("bánh mì")) {
-    dishCategory = "banh_mi";
   } else if (candidateCat === "pizza" || allText.includes("pizza") || allText.includes("margherita")) {
     dishCategory = "pizza";
   } else if (candidateCat === "pasta" || allText.includes("pasta") || allText.includes("carbonara")) {
@@ -306,19 +319,35 @@ export function resolveEntityTaxonomy(
     dishCategory = "k_chicken";
   } else if (candidateCat === "naan" || candidateCat === "flatbread" || allText.includes("naan") || allText.includes("garlic naan")) {
     dishCategory = "naan";
-  } else if (candidateCat === "croissant" || (candidateCat === "bakery" && allText.includes("croissant"))) {
-    dishCategory = "croissant";
-  } else if (candidateCat === "cinnamon_roll" || candidateCat === "kanelbolle" || allText.includes("kanelbolle") || allText.includes("cinnamon")) {
+  } else if (
+    candidateCat === "cinnamon_roll" ||
+    candidateCat === "kanelbolle" ||
+    allText.includes("kanelbolle") ||
+    allText.includes("cinnamon") ||
+    allText.includes("kveitemjøl")
+  ) {
     dishCategory = "kanelbolle";
+  } else if (
+    candidateCat === "croissant" ||
+    candidateCat === "bakery" ||
+    allText.includes("croissant") ||
+    allText.includes("bakeri") ||
+    allText.includes("bakst") ||
+    allText.includes("håndbakt") ||
+    allText.includes("brød")
+  ) {
+    dishCategory = "croissant";
   } else if (candidateCat === "coffee" || allText.includes("kaffe") || allText.includes("latte") || allText.includes("cappuccino")) {
     dishCategory = "coffee";
-  } else if (candidateCat === "matcha" || allText.includes("matcha")) {
+  } else if (candidateCat === "matcha" || allText.includes("matcha") || allText.includes("ochaya")) {
     dishCategory = "matcha";
   } else if (candidateCat === "tacos" || allText.includes("taco") || allText.includes("birria")) {
     dishCategory = "tacos";
   } else if (candidateCat === "burger" || allText.includes("burger") || allText.includes("smash")) {
     dishCategory = "burger";
-  } else if (candidateCat === "dumplings" || allText.includes("dumpling") || allText.includes("gyoza") || allText.includes("dim sum")) {
+  } else if (candidateCat === "pancakes" || allText.includes("pancake") || allText.includes("pannekake") || allText.includes("crave")) {
+    dishCategory = "pancakes";
+  } else if (candidateCat === "dumplings" || allText.includes("dumpling") || allText.includes("gyoza") || allText.includes("dim sum") || allText.includes("yum cha")) {
     dishCategory = "dumplings";
   } else if (candidateCat === "bao" || allText.includes("bao")) {
     dishCategory = "bao";
