@@ -78,14 +78,14 @@ const PIN_SHADOW_DEFAULT =
 
 function getMapMascotDimensions(zoom: number): { width: number; height: number } {
   // Prominently sized mascot bust (~76px x 62px at default zoom 13.5) framing the 50px dish pin
-  const height = Math.round(Math.min(92, Math.max(56, (zoom - 10) * 9 + 44)));
+  const height = Math.round(Math.min(74, Math.max(45, (zoom - 10) * 7.2 + 35)));
   const width = Math.round(height * 0.82);
   return { width, height };
 }
 
 function getUserAvatarDimensions(zoom: number): { width: number; height: number } {
   // Calibrated so user bust matches the visual head/torso volume of the Smakr mascot (~48px x 40px at zoom 13.5)
-  const height = Math.round(Math.min(58, Math.max(36, (zoom - 10) * 5 + 31)));
+  const height = Math.round(Math.min(46, Math.max(29, (zoom - 10) * 4 + 25)));
   const width = Math.round(height * 0.82);
   return { width, height };
 }
@@ -105,8 +105,8 @@ function applyPinState(root: HTMLElement, isSelected: boolean) {
   const arrow = root.querySelector<HTMLElement>(".smakr-puck-arrow");
   const isPopup = root.dataset.isPopup === "1";
   const isWeeklyPick = root.dataset.isWeeklyPick === "1";
-  const baseIconPx = isWeeklyPick ? 42 : 37;
-  const selectedIconPx = isWeeklyPick ? 46 : 41;
+  const baseIconPx = isWeeklyPick ? 34 : 30;
+  const selectedIconPx = isWeeklyPick ? 37 : 33;
   if (puck) {
     if (isPopup) {
       if (isSelected) {
@@ -264,8 +264,8 @@ function createAquarellePinElement(
   root.style.position = "absolute";
   root.style.top = "0";
   root.style.left = "0";
-  root.style.width = isWeeklyPickVenue ? "52px" : "48px";
-  root.style.height = isWeeklyPickVenue ? "58px" : "54px";
+  root.style.width = isWeeklyPickVenue ? "42px" : "38px";
+  root.style.height = isWeeklyPickVenue ? "47px" : "44px";
   root.style.margin = "0";
   root.style.padding = "0";
   root.style.cursor = "pointer";
@@ -311,8 +311,8 @@ function createAquarellePinElement(
     : venue.spot_type === "popup"
     ? "✨"
     : "";
-  const pinIconPx = isWeeklyPickVenue ? 42 : 37;
-  const puckPx = isWeeklyPickVenue ? 50 : 46;
+  const pinIconPx = isWeeklyPickVenue ? 34 : 30;
+  const puckPx = isWeeklyPickVenue ? 40 : 37;
   const pinGlyph = curatedIcon
     ? `<svg xmlns="http://www.w3.org/2000/svg" width="${pinIconPx}" height="${pinIconPx}" viewBox="-4 -4 32 32" style="overflow:visible !important; display:block;"><text x="12" y="13" font-size="21" text-anchor="middle" dominant-baseline="central" style="font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif; user-select:none;">${curatedIcon}</text></svg>`
     : iconSvg
@@ -352,9 +352,9 @@ function createAquarellePinElement(
       <!-- Distinct Pop-up Ticket Badge (38x38px rounded-xl, #FAF7F2, #E84A27 border) -->
       ${haloHtml}
       <div class="smakr-map-puck" style="
-        width: 38px;
-        height: 38px;
-        border-radius: 12px;
+        width: 31px;
+        height: 31px;
+        border-radius: 10px;
         background: #FAF7F2;
         border: 2px solid #E84A27;
         box-shadow: 0 4px 12px rgba(232, 74, 39, 0.22);
@@ -385,7 +385,7 @@ function createAquarellePinElement(
           z-index: 10;
         ">🔥 POP-UP</div>
         ${kitchenBadgeHtml}
-        <div class="smakr-puck-icon" style="width:22px;height:22px;display:grid;place-items:center;line-height:1;margin:0;padding:0;">
+        <div class="smakr-puck-icon" style="width:18px;height:18px;display:grid;place-items:center;line-height:1;margin:0;padding:0;">
           ${pinGlyph}
         </div>
         <!-- Pointer triangle -->
@@ -861,11 +861,11 @@ export function MapRadarView() {
       background: "#e84a27",
       color: "#ffffff",
       fontFamily: "var(--font-comico, sans-serif)",
-      fontSize: "9px",
+      fontSize: "8px",
       fontWeight: "700",
       letterSpacing: "0.02em",
       whiteSpace: "nowrap",
-      padding: "2px 7px",
+      padding: "1.5px 6px",
       borderRadius: "999px",
       border: "none",
       boxShadow: "0 2px 8px rgba(232, 74, 39, 0.35)",
@@ -1006,8 +1006,8 @@ export function MapRadarView() {
       // In smakr-pick-pointing.svg, index fingertip is at (0.9387 * width, 0.5145 * height).
       // The 50px weekly pick puck radius is 25px, with inner food icon extending to radius 21px.
       const leftOffset = placeRight
-        ? 20 - Math.round(0.0613 * bustWidth)
-        : -20 - Math.round(0.9387 * bustWidth);
+        ? 16 - Math.round(0.0613 * bustWidth)
+        : -16 - Math.round(0.9387 * bustWidth);
       const topOffset = -Math.round(0.5145 * bustHeight) - 2;
       inner.style.left = `${leftOffset}px`;
       inner.style.top = `${topOffset}px`;

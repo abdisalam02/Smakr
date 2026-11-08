@@ -23,8 +23,8 @@ Updated: 2026-11-02
 - No other open items recorded in this handoff.
 
 ## Recent (max 5, one line each)
-- 2026-11-07 — Fixed bottom nav phantom clicks & solid cream bg, solid cream Map pill, Plus Jakarta Sans card titles, top sheet drag, 35% smaller map pins; tsc clean
 - 2026-11-07 — Calibrated 31px/35px map pins, fixed swipe-close double-close lag, restored elastic filter yoink stretch, Comico dish titles; tsc clean
 - 2026-11-07 — Split GROUP_FILTER_WEBP & DISH_ICON_WEBP, clickable z-60 YOU collar stamp, 7-axis map filter sync, watercolor cuisine flags, zero-flash feed cards, 190ms single-pass venue sheet close; tsc clean
 - 2026-11-08 — Fixed food pin taxonomy: Zam Zam -> cheesesteak, Håndbakt -> croissant, Lai Zai -> banh mi, Em Oi -> pho, Dirty Taco -> tacos; tsc clean
 - 2026-11-08 — Cleaned redundant flags (no 🇳🇴 on bakeries, no 🇮🇹 on Digg Pizza), merged Breads into Bakery, Naan into Rice & Curry; tsc clean
+- 2026-11-08 — Scaled map pins and Smakr Pick -20%, created SEEDING_FEED_IMAGE_AUDIT.md for dish-only photos; tsc clean
