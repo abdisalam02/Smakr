@@ -146,9 +146,9 @@ export function getVenueLiveOpenStatus(
   if (isEarlyMorning) {
     return {
       isOpen: false,
-      statusText: "Closed · Opens 08:00",
-      detailText: "Opens later today",
-      badgeText: "● Closed · Opens 08:00",
+      statusText: "Closed",
+      detailText: "Closed now",
+      badgeText: "● Closed",
       color: "zinc",
     };
   }

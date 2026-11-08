@@ -37,7 +37,7 @@ import {
   resolveCustomIconKey,
   FILTER_CATEGORY_WEBP,
 } from "@/components/food/FoodIcons";
-import { resolveEntityTaxonomy } from "@/lib/taxonomy";
+import { resolveEntityTaxonomy, resolveVenueDisplayBadge, resolveDishIconKey } from "@/lib/taxonomy";
 import { getIconDisplay } from "@/lib/iconRegistry";
 import { formatDistance } from "@/lib/math";
 import { getDirectionsUrl } from "@/lib/location";
@@ -283,17 +283,20 @@ function createAquarellePinElement(
   const isSoldOut = kitchenStatus === "sold_out";
 
   const taxonomy = resolveEntityTaxonomy(venue);
+  const venueBadge = resolveVenueDisplayBadge(venue);
   const dishCustomKey = resolveCustomIconKey(taxonomy.dishCategory);
   const explicitVenueIcon = venue.icon ? resolveCustomIconKey(venue.icon) : null;
-  const categoryKey = overrideIconKey || taxonomy.dishCategory || venue.food_category || "all";
+  const badgePinKey = resolveCustomIconKey(venueBadge.pinIcon);
+  const categoryKey = overrideIconKey || explicitVenueIcon || badgePinKey || taxonomy.dishCategory || venue.food_category || "all";
   const rawIcon =
     !overrideIconKey && venue.icon
       ? String(venue.icon).replace(/[<>&"']/g, "").trim()
       : "";
   const customKey =
     (overrideIconKey ? resolveCustomIconKey(overrideIconKey) : null) ||
-    dishCustomKey ||
     explicitVenueIcon ||
+    badgePinKey ||
+    dishCustomKey ||
     resolveCustomIconKey(rawIcon) ||
     resolveCustomIconKey(categoryKey);
   const isCustomVectorKey = Boolean(customKey);
@@ -1576,23 +1579,22 @@ export function MapRadarView() {
       : imageUrl;
 
     const taxonomy = resolveEntityTaxonomy(selectedVenue);
+    const venueBadge = resolveVenueDisplayBadge(selectedVenue);
     const spotKindSvg = (FOOD_PIN_SVG_MAP[taxonomy.spotKind] || FOOD_PIN_SVG_MAP.restaurant)
       .replace('width="20" height="20"', 'width="18" height="18"');
-    const filterWebp = FILTER_CATEGORY_WEBP[taxonomy.group.id] || FILTER_CATEGORY_WEBP[taxonomy.dishCategory];
-    const headerFilterIconHtml = filterWebp
-      ? `<img src="${filterWebp}" width="22" height="22" style="object-fit:contain;display:block;" alt="${taxonomy.group.shortLabel}"/>`
-      : `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" style="display:block;"><path d="M12 4.5c-4.4 0-8 3.6-8 8v1h16v-1c0-4.4-3.6-8-8-8z" fill="#FAF7F2" stroke="#181615" stroke-width="1.6"/><circle cx="12" cy="3.5" r="1.3" fill="#E84A27"/><path d="M2.5 16.5h19" stroke="#181615" stroke-width="1.8" stroke-linecap="round"/><path d="M7 19.5h10" stroke="#E84A27" stroke-width="1.5" stroke-linecap="round"/></svg>`;
-    const dishDisplay = getIconDisplay(taxonomy.dishCategory);
-    const dishIconHtml =
-      dishDisplay.type === "webp"
-        ? `<img src="${dishDisplay.value}" width="18" height="18" style="object-fit:contain;display:inline-block;" alt="${dishDisplay.label}"/>`
-        : `<span style="display:inline-flex;width:18px;height:18px;">${dishDisplay.value}</span>`;
     const signatureDishName = isWeeklyPickVenue
       ? weeklyPick.dish_name
       : (selectedVenue.signature_dishes && selectedVenue.signature_dishes[0]) || "";
     const signaturePrice = isWeeklyPickVenue && weeklyPick.price_nok
       ? `${weeklyPick.price_nok} kr`
       : "";
+
+    const dishIconKey = resolveDishIconKey(signatureDishName, selectedVenue.food_category);
+    const dishIconDisplay = getIconDisplay(dishIconKey);
+    const dishChipIconHtml =
+      dishIconDisplay.type === "webp"
+        ? `<img src="${dishIconDisplay.value}" width="16" height="16" style="object-fit:contain;display:inline-block;" alt="${dishIconDisplay.label}"/>`
+        : `<span style="display:inline-flex;width:16px;height:16px;align-items:center;justify-content:center;">${dishIconDisplay.value}</span>`;
 
     popupNode.innerHTML = `
       <div style="
@@ -1639,13 +1641,13 @@ export function MapRadarView() {
           z-index: 10;
         ">✕</button>
 
-        <!-- Header: Filter Tag Icon + Food Category Label (Address removed) -->
+        <!-- Header: Flag + ONE Main Tag (e.g. 🇮🇳 INDIAN, 🇻🇳 VIETNAMESE, 🇯🇵 MATCHA) + Price Level -->
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:7px;padding-bottom:5px;border-bottom:1px solid rgba(24,22,21,0.06);padding-right:24px;">
-          <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:rgba(232,74,39,0.08);flex-shrink:0;">
-            ${headerFilterIconHtml}
+          <span style="display:inline-flex;align-items:center;justify-content:center;font-size:15px;line-height:1;flex-shrink:0;">
+            ${venueBadge.flag}
           </span>
           <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:#e84a27;font-family:var(--font-comico, sans-serif);">
-            ${taxonomy.group.shortLabel || taxonomy.dishLabel}
+            ${venueBadge.mainTag}
           </span>
           ${selectedVenue.price_level ? `
             <span style="font-size:10px;color:#78716c;font-weight:700;">
@@ -1744,7 +1746,7 @@ export function MapRadarView() {
             ${
               signatureDishName
                 ? `<div style="display:flex;align-items:center;gap:4px;margin-top:4px;padding:2px 6px;border-radius:8px;background:rgba(255,255,255,0.7);border:1px solid rgba(24,22,21,0.08);">
-                    <span style="display:inline-flex;align-items:center;flex-shrink:0;">${filterWebp ? `<img src="${filterWebp}" width="16" height="16" style="object-fit:contain;display:inline-block;" alt="${taxonomy.group.shortLabel}"/>` : dishIconHtml}</span>
+                    <span style="display:inline-flex;align-items:center;flex-shrink:0;">${dishChipIconHtml}</span>
                     <span style="font-size:10px;font-weight:700;color:#181615;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">
                       ${signatureDishName}
                     </span>

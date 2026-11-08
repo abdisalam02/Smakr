@@ -1,0 +1,622 @@
+[
+  {
+    "name": "Pele Pele",
+    "spot_type": "restaurant",
+    "food_category": "street_food",
+    "neighborhood": "gronland",
+    "address": "Smalgangen 31, 0188 Oslo",
+    "coords": [10.7629, 59.9131],
+    "price_level": "$$",
+    "icon": "fried_chicken",
+    "signature_dishes": [
+      "Half Flame-Grilled Peri-Peri Chicken",
+      "Pele Pele Sharing Platter"
+    ],
+    "dish_highlights": [
+      {
+        "dish_name": "Half Flame-Grilled Peri-Peri Chicken",
+        "category": "street_food",
+        "price_nok": 189,
+        "taste_tags": ["flame-grilled", "spicy", "smoky", "citrus"],
+        "review_text": "Marinated in authentic African bird's eye chili and flame-charred to order with zesty, fiery peri-peri glaze."
+      }
+    ],
+    "source_attribution": "@matmeg_oslo (TikTok/IG viral feature)",
+    "why_curated": "Founded by Robin Hundal, Pele Pele brings authentic Mozambican, South African, and Portuguese peri-peri poultry culture to Grønland's culinary hub. It delivers real flame craft and multi-tiered spice levels instead of fast-casual shortcuts.",
+    "google_rating": 4.7,
+    "google_reviews_count": 116,
+    "website_uri": "https://gronlandstorg.no/piri-piri/",
+    "instagram_url": "https://www.instagram.com/pelepeleoslo",
+    "opening_hours_text": "Mon–Sun 14:00–21:00",
+    "popup_meta": null
+  },
+  {
+    "name": "Chaiwala",
+    "spot_type": "restaurant",
+    "food_category": "street_food",
+    "neighborhood": "gronland",
+    "address": "Smalgangen 14, 0188 Oslo",
+    "coords": [10.7621, 59.9129],
+    "price_level": "$",
+    "icon": "drinks",
+    "signature_dishes": [
+      "Slow-Brewed Karak Masala Chai",
+      "Stuffed Aloo Paratha with Chutneys"
+    ],
+    "dish_highlights": [
+      {
+        "dish_name": "Slow-Brewed Karak Masala Chai",
+        "category": "street_food",
+        "price_nok": 55,
+        "taste_tags": ["aromatic", "warming", "spiced", "creamy"],
+        "review_text": "Velvety spiced black tea simmered with cardamom, ginger, and condensed milk poured from height for frothy aeration."
+      }
+    ],
+    "source_attribution": "@matmeg_oslo / Robin Hundal",
+    "why_curated": "Norway's first authentic Desi chai cafe, Chaiwala captures the true street spirit of Lahore and Delhi with freshly rolled parathas, crisp samosas, and fragrant karak chai. It acts as an energetic neighborhood living room in Grønland.",
+    "google_rating": 4.5,
+    "google_reviews_count": 548,
+    "website_uri": "https://www.chaiwala.no/",
+    "instagram_url": "https://www.instagram.com/chaiwalaoslo",
+    "opening_hours_text": "Tue–Fri 11:00–19:00, Sat–Sun 12:00–20:00, Mon Closed",
+    "popup_meta": null
+  },
+  {
+    "name": "King Falafel",
+    "spot_type": "restaurant",
+    "food_category": "kebab",
+    "neighborhood": "gronland",
+    "address": "Brugata 1, 0186 Oslo",
+    "coords": [10.7562, 59.9141],
+    "price_level": "$",
+    "icon": "street_food",
+    "signature_dishes": [
+      "King Falafel Rull",
+      "Falafel & Hummus Deluxe Platter"
+    ],
+    "dish_highlights": [
+      {
+        "dish_name": "King Falafel Rull",
+        "category": "kebab",
+        "price_nok": 99,
+        "taste_tags": ["ultra-crispy", "herbaceous", "tangy", "nutty"],
+        "review_text": "Golden-fried, herb-packed falafels shattered inside fresh flatbread with tart pickled turnips, fresh mint, and creamy tahina."
+      }
+    ],
+    "source_attribution": "@youngjolasie (viral review) & Falstaff Street Food Guide",
+    "why_curated": "Standing tall on the bridge to Grønland, King Falafel represents true Levantine mastery using a 50-year-old family recipe. Fully plant-based and made fresh continuously throughout the day, it is widely acclaimed by local creators as Oslo's falafel benchmark.",
+    "google_rating": 4.8,
+    "google_reviews_count": 1869,
+    "website_uri": null,
+    "instagram_url": "https://www.instagram.com/kingfalafeloslo",
+    "opening_hours_text": "Mon–Sat 10:00–22:00, Sun 12:00–22:00",
+    "popup_meta": null
+  },
+  {
+    "name": "Hernández Oslo",
+    "spot_type": "restaurant",
+    "food_category": "dessert",
+    "neighborhood": "st_hanshaugen",
+    "address": "Uelands gate 59K, 0460 Oslo",
+    "coords": [10.7511, 59.9328],
+    "price_level": "$$",
+    "icon": "bakery",
+    "signature_dishes": [
+      "Classic Basque Burnt Cheesecake",
+      "Specialty Filter Coffee"
+    ],
+    "dish_highlights": [
+      {
+        "dish_name": "Classic Basque Burnt Cheesecake",
+        "category": "dessert",
+        "price_nok": 85,
+        "taste_tags": ["caramelized", "custardy", "molten-center", "velvety"],
+        "review_text": "Deeply charred bitter-caramel exterior yielding to an impossibly unctuous, molten cheese core."
+      }
+    ],
+    "source_attribution": "@eatbyle / European Coffee Trip",
+    "why_curated": "Founded by Barcelona-trained pastry chef Diego Hernandez (alumnus of Hofmann Barcelona), this charming corner sanctuary at Alexander Kiellands plass is celebrated across social media for baking Norway's definitive Basque burnt cheesecake.",
+    "google_rating": 4.8,
+    "google_reviews_count": 288,
+    "website_uri": "https://www.hernandezoslo.no/",
+    "instagram_url": "https://www.instagram.com/hernandezoslo",
+    "opening_hours_text": "Tue–Fri 09:00–17:00, Sat–Sun 10:00–17:00, Mon Closed",
+    "popup_meta": null
+  },
+  {
+    "name": "Oslo Sandwich Shop",
+    "spot_type": "restaurant",
+    "food_category": "street_food",
+    "neighborhood": "st_hanshaugen",
+    "address": "Maridalsveien 21, 0175 Oslo",
+    "coords": [10.751, 59.9234],
+    "price_level": "$$",
+    "icon": "burger",
+    "signature_dishes": [
+      "Wagyu French Dip Sandwich",
+      "Slow-Roasted Pork Belly Sub"
+    ],
+    "dish_highlights": [
+      {
+        "dish_name": "Wagyu French Dip Sandwich",
+        "category": "street_food",
+        "price_nok": 185,
+        "taste_tags": ["savory", "juicy", "umami-rich", "crusty"],
+        "review_text": "Thinly shaved prime wagyu beef stacked on toasted crusty baguette served with rich, herb-steeped beef jus for dipping."
+      }
+    ],
+    "source_attribution": "@matmeg_oslo & @eatbyle",
+    "why_curated": "Elevating street-food comfort into fine-dining craft, Oslo Sandwich Shop pairs high-grade wagyu beef and artisanal baguettes with scratch jus and pickles. A massive creator favorite for uncompromising lunchtime indulgence.",
+    "google_rating": 4.4,
+    "google_reviews_count": 26,
+    "website_uri": null,
+    "instagram_url": "https://www.instagram.com/oslosandwichshop",
+    "opening_hours_text": "Wed–Fri 16:00–20:00, Sat 12:00–14:30 & 16:00–21:00, Sun 12:00–14:30 & 16:00–20:00, Mon–Tue Closed",
+    "popup_meta": null
+  },
+  {
+    "name": "Ahaan",
+    "spot_type": "restaurant",
+    "food_category": "street_food",
+    "neighborhood": "frogner",
+    "address": "Sommerrogata 1, 0255 Oslo",
+    "coords": [10.7188, 59.9148],
+    "price_level": "$$$",
+    "icon": "street_food",
+    "signature_dishes": [
+      "Crispy Pork Knuckle with Nahm Jim",
+      "Prawn Crackers with Nahm Prik Plah"
+    ],
+    "dish_highlights": [
+      {
+        "dish_name": "Crispy Pork Knuckle with Nahm Jim",
+        "category": "street_food",
+        "price_nok": 285,
+        "taste_tags": ["ultra-crispy", "succulent", "tangy", "spicy"],
+        "review_text": "Braised until spoon-tender and flash-crackled to blistered perfection, served with pungent chili-tamarind dipping sauce."
+      }
+    ],
+    "source_attribution": "@eatbyle / Vink (Aftenposten)",
+    "why_curated": "Conceived by chef Terje Ommundsen inside the iconic Sommerro art-deco house, Ahaan serves electric, uncompromised Bangkok-style street food, natural wines, and inventive Southeast Asian small plates that break away from Europeanized curry clichés.",
+    "google_rating": 4.0,
+    "google_reviews_count": 270,
+    "website_uri": "https://www.sommerrohouse.com/restaurants/plahahaan/",
+    "instagram_url": "https://www.instagram.com/ahaan_oslo",
+    "opening_hours_text": "Mon–Wed 16:00–00:00, Thu–Fri 16:00–01:00, Sat 12:00–01:00, Sun Closed",
+    "popup_meta": null
+  },
+  {
+    "name": "Gioia AS",
+    "spot_type": "restaurant",
+    "food_category": "dessert",
+    "neighborhood": "frogner",
+    "address": "Eckersbergs gate 41, 0266 Oslo",
+    "coords": [10.7118, 59.9189],
+    "price_level": "$$",
+    "icon": "bakery",
+    "signature_dishes": [
+      "Galette Complète (Buckwheat Crêpe)",
+      "Sicilian Pistachio Gelato"
+    ],
+    "dish_highlights": [
+      {
+        "dish_name": "Galette Complète (Buckwheat Crêpe)",
+        "category": "dessert",
+        "price_nok": 165,
+        "taste_tags": ["nutty", "savory", "lacy-crisp", "buttery"],
+        "review_text": "Authentic Brittany-style crisp buckwheat galette folded over artisan ham, melted Gruyère cheese, and an organic sunny egg."
+      }
+    ],
+    "source_attribution": "@eatbyle (featured in Oslo Pastry Shops)",
+    "why_curated": "Tucked in the leafy streets of Frogner, Pierre and Meg's micro-creperie and artisanal gelateria churns small-batch Italian gelato and spins authentic Breton buckwheat galettes using imported heritage flours.",
+    "google_rating": 4.8,
+    "google_reviews_count": 252,
+    "website_uri": "https://gioia.no/",
+    "instagram_url": "https://www.instagram.com/gioia_oslo",
+    "opening_hours_text": "Thu 14:00–17:30, Fri–Sun 10:00–18:00, Mon–Wed Closed",
+    "popup_meta": null
+  },
+  {
+    "name": "Corral's Tacos Solli",
+    "spot_type": "restaurant",
+    "food_category": "tacos",
+    "neighborhood": "frogner",
+    "address": "Frognerveien 9D, 0257 Oslo",
+    "coords": [10.7184, 59.915],
+    "price_level": "$$",
+    "icon": "tacos",
+    "signature_dishes": [
+      "Jalisco Beef Birria Tacos",
+      "Consomé Dipping Broth"
+    ],
+    "dish_highlights": [
+      {
+        "dish_name": "Jalisco Beef Birria Tacos (3 pcs)",
+        "category": "tacos",
+        "price_nok": 195,
+        "taste_tags": ["crispy-seared", "dripping-juicy", "spiced", "cheesy"],
+        "review_text": "Masa corn tortillas dipped in spiced chili fat, griddled with Oaxaca-style cheese and slow-stewed beef, dunked into dark consommé."
+      }
+    ],
+    "source_attribution": "Vink ('Oslos beste mat på farta') & TikTok viral sensation",
+    "why_curated": "What started as an underground food truck became an Oslo obsession. Corral's braises Mexican beef chuck for over 10 hours with 4 distinct dried chiles, delivering Oslo's most authentic and drippingly decadent birria taco experience.",
+    "google_rating": 4.4,
+    "google_reviews_count": 182,
+    "website_uri": "https://www.corralstacos.no/",
+    "instagram_url": "https://www.instagram.com/corralstacos",
+    "opening_hours_text": "Tue–Fri 15:00–22:00, Sat 12:00–22:00, Sun 13:00–20:00, Mon Closed",
+    "popup_meta": null
+  },
+  {
+    "name": "Farine",
+    "spot_type": "restaurant",
+    "food_category": "bakery",
+    "neighborhood": "kampen",
+    "address": "Normannsgata 44, 0655 Oslo",
+    "coords": [10.7818, 59.9127],
+    "price_level": "$$",
+    "icon": "croissant",
+    "signature_dishes": [
+      "Stone-Ground Cardamom Bun (Kardemommebolle)",
+      "Whipped Butter & Sourdough Toast"
+    ],
+    "dish_highlights": [
+      {
+        "dish_name": "Stone-Ground Cardamom Bun",
+        "category": "bakery",
+        "price_nok": 48,
+        "taste_tags": ["cardamom-spiced", "caramelized-bottom", "buttery", "fluffy"],
+        "review_text": "Twisted sourdough brioche dough infused with freshly milled coarse cardamom seeds, baked with a glistening caramelized base."
+      }
+    ],
+    "source_attribution": "Anders Husa & Falstaff Magazine (92/100 points)",
+    "why_curated": "Occupying a picturesque bright yellow 1878 timber house beside Kampen church, Farine bakes with organic stone-ground heritage flour from Holli Mølle. It doubles as a warm neighborhood wine and small-plate eatery.",
+    "google_rating": 4.5,
+    "google_reviews_count": 361,
+    "website_uri": "https://www.farine.no/",
+    "instagram_url": "https://www.instagram.com/farine_oslo",
+    "opening_hours_text": "Tue–Fri 09:00–16:00, Sat–Sun 10:00–17:00, Mon Closed",
+    "popup_meta": null
+  },
+  {
+    "name": "Mesob Restaurant",
+    "spot_type": "restaurant",
+    "food_category": "street_food",
+    "neighborhood": "gronland",
+    "address": "Motzfeldts gate 5, 0187 Oslo",
+    "coords": [10.7645, 59.9138],
+    "price_level": "$$",
+    "icon": "street_food",
+    "signature_dishes": [
+      "Mesob Beyaynetu Combination Platter",
+      "Spicy Doro Wat with Hard-Boiled Egg"
+    ],
+    "dish_highlights": [
+      {
+        "dish_name": "Mesob Beyaynetu Platter",
+        "category": "street_food",
+        "price_nok": 225,
+        "taste_tags": ["tangy-fermented", "spicy-berbere", "earthy", "communal"],
+        "review_text": "Spongy, naturally fermented teff injera draped with mounds of slow-cooked red lentil misir, collard gomen, and berbere-spiced beef."
+      }
+    ],
+    "source_attribution": "Vink (Aftenposten) & Local East-End Habesha Community",
+    "why_curated": "Widely revered as Oslo's most authentic Habesha dining experience, Mesob invites guests to tear and share authentic fermented teff injera from hand-woven mesob baskets in an intimate, traditionally decorated dining room.",
+    "google_rating": 4.7,
+    "google_reviews_count": 546,
+    "website_uri": "https://mesobrestaurant.no/",
+    "instagram_url": "https://www.instagram.com/mesob_oslo",
+    "opening_hours_text": "Mon–Sun 13:00–22:00",
+    "popup_meta": null
+  },
+  {
+    "name": "Noods Norway",
+    "spot_type": "restaurant",
+    "food_category": "street_food",
+    "neighborhood": "sentrum",
+    "address": "Klingenberggata 4, 0161 Oslo",
+    "coords": [10.7327, 59.9132],
+    "price_level": "$$",
+    "icon": "noodles",
+    "signature_dishes": [
+      "Szechuan Braised Beef Noodles",
+      "Noods Scallion Pancake Beef Burger"
+    ],
+    "dish_highlights": [
+      {
+        "dish_name": "Szechuan Braised Beef Noodles",
+        "category": "street_food",
+        "price_nok": 199,
+        "taste_tags": ["springy", "numbing", "rich-broth", "tender-beef"],
+        "review_text": "Chewy craft wheat noodles in a 12-hour simmered beef bone broth laced with homemade Sichuan chili oil, star anise, and braised beef."
+      }
+    ],
+    "source_attribution": "Local Cult Foodie favorite (Reddit & TikTok viral)",
+    "why_curated": "Bringing genuine Northern Chinese and Shaanxi comfort food right beside Nationaltheatret, Noods is loved for its flaky scallion pancake wraps, roujiamo Chinese burgers, and fiery Szechuan beef noodle soups.",
+    "google_rating": 4.4,
+    "google_reviews_count": 560,
+    "website_uri": "https://www.noodsnorway.no/",
+    "instagram_url": "https://www.instagram.com/noodsnorway",
+    "opening_hours_text": "Mon–Thu 11:00–20:00, Fri 11:00–22:00, Sat 12:00–22:00, Sun 12:00–20:00",
+    "popup_meta": null
+  },
+  {
+    "name": "Szechuan Chengdu Restaurant",
+    "spot_type": "restaurant",
+    "food_category": "street_food",
+    "neighborhood": "grunerlokka",
+    "address": "Trondheimsveien 64, 0560 Oslo",
+    "coords": [10.7699, 59.9228],
+    "price_level": "$$",
+    "icon": "noodles",
+    "signature_dishes": [
+      "Shuizhu Niurou (Boiled Beef in Hot Chili Oil)",
+      "Traditional Chengdu Mapo Tofu"
+    ],
+    "dish_highlights": [
+      {
+        "dish_name": "Shuizhu Niurou (Boiled Beef in Hot Chili Oil)",
+        "category": "street_food",
+        "price_nok": 245,
+        "taste_tags": ["ma-la", "numbing", "intensely-spicy", "silky"],
+        "review_text": "Tender velveted beef slices bathed in a bubbling crimson broth of roasted chili peppers, toasted Sichuan peppercorns, and Napa cabbage."
+      }
+    ],
+    "source_attribution": "Anders Husa & Cult Chinese Foodie Community",
+    "why_curated": "The undisputed home of authentic mala cooking in Oslo, Chengdu's famous 'red menu' refuses to compromise on heat or numbing peppercorn potency, making it an essential destination for serious Sichuan enthusiasts.",
+    "google_rating": 4.4,
+    "google_reviews_count": 1341,
+    "website_uri": null,
+    "instagram_url": "https://www.instagram.com/szechuanchengdu_oslo",
+    "opening_hours_text": "Mon–Sun 14:00–21:30",
+    "popup_meta": null
+  },
+  {
+    "name": "Izakaya Oslo",
+    "spot_type": "restaurant",
+    "food_category": "street_food",
+    "neighborhood": "sentrum",
+    "address": "St. Olavs gate 7, 0165 Oslo",
+    "coords": [10.7397, 59.9184],
+    "price_level": "$$",
+    "icon": "street_food",
+    "signature_dishes": [
+      "Kansai-Style Okonomiyaki",
+      "Spicy Mazemen Udon with Poached Egg"
+    ],
+    "dish_highlights": [
+      {
+        "dish_name": "Kansai-Style Okonomiyaki",
+        "category": "street_food",
+        "price_nok": 159,
+        "taste_tags": ["savory", "cabbage-sweet", "kewpie-tang", "umami"],
+        "review_text": "Thick grilled Japanese savory cabbage pancake criss-crossed with sweet tonkatsu glaze, creamy Kewpie mayonnaise, and dancing bonito flakes."
+      }
+    ],
+    "source_attribution": "Mer av Oslo & Vink (Aftenposten)",
+    "why_curated": "Hidden down half-subterranean stairs with red lanterns and vintage posters at St. Olavs plass, Izakaya Oslo is Oslo's most authentic Japanese drinking den, pairing small plates with rare sakes and Japanese craft highballs.",
+    "google_rating": 4.6,
+    "google_reviews_count": 874,
+    "website_uri": "https://www.izakayaoslo.com/",
+    "instagram_url": "https://www.instagram.com/izakayaoslo",
+    "opening_hours_text": "Mon–Thu 17:00–00:00, Fri–Sat 17:00–01:00, Sun Closed",
+    "popup_meta": null
+  },
+  {
+    "name": "Syverkiosken",
+    "spot_type": "food_truck",
+    "food_category": "street_food",
+    "neighborhood": "st_hanshaugen",
+    "address": "Maridalsveien 45B, 0175 Oslo",
+    "coords": [10.7523, 59.9287],
+    "price_level": "$",
+    "icon": "street_food",
+    "signature_dishes": [
+      "Treretters Pølse i Lompe",
+      "Spiced Wiener with Jalapeño & Lingonberry Mustard"
+    ],
+    "dish_highlights": [
+      {
+        "dish_name": "Artisanal Pølse in Homemade Potato Lompe",
+        "category": "street_food",
+        "price_nok": 45,
+        "taste_tags": ["snappy", "spiced-broth", "tangy-mustard", "smoky"],
+        "review_text": "Natural casing sausage simmered in aromatic proprietary broth, wrapped in soft potato lompe with homemade sharp mustard."
+      }
+    ],
+    "source_attribution": "Anders Husa, Vink, & @eatbyle",
+    "why_curated": "Operating since 1979 at Alexander Kiellands plass, Syverkiosken is Oslo's last independent pølsekiosk hero. Erlend and his team simmer quality butcher sausages in secret spiced stock and serve them with housemade sauces and artisanal toppings.",
+    "google_rating": 4.7,
+    "google_reviews_count": 1192,
+    "website_uri": null,
+    "instagram_url": "https://www.instagram.com/syverkiosken",
+    "opening_hours_text": "Mon–Fri 10:00–23:30, Sat–Sun 12:00–23:30",
+    "popup_meta": null
+  },
+  {
+    "name": "The Little Pickle",
+    "spot_type": "restaurant",
+    "food_category": "natural_wine",
+    "neighborhood": "toyen",
+    "address": "Jens Bjelkes gate 9A, 0562 Oslo",
+    "coords": [10.7672, 59.9157],
+    "price_level": "$$",
+    "icon": "drinks",
+    "signature_dishes": [
+      "Ox Cheek Croquettes with House Pickle Remoulade",
+      "Smoked Mackerel Toast with Pickled Shallots"
+    ],
+    "dish_highlights": [
+      {
+        "dish_name": "Ox Cheek Croquettes with Pickle Remoulade",
+        "category": "natural_wine",
+        "price_nok": 165,
+        "taste_tags": ["crunchy", "rich-braise", "tangy-acid", "herby"],
+        "review_text": "Golden crisp panko shells brimming with slow-braised ox cheek, balanced by bracing, vinegar-spiked house pickle remoulade."
+      }
+    ],
+    "source_attribution": "Michelin Guide & Vink (Aftenposten)",
+    "why_curated": "Run by chef-couple Luke and Fiona in Tøyen, The Little Pickle channels British gastro-pub irreverence through a modern Nordic seasonal lens, pairing fermented pantry magic and small plates with an adventurous natural wine list.",
+    "google_rating": 4.5,
+    "google_reviews_count": 351,
+    "website_uri": "https://thelittlepickle.no/",
+    "instagram_url": "https://www.instagram.com/thelittlepickle_oslo",
+    "opening_hours_text": "Wed–Fri 09:00–15:00 & 17:00–21:00, Sat 10:00–15:00 & 17:00–21:00, Sun 10:00–17:30, Mon–Tue Closed",
+    "popup_meta": null
+  },
+  {
+    "name": "Marani",
+    "spot_type": "restaurant",
+    "food_category": "street_food",
+    "neighborhood": "bjorvika",
+    "address": "Sørengkaia 69, 0194 Oslo",
+    "coords": [10.7547, 59.9029],
+    "price_level": "$$$",
+    "icon": "street_food",
+    "signature_dishes": [
+      "Adjaruli Khachapuri",
+      "Handmade Lamb & Beef Khinkali Dumplings"
+    ],
+    "dish_highlights": [
+      {
+        "dish_name": "Adjaruli Khachapuri",
+        "category": "street_food",
+        "price_nok": 215,
+        "taste_tags": ["cheesy", "buttery", "rich-yolk", "crusty-bread"],
+        "review_text": "Boat-shaped sourdough crust bubbling with molten Sulguni cheese, topped with butter and a raw egg yolk to stir table-side."
+      }
+    ],
+    "source_attribution": "Vink (Aftenposten: 'Et hull i Restaurant-Oslo er tettet') & Mer av Oslo",
+    "why_curated": "Opened in 2026 on the Sørenga waterfront as Oslo's first dedicated Georgian restaurant, Marani fills a major gap in the city's food scene with handmade soup-filled khinkali, freshly baked khachapuri, and ancient Qvevri amber wines.",
+    "google_rating": 4.6,
+    "google_reviews_count": 140,
+    "website_uri": "https://marani.no/",
+    "instagram_url": "https://www.instagram.com/marani_oslo",
+    "opening_hours_text": "Mon–Fri 16:00–23:00, Sat–Sun 13:00–23:00",
+    "popup_meta": null
+  },
+  {
+    "name": "Gazakjøkken",
+    "spot_type": "restaurant",
+    "food_category": "street_food",
+    "neighborhood": "torggata",
+    "address": "Møllergata 10, 0179 Oslo",
+    "coords": [10.7483, 59.9147],
+    "price_level": "$",
+    "icon": "street_food",
+    "signature_dishes": [
+      "Gaza Supermix Flatbread Wrap",
+      "Warm Homemade Hummus with Spiced Lamb"
+    ],
+    "dish_highlights": [
+      {
+        "dish_name": "Gaza Supermix Flatbread Wrap",
+        "category": "street_food",
+        "price_nok": 135,
+        "taste_tags": ["smoky", "fresh-herb", "crunchy", "garlicky"],
+        "review_text": "Warm rolled saj bread packed with piping hot falafel, spiced chicken shawarma, grilled halloumi, and garlicky toum."
+      }
+    ],
+    "source_attribution": "Øyafestivalen Official Curation & HappyCow Community",
+    "why_curated": "Tucked beside Youngstorget on Møllergata, this family-run Palestinian kitchen crafts every falafel batch and flatbread wrap fresh upon ordering. Known for deeply seasoned shawarma, silky hummus, and genuine Levant warmth.",
+    "google_rating": 4.6,
+    "google_reviews_count": 1102,
+    "website_uri": "https://gazakjokken.no/",
+    "instagram_url": "https://www.instagram.com/gazakjokken",
+    "opening_hours_text": "Mon–Thu 11:00–23:00, Fri–Sat 11:00–04:00, Sun 12:00–23:00",
+    "popup_meta": null
+  },
+  {
+    "name": "Silin Bakeri",
+    "spot_type": "restaurant",
+    "food_category": "bakery",
+    "neighborhood": "gronland",
+    "address": "Grønlandsleiret 61C, 0190 Oslo",
+    "coords": [10.7686, 59.9121],
+    "price_level": "$",
+    "icon": "bakery",
+    "signature_dishes": [
+      "Fresh Za'atar & Olive Manakish",
+      "Lahmacun Flatbread with Minced Lamb & Sumac"
+    ],
+    "dish_highlights": [
+      {
+        "dish_name": "Fresh Za'atar & Chili Manakish",
+        "category": "bakery",
+        "price_nok": 45,
+        "taste_tags": ["herbal-thyme", "toasted-sesame", "olive-oil", "crisp-pillowy"],
+        "review_text": "Blistered wood-fire-style flatbread brushed generously with aromatic wild za'atar herbs, extra virgin olive oil, and Aleppo chili flakes."
+      }
+    ],
+    "source_attribution": "Cult East-End Local Gem (BudgetTraveller & local food critics)",
+    "why_curated": "Boasting an extraordinary 4.9 rating from over 580 local reviews, Silin Bakeri is Grønland's beloved artisanal Middle Eastern oven bakery, turning out hot, blistered manakish flatbreads and savory pastries at honest street prices.",
+    "google_rating": 4.9,
+    "google_reviews_count": 580,
+    "website_uri": null,
+    "instagram_url": "https://www.instagram.com/silinbakeri",
+    "opening_hours_text": "Mon–Sun 10:00–20:00",
+    "popup_meta": null
+  },
+  {
+    "name": "Koie Ramen",
+    "spot_type": "restaurant",
+    "food_category": "ramen",
+    "neighborhood": "torggata",
+    "address": "Osterhaus' gate 13, 0183 Oslo",
+    "coords": [10.7516, 59.9168],
+    "price_level": "$$",
+    "icon": "ramen",
+    "signature_dishes": [
+      "Koie Tonkotsu Ramen",
+      "Handmade Pan-Fried Pork Gyoza"
+    ],
+    "dish_highlights": [
+      {
+        "dish_name": "Koie Tonkotsu Ramen",
+        "category": "ramen",
+        "price_nok": 205,
+        "taste_tags": ["rich-collagen", "savory", "springy-noodles", "tender-chashu"],
+        "review_text": "Milky, 16-hour pork bone broth layered with firm in-house cut ramen noodles, tender chashu, and a marinated soft-boiled ajitsuke tamago."
+      }
+    ],
+    "source_attribution": "Anders Husa & Michelin Guide Bib Gourmand",
+    "why_curated": "The trailblazer of serious craft ramen in Norway, Koie imports flour and machines from Japan to make every single noodle and gyoza skin in-house daily. It sets the undisputed standard for Tokyo-grade ramen in Oslo.",
+    "google_rating": 4.5,
+    "google_reviews_count": 2917,
+    "website_uri": "https://koieramen.no/",
+    "instagram_url": "https://www.instagram.com/koieramen",
+    "opening_hours_text": "Mon–Sun 11:00–22:00",
+    "popup_meta": null
+  },
+  {
+    "name": "Vinoteket",
+    "spot_type": "restaurant",
+    "food_category": "pizza",
+    "neighborhood": "frogner",
+    "address": "Henrik Ibsens gate 60A, 0255 Oslo",
+    "coords": [10.7198, 59.9142],
+    "price_level": "$$$",
+    "icon": "pizza",
+    "signature_dishes": [
+      "Sourdough Scallop & Truffle Modern Pizza",
+      "8-Course Pizza Tasting Menu"
+    ],
+    "dish_highlights": [
+      {
+        "dish_name": "Sourdough Scallop Pizza Slice",
+        "category": "pizza",
+        "price_nok": 145,
+        "taste_tags": ["fermented-crust", "sweet-scallop", "truffled", "airy-crunch"],
+        "review_text": "High-hydration slow-fermented sourdough base with blistered micro-bubbles, topped with Norwegian hand-dived scallops and sea salt."
+      }
+    ],
+    "source_attribution": "Vink (Aftenposten) & @victoria.eat",
+    "why_curated": "Holding our single permitted craft pizza quota spot, Vinoteket redefines pizza as fine gastronomy. Its celebrated tasting menu pairs hyper-light, long-fermented sourdough slices with scallops, chanterelles, and an award-winning international wine cellar.",
+    "google_rating": 4.2,
+    "google_reviews_count": 296,
+    "website_uri": "https://vinoteket.no/",
+    "instagram_url": "https://www.instagram.com/vinoteketoslo",
+    "opening_hours_text": "Tue–Sat 16:00–23:00, Sun–Mon Closed",
+    "popup_meta": null
+  }
+]

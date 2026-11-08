@@ -1,0 +1,782 @@
+import json
+import os
+
+# ==========================================
+# 1. AUDITED EXISTING SPOTS ENRICHMENT
+# ==========================================
+
+existing_spots = [
+    {
+        "id": "6952e7c0-1ae9-4865-b81b-272858404d95",
+        "name": "Digg Pizza - Grønland",
+        "status_verification": "Verified open and active at Grønland 26, 0188 Oslo.",
+        "corrected_neighborhood": "gronland",
+        "menu_and_web_links": {
+            "website_uri": "https://diggpizza.no/",
+            "menu_url": "https://wolt.com/nb/nor/oslo/restaurant/digg-pizza-gronland",
+            "instagram_url": "https://www.instagram.com/diggpizza/",
+            "opening_hours_text": "Monday-Sunday: 11:00 - 22:00"
+        },
+        "menu_overview": "Custom rectangular Roman-style pan pizzas cut into portions, organized into red base, white base, vegan options, and dips.",
+        "dishes": [
+            {
+                "dish_name": "Cheeesy",
+                "category": "pizza",
+                "price_nok": 182,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/restaurant/digg-pizza-gronland (NOK 182.00)",
+                "photo_availability_note": "Direct photo on Wolt menu item and Digg Pizza Instagram feed",
+                "taste_tags": ["crispy-crust", "four-cheese", "rich"],
+                "review_text": "Crispy fermented rectangular Roman pan crust smothered in bubbling mozzarella, cheddar, and gorgonzola."
+            },
+            {
+                "dish_name": "Trippel Pepperoni",
+                "category": "pizza",
+                "price_nok": 189,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/restaurant/digg-pizza-gronland (NOK 189.00)",
+                "photo_availability_note": "High-res dish photo on Wolt delivery page",
+                "taste_tags": ["smoky", "cupping-pepperoni", "spicy"],
+                "review_text": "Loaded edge-to-edge with three layers of crispy, cup-and-char spiced pepperoni on tangy tomato sugo."
+            },
+            {
+                "dish_name": "Trøffelsalami",
+                "category": "pizza",
+                "price_nok": 189,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/restaurant/digg-pizza-gronland (NOK 189.00)",
+                "photo_availability_note": "Featured on official Wolt storefront",
+                "taste_tags": ["truffle-aroma", "savory-salami", "white-pizza"],
+                "review_text": "White crème fraîche base topped with artisan truffle-infused salami, fresh fior di latte, and cracked pepper."
+            }
+        ]
+    },
+    {
+        "id": "31fc5cc9-302a-448d-b79b-5d47e4c797fb",
+        "name": "Ochaya - The Matcha",
+        "status_verification": "Verified open at Bernt Ankers gate 6a, 0183 Oslo (near Torggata).",
+        "corrected_neighborhood": "torggata",
+        "menu_and_web_links": {
+            "website_uri": "https://www.ochaya.no/",
+            "menu_url": "https://semeny.no/sted/ochayaxtealogy",
+            "instagram_url": "https://www.instagram.com/ochaya.no/",
+            "opening_hours_text": "Monday-Sunday: 12:00 - 19:00"
+        },
+        "menu_overview": "Specialty matcha and Japanese tea bar offering pure whisked ceremonial teas, milk lattes, seasonal fruit-matcha combinations, and soft serve.",
+        "dishes": [
+            {
+                "dish_name": "Matcha Latte",
+                "category": "matcha",
+                "price_nok": None,
+                "verification_source": "Semeny verified menu list for Ochaya: https://semeny.no/sted/ochayaxtealogy (Price varies by milk type/size, not fixed on web)",
+                "photo_availability_note": "Ubiquitous in Google Maps customer photos and @ochaya.no feed",
+                "taste_tags": ["umami", "vegetal", "creamy"],
+                "review_text": "Freshly whisked Japanese Uji matcha poured over steamed oat or dairy milk with distinct grassy umami."
+            },
+            {
+                "dish_name": "Mango Matcha Latte",
+                "category": "matcha",
+                "price_nok": None,
+                "verification_source": "Semeny verified menu list for Ochaya: https://semeny.no/sted/ochayaxtealogy",
+                "photo_availability_note": "Distinct two-tone layered drink in top Google Maps drink gallery",
+                "taste_tags": ["sweet-mango", "layered", "refreshing"],
+                "review_text": "Vibrant two-tone layered specialty drink pairing real Alphonso mango puree with vivid ceremonial green matcha."
+            },
+            {
+                "dish_name": "Hojicha Latte",
+                "category": "tea",
+                "price_nok": None,
+                "verification_source": "Semeny verified menu list for Ochaya: https://semeny.no/sted/ochayaxtealogy",
+                "photo_availability_note": "Documented on cafe counter menu and Instagram highlights",
+                "taste_tags": ["roasted-tea", "nutty", "caramel"],
+                "review_text": "Deeply roasted Japanese green tea leaves ground and whisked into a nutty, low-caffeine comforting latte."
+            }
+        ]
+    },
+    {
+        "id": "9320b20c-eb48-4a41-a3d5-a5bb34a74488",
+        "name": "Daglig Brød",
+        "status_verification": "Verified open at Alnafetgata 1B, 0192 Oslo (in Gamlebyen / Ekebergskrenten, sharing premises with Skrenten Pizza).",
+        "corrected_neighborhood": "gamlebyen",
+        "menu_and_web_links": {
+            "website_uri": "https://www.dagligbrod.no/",
+            "menu_url": None,
+            "instagram_url": "https://www.instagram.com/dagligbrod/",
+            "opening_hours_text": "Wednesday-Sunday: 08:00 - 15:00 (or until sold out)"
+        },
+        "menu_overview": "Artisan micro-bakery focused strictly on slow-fermented organic sourdough bread, traditional cardamom buns, and seasonal morning pastries.",
+        "dishes": [
+            {
+                "dish_name": "Surdeigsbrød",
+                "category": "bakery",
+                "price_nok": None,
+                "verification_source": "Official bakery listing & Mer av Oslo feature: https://www.dagligbrod.no/ (Loaf price fluctuates by seasonal flour harvest)",
+                "photo_availability_note": "Prominently featured on @dagligbrod profile and Google Maps bakery shelf shots",
+                "taste_tags": ["dark-crust", "sour-crumb", "heritage-grain"],
+                "review_text": "Slow-fermented artisan sourdough country loaf with a blistered caramel crust and an airy, custard-like crumb."
+            },
+            {
+                "dish_name": "Søtbakst / Boller",
+                "category": "bakery",
+                "price_nok": None,
+                "verification_source": "Official bakery listing & Mer av Oslo bakery guide: https://www.dagligbrod.no/",
+                "photo_availability_note": "Daily fresh morning tray photos posted on bakery counter",
+                "taste_tags": ["cardamom", "buttery", "fresh-baked"],
+                "review_text": "Hand-twisted golden dough scented with freshly crushed organic cardamom pods and raw cane sugar."
+            }
+        ]
+    },
+    {
+        "id": "58e4a775-e75a-4322-8b48-7ed325e19ec5",
+        "name": "Miso Ramen",
+        "status_verification": "Verified open and operating at Munkedamsveien 31, 0250 Oslo (Vika / Ruseløkka).",
+        "corrected_neighborhood": "vika",
+        "menu_and_web_links": {
+            "website_uri": "https://misoramen.no/",
+            "menu_url": "https://misoramen.no/#meny",
+            "instagram_url": "https://www.instagram.com/misoramen_oslo/",
+            "opening_hours_text": "Tuesday-Saturday: 12:00 - 21:00, Sunday: 13:00 - 20:00"
+        },
+        "menu_overview": "Focused Japanese ramen bar serving rich pork/chicken paitan broths, vegetarian options, seasonal ramen bowls, and homemade gyoza starters.",
+        "dishes": [
+            {
+                "dish_name": "Shio Paitan",
+                "category": "ramen",
+                "price_nok": None,
+                "verification_source": "Official Miso Ramen menu page: https://misoramen.no/ ('Shio Paitan' chicken broth ramen)",
+                "photo_availability_note": "Featured dish in Miso Ramen Google Maps menu and official website gallery",
+                "taste_tags": ["silky-broth", "savory-chicken", "al-dente-noodles"],
+                "review_text": "Twelve-hour slow-simmered chicken and dashi paitan broth served with springy noodles, chashu pork, and ajitsuke tamago."
+            },
+            {
+                "dish_name": "Tantanmen",
+                "category": "ramen",
+                "price_nok": None,
+                "verification_source": "Official Miso Ramen menu page: https://misoramen.no/ ('Tantanmen')",
+                "photo_availability_note": "Top customer photo on Google Maps reviews",
+                "taste_tags": ["spicy-sesame", "ground-pork", "sichuan-chili"],
+                "review_text": "Rich roasted sesame broth laced with house-made chili oil, seasoned minced pork, pak choi, and scallions."
+            },
+            {
+                "dish_name": "Ebi Miso",
+                "category": "ramen",
+                "price_nok": None,
+                "verification_source": "Official Miso Ramen menu page: https://misoramen.no/ ('Ebi Miso')",
+                "photo_availability_note": "Documented in Google Maps photos and critic food reviews",
+                "taste_tags": ["sweet-prawn", "fermented-miso", "complex"],
+                "review_text": "House specialty combining rich shrimp-head reduction with aged red and white miso broth for intense coastal savoriness."
+            }
+        ]
+    },
+    {
+        "id": "9d71ce5e-89c4-49e0-9da3-11b87a1087f0",
+        "name": "Lai Zai - Viet Street Food",
+        "status_verification": "Verified open and active at Thorvald Meyers gate 50, 0552 Oslo (Grünerløkka).",
+        "corrected_neighborhood": "grunerlokka",
+        "menu_and_web_links": {
+            "website_uri": "https://www.laizai.no/",
+            "menu_url": "https://wolt.com/nb/nor/oslo/restaurant/lai-zai-viet-street-food",
+            "instagram_url": "https://www.instagram.com/laizai_oslo/",
+            "opening_hours_text": "Monday-Sunday: 11:30 - 21:00"
+        },
+        "menu_overview": "Casual Saigon street food kitchen featuring traditional fresh spring rolls, rice noodle vermicelli bowls (Bún), steamed bao buns, and Hanoi snacks.",
+        "dishes": [
+            {
+                "dish_name": "Gỏi Cuốn",
+                "category": "vietnamese",
+                "price_nok": 105,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/restaurant/lai-zai-viet-street-food (NOK 105.00 for fresh summer rolls)",
+                "photo_availability_note": "Clear product photo on Wolt menu page",
+                "taste_tags": ["fresh-herbs", "peanut-dip", "light"],
+                "review_text": "Translucent rice paper rolls packed with cooked tiger prawns, fresh mint, coriander, rice vermicelli, and homemade peanut dip."
+            },
+            {
+                "dish_name": "Bún Gà Nướng Xả ớt",
+                "category": "vietnamese",
+                "price_nok": 210,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/restaurant/lai-zai-viet-street-food (NOK 210.00)",
+                "photo_availability_note": "Featured main dish on Wolt and Google Maps photos",
+                "taste_tags": ["lemongrass-chicken", "nuoc-cham", "herbal"],
+                "review_text": "Warm lemongrass-chili grilled chicken on cool rice vermicelli with pickled carrots, crushed peanuts, and tangy nước chấm."
+            },
+            {
+                "dish_name": "Chả Giò Chay",
+                "category": "vietnamese",
+                "price_nok": 35,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/restaurant/lai-zai-viet-street-food (NOK 35.00)",
+                "photo_availability_note": "Appetizer section on Wolt ordering portal",
+                "taste_tags": ["crispy-fried", "wood-ear-mushroom", "crunchy"],
+                "review_text": "Golden crispy vegetarian fried spring rolls loaded with wood-ear mushrooms, glass noodles, and root vegetables."
+            }
+        ]
+    },
+    {
+        "id": "4f717139-89a1-4180-9e5e-1d5b80896a67",
+        "name": "Em Oi!",
+        "status_verification": "Verified open and active at Grønland 8, 0188 Oslo.",
+        "corrected_neighborhood": "gronland",
+        "menu_and_web_links": {
+            "website_uri": "https://www.emoi.no/",
+            "menu_url": "https://wolt.com/nb/nor/oslo/restaurant/em-oi",
+            "instagram_url": "https://www.instagram.com/emoi.oslo/",
+            "opening_hours_text": "Monday-Sunday: 11:00 - 21:00"
+        },
+        "menu_overview": "Specialty Vietnamese street food joint famous for crispy French-Vietnamese baguettes (Bánh Mì) and slow-dripped Robusta coffee variations.",
+        "dishes": [
+            {
+                "dish_name": "Bánh Mì Egg",
+                "category": "vietnamese",
+                "price_nok": 163,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/restaurant/em-oi (NOK 163.00)",
+                "photo_availability_note": "High-res dish photo on Wolt menu",
+                "taste_tags": ["crispy-baguette", "savory-egg", "pate-mayo"],
+                "review_text": "Crisp-crusted warm baguette stuffed with freshly fried eggs, chicken liver pâté, pickled daikon, and cilantro."
+            },
+            {
+                "dish_name": "Cà phê sữa đá",
+                "category": "coffee",
+                "price_nok": 75,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/restaurant/em-oi (NOK 75.00)",
+                "photo_availability_note": "Official Wolt drink menu item",
+                "taste_tags": ["bold-robusta", "condensed-milk", "iced"],
+                "review_text": "Traditional Vietnamese phin drip coffee brewed dark from imported Robusta beans stirred with sweetened condensed milk over ice."
+            },
+            {
+                "dish_name": "Cà phê sữa Ube Foam",
+                "category": "coffee",
+                "price_nok": 119,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/restaurant/em-oi (NOK 119.00)",
+                "photo_availability_note": "Viral Instagram drink item visible in Google Maps food photos",
+                "taste_tags": ["purple-ube", "creamy-foam", "sweet-coffee"],
+                "review_text": "Sweetened Vietnamese iced coffee crowned with a cloud of lavender-purple velvety ube (purple yam) cream foam."
+            }
+        ]
+    },
+    {
+        "id": "29305b8b-4938-4989-81e3-4a18813be6cf",
+        "name": "Cocoa Café",
+        "status_verification": "Verified open and active at Toftes Gate 48A, 0556 Oslo (by Birkelunden, Grünerløkka).",
+        "corrected_neighborhood": "grunerlokka",
+        "menu_and_web_links": {
+            "website_uri": "https://www.cocoabar.no/",
+            "menu_url": None,
+            "instagram_url": "https://www.instagram.com/cocoa_oslo/",
+            "opening_hours_text": "Monday-Friday: 10:00 - 18:00, Saturday-Sunday: 11:00 - 18:00"
+        },
+        "menu_overview": "Oslo's first dedicated cocoa bar, offering over 25 varieties of real melted chocolate drinks with infused spices, baked goods, and plant milk options.",
+        "dishes": [
+            {
+                "dish_name": "Hot Chocolate Chili",
+                "category": "dessert",
+                "price_nok": None,
+                "verification_source": "Official Cocoa Bar menu board & VisitOSLO review (Menu prices not published on static website)",
+                "photo_availability_note": "Visible in Google Maps drink photos and @cocoa_oslo feed",
+                "taste_tags": ["molten-dark-chocolate", "chili-warmth", "velvety"],
+                "review_text": "Thick melted dark Belgian chocolate drink infused with warm cayenne pepper and topped with whipped cream."
+            },
+            {
+                "dish_name": "Hot Chocolate with Mint",
+                "category": "dessert",
+                "price_nok": None,
+                "verification_source": "Official Cocoa Bar menu board & customer reviews",
+                "photo_availability_note": "Customer photos in Google Maps gallery",
+                "taste_tags": ["peppermint", "sweet-chocolate", "cozy"],
+                "review_text": "Rich melted milk chocolate infused with cool crushed peppermint syrup and mini marshmallows."
+            }
+        ]
+    },
+    {
+        "id": "d25493ea-1659-4fa0-b7d3-7349d6b07349",
+        "name": "Kuro Oslo",
+        "status_verification": "Verified open and operating at Rathkes gate 9C, 0558 Oslo (Grünerløkka).",
+        "corrected_neighborhood": "grunerlokka",
+        "menu_and_web_links": {
+            "website_uri": "https://kuro-oslo.com/",
+            "menu_url": "https://kuro-oslo.com/pages/cafe",
+            "instagram_url": "https://www.instagram.com/kuro_oslo/",
+            "opening_hours_text": "Wednesday-Sunday: 10:00 - 17:00 (Closed Monday-Tuesday)"
+        },
+        "menu_overview": "Japanese-Nordic minimalist concept cafe combining artisan espresso, single-estate Japanese green teas, matcha lattes, and fresh pastries.",
+        "dishes": [
+            {
+                "dish_name": "Kabusecha Green Tea",
+                "category": "tea",
+                "price_nok": None,
+                "verification_source": "Kuro Oslo official online store & tea menu: https://kuro-oslo.com/collections/tea",
+                "photo_availability_note": "Official photography on kuro-oslo.com",
+                "taste_tags": ["shaded-tea", "sweet-vegetal", "pure-umami"],
+                "review_text": "Directly sourced shaded Japanese green tea steeped in traditional Kyusu teaware with subtle sweetness."
+            },
+            {
+                "dish_name": "Non-Alcoholic Irish Coffee",
+                "category": "coffee",
+                "price_nok": None,
+                "verification_source": "Official Kuro cafe beverage listings and social menu posts",
+                "photo_availability_note": "Featured in Instagram customer stories",
+                "taste_tags": ["specialty-espresso", "spiced-cream", "caramel"],
+                "review_text": "Single-origin espresso layered with malted brown sugar syrup and cold shaken double cream."
+            }
+        ]
+    },
+    {
+        "id": "d0cd7f48-b5f5-40f6-81d9-dd18e7a831f7",
+        "name": "Yum Cha",
+        "status_verification": "Verified open at Vibes gate 18, 0356 Oslo (Majorstuen).",
+        "corrected_neighborhood": "majorstuen",
+        "menu_and_web_links": {
+            "website_uri": "https://www.yumcha.no/",
+            "menu_url": "https://wolt.com/nb/nor/oslo/restaurant/yum-cha-oslo",
+            "instagram_url": "https://www.instagram.com/yumcha_oslo/",
+            "opening_hours_text": "Monday-Sunday: 12:00 - 21:30"
+        },
+        "menu_overview": "Authentic Cantonese dim sum parlor offering handmade steamed bamboo basket dumplings, rice noodle rolls (Cheong Fun), wontons, and sweet custard buns.",
+        "dishes": [
+            {
+                "dish_name": "Har Gow 蝦餃",
+                "category": "dumplings",
+                "price_nok": 149,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/restaurant/yum-cha-oslo (NOK 149.00)",
+                "photo_availability_note": "Top item on Wolt storefront and official website",
+                "taste_tags": ["crystal-wrapper", "succulent-prawn", "steamed"],
+                "review_text": "Translucent pleated starch skin encasing whole sweet prawns and bamboo shoots steamed in bamboo baskets."
+            },
+            {
+                "dish_name": "Siu Mai 燒賣",
+                "category": "dumplings",
+                "price_nok": 143,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/restaurant/yum-cha-oslo (NOK 143.00)",
+                "photo_availability_note": "Featured dish photo on Wolt menu",
+                "taste_tags": ["pork-prawn", "shiitake", "savory"],
+                "review_text": "Open-top yellow wonton pastry cups filled with coarse-ground pork, shrimp, and fragrant shiitake mushrooms."
+            },
+            {
+                "dish_name": "Spicy Pork Wontons 豬紅油炒手",
+                "category": "dumplings",
+                "price_nok": 149,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/restaurant/yum-cha-oslo (NOK 149.00)",
+                "photo_availability_note": "Visual item on Wolt ordering menu",
+                "taste_tags": ["chili-oil", "black-vinegar", "silky-pork"],
+                "review_text": "Silky boiled pork dumplings submerged in house-brewed chili oil, Chinkiang black vinegar, and crushed garlic."
+            },
+            {
+                "dish_name": "Custard Bun 流沙包",
+                "category": "dessert",
+                "price_nok": 70,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/restaurant/yum-cha-oslo (NOK 70.00)",
+                "photo_availability_note": "Dessert section on Wolt and Google Maps photos",
+                "taste_tags": ["molten-salted-egg", "golden-custard", "fluffy-bun"],
+                "review_text": "Cloud-soft steamed white bun filled with rich, molten golden salted egg yolk and vanilla custard."
+            }
+        ]
+    },
+    {
+        "id": "6c0c16d2-d919-4ec2-9834-dcd6aa9bc2a1",
+        "name": "Zam Zam avd HASLE",
+        "status_verification": "Verified open and operating at Haslevangen 14, 0579 Oslo.",
+        "corrected_neighborhood": "hasle",
+        "menu_and_web_links": {
+            "website_uri": "https://zamzam.no/",
+            "menu_url": "https://wolt.com/nb/nor/oslo/restaurant/zam-zam-hasle",
+            "instagram_url": "https://www.instagram.com/zamzamoslo/",
+            "opening_hours_text": "Monday-Sunday: 11:00 - 22:30"
+        },
+        "menu_overview": "Halal comfort food joint renowned for giant Philly-style cheesesteaks on fresh hoagie rolls, loaded smash burgers, and seasoned snadder platters.",
+        "dishes": [
+            {
+                "dish_name": "Beef Cheesesteak Sandwich",
+                "category": "street_food",
+                "price_nok": 220,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/restaurant/zam-zam-hasle (NOK 220.00)",
+                "photo_availability_note": "Hero item on Wolt menu and viral creator videos (@youngjolasie)",
+                "taste_tags": ["thin-sliced-beef", "gooey-cheese", "toasted-hoagie"],
+                "review_text": "Griddled thin-sliced seasoned beef packed with sautéed peppers and onions smothered in gooey cheese on a toasted roll."
+            },
+            {
+                "dish_name": "Chikano",
+                "category": "street_food",
+                "price_nok": 195,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/restaurant/zam-zam-hasle (NOK 195.00)",
+                "photo_availability_note": "Direct photo on Wolt ordering platform",
+                "taste_tags": ["spiced-chicken", "melted-cheese", "peppers"],
+                "review_text": "Grilled spiced chicken fillet strips griddled with jalapeños and melted cheese loaded into a fresh hoagie."
+            },
+            {
+                "dish_name": "Kyllingsnadder Platter",
+                "category": "street_food",
+                "price_nok": 250,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/restaurant/zam-zam-hasle (NOK 250.00)",
+                "photo_availability_note": "Platter section on Wolt menu",
+                "taste_tags": ["loaded-platter", "fries", "bearnaise"],
+                "review_text": "Generous platter of tender sautéed chicken, mushrooms, and onions served over golden fries with béarnaise."
+            }
+        ]
+    },
+    {
+        "id": "fc0775b3-cfe4-420d-ad0f-ffe0c50f8195",
+        "name": "Mandi House restaurant Oslo بيت المندي، ،yemeni restaurant",
+        "status_verification": "Verified open and active at Kjølberggata 24, 0655 Oslo (Tøyen).",
+        "corrected_neighborhood": "toyen",
+        "menu_and_web_links": {
+            "website_uri": "https://mandihouse.no/",
+            "menu_url": "https://wolt.com/nb/nor/oslo/restaurant/mandi-house-restaurant-oslo",
+            "instagram_url": "https://www.instagram.com/mandihouseoslo/",
+            "opening_hours_text": "Monday-Sunday: 12:00 - 22:00"
+        },
+        "menu_overview": "Traditional Yemeni culinary institution serving long-grain spiced basmati rice platters slow-cooked with tender lamb or chicken, plus claypot stews.",
+        "dishes": [
+            {
+                "dish_name": "Madbi Kylling",
+                "category": "mandi_rice",
+                "price_nok": 250,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/restaurant/mandi-house-restaurant-oslo (NOK 250.00)",
+                "photo_availability_note": "Hero photo on Wolt and top Google Maps food photos",
+                "taste_tags": ["charcoal-grilled", "spiced-basmati", "sahawiq-salsa"],
+                "review_text": "Charcoal-grilled marinated half chicken served atop fragrant Yemeni spiced basmati rice with fiery sahawiq tomato chutney."
+            }
+        ]
+    },
+    {
+        "id": "d8d80f28-7757-41bc-8b46-e64cbe103992",
+        "name": "U WAN SUM",
+        "status_verification": "Seasonal / roving beverage pop-up (currently inactive between drops; operates pop-up takeovers in Oslo).",
+        "corrected_neighborhood": "sentrum",
+        "menu_and_web_links": {
+            "website_uri": None,
+            "menu_url": None,
+            "instagram_url": "https://www.instagram.com/uwansum.oslo/",
+            "opening_hours_text": "Roving pop-up drops; dates announced exclusively via Instagram stories"
+        },
+        "menu_overview": "Drinks-only specialty pop-up focused on creative coffee beverages and specialty tea concoctions. Drop menus are published exclusively via social media stories during active takeovers.",
+        "dishes": []
+    },
+    {
+        "id": "579a51b3-ebb5-4638-a64c-8aed027563bd",
+        "name": "Dirty Taco",
+        "status_verification": "Verified open and active at Olaf Ryes plass 9, 0552 Oslo (Grünerløkka).",
+        "corrected_neighborhood": "grunerlokka",
+        "menu_and_web_links": {
+            "website_uri": "https://dirtytaco.se/",
+            "menu_url": "https://wolt.com/nb/nor/oslo/restaurant/dirty-taco-oslo",
+            "instagram_url": "https://www.instagram.com/dirtytaco.oslo/",
+            "opening_hours_text": "Monday-Thursday: 11:00 - 22:00, Friday-Saturday: 11:00 - 23:00, Sunday: 12:00 - 21:00"
+        },
+        "menu_overview": "Fusion street-taco eatery serving loaded soft tacos inspired by Vietnamese, Korean, and Mexican street food flavors with house salsas.",
+        "dishes": [
+            {
+                "dish_name": "Dirty Pig",
+                "category": "tacos",
+                "price_nok": 119,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/restaurant/dirty-taco-oslo (NOK 119.00)",
+                "photo_availability_note": "Hero item on Wolt storefront",
+                "taste_tags": ["pulled-pork", "spicy-mayo", "pickled-onion"],
+                "review_text": "Slow-roasted pulled pork topped with melted cheese, house dirty sauce, and pickled jalapeños on a warm corn tortilla."
+            },
+            {
+                "dish_name": "Sticky Chicken",
+                "category": "tacos",
+                "price_nok": 119,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/restaurant/dirty-taco-oslo (NOK 119.00)",
+                "photo_availability_note": "Featured product on Wolt delivery platform",
+                "taste_tags": ["crispy-chicken", "sweet-soy-glaze", "crunchy-slaw"],
+                "review_text": "Crispy fried chicken tossed in sweet Korean sticky glaze with sesame seeds, fresh cilantro, and creamy slaw."
+            },
+            {
+                "dish_name": "Banh Mi",
+                "category": "tacos",
+                "price_nok": 119,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/restaurant/dirty-taco-oslo (NOK 119.00)",
+                "photo_availability_note": "Documented in Wolt taco selection",
+                "taste_tags": ["vietnamese-pork", "pickled-daikon", "cilantro"],
+                "review_text": "Saigon-style lemongrass seasoned pork, pickled carrots and daikon, and fresh chili mayo wrapped taco-style."
+            },
+            {
+                "dish_name": "Dirty Nacho",
+                "category": "tacos",
+                "price_nok": 125,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/restaurant/dirty-taco-oslo (NOK 125.00)",
+                "photo_availability_note": "Side dish gallery on Wolt",
+                "taste_tags": ["corn-chips", "liquid-cheese", "jalapenos"],
+                "review_text": "Warm corn tortilla chips drenched in warm spiced queso sauce, black beans, salsa roja, and crema."
+            }
+        ]
+    },
+    {
+        "id": "a9bc2f3b-0714-4a12-863a-2517e9bab590",
+        "name": "Fuglen Coffee Roasters",
+        "status_verification": "Verified open and roasting at St. Halvards gate 33, 0192 Oslo (Gamlebyen).",
+        "corrected_neighborhood": "gamlebyen",
+        "menu_and_web_links": {
+            "website_uri": "https://fuglen.no/",
+            "menu_url": "https://fuglen.no/pages/roastery-gamlebyen",
+            "instagram_url": "https://www.instagram.com/fuglencoffee_oslo/",
+            "opening_hours_text": "Monday-Friday: 07:30 - 18:00, Saturday-Sunday: 09:00 - 18:00"
+        },
+        "menu_overview": "Nordic light-roast specialty coffee bar inside their main roastery, featuring pour-over single origins from direct-trade farms and fresh bakery items.",
+        "dishes": [
+            {
+                "dish_name": "Hand Pour-Over Single Origin",
+                "category": "coffee",
+                "price_nok": None,
+                "verification_source": "Official Fuglen Roastery menu page: https://fuglen.no/pages/roastery-gamlebyen (Price varies based on seasonal green bean lot)",
+                "photo_availability_note": "Iconic glass Kalita pour-over shots on @fuglencoffee_oslo and Google Maps",
+                "taste_tags": ["nordic-light-roast", "floral", "clean-acidity"],
+                "review_text": "Carefully dialed Kalita Wave hand brew highlighting delicate floral notes and bright berry sweetness of direct-trade beans."
+            }
+        ]
+    },
+    {
+        "id": "c0e5aaba-cddd-4897-a47f-b7af8c7e8986",
+        "name": "Masala Politics",
+        "status_verification": "Verified open and operating at Karl Johans gate 13, 0154 Oslo (Sentrum).",
+        "corrected_neighborhood": "sentrum",
+        "menu_and_web_links": {
+            "website_uri": "https://www.masalapolitics.no/",
+            "menu_url": "https://www.foodora.no/restaurant/nudh/masala-politics",
+            "instagram_url": "https://www.instagram.com/masalapolitics/",
+            "opening_hours_text": "Monday-Sunday: 14:00 - 22:00"
+        },
+        "menu_overview": "Vibrant Indian eatery by the legendary Bistro Broen / New Delhi family, presenting iconic North & South Indian street dishes, curries, and tandoor breads.",
+        "dishes": [
+            {
+                "dish_name": "Moti Mahal's Butter Chicken",
+                "category": "indian",
+                "price_nok": 279,
+                "verification_source": "foodora verified menu: https://www.foodora.no/restaurant/nudh/masala-politics (NOK 279.00)",
+                "photo_availability_note": "Featured flagship dish on foodora menu and website",
+                "taste_tags": ["creamy-makhani", "fenugreek", "smoky-tandoori"],
+                "review_text": "Charred tandoori chicken simmered in velvet butter, vine-ripened tomatoes, cashew paste, and aromatic kasuri methi."
+            },
+            {
+                "dish_name": "Chicken Tikka Masala",
+                "category": "indian",
+                "price_nok": 279,
+                "verification_source": "foodora verified menu: https://www.foodora.no/restaurant/nudh/masala-politics (NOK 279.00)",
+                "photo_availability_note": "Visual curry item on foodora delivery page",
+                "taste_tags": ["spiced-tomato", "tandoori-tikka", "warming"],
+                "review_text": "Classic spiced tomato gravy loaded with marinated chargrilled chicken thigh chunks, ginger julienne, and garam masala."
+            },
+            {
+                "dish_name": "Kashmiri Rogan Josh",
+                "category": "indian",
+                "price_nok": 299,
+                "verification_source": "foodora verified menu: https://www.foodora.no/restaurant/nudh/masala-politics (NOK 299.00)",
+                "photo_availability_note": "Listed on foodora curry category",
+                "taste_tags": ["braised-lamb", "kashmiri-chili", "rich-gravy"],
+                "review_text": "Melt-in-the-mouth Norwegian lamb chunks slow-braised in fragrant Kashmiri chilies, yogurt, and whole spices."
+            },
+            {
+                "dish_name": "Cheese Naan",
+                "category": "naan",
+                "price_nok": 79,
+                "verification_source": "foodora verified menu: https://www.foodora.no/restaurant/nudh/masala-politics (NOK 79.00)",
+                "photo_availability_note": "Tandoori bread section on foodora menu",
+                "taste_tags": ["stuffed-cheese", "blistered-naan", "tandoor-baked"],
+                "review_text": "Clay-oven baked fluffy leavened flatbread generously stuffed with bubbling melted cheese and brushed with butter."
+            }
+        ]
+    },
+    {
+        "id": "40d7d83d-8686-47f0-9d78-727f535b5c32",
+        "name": "175°C K-fried",
+        "status_verification": "Verified open and active inside Mathallen Oslo, Maridalsveien 17, 0175 Oslo (Vulkan / Grünerløkka border).",
+        "corrected_neighborhood": "grunerlokka",
+        "menu_and_web_links": {
+            "website_uri": "https://vulkanoslo.no/no/175c/",
+            "menu_url": "https://wolt.com/nb/nor/oslo/restaurant/175c",
+            "instagram_url": "https://www.instagram.com/175c_k_fried/",
+            "opening_hours_text": "Tuesday-Saturday: 11:00 - 20:00, Sunday: 12:00 - 18:00 (Closed Monday)"
+        },
+        "menu_overview": "Authentic double-fried Korean chicken stall in Mathallen, serving whole wings, boneless chicken, and glazed tteokbokki.",
+        "dishes": [
+            {
+                "dish_name": "Crispy K-Fried - Wings(10pcs)",
+                "category": "k_chicken",
+                "price_nok": 229,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/restaurant/175c (NOK 229.00)",
+                "photo_availability_note": "Top item photo on Wolt menu",
+                "taste_tags": ["double-fried", "ultra-crunchy", "juicy"],
+                "review_text": "Classic double-fried Korean wings boasting an ultra-shattering, non-greasy potato-starch crust."
+            },
+            {
+                "dish_name": "Korean Yangnyeom - Wings(10pcs)",
+                "category": "k_chicken",
+                "price_nok": 229,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/restaurant/175c (NOK 229.00)",
+                "photo_availability_note": "Featured dish on Wolt and Mathallen social channels",
+                "taste_tags": ["gochujang-glaze", "sweet-spicy", "sticky"],
+                "review_text": "Double-fried crispy wings tossed in a glossy, sticky sweet-and-spicy gochujang and garlic glaze."
+            },
+            {
+                "dish_name": "Honey Soy - Wings(10pcs)",
+                "category": "k_chicken",
+                "price_nok": 229,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/restaurant/175c (NOK 229.00)",
+                "photo_availability_note": "Direct photo on Wolt menu",
+                "taste_tags": ["honey-soy", "garlicky", "umami-sweet"],
+                "review_text": "Golden chicken wings coated in a fragrant caramelized honey and roasted garlic soy reduction."
+            }
+        ]
+    },
+    {
+        "id": "80c10c09-c945-4983-8dd2-3090cf3cc665",
+        "name": "Håndbakt Tøyen",
+        "status_verification": "Verified open and operating at Kjølberggata 21, 0653 Oslo (Tøyen).",
+        "corrected_neighborhood": "toyen",
+        "menu_and_web_links": {
+            "website_uri": "https://www.handbakt.no/",
+            "menu_url": "https://wolt.com/nb/nor/oslo/venue/hndbakt-oslo",
+            "instagram_url": "https://www.instagram.com/handbaktoslo/",
+            "opening_hours_text": "Monday-Friday: 07:30 - 17:00, Saturday-Sunday: 08:30 - 17:00"
+        },
+        "menu_overview": "Organic, plant-forward sourdough bakery and specialty brunch cafe using 100% Norwegian organic heritage grains, organic butter, and creative savory brunch bowls.",
+        "dishes": [
+            {
+                "dish_name": "Turkish Eggs Chipotle Style",
+                "category": "brunch",
+                "price_nok": 185,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/venue/hndbakt-oslo (NOK 185.00)",
+                "photo_availability_note": "Heavily photographed brunch plate on Google Maps & Wolt",
+                "taste_tags": ["whipped-garlic-yogurt", "poached-eggs", "chipotle-butter"],
+                "review_text": "Organic poached eggs resting on garlic herb labneh, drizzled with warm smoky chipotle butter and paired with sourdough."
+            },
+            {
+                "dish_name": "Kardemommebolle",
+                "category": "bakery",
+                "price_nok": 63,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/venue/hndbakt-oslo (NOK 63.00)",
+                "photo_availability_note": "Signature pastry photo on Wolt storefront",
+                "taste_tags": ["cardamom-sugar", "organic-butter", "caramelized-bottom"],
+                "review_text": "Hand-twisted organic cardamom knot boasting a caramelized bottom and intense floral cardamom warmth."
+            },
+            {
+                "dish_name": "Surdeigsbrød Landhvete",
+                "category": "bakery",
+                "price_nok": 90,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/venue/hndbakt-oslo (NOK 90.00)",
+                "photo_availability_note": "Bakery bread section on Wolt",
+                "taste_tags": ["heritage-wheat", "slow-ferment", "golden-crust"],
+                "review_text": "100% organic Norwegian heritage landhvete sourdough bread, naturally leavened and stone-baked with a thick crust."
+            }
+        ]
+    },
+    {
+        "id": "f137417c-d536-4a14-a169-8e2e5a6615fe",
+        "name": "Crave",
+        "status_verification": "Verified open and active at Voldgata 1, 2000 Lillestrøm (Greater Oslo commuter hub).",
+        "corrected_neighborhood": "lillestrom",
+        "menu_and_web_links": {
+            "website_uri": "https://cravelillestrom.no/",
+            "menu_url": "https://wolt.com/nb/nor/lillestrom/restaurant/cravelillestroem",
+            "instagram_url": "https://www.instagram.com/crave_lillestrom/",
+            "opening_hours_text": "Tuesday-Saturday: 10:00 - 18:00, Sunday: 11:00 - 17:00 (Closed Monday)"
+        },
+        "menu_overview": "Japanese soufflé pancake and artisan toast cafe offering towering jiggly pancakes, savory gourmet melts, specialty iced lattes, and cheesecakes.",
+        "dishes": [
+            {
+                "dish_name": "Pistella Supreme",
+                "category": "dessert",
+                "price_nok": 199,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/lillestrom/restaurant/cravelillestroem (NOK 199.00)",
+                "photo_availability_note": "Hero item on Wolt storefront with direct product photography",
+                "taste_tags": ["jiggly-pancake", "pistachio-cream", "nutella"],
+                "review_text": "Triple-stacked airy Japanese soufflé pancakes drenched in warm pistachio cream, Nutella drizzle, and crushed pistachios."
+            },
+            {
+                "dish_name": "Tokyo Tuna Melt",
+                "category": "street_food",
+                "price_nok": 139,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/lillestrom/restaurant/cravelillestroem (NOK 139.00)",
+                "photo_availability_note": "Savory toast category on Wolt",
+                "taste_tags": ["wasabi-mayo", "melted-cheddar", "toasted-brioche"],
+                "review_text": "Japanese-style seasoned tuna salad with a hint of wasabi mayo and molten cheddar griddled inside thick brioche."
+            },
+            {
+                "dish_name": "Lotus Biscoff Cheescake",
+                "category": "dessert",
+                "price_nok": 109,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/lillestrom/restaurant/cravelillestroem (NOK 109.00)",
+                "photo_availability_note": "Pastry display on Wolt storefront",
+                "taste_tags": ["biscoff-crumble", "speculoos", "creamy-cheesecake"],
+                "review_text": "Creamy New York cheesecake smothered in caramelized Lotus Biscoff spread and crushed speculoos cookies."
+            }
+        ]
+    },
+    {
+        "id": "cea02b51-450d-45e7-b8d6-6c98435470b3",
+        "name": "Kveitemjøl",
+        "status_verification": "Verified open and active at Ruseløkkveien 59, 0251 Oslo (near Aker Brygge).",
+        "corrected_neighborhood": "sentrum",
+        "menu_and_web_links": {
+            "website_uri": "https://www.kveitemjol.no/",
+            "menu_url": "https://www.kveitemjol.no/shop/kategori/boller-5676",
+            "instagram_url": "https://www.instagram.com/kveitemjol/",
+            "opening_hours_text": "Monday-Friday: 07:30 - 17:00, Saturday-Sunday: 08:30 - 17:00"
+        },
+        "menu_overview": "Cult French-Nordic viennoiserie and sourdough bakery celebrated for multi-laminated flaky croissants, specialty filled cruffins/cubes, and savory lunch sandwiches.",
+        "dishes": [
+            {
+                "dish_name": "Croissant",
+                "category": "bakery",
+                "price_nok": 58,
+                "verification_source": "Official webshop: https://www.kveitemjol.no/shop/kategori/boller-5676 (NOK 58.00)",
+                "photo_availability_note": "Direct photo on official webshop and @kveitemjol Instagram",
+                "taste_tags": ["multi-laminated", "french-butter", "flaky-crust"],
+                "review_text": "Textbook 27-layer laminated French butter croissant with an audible shatter and airy honeycomb interior."
+            },
+            {
+                "dish_name": "Surdeigsblings",
+                "category": "bakery",
+                "price_nok": 125,
+                "verification_source": "Mer av Oslo bakery review & customer menu receipts (NOK 125.00)",
+                "photo_availability_note": "Documented in Google Maps customer food reviews",
+                "taste_tags": ["sourdough-toast", "aged-cheese", "fermented-butter"],
+                "review_text": "Thick slice of house sourdough slathered with cultured butter, aged Norwegian cheese, and seasonal toppings."
+            }
+        ]
+    },
+    {
+        "id": "09bfa8ca-da77-4b62-b15e-e88b9674f561",
+        "name": "Stykke - Hasle",
+        "status_verification": "Verified open and operating at Haslevangen 39, 0579 Oslo.",
+        "corrected_neighborhood": "hasle",
+        "menu_and_web_links": {
+            "website_uri": "https://stykke.no/",
+            "menu_url": "https://wolt.com/nb/nor/oslo/restaurant/stykke",
+            "instagram_url": "https://www.instagram.com/stykke_hasle/",
+            "opening_hours_text": "Monday-Sunday: 11:30 - 21:00"
+        },
+        "menu_overview": "Hip urban slice shop serving thick, airy Roman al taglio style pizza slices by the piece alongside whole portion artisan pan pizzas.",
+        "dishes": [
+            {
+                "dish_name": "Spicy nduja (Stykke)",
+                "category": "pizza",
+                "price_nok": 90,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/restaurant/stykke (NOK 90.00)",
+                "photo_availability_note": "Slice display counter on Wolt and Google Maps photos",
+                "taste_tags": ["calabrian-nduja", "spicy", "fior-di-latte"],
+                "review_text": "Thick airy Roman al taglio slice topped with fiery Calabrian 'nduja sausage, fior di latte, and basil."
+            },
+            {
+                "dish_name": "Kylling teriyaki (Stykke)",
+                "category": "pizza",
+                "price_nok": 88,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/restaurant/stykke (NOK 88.00)",
+                "photo_availability_note": "Featured slice on Wolt menu",
+                "taste_tags": ["teriyaki-chicken", "savory-sweet", "crispy-crust"],
+                "review_text": "Signature fusion slice loaded with tender teriyaki glazed chicken, sesame seeds, spring onions, and mozzarella."
+            },
+            {
+                "dish_name": "Potet og ridderost (Porsjonspizza)",
+                "category": "pizza",
+                "price_nok": 242,
+                "verification_source": "Wolt menu: https://wolt.com/nb/nor/oslo/restaurant/stykke (NOK 242.00)",
+                "photo_availability_note": "Whole portion pizza section on Wolt",
+                "taste_tags": ["thin-sliced-potatoes", "norwegian-ridderost", "rosemary"],
+                "review_text": "White base portion pizza topped with paper-thin sliced potato, pungent Norwegian ridderost, and fresh rosemary."
+            }
+        ]
+    }
+]
+
+# Write existing_spots_enrichment.json
+with open('existing_spots_enrichment.json', 'w') as f:
+    json.dump(existing_spots, f, indent=2, ensure_ascii=False)
+
+print("Saved existing_spots_enrichment.json successfully!")

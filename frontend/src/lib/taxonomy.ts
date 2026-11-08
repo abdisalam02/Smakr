@@ -293,20 +293,19 @@ export function resolveEntityTaxonomy(
   } else if (
     allText.includes("lai zai") ||
     allText.includes("laizai") ||
+    allText.includes("em oi") ||
+    allText.includes("êm ôi") ||
     candidateCat === "banh_mi" ||
     allText.includes("banh mi") ||
     allText.includes("bánh mì")
   ) {
     dishCategory = "banh_mi";
   } else if (
-    allText.includes("em oi") ||
-    allText.includes("êm ôi") ||
     allText.includes("pho") ||
     allText.includes("phở") ||
     allText.includes("noodle") ||
     allText.includes("udon") ||
-    candidateCat === "pho" ||
-    (candidateCat === "vietnamese" && !allText.includes("banh mi") && !allText.includes("bánh mì"))
+    candidateCat === "pho"
   ) {
     dishCategory = "pho";
   } else if (candidateCat === "ramen" || allText.includes("ramen")) {
@@ -433,3 +432,292 @@ export function resolveEntityTaxonomy(
     diets,
   };
 }
+
+export interface VenueDisplayBadge {
+  flag: string;
+  mainTag: string;
+  pinIcon: string;
+  filterTags: string[];
+}
+
+/**
+ * Deterministic Venue Display Badge Resolver (1 Main Tag Only for Card Header).
+ * Provides clean Flag + 1 Short Main Tag (e.g. "🇮🇳 INDIAN", "🇻🇳 VIETNAMESE", "🇯🇵 MATCHA")
+ * while preserving the specific pinIcon for map markers.
+ */
+export function resolveVenueDisplayBadge(venue?: Partial<Venue> | null): VenueDisplayBadge {
+  if (!venue) {
+    return { flag: "🍽", mainTag: "FOOD", pinIcon: "all", filterTags: ["food"] };
+  }
+
+  const nameLower = (venue.name || "").toLowerCase().trim();
+  const catLower = (venue.food_category || (venue as any).category || "").toLowerCase().trim();
+  const iconLower = (venue.icon || "").toLowerCase().trim();
+
+  // 1. Specific Curated Spot Matches (Oslo Core DB)
+  if (nameLower.includes("masala politics") || catLower === "naan") {
+    return { flag: "🇮🇳", mainTag: "INDIAN", pinIcon: "naan", filterTags: ["indian", "curry", "halal", "street_food", "asian", "dinner"] };
+  }
+  if (nameLower.includes("em oi") || nameLower.includes("êm ôi")) {
+    return { flag: "🇻🇳", mainTag: "VIETNAMESE", pinIcon: "banh_mi", filterTags: ["vietnamese", "banh_mi", "coffee", "street_food", "asian", "lunch"] };
+  }
+  if (nameLower.includes("lai zai")) {
+    return { flag: "🇻🇳", mainTag: "VIETNAMESE", pinIcon: "banh_mi", filterTags: ["vietnamese", "street_food", "asian", "noodles", "rolls", "lunch"] };
+  }
+  if (nameLower.includes("ochaya")) {
+    return { flag: "🇯🇵", mainTag: "MATCHA", pinIcon: "matcha", filterTags: ["matcha", "tea", "japanese", "asian", "drinks", "dessert"] };
+  }
+  if (nameLower.includes("miso ramen")) {
+    return { flag: "🇯🇵", mainTag: "RAMEN", pinIcon: "ramen", filterTags: ["ramen", "noodles", "japanese", "asian", "soup", "dinner"] };
+  }
+  if (nameLower.includes("kuro")) {
+    return { flag: "🇯🇵", mainTag: "COFFEE & TEA", pinIcon: "coffee", filterTags: ["coffee", "tea", "matcha", "japanese", "minimalist", "drinks"] };
+  }
+  if (nameLower.includes("daglig brød") || nameLower.includes("daglig brod")) {
+    return { flag: "🇳🇴", mainTag: "BAKERY", pinIcon: "croissant", filterTags: ["bakery", "sourdough", "bread", "pastries", "nordic", "morning"] };
+  }
+  if (nameLower.includes("håndbakt") || nameLower.includes("handbakt")) {
+    return { flag: "🇳🇴", mainTag: "BAKERY", pinIcon: "croissant", filterTags: ["bakery", "sourdough", "brunch", "organic", "nordic", "pastries"] };
+  }
+  if (nameLower.includes("kveitemjøl") || nameLower.includes("kveitemjol")) {
+    return { flag: "🇳🇴", mainTag: "BAKERY", pinIcon: "croissant", filterTags: ["bakery", "pastries", "croissant", "sourdough", "nordic", "butter"] };
+  }
+  if (nameLower.includes("fuglen")) {
+    return { flag: "🇳🇴", mainTag: "COFFEE", pinIcon: "coffee", filterTags: ["coffee", "specialty_coffee", "roastery", "nordic", "morning"] };
+  }
+  if (nameLower.includes("mandi house")) {
+    return { flag: "🇾🇪", mainTag: "YEMENI", pinIcon: "mandi_rice", filterTags: ["mandi_rice", "yemeni", "middle_eastern", "halal", "rice", "lamb"] };
+  }
+  if (nameLower.includes("yum cha")) {
+    return { flag: "🇭🇰", mainTag: "DIM SUM", pinIcon: "dumplings", filterTags: ["dim_sum", "dumplings", "cantonese", "chinese", "asian", "tea"] };
+  }
+  if (nameLower.includes("175°c") || nameLower.includes("175 c") || nameLower.includes("k-fried")) {
+    return { flag: "🇰🇷", mainTag: "K-CHICKEN", pinIcon: "k_chicken", filterTags: ["k_chicken", "fried_chicken", "korean", "asian", "halal", "street_food"] };
+  }
+  if (nameLower.includes("zam zam") || nameLower.includes("zamzam")) {
+    return { flag: "🇺🇸", mainTag: "CHEESESTEAK", pinIcon: "cheesesteak", filterTags: ["cheesesteak", "halal", "street_food", "burger", "comfort_food"] };
+  }
+  if (nameLower.includes("dirty taco")) {
+    return { flag: "🇲🇽", mainTag: "TACOS", pinIcon: "tacos", filterTags: ["tacos", "mexican", "fusion", "street_food", "casual", "late_night"] };
+  }
+  if (nameLower.includes("digg pizza")) {
+    return { flag: "🇮🇹", mainTag: "PIZZA", pinIcon: "pizza", filterTags: ["pizza", "italian", "sourdough", "dinner", "casual"] };
+  }
+  if (nameLower.includes("stykke")) {
+    return { flag: "🇮🇹", mainTag: "PIZZA", pinIcon: "pizza", filterTags: ["pizza", "roman_pizza", "italian", "slices", "casual", "lunch"] };
+  }
+  if (nameLower.includes("cocoa")) {
+    return { flag: "🍫", mainTag: "COCOA BAR", pinIcon: "coffee", filterTags: ["dessert", "cocoa", "chocolate", "drinks", "sweet", "cozy"] };
+  }
+  if (nameLower.includes("crave")) {
+    return { flag: "🇯🇵", mainTag: "PANCAKES", pinIcon: "pancakes", filterTags: ["dessert", "pancakes", "japanese", "toast", "sweet", "brunch"] };
+  }
+  if (nameLower.includes("u wan sum")) {
+    return { flag: "✦", mainTag: "DRINKS POP-UP", pinIcon: "drinks", filterTags: ["popup", "coffee", "matcha", "drinks", "seasonal"] };
+  }
+
+  // 2. Additional Known Candidates & Pop-Ups
+  if (nameLower.includes("farine")) {
+    return { flag: "🇳🇴", mainTag: "BAKERY", pinIcon: "croissant", filterTags: ["bakery", "sourdough", "pastries", "nordic", "morning"] };
+  }
+  if (nameLower.includes("tomodomo")) {
+    return { flag: "🇯🇵", mainTag: "RAMEN & UDON", pinIcon: "ramen", filterTags: ["ramen", "udon", "noodle", "japanese", "popup"] };
+  }
+  if (nameLower.includes("waaj")) {
+    return { flag: "🇲🇽", mainTag: "TACOS", pinIcon: "tacos", filterTags: ["tacos", "mexican", "street_food", "food_truck"] };
+  }
+  if (nameLower.includes("aleppo bahebek")) {
+    return { flag: "🇸🇾", mainTag: "SHAWARMA", pinIcon: "kebab", filterTags: ["syrian", "middle_eastern", "halal", "street_food"] };
+  }
+  if (nameLower.includes("crantz cookies") || nameLower.includes("sukkerbakeriet")) {
+    return { flag: "🍪", mainTag: "COOKIES", pinIcon: "croissant", filterTags: ["dessert", "cookies", "bakery", "popup"] };
+  }
+  if (nameLower.includes("mint on wheels")) {
+    return { flag: "🇯🇵", mainTag: "MATCHA", pinIcon: "matcha", filterTags: ["matcha", "tea", "popup", "drinks"] };
+  }
+  if (nameLower.includes("dæsj") || nameLower.includes("daesj")) {
+    return { flag: "🍨", mainTag: "GELATO", pinIcon: "gelato", filterTags: ["gelato", "dessert", "popup"] };
+  }
+  if (nameLower.includes("koie ramen")) {
+    return { flag: "🇯🇵", mainTag: "RAMEN", pinIcon: "ramen", filterTags: ["ramen", "japanese", "noodles", "craft_broth", "asian"] };
+  }
+  if (nameLower.includes("vinoteket")) {
+    return { flag: "🇮🇹", mainTag: "PIZZA", pinIcon: "pizza", filterTags: ["pizza", "gourmet_pizza", "natural_wine", "italian"] };
+  }
+  if (nameLower.includes("king falafel")) {
+    return { flag: "🇵🇸", mainTag: "FALAFEL", pinIcon: "kebab", filterTags: ["falafel", "vegan", "vegetarian", "street_food", "food_truck"] };
+  }
+  if (nameLower.includes("chaiwala")) {
+    return { flag: "🇵🇰", mainTag: "PAKISTANI", pinIcon: "curry", filterTags: ["pakistani", "karahi", "halal", "street_food", "chai", "asian"] };
+  }
+  if (nameLower.includes("pele pele")) {
+    return { flag: "🇬🇭", mainTag: "WEST AFRICAN", pinIcon: "k_chicken", filterTags: ["african", "street_food", "grill", "spicy", "halal"] };
+  }
+  if (nameLower.includes("noods")) {
+    return { flag: "🇨🇳", mainTag: "NOODLES", pinIcon: "ramen", filterTags: ["noodles", "biang_biang", "chinese", "asian", "spicy"] };
+  }
+  if (nameLower.includes("szechuan chengdu")) {
+    return { flag: "🇨🇳", mainTag: "SICHUAN", pinIcon: "curry", filterTags: ["chinese", "sichuan", "spicy", "asian", "dumplings"] };
+  }
+  if (nameLower.includes("izakaya")) {
+    return { flag: "🇯🇵", mainTag: "IZAKAYA", pinIcon: "dumplings", filterTags: ["japanese", "izakaya", "asian", "drinks", "dinner"] };
+  }
+  if (nameLower.includes("syverkiosken")) {
+    return { flag: "🇳🇴", mainTag: "STREET FOOD", pinIcon: "street_food", filterTags: ["street_food", "heritage", "sausage", "kiosk"] };
+  }
+  if (nameLower.includes("the little pickle")) {
+    return { flag: "🇬🇧", mainTag: "BISTRO", pinIcon: "natural_wine", filterTags: ["natural_wine", "bistro", "seasonal", "dinner"] };
+  }
+  if (nameLower.includes("marani")) {
+    return { flag: "🇬🇪", mainTag: "GEORGIAN", pinIcon: "dumplings", filterTags: ["georgian", "khinkali", "khachapuri", "wine"] };
+  }
+  if (nameLower.includes("gazakjøkken") || nameLower.includes("gazakjokken")) {
+    return { flag: "🇵🇸", mainTag: "MIDDLE EASTERN", pinIcon: "kebab", filterTags: ["palestinian", "middle_eastern", "halal", "shawarma"] };
+  }
+  if (nameLower.includes("silin bakeri")) {
+    return { flag: "🇸🇾", mainTag: "BAKERY", pinIcon: "dessert", filterTags: ["bakery", "syrian", "baklava", "halal", "sweet"] };
+  }
+  if (nameLower.includes("becco")) {
+    return { flag: "🍷", mainTag: "NATURAL WINE", pinIcon: "natural_wine", filterTags: ["natural_wine", "wine_bar", "popup", "drinks"] };
+  }
+  if (nameLower.includes("lasarett")) {
+    return { flag: "🍷", mainTag: "WINE & BITES", pinIcon: "natural_wine", filterTags: ["natural_wine", "wine_bar", "popup", "guest_chef"] };
+  }
+
+  // 3. Fallbacks Based on food_category and icon
+  if (catLower === "ramen" || iconLower === "ramen") {
+    return { flag: "🇯🇵", mainTag: "RAMEN", pinIcon: "ramen", filterTags: ["ramen", "noodles", "japanese", "asian"] };
+  }
+  if (catLower === "matcha" || iconLower === "matcha") {
+    return { flag: "🇯🇵", mainTag: "MATCHA", pinIcon: "matcha", filterTags: ["matcha", "tea", "japanese", "drinks"] };
+  }
+  if (catLower === "pizza" || iconLower === "pizza") {
+    return { flag: "🇮🇹", mainTag: "PIZZA", pinIcon: "pizza", filterTags: ["pizza", "italian", "dinner"] };
+  }
+  if (catLower === "pasta" || iconLower === "pasta") {
+    return { flag: "🇮🇹", mainTag: "PASTA", pinIcon: "pasta", filterTags: ["pasta", "italian", "dinner"] };
+  }
+  if (catLower === "tacos" || iconLower === "tacos") {
+    return { flag: "🇲🇽", mainTag: "TACOS", pinIcon: "tacos", filterTags: ["tacos", "mexican", "street_food"] };
+  }
+  if (catLower === "k_chicken" || iconLower === "k_chicken") {
+    return { flag: "🇰🇷", mainTag: "K-CHICKEN", pinIcon: "k_chicken", filterTags: ["k_chicken", "korean", "chicken"] };
+  }
+  if (catLower === "dumplings" || iconLower === "dumplings" || catLower === "bao") {
+    return { flag: "🥟", mainTag: "DUMPLINGS", pinIcon: "dumplings", filterTags: ["dumplings", "dim_sum", "asian"] };
+  }
+  if (catLower === "bakery" || catLower === "cinnamon_roll" || iconLower === "croissant") {
+    return { flag: "🇳🇴", mainTag: "BAKERY", pinIcon: "croissant", filterTags: ["bakery", "sourdough", "pastries"] };
+  }
+  if (catLower === "coffee" || iconLower === "coffee") {
+    return { flag: "☕", mainTag: "COFFEE", pinIcon: "coffee", filterTags: ["coffee", "cafe", "drinks"] };
+  }
+  if (catLower === "natural_wine" || catLower === "drinks" || iconLower === "natural_wine" || iconLower === "drinks") {
+    return { flag: "🍷", mainTag: "NATURAL WINE", pinIcon: "natural_wine", filterTags: ["natural_wine", "wine", "drinks"] };
+  }
+  if (catLower === "gelato" || catLower === "dessert" || iconLower === "gelato") {
+    return { flag: "🍨", mainTag: "DESSERT", pinIcon: "gelato", filterTags: ["dessert", "gelato", "sweets"] };
+  }
+  if (venue.spot_type === "popup") {
+    return { flag: "✨", mainTag: "POP-UP", pinIcon: "drinks", filterTags: ["popup", "seasonal"] };
+  }
+  if (venue.spot_type === "food_truck") {
+    return { flag: "🚚", mainTag: "FOOD TRUCK", pinIcon: "street_food", filterTags: ["food_truck", "street_food"] };
+  }
+
+  return { flag: "🍽", mainTag: "RESTAURANT", pinIcon: "restaurant", filterTags: ["restaurant", "food"] };
+}
+
+/**
+ * Resolves a dedicated icon key for a specific dish based on its name and optional category.
+ * Prevents dish chips (like "Coconut Coffee") from inheriting the venue's fallback icon.
+ */
+export function resolveDishIconKey(dishName?: string | null, dishCategory?: string | null): string {
+  if (!dishName && !dishCategory) return "food";
+  const name = (dishName || "").toLowerCase().trim();
+  const cat = (dishCategory || "").toLowerCase().trim();
+
+  // 1. Exact beverage detection
+  if (
+    name.includes("coffee") ||
+    name.includes("kaffe") ||
+    name.includes("latte") ||
+    name.includes("cà phê") ||
+    name.includes("espresso") ||
+    name.includes("pour-over")
+  ) {
+    return "coffee";
+  }
+  if (name.includes("matcha") || name.includes("hojicha") || name.includes("usucha") || name.includes("tea") || name.includes("te")) {
+    return "matcha";
+  }
+  if (name.includes("cocoa") || name.includes("chocolate") || name.includes("sjokolade")) {
+    return "dessert";
+  }
+
+  // 2. Bakery items
+  if (name.includes("croissant")) return "croissant";
+  if (name.includes("bolle") || name.includes("bun") || name.includes("snurr") || name.includes("knot") || name.includes("roll")) {
+    return "cinnamon_roll";
+  }
+  if (name.includes("brød") || name.includes("bread") || name.includes("landhvete") || name.includes("loaf") || name.includes("sourdough")) {
+    return "breads";
+  }
+  if (name.includes("banh mi") || name.includes("bánh mì") || name.includes("sandwich") || name.includes("blings") || name.includes("melt")) {
+    return "banh_mi";
+  }
+
+  // 3. Savory street foods
+  if (name.includes("taco") || name.includes("quesadilla") || name.includes("totopo") || name.includes("nacho")) {
+    return "tacos";
+  }
+  if (name.includes("pizza") || name.includes("stykke") || name.includes("cheeesy") || name.includes("diavola") || name.includes("pepperoni")) {
+    return "pizza";
+  }
+  if (name.includes("cheesesteak") || name.includes("chikano") || name.includes("snadder")) {
+    return "cheesesteak";
+  }
+  if (name.includes("pancake") || name.includes("soufflé") || name.includes("pannekake") || name.includes("pistella")) {
+    return "pancakes";
+  }
+  if (name.includes("ramen") || name.includes("udon") || name.includes("noodle") || name.includes("bún") || name.includes("pho") || name.includes("phở")) {
+    return "ramen";
+  }
+  if (name.includes("dumpling") || name.includes("wonton") || name.includes("har gow") || name.includes("siu mai") || name.includes("gyoza") || name.includes("bao") || name.includes("dim sum")) {
+    return "dumplings";
+  }
+  if (name.includes("chicken") || name.includes("wings") || name.includes("k-fried") || name.includes("kylling") || name.includes("yangnyeom")) {
+    return "k_chicken";
+  }
+  if (name.includes("mandi") || name.includes("madbi") || name.includes("biryani") || name.includes("rice")) {
+    return "mandi_rice";
+  }
+  if (name.includes("curry") || name.includes("butter chicken") || name.includes("tikka") || name.includes("rogan josh") || name.includes("masala") || name.includes("karahi")) {
+    return "curry";
+  }
+  if (name.includes("naan")) {
+    return "naan";
+  }
+  if (name.includes("egg") || name.includes("brunch") || name.includes("labneh") || name.includes("turkish")) {
+    return "brunch";
+  }
+  if (name.includes("gelato") || name.includes("is") || name.includes("ice cream") || name.includes("paleta")) {
+    return "gelato";
+  }
+  if (name.includes("cookie") || name.includes("cake") || name.includes("cheesecake") || name.includes("dessert")) {
+    return "dessert";
+  }
+  if (name.includes("falafel") || name.includes("shawarma") || name.includes("kebab")) {
+    return "kebab";
+  }
+  if (name.includes("burger")) {
+    return "burger";
+  }
+
+  // 4. Fallback to category or generic food
+  if (cat && cat !== "food" && cat !== "all") {
+    return cat;
+  }
+  return "food";
+}
+
