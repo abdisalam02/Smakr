@@ -21,7 +21,7 @@ import {
   ZoomIn,
 } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
-import { motion, AnimatePresence, useMotionValue, animate } from "motion/react";
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "motion/react";
 import { useVenueDetail } from "@/hooks/useVenueDetail";
 import { formatDistance } from "@/lib/math";
 import { FoodPost, ReviewItem } from "@/types";
@@ -102,6 +102,19 @@ export function VenueBottomSheet() {
   const sheetRef = React.useRef<HTMLDivElement>(null);
   const contentScrollRef = React.useRef<HTMLDivElement>(null);
   const sheetY = useMotionValue(0);
+  const scrollY = useMotionValue(0);
+
+  // Buttery-smooth continuous scroll interpolation for the sticky hero header
+  // 1. Title, tags & address smoothly glide up from resting position over the hero photo (y=175) to dock in the header bar (y=0)
+  // 2. Title scales down from 1.0 (text-2xl) to 0.85 (text-lg) smoothly
+  // 3. Category & open status badges remain visible in both resting & docked states
+  // 4. Frosted glass scrim fades in smoothly over the docked header
+  const titleTranslateY = useTransform(scrollY, [0, 175], [175, 0], { clamp: true });
+  const titleScale = useTransform(scrollY, [0, 175], [1, 0.85], { clamp: true });
+  const navScrimOpacity = useTransform(scrollY, [40, 175], [0, 1], { clamp: true });
+  const imageParallaxY = useTransform(scrollY, [0, 260], [0, -35], { clamp: true });
+  const imageScale = useTransform(scrollY, [-100, 0], [1.12, 1], { clamp: true });
+
   const isDraggingRef = React.useRef(false);
   const dragStartYRef = React.useRef(0);
   const currentYRef = React.useRef(0);
@@ -114,8 +127,13 @@ export function VenueBottomSheet() {
   useEffect(() => {
     if (isVenueDetailModalOpen) {
       sheetY.set(0);
+      scrollY.set(0);
+      if (contentScrollRef.current) {
+        contentScrollRef.current.scrollTop = 0;
+      }
+      setIsStoryExpanded(false);
     }
-  }, [isVenueDetailModalOpen, sheetY]);
+  }, [isVenueDetailModalOpen, sheetY, scrollY]);
 
   // Shared venue data: posts, recommended meals, reactions, likes & saves
   const {
@@ -130,6 +148,7 @@ export function VenueBottomSheet() {
 
   const [selectedDish, setSelectedDish] = useState<FoodPost | null>(null);
   const [showAllReviews, setShowAllReviews] = useState(false);
+  const [isStoryExpanded, setIsStoryExpanded] = useState(false);
   const openStatus = getVenueLiveOpenStatus(selectedVenue);
 
   const isPopup = isPopupVenue(selectedVenue);
@@ -248,6 +267,10 @@ export function VenueBottomSheet() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isVenueDetailModalOpen, zoomImage, handleClose]);
+
+  const handleContentScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    scrollY.set(e.currentTarget.scrollTop);
+  };
 
   // 1. Header grab bar touch drag handlers (unified Framer Motion sheetY pipeline)
   const handleHeaderTouchStart = (e: React.TouchEvent) => {
@@ -393,145 +416,147 @@ export function VenueBottomSheet() {
               }}
               className="relative z-10 w-full h-[88dvh] max-h-[90vh] bg-[#FAF7F2] dark:bg-[#181615] lg:bg-[#FAF7F2]/95 lg:backdrop-blur-sm rounded-t-3xl border-t border-[#181615]/10 dark:border-white/10 shadow-2xl flex flex-col overflow-hidden will-change-transform smakr-bottom-sheet"
             >
-              {/* Grab Handle Header for dragging */}
-              <div
-                onTouchStart={handleHeaderTouchStart}
-                onTouchMove={handleHeaderTouchMove}
-                onTouchEnd={handleHeaderTouchEnd}
-                className="w-full flex flex-col items-center pt-2.5 pb-2.5 px-5 cursor-grab active:cursor-grabbing bg-transparent border-b border-black/[0.06] dark:border-white/[0.06] shrink-0 touch-none select-none"
-              >
-                {/* Pill grab bar */}
-                <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-zinc-600 hover:bg-zinc-400 transition-colors mb-2.5" />
+              {/* 1. PINNED HERO IMAGE BACKGROUND — Generous, cinematic surface area with subtle parallax */}
+              {selectedVenue.cover_image_url && (
+                <div className="absolute top-0 inset-x-0 h-[380px] sm:h-[420px] overflow-hidden rounded-t-3xl pointer-events-none z-0">
+                  <motion.div
+                    style={{ y: imageParallaxY, scale: imageScale }}
+                    className="relative w-full h-full origin-top"
+                  >
+                    <Image
+                      src={selectedVenue.cover_image_url}
+                      alt={selectedVenue.name}
+                      fill
+                      priority
+                      className="object-cover object-center"
+                      sizes="(max-width: 640px) 100vw, 600px"
+                      placeholder="blur"
+                      blurDataURL={FEED_BLUR_DARK}
+                    />
+                    {/* Permanent subtle dark gradients: top for handle/controls, bottom for resting title legibility */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/90" />
+                  </motion.div>
+                </div>
+              )}
 
-                <div className="w-full flex items-start justify-between gap-3">
-                  {isPopup ? (
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <span className="px-2.5 py-0.5 rounded-full bg-[#E84A27]/10 text-[#E84A27] text-[10px] font-bold uppercase tracking-wider">
-                          🎟️ Pop-Up Residency
+              {/* 2. TOP STICKY HEADER BAR & CONTINUOUS MORPHING TITLE */}
+              {/* Shows Spot Name, Tag, Open/Closed status & Address with generous spacing in both resting & scrolled states */}
+              <div className="absolute top-0 inset-x-0 z-30 pt-2 pb-2.5 px-4 rounded-t-3xl pointer-events-none">
+                {/* Frosted glass scrim: softened blur and gentle transparency so the photo texture stays visible */}
+                <motion.div
+                  style={{ opacity: navScrimOpacity }}
+                  className="absolute top-0 inset-x-0 h-[88px] sm:h-[94px] bg-[#181615]/65 backdrop-blur-md border-b border-white/10 pointer-events-none rounded-t-3xl shadow-md"
+                />
+
+                <div className="relative z-10 w-full flex flex-col">
+                  {/* Centered Drag Handle Pill */}
+                  <div
+                    onTouchStart={handleHeaderTouchStart}
+                    onTouchMove={handleHeaderTouchMove}
+                    onTouchEnd={handleHeaderTouchEnd}
+                    className="w-full flex justify-center pb-2 cursor-grab active:cursor-grabbing pointer-events-auto touch-none select-none"
+                  >
+                    <div className="w-10 h-1 rounded-full bg-white/75 shadow-xs transition-colors" />
+                  </div>
+
+                  <div className="w-full relative flex items-start justify-between min-h-[66px]">
+                    {/* Continuous Morphing Title, Tags & Address: Glides smoothly and stays 100% visible */}
+                    <motion.div
+                      style={{
+                        y: titleTranslateY,
+                        scale: titleScale,
+                        transformOrigin: "top left",
+                      }}
+                      className="min-w-0 pr-24 pointer-events-none select-none will-change-transform flex flex-col gap-1"
+                    >
+                      {/* Category tag & Closed/Open live badge — always visible in both resting & docked states */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {isPopup ? (
+                          <span className="px-2 py-0.5 rounded-md bg-white/20 backdrop-blur-md text-[10px] font-bold text-white border border-white/25">
+                            {isDormant ? "Between Residencies" : "Oslo Residency"}
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-md bg-black/50 backdrop-blur-md text-[10px] font-bold text-white/95 border border-white/15 uppercase tracking-wider">
+                            {selectedVenue.food_category ? selectedVenue.food_category.replace(/_/g, " ") : "Oslo Spot"}
+                          </span>
+                        )}
+                        <span
+                          className={`px-2 py-0.5 rounded-md backdrop-blur-md text-[10px] font-bold flex items-center gap-1 border shadow-xs ${
+                            openStatus.isOpen
+                              ? "bg-emerald-950/70 text-emerald-300 border-emerald-500/35"
+                              : "bg-red-950/70 text-red-300 border-red-500/35"
+                          }`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${openStatus.isOpen ? "bg-emerald-400" : "bg-red-400"}`} />
+                          <span>{openStatus.isOpen ? "Open" : "Closed"}</span>
+                          {openStatus.detailText && (
+                            <span className="opacity-80 font-normal">· {openStatus.detailText}</span>
+                          )}
                         </span>
-                        {isDormant ? (
-                          <span className="px-2 py-0.5 rounded-md bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-300 text-[10px] font-bold uppercase">
-                            Inactive
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold uppercase">
-                            Live Drop
-                          </span>
-                        )}
                       </div>
-                      <h3 className="font-comico text-xl sm:text-2xl text-zinc-950 dark:text-white tracking-tight leading-tight truncate">
+
+                      <h3 className="font-comico text-2xl sm:text-3xl text-white tracking-tight leading-tight drop-shadow-md truncate max-w-full">
                         {selectedVenue.name}
                       </h3>
-                      <p className="text-xs text-zinc-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
-                        {isDormant ? (
-                          <span className="font-medium text-zinc-500">
-                            Oslo · Dates &amp; location announcing soon
-                          </span>
-                        ) : popupHostVenue ? (
-                          <>
-                            <MapPin className="w-3.5 h-3.5 text-[#e84a27] shrink-0" />
-                            <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                              Hosted at {popupHostVenue}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="font-medium text-zinc-500">
-                            Oslo Pop-Up Residency
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-comico text-xl sm:text-2xl text-zinc-950 dark:text-white tracking-tight leading-tight truncate">
-                        {selectedVenue.name}
-                      </h3>
-                      <p className="text-xs text-zinc-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                      <p className="text-xs sm:text-[13px] text-white/90 flex items-center gap-1 drop-shadow-xs truncate max-w-full">
                         <MapPin className="w-3.5 h-3.5 text-[#e84a27] shrink-0" />
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                        <span className="truncate">
                           {formatOsloLocation(selectedVenue.address, selectedVenue.city || selectedVenue.neighborhood).fullClean}
                         </span>
                       </p>
+                    </motion.div>
+
+                    {/* Share & Close Buttons — docked top-right */}
+                    <div className="absolute right-0 top-0 flex items-center gap-1.5 shrink-0 pointer-events-auto">
+                      <button
+                        type="button"
+                        onClick={handleShare}
+                        className="p-2 rounded-full bg-black/45 hover:bg-black/65 active:bg-black/80 backdrop-blur-md text-white border border-white/20 shadow-sm transition-all cursor-pointer"
+                        title="Share venue link"
+                        aria-label="Share venue link"
+                      >
+                        <Share2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleClose}
+                        className="p-2 rounded-full bg-black/45 hover:bg-black/65 active:bg-black/80 backdrop-blur-md text-white border border-white/20 shadow-sm transition-all cursor-pointer"
+                        title="Close details"
+                        aria-label="Close details"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
-                  )}
-                  <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
-                    <button
-                      type="button"
-                      onClick={handleShare}
-                      className="p-2 rounded-full bg-zinc-200/80 hover:bg-zinc-300 active:bg-zinc-400 text-zinc-700 dark:bg-white/10 dark:text-white dark:hover:bg-white/20 transition-colors cursor-pointer"
-                      title="Share venue link"
-                      aria-label="Share venue link"
-                    >
-                      <Share2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleClose}
-                      className="p-2 rounded-full bg-zinc-200/80 hover:bg-zinc-300 active:bg-zinc-400 text-zinc-700 dark:bg-white/10 dark:text-white dark:hover:bg-white/20 transition-colors cursor-pointer"
-                      title="Close details"
-                      aria-label="Close details"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
                   </div>
                 </div>
               </div>
 
               <div
                 ref={contentScrollRef}
+                onScroll={handleContentScroll}
                 onTouchStart={handleContentTouchStart}
                 onTouchMove={handleContentTouchMove}
                 onTouchEnd={handleContentTouchEnd}
-                className="flex-1 overflow-y-auto p-5 space-y-5 text-xs no-scrollbar overscroll-contain"
+                className="flex-1 overflow-y-auto text-xs no-scrollbar overscroll-contain relative z-10"
               >
               {isPopup ? (
                 /* =========================================================================
                    DEDICATED POP-UP RESIDENCY SHEET
                    ========================================================================= */
                 <div className="space-y-4">
-                  {/* Cover Photo */}
-                  {selectedVenue.cover_image_url && (
-                    <div
-                      onClick={() =>
-                        selectedVenue.cover_image_url &&
-                        setZoomImage({ src: selectedVenue.cover_image_url, alt: selectedVenue.name })
-                      }
-                      className="group/hero relative w-full h-56 rounded-3xl overflow-hidden border border-[#181615]/10 bg-[#181615] shadow-xs cursor-zoom-in"
-                    >
-                      <Image
-                        src={selectedVenue.cover_image_url}
-                        alt={selectedVenue.name}
-                        fill
-                        onLoad={() => setHeroImgReady(true)}
-                        placeholder="blur"
-                        blurDataURL={FEED_BLUR_DARK}
-                        className={`object-cover transition-all duration-500 group-hover/hero:scale-[1.03] ${
-                          heroImgReady ? "opacity-100" : "opacity-0"
-                        }`}
-                        sizes="600px"
-                      />
-                      <div
-                        aria-hidden="true"
-                        className={`smakr-shimmer absolute inset-0 pointer-events-none transition-opacity duration-500 ${
-                          heroImgReady ? "opacity-0" : "opacity-100"
-                        }`}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent pointer-events-none" />
-                      <span className="absolute top-3 right-3 px-2 py-1 rounded-lg bg-black/50 backdrop-blur-md text-white/90 text-[10px] font-semibold flex items-center gap-1 pointer-events-none">
-                        <ZoomIn className="w-3 h-3" />
-                        <span>Zoom</span>
-                      </span>
-                      <div className="absolute bottom-3.5 left-3.5 right-3.5 flex items-center justify-between text-white pointer-events-none">
-                        <span className="font-comico font-black text-lg tracking-tight drop-shadow-md truncate">
-                          {selectedVenue.name}
-                        </span>
-                        <span className="px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-md text-[11px] font-bold border border-white/25 shrink-0">
-                          {isDormant ? "Between Residencies" : "Oslo Residency"}
-                        </span>
-                      </div>
-                    </div>
-                  )}
+                  {/* Top Spacer: Reveals pinned hero photo beneath with generous space above card */}
+                  <div
+                    onClick={() =>
+                      selectedVenue.cover_image_url &&
+                      setZoomImage({ src: selectedVenue.cover_image_url, alt: selectedVenue.name })
+                    }
+                    className="w-full h-[315px] sm:h-[350px] shrink-0 relative cursor-zoom-in"
+                  >
+                    <span className="absolute bottom-3 right-4 px-2 py-1 rounded-lg bg-black/50 hover:bg-black/70 backdrop-blur-md text-white/90 text-[10px] font-semibold flex items-center gap-1 pointer-events-auto transition-colors border border-white/15">
+                      <ZoomIn className="w-3 h-3" />
+                      <span>Zoom</span>
+                    </span>
+                  </div>
 
                   {/* Primary Residency Status & Schedule Card */}
                   <div className="p-4 sm:p-5 rounded-3xl bg-[#F5EFE4] dark:bg-[#1E1C1A] border border-[#181615]/10 space-y-3.5 shadow-xs">
@@ -771,99 +796,36 @@ export function VenueBottomSheet() {
                    STANDARD RESTAURANT SHEET
                    ========================================================================= */
                 <>
-                   {/* Cover Photo — Upgraded to 288px (h-72) Hero with Bottom Dark Scrim and Frosted Metadata */}
-                  {selectedVenue.cover_image_url && (
-                    <div
-                      onClick={() =>
-                        selectedVenue.cover_image_url &&
-                        setZoomImage({ src: selectedVenue.cover_image_url, alt: selectedVenue.name })
-                      }
-                      className="group/hero relative w-full h-72 rounded-3xl overflow-hidden border border-[#181615]/10 dark:border-white/10 bg-[#181615] shadow-md cursor-zoom-in"
-                    >
-                      <Image
-                        src={selectedVenue.cover_image_url}
-                        alt={selectedVenue.name}
-                        fill
-                        onLoad={() => setHeroImgReady(true)}
-                        className={`object-cover transition-all duration-500 group-hover/hero:scale-[1.03] ${
-                          heroImgReady ? "opacity-100" : "opacity-0"
-                        }`}
-                        sizes="(max-width: 640px) 100vw, 600px"
-                        placeholder="blur"
-                        blurDataURL={FEED_BLUR_DARK}
-                      />
-                      <div
-                        aria-hidden="true"
-                        className={`smakr-shimmer absolute inset-0 pointer-events-none transition-opacity duration-500 ${
-                          heroImgReady ? "opacity-0" : "opacity-100"
-                        }`}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#181615]/95 via-[#181615]/40 to-transparent pointer-events-none" />
-                      <span className="absolute top-3 right-3 px-2 py-1 rounded-lg bg-black/50 backdrop-blur-md text-white/90 text-[10px] font-semibold flex items-center gap-1 pointer-events-none">
-                        <ZoomIn className="w-3 h-3" />
-                        <span>Zoom</span>
-                      </span>
-                      <div className="absolute bottom-0 inset-x-0 p-4 sm:p-5 flex flex-col justify-end gap-1.5 text-white pointer-events-none">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="px-2.5 py-1 rounded-lg bg-black/40 backdrop-blur-md text-[10px] sm:text-[11px] font-bold text-white/90 border border-white/15 uppercase tracking-wider flex items-center gap-1 shadow-xs">
-                            {selectedVenue.food_category ? selectedVenue.food_category.replace(/_/g, " ") : "Oslo Spot"}
-                          </span>
-                          <span
-                            className={`px-2.5 py-1 rounded-lg backdrop-blur-md text-[10px] sm:text-[11px] font-bold flex items-center gap-1.5 border shadow-xs ${
-                              openStatus.isOpen
-                                ? "bg-emerald-950/60 text-emerald-300 border-emerald-500/30"
-                                : "bg-red-950/60 text-red-300 border-red-500/30"
-                            }`}
-                          >
-                            <span className={`w-1.5 h-1.5 rounded-full ${openStatus.isOpen ? "bg-emerald-400" : "bg-red-400"}`} />
-                            <span>{openStatus.isOpen ? "Open" : "Closed"}</span>
-                            {openStatus.detailText && (
-                              <span className="opacity-80 font-normal">· {openStatus.detailText}</span>
-                            )}
-                          </span>
-                        </div>
+                  {/* Top Spacer: Reveals pinned hero photo beneath with generous space above card */}
+                  <div
+                    onClick={() =>
+                      selectedVenue.cover_image_url &&
+                      setZoomImage({ src: selectedVenue.cover_image_url, alt: selectedVenue.name })
+                    }
+                    className="w-full h-[315px] sm:h-[350px] shrink-0 relative cursor-zoom-in"
+                  >
+                    <span className="absolute bottom-3 right-4 px-2 py-1 rounded-lg bg-black/50 hover:bg-black/70 backdrop-blur-md text-white/90 text-[10px] font-semibold flex items-center gap-1 pointer-events-auto transition-colors border border-white/15">
+                      <ZoomIn className="w-3 h-3" />
+                      <span>Zoom</span>
+                    </span>
+                  </div>
 
-                        <h3 className="font-comico text-2xl sm:text-3xl text-white tracking-tight drop-shadow-md leading-tight truncate">
-                          {selectedVenue.name}
-                        </h3>
-
-                        <div className="flex items-center justify-between gap-2 flex-wrap pt-0.5">
-                          <p className="text-xs text-white/85 flex items-center gap-1 drop-shadow-xs truncate max-w-[65%]">
-                            <MapPin className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
-                            <span className="truncate">
-                              {formatOsloLocation(selectedVenue.address, selectedVenue.city || selectedVenue.neighborhood).fullClean}
-                            </span>
+                  {/* Content Card: Glides smoothly up over the hero photo as user scrolls */}
+                  <div className="relative z-10 bg-[#FAF7F2] dark:bg-[#181615] rounded-t-3xl px-4 pt-4 pb-14 space-y-4 shadow-xl border-t border-black/5 dark:border-white/5">
+                    {/* Food Truck schedule callout */}
+                    {selectedVenue.spot_type === "food_truck" && selectedVenue.location_schedule && (
+                      <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-900 dark:text-emerald-300">
+                        <span className="text-xl">🚚</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold">Food Truck Schedule</p>
+                          <p className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400">
+                            {selectedVenue.location_schedule}
                           </p>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white/20 backdrop-blur-md border border-white/20 text-white text-xs font-bold shadow-xs">
-                              <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-                              <span className="font-comico">
-                                {selectedVenue.google_rating != null ? selectedVenue.google_rating.toFixed(1) : "4.8"}
-                              </span>
-                            </div>
-                            <div className="px-2 py-0.5 rounded-lg bg-white/20 backdrop-blur-md border border-white/20 text-white text-xs font-comico font-bold shadow-xs">
-                              {selectedVenue.price_level || "$$"}
-                            </div>
-                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Food Truck schedule callout */}
-                  {selectedVenue.spot_type === "food_truck" && selectedVenue.location_schedule && (
-                    <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-900 dark:text-emerald-300">
-                      <span className="text-xl">🚚</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold">Food Truck Schedule</p>
-                        <p className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400">
-                          {selectedVenue.location_schedule}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Action Buttons */}
+                    {/* Action Buttons */}
                   <div className="grid grid-cols-2 gap-2.5">
                     <a
                       href={googleMapsUrl}
@@ -886,6 +848,33 @@ export function VenueBottomSheet() {
                       <span>Log a Dish</span>
                     </button>
                   </div>
+
+                  {/* Culinary Story & Ambiance — Directly under Directions & Log a Dish */}
+                  {selectedVenue.description && (
+                    <div className="p-3.5 rounded-2xl bg-white/80 dark:bg-[#1E1C1A] border border-[#181615]/8 dark:border-white/10 shadow-2xs space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-bold text-zinc-700 dark:text-zinc-300 uppercase text-[10px] tracking-wider font-mono">
+                          Culinary Story &amp; Ambiance
+                        </h4>
+                      </div>
+                      <p
+                        className={`font-comico text-xs sm:text-[13px] text-zinc-800 dark:text-zinc-200 leading-relaxed ${
+                          !isStoryExpanded ? "line-clamp-3" : ""
+                        }`}
+                      >
+                        &ldquo;{selectedVenue.description}&rdquo;
+                      </p>
+                      {selectedVenue.description.length > 130 && (
+                        <button
+                          type="button"
+                          onClick={() => setIsStoryExpanded(!isStoryExpanded)}
+                          className="text-[11px] font-bold text-[#e84a27] hover:underline cursor-pointer pt-0.5 inline-block"
+                        >
+                          {isStoryExpanded ? "show less" : "... to read more"}
+                        </button>
+                      )}
+                    </div>
+                  )}
 
                   {/* Extra Quick Links: Website / Phone */}
                   {(selectedVenue.website_uri || selectedVenue.phone_number) && (
@@ -961,13 +950,9 @@ export function VenueBottomSheet() {
                   {/* Culinary Spotlight: Dishes Mini-Feed — 2-Column Visual Card Grid */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-bold text-zinc-900 dark:text-white text-sm flex items-center gap-1.5">
-                        <Sparkles className="w-4 h-4 text-[#e84a27]" />
-                        <span>Dishes You Can't Miss ({recommendedMeals.length})</span>
+                      <h4 className="font-bold text-zinc-900 dark:text-white text-sm">
+                        Dishes You Can't Miss ({recommendedMeals.length})
                       </h4>
-                      <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500">
-                        Foodie Radar Verified
-                      </span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
@@ -1019,7 +1004,7 @@ export function VenueBottomSheet() {
 
                               {/* Details */}
                               <div className="mt-2">
-                                <h5 className="font-comico text-xs sm:text-sm text-[#181615] dark:text-white line-clamp-1 leading-tight group-hover:text-[#e84a27] transition-colors">
+                                <h5 className="font-comico text-xs sm:text-sm text-[#e84a27] font-bold line-clamp-1 leading-tight">
                                   {dish.dish_name}
                                 </h5>
 
@@ -1029,88 +1014,38 @@ export function VenueBottomSheet() {
                                   </p>
                                 )}
 
-                                {dish.taste_tags && dish.taste_tags.length > 0 && (
-                                  <div className="flex flex-wrap gap-1 mt-1.5">
-                                    {dish.taste_tags.slice(0, 2).map((tag) => (
-                                      <span
-                                        key={tag}
-                                        className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 text-[9px] font-medium"
-                                      >
-                                        {tag}
-                                      </span>
-                                    ))}
+                                {/* Inline Taste Tags + Bookmark/Save Button */}
+                                <div className="flex items-center justify-between gap-1.5 mt-2">
+                                  <div className="flex flex-wrap items-center gap-1 min-w-0">
+                                    {dish.taste_tags && dish.taste_tags.length > 0 &&
+                                      dish.taste_tags.slice(0, 2).map((tag) => (
+                                        <span
+                                          key={tag}
+                                          className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 text-[9px] font-medium"
+                                        >
+                                          {tag}
+                                        </span>
+                                      ))}
                                   </div>
-                                )}
+
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleSavePost(dish.id);
+                                    }}
+                                    className={`p-1.5 rounded-lg border transition-all cursor-pointer shrink-0 ${
+                                      isSaved
+                                        ? "bg-[#e84a27] text-white border-[#e84a27] shadow-xs"
+                                        : "bg-[#F5EFE4]/80 dark:bg-white/5 text-zinc-500 hover:text-[#e84a27] border-zinc-200/80 dark:border-white/10 hover:bg-zinc-100"
+                                    }`}
+                                    title={isSaved ? "Saved to your list" : "Save dish"}
+                                    aria-label={isSaved ? "Saved to your list" : "Save dish"}
+                                  >
+                                    <Bookmark className={`w-3.5 h-3.5 ${isSaved ? "fill-current" : ""}`} />
+                                  </button>
+                                </div>
                               </div>
-                            </div>
-
-                            {/* 1-Tap Foodie Reactions & Save */}
-                            <div className="pt-2 mt-2 border-t border-[#181615]/8 dark:border-white/10 flex items-center justify-between gap-1">
-                              <div className="flex items-center gap-1">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleReaction(dish.id, "craving");
-                                  }}
-                                  className={`p-1.5 rounded-lg border text-[10px] font-bold transition-all flex items-center gap-0.5 cursor-pointer ${
-                                    activeReaction === "craving"
-                                      ? "bg-[#e84a27] text-white border-[#e84a27] shadow-xs"
-                                      : "bg-[#F5EFE4]/80 dark:bg-white/5 text-zinc-600 dark:text-zinc-400 border-zinc-200/80 dark:border-white/10 hover:border-[#e84a27]/50"
-                                  }`}
-                                  title="Craving"
-                                >
-                                  <Flame className="w-3 h-3" />
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleReaction(dish.id, "must_try");
-                                  }}
-                                  className={`p-1.5 rounded-lg border text-[10px] font-bold transition-all flex items-center gap-0.5 cursor-pointer ${
-                                    activeReaction === "must_try"
-                                      ? "bg-amber-500 text-white border-amber-500 shadow-xs"
-                                      : "bg-[#F5EFE4]/80 dark:bg-white/5 text-zinc-600 dark:text-zinc-400 border-zinc-200/80 dark:border-white/10 hover:border-amber-400"
-                                  }`}
-                                  title="Must Try"
-                                >
-                                  <Star className="w-3 h-3" />
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleReaction(dish.id, "ate_here");
-                                  }}
-                                  className={`p-1.5 rounded-lg border text-[10px] font-bold transition-all flex items-center gap-0.5 cursor-pointer ${
-                                    activeReaction === "ate_here"
-                                      ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
-                                      : "bg-[#F5EFE4]/80 dark:bg-white/5 text-zinc-600 dark:text-zinc-400 border-zinc-200/80 dark:border-white/10 hover:border-emerald-500"
-                                  }`}
-                                  title="Tried"
-                                >
-                                  <CheckCircle2 className="w-3 h-3" />
-                                </button>
-                              </div>
-
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleSavePost(dish.id);
-                                }}
-                                className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
-                                  isSaved
-                                    ? "bg-[#181615] text-white border-[#181615] dark:bg-white dark:text-[#181615]"
-                                    : "bg-[#F5EFE4]/80 dark:bg-white/5 text-zinc-500 border-zinc-200/80 dark:border-white/10 hover:bg-zinc-100"
-                                }`}
-                                title={isSaved ? "Saved to your list" : "Save dish"}
-                              >
-                                <Bookmark className="w-3 h-3" />
-                              </button>
                             </div>
                           </div>
                         );
@@ -1216,17 +1151,7 @@ export function VenueBottomSheet() {
                     )}
                   </div>
 
-                  {/* About description */}
-                  {selectedVenue.description && (
-                    <div className="space-y-1.5 pt-2">
-                      <h4 className="font-bold text-zinc-700 uppercase text-[10px] tracking-wider">
-                        Culinary Story & Ambiance
-                      </h4>
-                      <p className="text-zinc-600 leading-relaxed bg-zinc-50 p-3.5 rounded-2xl border border-zinc-100 text-xs">
-                        {selectedVenue.description}
-                      </p>
-                    </div>
-                  )}
+                  </div>
                 </>
               )}
             </div>

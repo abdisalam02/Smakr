@@ -64,22 +64,32 @@ async function run() {
   // 1. Raw buffer with alpha for background removal
   const { data } = await image.ensureAlpha().raw().toBuffer({ resolveWithObject: true });
 
-  // 2. Flood fill #FFFFFF background to transparent
+  // 2. Flood fill #FFFFFF background AND neutral contact shadows to transparent
   const visited = new Uint8Array(w * h);
   const queue = [];
 
-  function isWhite(x, y) {
+  function isBg(x, y) {
     const idx = (y * w + x) * 4;
-    return data[idx] > 238 && data[idx + 1] > 238 && data[idx + 2] > 238;
+    const r = data[idx];
+    const g = data[idx + 1];
+    const b = data[idx + 2];
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const diff = max - min;
+    // Pure or near-white background
+    if (r > 218 && g > 218 && b > 218) return true;
+    // Neutral contact shadows / floor gradients (achromatic grey)
+    if (r > 140 && g > 140 && b > 140 && diff <= 18) return true;
+    return false;
   }
 
   for (let x = 0; x < w; x++) {
-    if (isWhite(x, 0)) queue.push(x, 0);
-    if (isWhite(x, h - 1)) queue.push(x, h - 1);
+    if (isBg(x, 0)) queue.push(x, 0);
+    if (isBg(x, h - 1)) queue.push(x, h - 1);
   }
   for (let y = 0; y < h; y++) {
-    if (isWhite(0, y)) queue.push(0, y);
-    if (isWhite(w - 1, y)) queue.push(w - 1, y);
+    if (isBg(0, y)) queue.push(0, y);
+    if (isBg(w - 1, y)) queue.push(w - 1, y);
   }
 
   while (queue.length > 0) {
@@ -91,22 +101,28 @@ async function run() {
 
     data[pos * 4 + 3] = 0;
 
-    if (cx > 0 && !visited[pos - 1] && isWhite(cx - 1, cy)) queue.push(cx - 1, cy);
-    if (cx < w - 1 && !visited[pos + 1] && isWhite(cx + 1, cy)) queue.push(cx + 1, cy);
-    if (cy > 0 && !visited[pos - w] && isWhite(cx, cy - 1)) queue.push(cx, cy - 1);
-    if (cy < h - 1 && !visited[pos + w] && isWhite(cx, cy + 1)) queue.push(cx, cy + 1);
+    if (cx > 0 && !visited[pos - 1] && isBg(cx - 1, cy)) queue.push(cx - 1, cy);
+    if (cx < w - 1 && !visited[pos + 1] && isBg(cx + 1, cy)) queue.push(cx + 1, cy);
+    if (cy > 0 && !visited[pos - w] && isBg(cx, cy - 1)) queue.push(cx, cy - 1);
+    if (cy < h - 1 && !visited[pos + w] && isBg(cx, cy + 1)) queue.push(cx, cy + 1);
   }
 
-  // Defringe 1px border halo
-  for (let y = 1; y < h - 1; y++) {
-    for (let x = 1; x < w - 1; x++) {
-      const pos = y * w + x;
-      if (!visited[pos]) {
-        if (visited[pos - 1] || visited[pos + 1] || visited[pos - w] || visited[pos + w]) {
-          const idx = pos * 4;
-          if (data[idx] > 234 && data[idx + 1] > 234 && data[idx + 2] > 234) {
-            data[idx + 3] = 0;
-            visited[pos] = 1;
+  // 2-pass perimeter defringing: remove any residual anti-aliased white halo or shadow haze
+  for (let pass = 0; pass < 2; pass++) {
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const pos = y * w + x;
+        if (!visited[pos]) {
+          if (visited[pos - 1] || visited[pos + 1] || visited[pos - w] || visited[pos + w]) {
+            const idx = pos * 4;
+            const r = data[idx];
+            const g = data[idx + 1];
+            const b = data[idx + 2];
+            const diff = Math.max(r, g, b) - Math.min(r, g, b);
+            if ((r > 208 && g > 208 && b > 208) || (r > 135 && g > 135 && b > 135 && diff <= 22)) {
+              data[idx + 3] = 0;
+              visited[pos] = 1;
+            }
           }
         }
       }

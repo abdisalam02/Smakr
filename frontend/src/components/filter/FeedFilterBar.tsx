@@ -467,10 +467,11 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
     activeExtraFiltersCount > 0 || currentCategory !== "all";
 
   const handleSelectAll = () => {
+    // Fast single-step feed filter reset (matches handleSelectGroup speed without forcing MapRadarView pin rebuild)
     useCityPulseStore.setState((state) => ({
+      selectedSpotKind: null,
       selectedGroup: null,
       selectedDishCategory: null,
-      selectedSpotKind: null,
       selectedCuisine: null,
       selectedDietary: [],
       feedCategory: "all",
@@ -481,9 +482,12 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
         staff_picks_only: false,
         saved_only: false,
         open_now: false,
+        tags: [],
       },
     }));
-    filterScrollRef.current?.scrollTo({ left: 0, behavior: "smooth" });
+    if (filterScrollRef.current && filterScrollRef.current.scrollLeft > 60) {
+      filterScrollRef.current.scrollLeft = 0;
+    }
   };
 
   const handleSelectSaved = () => {

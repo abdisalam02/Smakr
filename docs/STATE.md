@@ -1,15 +1,15 @@
 # STATE.md — CityPulse / Smakr (read first, keep <= 30 lines)
 
-Updated: 2026-11-02
+Updated: 2026-11-09
 
 ## Now
-- Task: Zero-cost Google Places Ingest-Once -> Supabase Storage CDN architecture.
-- Status: Migrated 100% of DB photos (0 proxy URLs remain), sharp WebP pipeline active, tsc clean.
+- Task: 8 custom WebP icons cutout & live on map pins/taxonomy; guide updated at docs/FOOD_ICON_FACTORY_GUIDE.md.
+- Status: Implemented & verified. Faint contact shadows will be perfected on quota reset.
 
 ## Next (max 3)
-1. Re-run `npm run test:security` from `frontend/` after any environment change.
-2. Review remaining dependency advisories with `npm run security:audit`.
-3. Verify partner claim and kitchen token flows against current migrations.
+1. Perfect no-shadow studio renders when image quota resets (~4h).
+2. Re-run `npm run test:security` from `frontend/` after any environment change.
+3. Review remaining dependency advisories with `npm run security:audit`.
 
 ## Decisions (don't reopen)
 - Product is Smakr; the app lives in `frontend/`.
@@ -23,8 +23,8 @@ Updated: 2026-11-02
 - No other open items recorded in this handoff.
 
 ## Recent (max 5, one line each)
-- 2026-11-07 — Calibrated 31px/35px map pins, fixed swipe-close double-close lag, restored elastic filter yoink stretch, Comico dish titles; tsc clean
-- 2026-11-07 — Split GROUP_FILTER_WEBP & DISH_ICON_WEBP, clickable z-60 YOU collar stamp, 7-axis map filter sync, watercolor cuisine flags, zero-flash feed cards, 190ms single-pass venue sheet close; tsc clean
-- 2026-11-08 — Fixed food pin taxonomy: Zam Zam -> cheesesteak, Håndbakt -> croissant, Lai Zai -> banh mi, Em Oi -> pho, Dirty Taco -> tacos; tsc clean
-- 2026-11-08 — Cleaned redundant flags (no 🇳🇴 on bakeries, no 🇮🇹 on Digg Pizza), merged Breads into Bakery, Naan into Rice & Curry; tsc clean
-- 2026-11-08 — Scaled map pins and Smakr Pick -20%, created SEEDING_FEED_IMAGE_AUDIT.md for dish-only photos; tsc clean
+- 2026-11-09 — Fixed feed density toggle stacking context (z-0 orange pill under active icon); tsc clean
+- 2026-11-09 — +20% spot card/image size, tighter 10px card gap, 1x/2x grid toggle & smooth bottom nav pill; tsc clean
+- 2026-11-09 — Redesigned FoodSpotCard: Warm Oat, frosted rating glass, flag + category tag, NOK price; tsc clean
+- 2026-11-09 — Softened docked sticky header scrim to backdrop-blur-md with 65% opacity; tsc clean
+- 2026-11-09 — Seeded 20 spots & 21 dishes from spots_dishes_enrichment.json to Supabase; tsc clean

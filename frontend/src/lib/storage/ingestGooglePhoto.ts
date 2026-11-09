@@ -1,4 +1,6 @@
 import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import sharp from "sharp";
 
@@ -20,6 +22,45 @@ function getAdminClient(): SupabaseClient | null {
 
 // In-flight deduplication pool to prevent concurrent duplicate Google fetches
 const inFlightIngestions = new Map<string, Promise<string>>();
+
+// Persistent memory + disk cache mapping Google photo ref -> permanent Supabase CDN URL
+const resolvedCdnMemoryCache = new Map<string, string>();
+let diskCacheLoaded = false;
+
+function getPhotoCdnCachePath(): string {
+  const p1 = path.join(process.cwd(), "curation", "google_photo_cdn_cache.json");
+  if (fs.existsSync(path.dirname(p1))) return p1;
+  return path.join(process.cwd(), "frontend", "curation", "google_photo_cdn_cache.json");
+}
+
+function loadDiskPhotoCache(): void {
+  if (diskCacheLoaded) return;
+  diskCacheLoaded = true;
+  try {
+    const filePath = getPhotoCdnCachePath();
+    if (fs.existsSync(filePath)) {
+      const parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
+      for (const [k, v] of Object.entries(parsed)) {
+        if (typeof v === "string") resolvedCdnMemoryCache.set(k, v);
+      }
+    }
+  } catch {
+    // Ignore read errors
+  }
+}
+
+function saveDiskPhotoCache(ref: string, cdnUrl: string): void {
+  resolvedCdnMemoryCache.set(ref, cdnUrl);
+  try {
+    const filePath = getPhotoCdnCachePath();
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const obj = Object.fromEntries(resolvedCdnMemoryCache.entries());
+    fs.writeFileSync(filePath, JSON.stringify(obj, null, 2), "utf8");
+  } catch {
+    // Ignore write errors
+  }
+}
 
 /**
  * Extracts a Google Places photo resource name from a raw reference or proxy URL.
@@ -84,6 +125,12 @@ export async function ingestGooglePhotoToSupabase(
     return trimmed;
   }
 
+  // Instant memory + disk cache check (zero network calls once ingested)
+  loadDiskPhotoCache();
+  if (resolvedCdnMemoryCache.has(ref)) {
+    return resolvedCdnMemoryCache.get(ref)!;
+  }
+
   // Deduplicate concurrent requests in-flight for the same photo ref
   const existingPromise = inFlightIngestions.get(ref);
   if (existingPromise) {
@@ -105,6 +152,7 @@ export async function ingestGooglePhotoToSupabase(
     try {
       const headRes = await fetch(publicUrl, { method: "HEAD", cache: "no-store" });
       if (headRes.ok && Number(headRes.headers.get("content-length") || 0) > 0) {
+        saveDiskPhotoCache(ref, publicUrl);
         return publicUrl;
       }
     } catch {
@@ -150,6 +198,7 @@ export async function ingestGooglePhotoToSupabase(
         return trimmed;
       }
 
+      saveDiskPhotoCache(ref, publicUrl);
       return publicUrl;
     } catch (err) {
       console.error("[ingestGooglePhoto] Error during ingestion pipeline:", err);

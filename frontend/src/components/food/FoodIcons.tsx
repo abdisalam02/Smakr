@@ -31,8 +31,11 @@ export interface IconProps {
  * Single-Source Authoritative SVG Inner Bodies (24x24 viewBox)
  */
 export const SMAKR_ICON_SVG_BODIES: Record<string, string> = {
-  // Discover / All
-  all: `<circle cx="12" cy="12" r="9.5" fill="#FAF7F2" stroke="#181615" stroke-width="1.8"/><path d="M12 5.5L13.8 10.2L18.5 12L13.8 13.8L12 18.5L10.2 13.8L5.5 12L10.2 10.2L12 5.5Z" fill="#E84A27" stroke="#181615" stroke-width="1.2" stroke-linejoin="round"/>`,
+  // Discover / All (Artisan Gourmet Serving Cloche & Platter)
+  all: `<path d="M3 18.5H21" stroke="#181615" stroke-width="2" stroke-linecap="round"/><path d="M4.5 17C4.5 11.2 7.8 7.5 12 7.5C16.2 7.5 19.5 11.2 19.5 17H4.5Z" fill="#FAF7F2" stroke="#181615" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="5.2" r="1.8" fill="#E84A27" stroke="#181615" stroke-width="1.4"/><path d="M8.5 14.5C9.8 12.5 14.2 12.5 15.5 14.5" stroke="#E84A27" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="12" r="1.2" fill="#E84A27"/>`,
+
+  // Basque Burnt Cheesecake & Bakery Specialties
+  cheesecake: `<path d="M4 17.5L12 5.5L20 9.5L16 19.5H4Z" fill="#F4E8D0" stroke="#181615" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 5.5L20 9.5L16 11.5L8.5 7.5L12 5.5Z" fill="#3D2012" stroke="#181615" stroke-width="1.5" stroke-linejoin="round"/><path d="M8.5 7.5L16 11.5L16 19.5L8.5 15.5Z" fill="#E8A63A" fill-opacity="0.35"/><path d="M4 17.5L8.5 15.5L8.5 7.5L4 17.5Z" fill="#FAF7F2" stroke="#181615" stroke-width="1.4"/><path d="M11 9C13 10.5 15 10.8 17 9.8" stroke="#E84A27" stroke-width="1.3" stroke-linecap="round"/>`,
 
   // Bakery & Viennoiserie
   bakery: `<path d="M3.5 14.5C2.5 10 6 6.5 12 6.5C18 6.5 21.5 10 20.5 14.5C19.8 17 17.2 18 15.2 16.2C13.8 15 13 13.8 12 13.8C11 13.8 10.2 15 8.8 16.2C6.8 18 4.2 17 3.5 14.5Z" fill="#FAF7F2" stroke="#181615" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 7.5C9.2 10 10.5 11.2 12 11.2C13.5 11.2 14.8 10 16 7.5" fill="#E84A27" fill-opacity="0.22" stroke="#E84A27" stroke-width="1.5" stroke-linecap="round"/><path d="M6.5 10.5L8.5 14M17.5 10.5L15.5 14" stroke="#181615" stroke-width="1.5" stroke-linecap="round"/>`,
@@ -185,7 +188,15 @@ SMAKR_ICON_SVG_BODIES.middle_eastern = SMAKR_ICON_SVG_BODIES.kebab;
 SMAKR_ICON_SVG_BODIES.outdoor_park = SMAKR_ICON_SVG_BODIES.park;
 SMAKR_ICON_SVG_BODIES.rice_bowls = SMAKR_ICON_SVG_BODIES.mandi_rice;
 SMAKR_ICON_SVG_BODIES.burrito_wrap = SMAKR_ICON_SVG_BODIES.shawarma;
-SMAKR_ICON_SVG_BODIES.dessert = SMAKR_ICON_SVG_BODIES.pancakes;
+SMAKR_ICON_SVG_BODIES.dessert = SMAKR_ICON_SVG_BODIES.cheesecake;
+SMAKR_ICON_SVG_BODIES.basque_cheesecake = SMAKR_ICON_SVG_BODIES.cheesecake;
+SMAKR_ICON_SVG_BODIES.birria = SMAKR_ICON_SVG_BODIES.tacos;
+SMAKR_ICON_SVG_BODIES.taco = SMAKR_ICON_SVG_BODIES.tacos;
+SMAKR_ICON_SVG_BODIES.manakish = SMAKR_ICON_SVG_BODIES.naan;
+SMAKR_ICON_SVG_BODIES.cocoa = SMAKR_ICON_SVG_BODIES.coffee;
+SMAKR_ICON_SVG_BODIES.hot_chocolate = SMAKR_ICON_SVG_BODIES.coffee;
+SMAKR_ICON_SVG_BODIES.chai = SMAKR_ICON_SVG_BODIES.coffee;
+SMAKR_ICON_SVG_BODIES.noodles = SMAKR_ICON_SVG_BODIES.ramen;
 
 /**
  * Strict lookup for the 13 Parent Group Filter Icons (/icons/filters/*.webp)
@@ -227,6 +238,8 @@ export const DISH_ICON_WEBP: Record<string, string> = {
   banh_mi: "/icons/food/banh_mi.webp",
   breakfast: "/icons/food/breakfast.webp",
   dessert: "/icons/food/dessert.webp",
+  basque_cheesecake: "/icons/food/basque_cheesecake.webp",
+  cheesecake: "/icons/food/basque_cheesecake.webp",
   gelato: "/icons/food/gelato.webp",
   matcha: "/icons/food/matcha.webp",
   matcha_cup: "/icons/food/matcha_cup.webp",
@@ -237,6 +250,13 @@ export const DISH_ICON_WEBP: Record<string, string> = {
   tacos: "/icons/food/tacos.webp",
   taco: "/icons/food/tacos.webp",
   burger: "/icons/food/burger.webp",
+  manakish: "/icons/food/manakish.webp",
+  masala_chai: "/icons/food/masala_chai.webp",
+  chai: "/icons/food/masala_chai.webp",
+  falafel: "/icons/food/falafel.webp",
+  hot_cocoa: "/icons/food/hot_cocoa.webp",
+  cocoa: "/icons/food/hot_cocoa.webp",
+  noodles: "/icons/food/noodles.webp",
   sushi: "/icons/food/sushi.webp",
   curry: "/icons/food/curry.webp",
   indian: "/icons/food/curry.webp",
@@ -260,6 +280,8 @@ export const CUSTOM_VECTOR_ICONS = new Set([
   "cinnamon_roll",
   "kanelbolle",
   "cardamom_bun",
+  "basque_cheesecake",
+  "cheesecake",
   "pizza",
   "pasta",
   "pizza_pasta",
@@ -268,8 +290,16 @@ export const CUSTOM_VECTOR_ICONS = new Set([
   "vietnamese",
   "pho",
   "ramen",
+  "noodles",
   "burger",
   "tacos",
+  "taco",
+  "manakish",
+  "masala_chai",
+  "chai",
+  "falafel",
+  "hot_cocoa",
+  "cocoa",
   "sushi",
   "nordic_seafood",
   "curry",
@@ -285,6 +315,15 @@ export const CUSTOM_VECTOR_ICONS = new Set([
   "matcha",
   "street_food",
   "dessert",
+  "cheesecake",
+  "basque_cheesecake",
+  "birria",
+  "taco",
+  "manakish",
+  "cocoa",
+  "hot_chocolate",
+  "chai",
+  "noodles",
 ]);
 
 export const EMOJI_TO_CUSTOM_ICON: Record<string, string> = {
@@ -351,7 +390,7 @@ export function normalizeSmakrIconName(name: string): string {
 export function getFoodPinSvg(categoryOrTag: string, width = 34, height = 34): string {
   const key = normalizeSmakrIconName(categoryOrTag);
   const body = SMAKR_ICON_SVG_BODIES[key] || SMAKR_ICON_SVG_BODIES.all;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -4 32 32" width="${width}" height="${height}" fill="none" style="overflow:visible !important; display:block;">${body}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-2 -2 28 28" width="${width}" height="${height}" fill="none" style="overflow:visible !important; display:block;">${body}</svg>`;
 }
 
 /**

@@ -35,6 +35,7 @@ import {
   FOOD_PIN_SVG_MAP,
   isCustomFoodIcon,
   resolveCustomIconKey,
+  DISH_ICON_WEBP,
   FILTER_CATEGORY_WEBP,
 } from "@/components/food/FoodIcons";
 import { resolveEntityTaxonomy, resolveVenueDisplayBadge, resolveDishIconKey } from "@/lib/taxonomy";
@@ -78,14 +79,14 @@ const PIN_SHADOW_DEFAULT =
 
 function getMapMascotDimensions(zoom: number): { width: number; height: number } {
   // Prominently sized mascot bust (~76px x 62px at default zoom 13.5) framing the 50px dish pin
-  const height = Math.round(Math.min(74, Math.max(45, (zoom - 10) * 7.2 + 35)));
+  const height = Math.round(Math.min(92, Math.max(56, (zoom - 10) * 9 + 44)));
   const width = Math.round(height * 0.82);
   return { width, height };
 }
 
 function getUserAvatarDimensions(zoom: number): { width: number; height: number } {
   // Calibrated so user bust matches the visual head/torso volume of the Smakr mascot (~48px x 40px at zoom 13.5)
-  const height = Math.round(Math.min(46, Math.max(29, (zoom - 10) * 4 + 25)));
+  const height = Math.round(Math.min(58, Math.max(36, (zoom - 10) * 5 + 31)));
   const width = Math.round(height * 0.82);
   return { width, height };
 }
@@ -96,17 +97,17 @@ function getUserAvatarDimensions(zoom: number): { width: number; height: number 
  * marker DOM (which caused layout thrash and frame drops).
  */
 function applyPinState(root: HTMLElement, isSelected: boolean) {
+  const isPopup = root.dataset.isPopup === "1";
+  const isWeeklyPick = root.dataset.isWeeklyPick === "1";
   root.dataset.selected = isSelected ? "1" : "0";
-  root.style.zIndex = isSelected ? "35" : "15";
+  root.style.zIndex = isSelected ? "55" : isWeeklyPick ? "44" : "15";
   const visual = root.querySelector<HTMLElement>(".pin-visual");
   if (visual) visual.style.transform = isSelected ? "scale(1.14)" : "scale(1.0)";
   const puck = root.querySelector<HTMLElement>(".smakr-map-puck");
   const iconContainer = root.querySelector<HTMLElement>(".smakr-puck-icon");
-  const arrow = root.querySelector<HTMLElement>(".smakr-puck-arrow");
-  const isPopup = root.dataset.isPopup === "1";
-  const isWeeklyPick = root.dataset.isWeeklyPick === "1";
-  const baseIconPx = isWeeklyPick ? 34 : 30;
-  const selectedIconPx = isWeeklyPick ? 37 : 33;
+  const dot = root.querySelector<HTMLElement>(".smakr-puck-dot");
+  const baseIconPx = isWeeklyPick ? 44 : 39;
+  const selectedIconPx = isWeeklyPick ? 48 : 43;
   if (puck) {
     if (isPopup) {
       if (isSelected) {
@@ -132,18 +133,44 @@ function applyPinState(root: HTMLElement, isSelected: boolean) {
     } else if (isSelected) {
       iconContainer.style.width = `${selectedIconPx}px`;
       iconContainer.style.height = `${selectedIconPx}px`;
-      iconContainer.style.filter = "url(#smakr-diecut-selected)";
+      iconContainer.style.filter = "url(#smakr-diecut-default)";
+      const svg = iconContainer.querySelector("svg");
+      if (svg) {
+        svg.setAttribute("width", `${selectedIconPx}`);
+        svg.setAttribute("height", `${selectedIconPx}`);
+      }
+      const img = iconContainer.querySelector("img");
+      if (img) {
+        img.style.width = `${selectedIconPx}px`;
+        img.style.height = `${selectedIconPx}px`;
+      }
     } else {
       iconContainer.style.width = `${baseIconPx}px`;
       iconContainer.style.height = `${baseIconPx}px`;
       iconContainer.style.filter = "url(#smakr-diecut-default)";
+      const svg = iconContainer.querySelector("svg");
+      if (svg) {
+        svg.setAttribute("width", `${baseIconPx}`);
+        svg.setAttribute("height", `${baseIconPx}`);
+      }
+      const img = iconContainer.querySelector("img");
+      if (img) {
+        img.style.width = `${baseIconPx}px`;
+        img.style.height = `${baseIconPx}px`;
+      }
     }
   }
-  if (arrow) {
-    if (isPopup) {
-      arrow.style.borderTopColor = "#E84A27";
+  if (dot) {
+    if (isSelected) {
+      dot.style.background = "#E84A27";
+      dot.style.borderColor = "#E84A27";
+      dot.style.transform = isPopup ? "translateX(-50%) scale(1.35)" : "scale(1.35)";
+      dot.style.boxShadow = "0 0 0 2px rgba(232, 74, 39, 0.25), 0 2px 5px rgba(232, 74, 39, 0.4)";
     } else {
-      arrow.style.borderTopColor = isSelected ? "#E84A27" : "#FAF7F2";
+      dot.style.background = "#FAF7F2";
+      dot.style.borderColor = isPopup ? "#E84A27" : "rgba(24, 22, 21, 0.28)";
+      dot.style.transform = isPopup ? "translateX(-50%) scale(1.0)" : "scale(1.0)";
+      dot.style.boxShadow = isPopup ? "0 1px 3px rgba(232, 74, 39, 0.35)" : "0 1px 3px rgba(24, 22, 21, 0.35)";
     }
   }
 }
@@ -264,8 +291,8 @@ function createAquarellePinElement(
   root.style.position = "absolute";
   root.style.top = "0";
   root.style.left = "0";
-  root.style.width = isWeeklyPickVenue ? "42px" : "38px";
-  root.style.height = isWeeklyPickVenue ? "47px" : "44px";
+  root.style.width = isWeeklyPickVenue ? "52px" : "48px";
+  root.style.height = isWeeklyPickVenue ? "58px" : "54px";
   root.style.margin = "0";
   root.style.padding = "0";
   root.style.cursor = "pointer";
@@ -311,22 +338,30 @@ function createAquarellePinElement(
     : venue.spot_type === "popup"
     ? "✨"
     : "";
-  const pinIconPx = isWeeklyPickVenue ? 34 : 30;
-  const puckPx = isWeeklyPickVenue ? 40 : 37;
-  const pinGlyph = curatedIcon
-    ? `<svg xmlns="http://www.w3.org/2000/svg" width="${pinIconPx}" height="${pinIconPx}" viewBox="-4 -4 32 32" style="overflow:visible !important; display:block;"><text x="12" y="13" font-size="21" text-anchor="middle" dominant-baseline="central" style="font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif; user-select:none;">${curatedIcon}</text></svg>`
+  const pinIconPx = isWeeklyPickVenue ? 44 : 39;
+  const puckPx = isWeeklyPickVenue ? 50 : 46;
+  const webpUrl =
+    DISH_ICON_WEBP[iconKey] ||
+    FILTER_CATEGORY_WEBP[iconKey] ||
+    (categoryKey ? DISH_ICON_WEBP[categoryKey] || FILTER_CATEGORY_WEBP[categoryKey] : null);
+  const pinGlyph = webpUrl
+    ? `<img src="${webpUrl}" width="${pinIconPx}" height="${pinIconPx}" alt="${iconKey}" style="width:${pinIconPx}px;height:${pinIconPx}px;object-fit:contain;display:block;user-select:none;pointer-events:none;" />`
+    : curatedIcon
+    ? `<svg xmlns="http://www.w3.org/2000/svg" width="${pinIconPx}" height="${pinIconPx}" viewBox="-2 -2 28 28" style="overflow:visible !important; display:block;"><text x="12" y="13" font-size="21" text-anchor="middle" dominant-baseline="central" style="font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif; user-select:none;">${curatedIcon}</text></svg>`
     : iconSvg
-        .replace(/width="\d+"/g, `width="${pinIconPx}"`)
-        .replace(/height="\d+"/g, `height="${pinIconPx}"`);
+        .replace(/width="\d+"/, `width="${pinIconPx}"`)
+        .replace(/height="\d+"/, `height="${pinIconPx}"`);
 
   const inner = document.createElement("div");
   inner.className = "pin-visual";
   inner.style.width = "100%";
   inner.style.height = "100%";
   inner.style.display = "flex";
-  inner.style.alignItems = "flex-start";
-  inner.style.justifyContent = "center";
+  inner.style.flexDirection = "column";
+  inner.style.alignItems = "center";
+  inner.style.justifyContent = "flex-start";
   inner.style.position = "relative";
+  inner.style.boxSizing = "border-box";
   inner.style.transformOrigin = "bottom center";
   inner.style.transition = "transform 0.18s cubic-bezier(0.16, 1, 0.3, 1)";
 
@@ -388,36 +423,29 @@ function createAquarellePinElement(
         <div class="smakr-puck-icon" style="width:18px;height:18px;display:grid;place-items:center;line-height:1;margin:0;padding:0;">
           ${pinGlyph}
         </div>
-        <!-- Pointer triangle -->
-        <div class="smakr-puck-arrow" style="
-          position: absolute;
-          bottom: -4.5px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 0;
-          height: 0;
-          border-left: 4px solid transparent;
-          border-right: 4px solid transparent;
-          border-top: 4.5px solid #E84A27;
-          transition: border-top-color 0.2s ease;
-        "></div>
+        <!-- Ground GPS anchor dot -->
+        <div class="smakr-puck-dot" style="position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); width: 5.5px; height: 5.5px; border-radius: 9999px; background: #FAF7F2; border: 1px solid #E84A27; box-shadow: 0 1px 3px rgba(232, 74, 39, 0.35); transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;"></div>
       </div>
     `;
   } else {
     inner.innerHTML = `
-      <!-- Die-Cut Floating Dish Silhouette Pin (37px/41px size, clean contour stroke) -->
+      <!-- Die-Cut Floating Dish Silhouette Pin (Crisp, perfectly centered ground dot) -->
       ${haloHtml}
       <div class="smakr-map-puck" style="
-        width: ${puckPx}px;
-        height: ${puckPx}px;
-        padding: 4.5px;
+        width: 100%;
+        height: 100%;
+        box-sizing: border-box;
+        padding: 0;
+        margin: 0;
         background: transparent !important;
         border: none !important;
         border-radius: 0 !important;
         box-shadow: none !important;
         overflow: visible !important;
-        display: grid;
-        place-items: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
         position: relative;
         transition: transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
         cursor: pointer;
@@ -426,31 +454,21 @@ function createAquarellePinElement(
         <div class="smakr-puck-icon" style="
           width: ${pinIconPx}px;
           height: ${pinIconPx}px;
-          display: grid;
-          place-items: center;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           line-height: 1;
           margin: 0;
           padding: 0;
+          flex-shrink: 0;
           overflow: visible !important;
           filter: url(#smakr-diecut-default);
           transition: filter 0.2s ease, width 0.15s ease, height 0.15s ease;
         ">
           ${pinGlyph}
         </div>
-        <!-- Downward pointer arrow beneath the floating icon -->
-        <div class="smakr-puck-arrow" style="
-          position: absolute;
-          bottom: -3.5px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 0;
-          height: 0;
-          border-left: 4px solid transparent;
-          border-right: 4px solid transparent;
-          border-top: 4.5px solid #FAF7F2;
-          filter: drop-shadow(0 2px 3px rgba(24,22,21,0.28));
-          transition: border-top-color 0.2s ease;
-        "></div>
+        <!-- Ground GPS anchor dot centered directly beneath the floating icon -->
+        <div class="smakr-puck-dot" style="width: 6px; height: 6px; border-radius: 9999px; background: #FAF7F2; border: 1px solid rgba(24, 22, 21, 0.28); box-shadow: 0 1px 3px rgba(24, 22, 21, 0.35); margin-top: 1px; flex-shrink: 0; transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;"></div>
       </div>
     `;
   }
@@ -796,7 +814,7 @@ export function MapRadarView() {
       const overrideIconKey = overrideIconByVenueId.get(venue.id) ?? null;
       const venueTax = resolveEntityTaxonomy(venue);
       const dishKey = resolveCustomIconKey(venueTax.dishCategory) || venueTax.dishCategory;
-      const pinKey = `${venue.icon ?? ""}|${dishKey}|${venue.spot_type ?? ""}|${popupStatus.status}|${kitchenStatus}|${venue.food_category}|${venue.name}|${venue.popup_end_date ?? ""}|${overrideIconKey ?? ""}|${isWeeklyPickVenue ? "1" : "0"}`;
+      const pinKey = `v3|${venue.icon ?? ""}|${dishKey}|${venue.spot_type ?? ""}|${popupStatus.status}|${kitchenStatus}|${venue.food_category}|${venue.name}|${venue.popup_end_date ?? ""}|${overrideIconKey ?? ""}|${isWeeklyPickVenue ? "1" : "0"}`;
 
       let existing = markerPoolRef.current.get(venue.id);
       if (existing && existing.rootEl.dataset.pinKey !== pinKey) {
@@ -1582,11 +1600,22 @@ export function MapRadarView() {
     const venueBadge = resolveVenueDisplayBadge(selectedVenue);
     const spotKindSvg = (FOOD_PIN_SVG_MAP[taxonomy.spotKind] || FOOD_PIN_SVG_MAP.restaurant)
       .replace('width="20" height="20"', 'width="18" height="18"');
+    const matchingFoodPost = useCityPulseStore.getState().foodPosts.find(
+      (p) => (p.spot_id === selectedVenue.id || p.spot_name === selectedVenue.name) && p.dish_name && !p.is_archived
+    );
     const signatureDishName = isWeeklyPickVenue
       ? weeklyPick.dish_name
-      : (selectedVenue.signature_dishes && selectedVenue.signature_dishes[0]) || "";
+      : (selectedVenue.signature_dishes && selectedVenue.signature_dishes[0]) ||
+        matchingFoodPost?.dish_name ||
+        (selectedVenue.vibe_signals as any)?.signature_dish ||
+        (selectedVenue.vibe_signals as any)?.dish_highlight ||
+        taxonomy.dishCategory ||
+        taxonomy.spotLabel ||
+        "";
     const signaturePrice = isWeeklyPickVenue && weeklyPick.price_nok
       ? `${weeklyPick.price_nok} kr`
+      : matchingFoodPost?.price_nok
+      ? `${matchingFoodPost.price_nok} kr`
       : "";
 
     const dishIconKey = resolveDishIconKey(signatureDishName, selectedVenue.food_category);
@@ -1859,6 +1888,10 @@ export function MapRadarView() {
     const attach = () => {
       if (venuePopupRef.current !== popup) return;
       popup.addTo(map);
+      const popupEl = popup.getElement();
+      if (popupEl) {
+        popupEl.style.zIndex = "120";
+      }
       resetContainerScroll();
     };
     if (map.isMoving()) {
@@ -1885,7 +1918,7 @@ export function MapRadarView() {
         <defs>
           {/* Default Unselected Sticker Outline (#FAF7F2 Warm Cream, 1.8px stroke + subtle ground shadow) */}
           <filter id="smakr-diecut-default" x="-35%" y="-35%" width="170%" height="170%">
-            <feMorphology in="SourceAlpha" operator="dilate" radius="1.8" result="dilated" />
+            <feMorphology in="SourceAlpha" operator="dilate" radius="0.9" result="dilated" />
             <feFlood floodColor="#FAF7F2" result="strokeColor" />
             <feComposite in="strokeColor" in2="dilated" operator="in" result="stroke" />
             <feDropShadow in="stroke" dx="0" dy="2.5" stdDeviation="1.8" floodColor="#181615" floodOpacity="0.30" result="shadow" />
@@ -1899,14 +1932,14 @@ export function MapRadarView() {
           {/* Selected Active Sticker Outline: Solid Cream Inner Stroke + Thin Delicate Orange Outer Rim + Warm Glow */}
           <filter id="smakr-diecut-selected" x="-45%" y="-45%" width="190%" height="190%">
             {/* Thin delicate outer orange rim (~0.7px outer whisper) */}
-            <feMorphology in="SourceAlpha" operator="dilate" radius="2.5" result="dilatedOuter" />
+            <feMorphology in="SourceAlpha" operator="dilate" radius="1.5" result="dilatedOuter" />
             <feFlood floodColor="#E84A27" floodOpacity="0.75" result="orangeColor" />
             <feComposite in="orangeColor" in2="dilatedOuter" operator="in" result="orangeRim" />
             {/* Soft warm orange elevation halo */}
             <feDropShadow in="orangeRim" dx="0" dy="2.5" stdDeviation="2.4" floodColor="#E84A27" floodOpacity="0.32" result="orangeGlow" />
 
             {/* Clean solid warm cream (#FAF7F2) inner sticker stroke (1.8px) */}
-            <feMorphology in="SourceAlpha" operator="dilate" radius="1.8" result="dilatedInner" />
+            <feMorphology in="SourceAlpha" operator="dilate" radius="0.9" result="dilatedInner" />
             <feFlood floodColor="#FAF7F2" result="whiteColor" />
             <feComposite in="whiteColor" in2="dilatedInner" operator="in" result="whiteStroke" />
 

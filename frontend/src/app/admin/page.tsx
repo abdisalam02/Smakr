@@ -21,6 +21,7 @@ import {
   Ticket,
   ChefHat,
   ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import {
@@ -1058,6 +1059,23 @@ export default function AdminControlCenterPage() {
         {/* ================================================================= */}
         {tab === "venues" && (
           <div className="space-y-4">
+            {/* Seeding Verification Lab Banner */}
+            <div className="p-4 sm:p-5 rounded-3xl bg-[#1C1A19] border border-[#e84a27]/30 shadow-md flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🔬</span>
+                <div>
+                  <h3 className="text-sm font-extrabold text-white">Manual Seeding Verification Lab</h3>
+                  <p className="text-xs text-zinc-400">Visually vet candidate spots, verify dish macros, swap photos, and approve before production seed.</p>
+                </div>
+              </div>
+              <Link
+                href="/admin/seeding-lab"
+                className="px-4 py-2 rounded-2xl bg-[#e84a27] hover:bg-[#d43d1c] text-white text-xs font-bold transition-all shadow-md flex items-center gap-1.5 shrink-0"
+              >
+                <span>Open Seeding Lab</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
             {/* 1. AI + Google Places Bulk Seeder Dropdown Accordion */}
             <details className="group rounded-3xl bg-white dark:bg-[#1C1917] border border-[#181615]/10 overflow-hidden shadow-xs">
               <summary className="p-4 flex items-center justify-between cursor-pointer font-bold text-xs sm:text-sm text-zinc-900 dark:text-white hover:text-[#e84a27] transition-colors select-none">

@@ -142,6 +142,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   const resetAllFilters = useCityPulseStore((state) => state.resetAllFilters);
   const feedMode = useCityPulseStore((state) => state.feedMode);
   const setFeedMode = useCityPulseStore((state) => state.setFeedMode);
+  const feedLayout = useCityPulseStore((state) => state.feedLayout);
   const selectedDietary = useCityPulseStore((state) => state.selectedDietary);
   const mapNeighborhood = useCityPulseStore((state) => state.mapNeighborhood);
   const openNow = useCityPulseStore((state) => state.filters.open_now);
@@ -809,7 +810,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                 ref={desktopFeedScrollRef}
                 onScroll={handleDesktopScroll}
                 data-feed-scroll
-                className="flex-1 overflow-y-auto p-5 space-y-4 no-scrollbar pb-36"
+                className="flex-1 overflow-y-auto px-3.5 py-2.5 space-y-2.5 no-scrollbar pb-36"
               >
                 {/* Pop-ups Feed Panel */}
                 <div className={feedMode === "popups" ? "block" : "hidden"}>
@@ -821,13 +822,15 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                   ) : (
                     <div
                       className={`grid ${
-                        viewMode === "feed"
+                        feedLayout === "grid"
+                          ? "grid-cols-2"
+                          : viewMode === "feed"
                           ? "grid-cols-2 xl:grid-cols-3"
-                          : "grid-cols-1 xl:grid-cols-2"
-                      } gap-4`}
+                          : "grid-cols-1"
+                      } gap-2.5`}
                     >
                       {popupVenues.map((venue, index) => (
-                        <div key={venue.id}>
+                        <div key={venue.id} className="col-span-full">
                           <PopupEventCard
                             venue={venue}
                             priority={isDesktop && index === 0}
@@ -843,10 +846,12 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                   {foodPosts.length === 0 && isHydratingData ? (
                     <div
                       className={`grid ${
-                        viewMode === "feed"
+                        feedLayout === "grid"
+                          ? "grid-cols-2"
+                          : viewMode === "feed"
                           ? "grid-cols-2 xl:grid-cols-3"
-                          : "grid-cols-1 xl:grid-cols-2"
-                      } gap-4`}
+                          : "grid-cols-1"
+                      } gap-2.5`}
                     >
                       {Array.from({ length: 4 }).map((_, i) => (
                         <FoodPostCardSkeleton key={`post-skeleton-${i}`} />
@@ -857,15 +862,18 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                   ) : (
                     <div
                       className={`grid ${
-                        viewMode === "feed"
+                        feedLayout === "grid"
+                          ? "grid-cols-2"
+                          : viewMode === "feed"
                           ? "grid-cols-2 xl:grid-cols-3"
-                          : "grid-cols-1 xl:grid-cols-2"
-                      } gap-4`}
+                          : "grid-cols-1"
+                      } gap-2.5`}
                     >
                       {filteredPosts.slice(0, visiblePostsCount).map((post, index) =>
                         index < 5 ? (
                           <motion.div
                             key={post.id}
+                            className={(venueById.get(post.spot_id)?.spot_type === "popup" || post.spot_type === "popup") ? "col-span-full" : undefined}
                             initial={getCardInitial(filteredPosts.length)}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, transition: { duration: 0.08 } }}
@@ -879,7 +887,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                             />
                           </motion.div>
                         ) : (
-                          <div key={post.id}>
+                          <div key={post.id} className={(venueById.get(post.spot_id)?.spot_type === "popup" || post.spot_type === "popup") ? "col-span-full" : undefined}>
                             <FoodPostCard
                               post={post}
                               index={index}
@@ -898,10 +906,12 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                   {venues.length === 0 && isHydratingData ? (
                     <div
                       className={`grid ${
-                        viewMode === "feed"
+                        feedLayout === "grid"
+                          ? "grid-cols-2"
+                          : viewMode === "feed"
                           ? "grid-cols-2 xl:grid-cols-3"
-                          : "grid-cols-1 xl:grid-cols-2"
-                      } gap-4`}
+                          : "grid-cols-1"
+                      } gap-2.5`}
                     >
                       {Array.from({ length: 4 }).map((_, i) => (
                         <FoodSpotCardSkeleton key={`spot-skeleton-${i}`} />
@@ -914,15 +924,17 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                   ) : (
                     <div
                       className={`grid ${
-                        viewMode === "feed"
+                        feedLayout === "grid"
+                          ? "grid-cols-2"
+                          : viewMode === "feed"
                           ? "grid-cols-2 xl:grid-cols-3"
-                          : "grid-cols-1 xl:grid-cols-2"
-                      } gap-4`}
+                          : "grid-cols-1"
+                      } gap-2.5`}
                     >
                       {filteredVenues.map((venue, index) => {
                         if (venue.spot_type === "popup") {
                           return (
-                            <div key={venue.id}>
+                            <div key={venue.id} className="col-span-full">
                               <PopupEventCard
                                 venue={venue}
                                 priority={isDesktop && index === 0}
@@ -1051,7 +1063,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                 setMobileSheet("half");
               }
             }}
-            className={`flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar overscroll-contain pb-36 ${
+            className={`flex-1 overflow-y-auto px-3 py-2.5 space-y-2.5 no-scrollbar overscroll-contain pb-36 ${
               mobileSheet === "peek"
                 ? "cursor-pointer active:opacity-90 transition-opacity touch-none"
                 : ""
@@ -1067,12 +1079,12 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                 </div>
               ) : (
                 <div
-                  className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${
+                  className={`grid ${feedLayout === "grid" ? "grid-cols-2 grid-flow-row-dense" : "grid-cols-1"} gap-2.5 ${
                     mobileSheet === "peek" ? "pointer-events-none" : ""
                   }`}
                 >
                   {popupVenues.map((venue, index) => (
-                    <div key={venue.id}>
+                    <div key={venue.id} className="col-span-full">
                       <PopupEventCard
                         venue={venue}
                         priority={!isDesktop && index === 0}
@@ -1086,7 +1098,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
             {/* 2. Mobile Dishes Feed Panel (Two-Frame Progressive Mount + 120fps Cascade) */}
             <div className={feedMode === "food" ? "block" : "hidden"}>
               {foodPosts.length === 0 && isHydratingData ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className={`grid ${feedLayout === "grid" ? "grid-cols-2 grid-flow-row-dense" : "grid-cols-1"} gap-2.5`}>
                   {Array.from({ length: 3 }).map((_, i) => (
                     <FoodPostCardSkeleton key={`m-post-skeleton-${i}`} />
                   ))}
@@ -1095,7 +1107,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                 <FeedEmptyState />
               ) : (
                 <div
-                  className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${
+                  className={`grid ${feedLayout === "grid" ? "grid-cols-2 grid-flow-row-dense" : "grid-cols-1"} gap-2.5 ${
                     mobileSheet === "peek" ? "pointer-events-none" : ""
                   }`}
                 >
@@ -1103,6 +1115,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                     index < 5 ? (
                       <motion.div
                         key={post.id}
+                        className={(venueById.get(post.spot_id)?.spot_type === "popup" || post.spot_type === "popup") ? "col-span-full" : undefined}
                         initial={getCardInitial(filteredPosts.length)}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, transition: { duration: 0.08 } }}
@@ -1116,7 +1129,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                         />
                       </motion.div>
                     ) : (
-                      <div key={post.id}>
+                      <div key={post.id} className={(venueById.get(post.spot_id)?.spot_type === "popup" || post.spot_type === "popup") ? "col-span-full" : undefined}>
                         <FoodPostCard
                           post={post}
                           index={index}
@@ -1133,7 +1146,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
             {/* 3. Mobile Spots Feed Panel */}
             <div className={feedMode === "places" ? "block" : "hidden"}>
               {venues.length === 0 && isHydratingData ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className={`grid ${feedLayout === "grid" ? "grid-cols-2 grid-flow-row-dense" : "grid-cols-1"} gap-2.5`}>
                   {Array.from({ length: 3 }).map((_, i) => (
                     <FoodSpotCardSkeleton key={`m-spot-skeleton-${i}`} />
                   ))}
@@ -1153,14 +1166,14 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                 </div>
               ) : (
                 <div
-                  className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${
+                  className={`grid ${feedLayout === "grid" ? "grid-cols-2 grid-flow-row-dense" : "grid-cols-1"} gap-2.5 ${
                     mobileSheet === "peek" ? "pointer-events-none" : ""
                   }`}
                 >
                   {filteredVenues.map((venue, index) => {
                     if (venue.spot_type === "popup") {
                       return (
-                        <div key={venue.id}>
+                        <div key={venue.id} className="col-span-full">
                           <PopupEventCard
                             venue={venue}
                             priority={!isDesktop && index === 0}
@@ -1192,6 +1205,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
       {/* MOBILE FLOATING GLASSMORPHIC FOOD VS LOCATIONS TOGGLE                    */}
       {/* Elevated at root level (z-[45]), 100% visible across all mobile browsers  */}
       {/* ========================================================================= */}
+      {!isDesktop && (
       <div
         className={`lg:hidden fixed left-1/2 -translate-x-1/2 z-[45] pointer-events-auto flex items-center justify-center transition-all duration-300 ease-out ${
           isVenueDetailModalOpen
@@ -1208,6 +1222,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
           popupsCount={popupVenues.length}
         />
       </div>
+      )}
 
       {/* Modals & Floating Spot Cards (auth + log-a-dish mount globally in layout) */}
       <VenueBottomSheet />

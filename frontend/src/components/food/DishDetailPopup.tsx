@@ -157,39 +157,41 @@ export function DishDetailPopup({
 
               {/* Price Sticker Tag */}
               {activeDish.price_nok && (
-                <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-xl bg-[#e84a27] text-white font-mono font-bold text-xs shadow-md shadow-[#e84a27]/30">
-                  {activeDish.price_nok} NOK
+                <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-xl bg-[#181615]/85 backdrop-blur-md text-white font-comico text-xs shadow-md border border-white/10">
+                  {activeDish.price_nok} kr
                 </div>
               )}
 
               {/* Category Pill Tag */}
               {activeDish.category && (
-                <div className="absolute top-3 left-3 px-2.5 py-1 rounded-xl bg-black/60 backdrop-blur-md text-white text-[11px] font-semibold capitalize">
-                  {activeDish.category.replace("_", " ")}
+                <div className="absolute top-3 left-3 px-2.5 py-1 rounded-xl bg-black/60 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-wider border border-white/10">
+                  {activeDish.category.replace(/_/g, " ")}
                 </div>
               )}
             </div>
 
             {/* Scrollable Dish Details Content */}
-            <div className="p-4 sm:p-5 overflow-y-auto space-y-3.5 flex-1">
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-3 flex-1">
               {/* Dish Title & Rating */}
               <div className="flex items-start justify-between gap-3">
                 <h2
                   id="dish-popup-title"
-                  className="text-base sm:text-lg font-black text-zinc-950 dark:text-white leading-tight"
+                  className="font-comico text-lg sm:text-xl text-[#e84a27] leading-tight"
                 >
                   {activeDish.dish_name}
                 </h2>
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 font-bold text-xs shrink-0 border border-amber-200/60 dark:border-amber-800/40">
-                  <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
-                  <span className="font-mono">{activeDish.rating}</span>
-                </div>
+                {activeDish.rating && (
+                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 font-bold text-xs shrink-0 border border-amber-200/60 dark:border-amber-800/40">
+                    <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                    <span className="font-comico">{activeDish.rating}</span>
+                  </div>
+                )}
               </div>
 
               {/* Restaurant Location Capsule */}
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 dark:bg-stone-800/50 border border-zinc-200/70 dark:border-white/5">
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-[#F5EFE4] dark:bg-[#1E1C1A] border border-[#181615]/8">
                 <div className="min-w-0 pr-2">
-                  <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                  <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate font-comico">
                     {spotName}
                   </p>
                   <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate flex items-center gap-1 mt-0.5">
@@ -200,7 +202,7 @@ export function DishDetailPopup({
                 <button
                   type="button"
                   onClick={handleFlyToMap}
-                  className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#e84a27]/10 hover:bg-[#e84a27]/20 text-[#e84a27] text-[11px] font-bold transition-colors"
+                  className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#e84a27] hover:bg-[#d43d1c] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
                 >
                   <span>Map</span>
                   <ExternalLink className="w-3 h-3" />
@@ -209,107 +211,45 @@ export function DishDetailPopup({
 
               {/* Editorial Review & Author Quote */}
               {activeDish.review_text && (
-                <div className="p-3 rounded-xl bg-orange-50/60 dark:bg-stone-800/40 border border-orange-100 dark:border-white/5">
-                  <p className="text-xs text-zinc-700 dark:text-zinc-300 italic leading-relaxed">
+                <div className="p-3.5 rounded-2xl bg-[#F5EFE4] dark:bg-[#1E1C1A] border border-[#181615]/8 space-y-1.5">
+                  <p className="font-comico text-xs sm:text-sm text-zinc-800 dark:text-zinc-200 italic leading-relaxed">
                     &ldquo;{activeDish.review_text}&rdquo;
                   </p>
                   {activeDish.author?.name && (
-                    <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-2 font-medium flex items-center gap-1.5">
+                    <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono flex items-center gap-1.5 pt-1 border-t border-[#181615]/5">
                       <span className="font-semibold text-zinc-600 dark:text-zinc-400">
                         {activeDish.author.name}
                       </span>
-                      <span>· {activeDish.author.handle}</span>
+                      <span>· {activeDish.author.handle || "@smak"}</span>
                     </p>
                   )}
                 </div>
               )}
 
-              {/* Taste Tags */}
-              {activeDish.taste_tags && activeDish.taste_tags.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {activeDish.taste_tags.map((tag) => (
+              {/* Taste Tags + Save Button Inline */}
+              <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#181615]/8">
+                <div className="flex flex-wrap gap-1.5 min-w-0">
+                  {activeDish.taste_tags && activeDish.taste_tags.map((tag) => (
                     <span
                       key={tag}
-                      className="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-stone-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-medium"
+                      className="px-2 py-0.5 rounded-md bg-[#F5EFE4] dark:bg-stone-800 text-stone-700 dark:text-stone-300 text-[10px] font-medium border border-[#181615]/5"
                     >
                       #{tag}
                     </span>
                   ))}
                 </div>
-              )}
-            </div>
-
-            {/* Sticky Action Footer */}
-            <div className="p-3 sm:p-4 bg-zinc-50 dark:bg-stone-900 border-t border-zinc-100 dark:border-white/10 flex items-center justify-between gap-2 shrink-0">
-              {/* Reaction Buttons */}
-              <div className="flex items-center gap-1.5">
-                {onReaction && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => onReaction(activeDish.id, "craving")}
-                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[11px] font-semibold transition-all active:scale-95 ${
-                        activeReaction === "craving"
-                          ? "bg-[#e84a27] text-white border-[#e84a27] shadow-sm"
-                          : "bg-white dark:bg-stone-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100"
-                      }`}
-                    >
-                      <Flame className="w-3 h-3" />
-                      <span>Craving</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onReaction(activeDish.id, "must_try")}
-                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[11px] font-semibold transition-all active:scale-95 ${
-                        activeReaction === "must_try"
-                          ? "bg-amber-500 text-white border-amber-500 shadow-sm"
-                          : "bg-white dark:bg-stone-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100"
-                      }`}
-                    >
-                      <Star className="w-3 h-3" />
-                      <span>Must Try</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onReaction(activeDish.id, "ate_here")}
-                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[11px] font-semibold transition-all active:scale-95 ${
-                        activeReaction === "ate_here"
-                          ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
-                          : "bg-white dark:bg-stone-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100"
-                      }`}
-                    >
-                      <CheckCircle2 className="w-3 h-3" />
-                      <span>Tried</span>
-                    </button>
-                  </>
-                )}
-              </div>
-
-              {/* Social Like & Bookmark */}
-              <div className="flex items-center gap-1.5 ml-auto">
-                <button
-                  type="button"
-                  onClick={() => toggleLikePost(activeDish.id)}
-                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-[11px] font-bold transition-all active:scale-95 ${
-                    isLiked
-                      ? "bg-[#e84a27] text-white border-[#e84a27]"
-                      : "bg-white dark:bg-stone-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100"
-                  }`}
-                >
-                  <Heart className={`w-3.5 h-3.5 ${isLiked ? "fill-current" : ""}`} />
-                  <span className="font-mono">{activeDish.likes_count}</span>
-                </button>
                 <button
                   type="button"
                   onClick={() => toggleSavePost(activeDish.id)}
-                  className={`p-2 rounded-xl border transition-all active:scale-95 ${
+                  className={`p-2 rounded-xl border transition-all active:scale-95 shrink-0 cursor-pointer ${
                     isSaved
-                      ? "bg-zinc-900 text-white border-zinc-900"
-                      : "bg-white dark:bg-stone-800 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100"
+                      ? "bg-[#e84a27] text-white border-[#e84a27] shadow-xs"
+                      : "bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-300 border-[#181615]/10 hover:border-[#e84a27]"
                   }`}
                   title={isSaved ? "Saved" : "Save dish"}
+                  aria-label="Save dish"
                 >
-                  <Bookmark className={`w-3.5 h-3.5 ${isSaved ? "fill-current" : ""}`} />
+                  <Bookmark className={`w-4 h-4 ${isSaved ? "fill-white text-white" : ""}`} />
                 </button>
               </div>
             </div>

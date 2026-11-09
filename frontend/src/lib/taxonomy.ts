@@ -90,14 +90,14 @@ export const FOOD_GROUPS: readonly FoodGroupDef[] = [
     label: "Noodles & Soup",
     shortLabel: "Noodles",
     heroIcon: "ramen",
-    childCategories: ["ramen", "pho", "udon", "noodle_soup"],
+    childCategories: ["ramen", "pho", "udon", "noodle_soup", "noodles"],
   },
   {
     id: "sandwiches_handhelds",
     label: "Sandwiches & Handhelds",
     shortLabel: "Sandwiches",
     heroIcon: "banh_mi",
-    childCategories: ["banh_mi", "burger", "tacos", "cheesesteak", "kebab_wrap", "street_sandwich", "street_food"],
+    childCategories: ["banh_mi", "burger", "tacos", "taco", "birria", "cheesesteak", "kebab_wrap", "street_sandwich", "street_food"],
   },
   {
     id: "pizza_pasta",
@@ -139,7 +139,7 @@ export const FOOD_GROUPS: readonly FoodGroupDef[] = [
     label: "Sweets & Frozen",
     shortLabel: "Sweets",
     heroIcon: "gelato",
-    childCategories: ["gelato", "dessert", "pancakes"],
+    childCategories: ["gelato", "dessert", "pancakes", "cheesecake", "basque_cheesecake"],
   },
   {
     id: "drinks_bars",
@@ -503,8 +503,14 @@ export function resolveVenueDisplayBadge(venue?: Partial<Venue> | null): VenueDi
   if (nameLower.includes("zam zam") || nameLower.includes("zamzam")) {
     return { mainTag: "CHEESESTEAK", pinIcon: "cheesesteak", filterTags: ["cheesesteak", "halal", "street_food"] };
   }
-  if (nameLower.includes("dirty taco")) {
-    return { mainTag: "TACOS", pinIcon: "tacos", filterTags: ["tacos", "street_food", "late_night"] };
+  if (nameLower.includes("dirty taco") || nameLower.includes("corral")) {
+    return { flag: "🇲🇽", mainTag: "TACOS", pinIcon: "tacos", filterTags: ["tacos", "mexican", "street_food"] };
+  }
+  if (nameLower.includes("hernández") || nameLower.includes("hernandez")) {
+    return { flag: "🇪🇸", mainTag: "CHEESECAKE", pinIcon: "basque_cheesecake", filterTags: ["cheesecake", "basque_cheesecake", "dessert", "sweets"] };
+  }
+  if (nameLower.includes("silin")) {
+    return { flag: "🇸🇾", mainTag: "MANAKISH", pinIcon: "manakish", filterTags: ["bakery", "manakish", "flatbread", "middle_eastern"] };
   }
   if (nameLower.includes("digg pizza")) {
     return { mainTag: "PIZZA", pinIcon: "pizza", filterTags: ["pizza", "roman_pizza", "dinner"] };
@@ -513,7 +519,7 @@ export function resolveVenueDisplayBadge(venue?: Partial<Venue> | null): VenueDi
     return { mainTag: "PIZZA", pinIcon: "pizza", filterTags: ["pizza", "roman_pizza", "slices"] };
   }
   if (nameLower.includes("cocoa")) {
-    return { mainTag: "COCOA BAR", pinIcon: "coffee", filterTags: ["dessert", "cocoa", "chocolate", "drinks"] };
+    return { mainTag: "COCOA BAR", pinIcon: "hot_cocoa", filterTags: ["dessert", "cocoa", "chocolate", "drinks"] };
   }
   if (nameLower.includes("crave")) {
     return { mainTag: "PANCAKES", pinIcon: "pancakes", filterTags: ["dessert", "pancakes", "toast", "sweet"] };
@@ -551,16 +557,19 @@ export function resolveVenueDisplayBadge(venue?: Partial<Venue> | null): VenueDi
     return { mainTag: "PIZZA & WINE", pinIcon: "pizza", filterTags: ["pizza", "natural_wine"] };
   }
   if (nameLower.includes("king falafel")) {
-    return { flag: "🇵🇸", mainTag: "FALAFEL", pinIcon: "kebab", filterTags: ["falafel", "vegan", "street_food"] };
+    return { flag: "🇵🇸", mainTag: "FALAFEL", pinIcon: "falafel", filterTags: ["falafel", "vegan", "street_food"] };
   }
   if (nameLower.includes("chaiwala")) {
-    return { flag: "🇵🇰", mainTag: "PAKISTANI", pinIcon: "curry", filterTags: ["pakistani", "halal", "street_food", "chai"] };
+    return { flag: "🇵🇰", mainTag: "MASALA CHAI", pinIcon: "masala_chai", filterTags: ["chai", "tea", "street_food", "coffee_tea"] };
   }
   if (nameLower.includes("pele pele")) {
     return { flag: "🇬🇭", mainTag: "WEST AFRICAN", pinIcon: "k_chicken", filterTags: ["african", "street_food", "grill", "spicy", "halal"] };
   }
   if (nameLower.includes("noods")) {
-    return { flag: "🇨🇳", mainTag: "NOODLES", pinIcon: "ramen", filterTags: ["noodles", "chinese", "asian", "spicy"] };
+    return { flag: "🇨🇳", mainTag: "NOODLES", pinIcon: "noodles", filterTags: ["noodles", "chinese", "asian", "spicy"] };
+  }
+  if (nameLower.includes("doga") || nameLower.includes("smash")) {
+    return { mainTag: "SMASH BURGER", pinIcon: "burger", filterTags: ["burger", "smash", "street_food"] };
   }
   if (nameLower.includes("szechuan chengdu")) {
     return { flag: "🇨🇳", mainTag: "SICHUAN", pinIcon: "curry", filterTags: ["chinese", "sichuan", "spicy", "asian"] };

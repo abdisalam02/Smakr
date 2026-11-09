@@ -711,6 +711,11 @@ body, input, textarea, button, select, p, span, h1, h2, h3, h4, h5, h6, a, div {
 /* SMAKR MAP VENUE CARD POPUP (Anchored cleanly right under map pin)         */
 /* ========================================================================= */
 
+.maplibregl-popup,
+.smakr-pin-card-popup {
+  z-index: 120 !important;
+}
+
 .smakr-pin-card-popup .maplibregl-popup-content {
   background: transparent !important;
   box-shadow: none !important;
@@ -793,3 +798,4 @@ body, input, textarea, button, select, p, span, h1, h2, h3, h4, h5, h6, a, div {
     animation: none;
   }
 }
+

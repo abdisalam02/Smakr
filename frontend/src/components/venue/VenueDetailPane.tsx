@@ -621,17 +621,11 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
         {(!isPopup || recommendedMeals.length > 0) && (
           <section className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-[var(--foreground)] flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-[#e84a27]" />
-                <span>
-                  {isPopup
-                    ? `Pop-Up Drop Dishes (${recommendedMeals.length})`
-                    : `Dishes You Can't Miss (${recommendedMeals.length})`}
-                </span>
+              <h2 className="text-sm font-bold text-[var(--foreground)]">
+                {isPopup
+                  ? `Pop-Up Drop Dishes (${recommendedMeals.length})`
+                  : `Dishes You Can't Miss (${recommendedMeals.length})`}
               </h2>
-              <span className="text-[10px] font-mono text-zinc-400">
-                Foodie Radar Verified
-              </span>
             </div>
 
             {!isPopup ? (
@@ -709,7 +703,7 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
                     </div>
 
                     <div className="flex-1 min-w-0 flex flex-col pt-2">
-                      <h3 className="text-sm font-bold text-[var(--foreground)] truncate leading-snug">
+                      <h3 className="font-comico text-xs sm:text-sm text-[#e84a27] font-bold truncate leading-snug">
                         {dish.dish_name}
                       </h3>
 
@@ -721,26 +715,17 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
                       )}
 
                       <div className="mt-auto pt-2 flex items-center justify-between gap-1.5">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleLikePost(dish.id);
-                          }}
-                          className={`flex items-center gap-1 px-2.5 py-1 rounded-full border text-[11px] font-bold transition-all active:scale-95 ${
-                            isLiked
-                              ? "bg-[#e84a27] text-white border-[#e84a27]"
-                              : "bg-[var(--surface-raised)] text-zinc-700 border-[var(--surface-border)] hover:bg-zinc-100"
-                          }`}
-                          title="Worth it"
-                        >
-                          <Flame
-                            className={`w-3 h-3 ${
-                              isLiked ? "fill-white text-white" : "text-[#E84A27]"
-                            }`}
-                          />
-                          <span className="font-mono">{Math.max(1, dish.likes_count || 1)}</span>
-                        </button>
+                        <div className="flex flex-wrap items-center gap-1 min-w-0">
+                          {dish.taste_tags && dish.taste_tags.length > 0 &&
+                            dish.taste_tags.slice(0, 2).map((tag) => (
+                              <span
+                                key={tag}
+                                className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 text-[9px] font-medium"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                        </div>
 
                         <button
                           type="button"
@@ -748,15 +733,16 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
                             e.stopPropagation();
                             toggleSavePost(dish.id);
                           }}
-                          className={`p-1.5 rounded-full border transition-all active:scale-95 ${
+                          className={`p-1.5 rounded-lg border transition-all cursor-pointer shrink-0 ${
                             isSaved
-                              ? "bg-zinc-900 text-white border-zinc-900"
-                              : "bg-[var(--surface-raised)] text-zinc-500 border-[var(--surface-border)] hover:bg-zinc-100"
+                              ? "bg-[#e84a27] text-white border-[#e84a27] shadow-xs"
+                              : "bg-[var(--surface-raised)] text-zinc-500 hover:text-[#e84a27] border-[var(--surface-border)] hover:bg-zinc-100"
                           }`}
                           title={isSaved ? "Saved to your list" : "Save dish"}
+                          aria-label={isSaved ? "Saved to your list" : "Save dish"}
                         >
                           <Bookmark
-                            className={`w-3 h-3 ${isSaved ? "fill-current" : ""}`}
+                            className={`w-3.5 h-3.5 ${isSaved ? "fill-current" : ""}`}
                           />
                         </button>
                       </div>

@@ -116,6 +116,7 @@ interface PulseStoreState {
   mapCategory: FoodCategory;
   feedCategory: FoodCategory;
   feedMode: "food" | "places" | "popups";
+  feedLayout: "list" | "grid";
   selectedAvatar: AvatarOption;
   mapNeighborhood: Neighborhood;
   selectedDietary: DietaryTag[];
@@ -166,6 +167,7 @@ interface PulseStoreState {
   /** Hydrate the mascot from the server profile without scheduling a write-back. */
   hydrateMascotConfig: (config: MascotConfig) => void;
   setFeedMode: (mode: "food" | "places" | "popups") => void;
+  setFeedLayout: (layout: "list" | "grid") => void;
   setMobileSheetState: (state: "peek" | "half" | "full") => void;
   setIsAuthModalOpen: (open: boolean) => void;
   login: (user?: UserProfile) => void;
@@ -265,6 +267,7 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
   mapCategory: "all",
   feedCategory: "all",
   feedMode: "food",
+  feedLayout: "list",
   selectedAvatar: "lordicon_barista",
   mapNeighborhood: "all",
   selectedDietary: [],
@@ -500,6 +503,7 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
     }),
 
   setFeedMode: (feedMode) => set({ feedMode }),
+  setFeedLayout: (feedLayout) => set({ feedLayout }),
 
   setIsAuthModalOpen: (isAuthModalOpen) => set({ isAuthModalOpen }),
 
