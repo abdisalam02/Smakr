@@ -543,7 +543,7 @@ export function VenueBottomSheet() {
                 /* =========================================================================
                    DEDICATED POP-UP RESIDENCY SHEET
                    ========================================================================= */
-                <div className="space-y-4">
+                <>
                   {/* Top Spacer: Reveals pinned hero photo beneath with generous space above card */}
                   <div
                     onClick={() =>
@@ -558,80 +558,70 @@ export function VenueBottomSheet() {
                     </span>
                   </div>
 
-                  {/* Primary Residency Status & Schedule Card */}
-                  <div className="p-4 sm:p-5 rounded-3xl bg-[#F5EFE4] dark:bg-[#1E1C1A] border border-[#181615]/10 space-y-3.5 shadow-xs">
-                    {isDormant ? (
-                      <>
-                        <div className="flex items-center justify-between">
-                          <span className="px-3 py-1 rounded-full bg-stone-300 dark:bg-stone-700 text-stone-800 dark:text-stone-200 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                            <span>⏳ Dates &amp; Location TBA</span>
-                          </span>
-                        </div>
-                        <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed font-medium">
-                          This pop-up residency is preparing its next Oslo drop. Dates and location are being confirmed. Follow their official Instagram to get drop alerts.
-                        </p>
-
-                        {/* Prominent Instagram CTA Button */}
-                        {popupMeta?.instagram_url && (
-                          <a
-                            href={popupMeta.instagram_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-pink-600 via-rose-600 to-amber-600 hover:opacity-95 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.98]"
-                          >
-                            <Instagram className="w-4 h-4" />
-                            <span>Follow {instagramHandle ? `@${instagramHandle}` : "on Instagram"} for Drop Alerts</span>
-                            <ExternalLink className="w-3.5 h-3.5 ml-0.5 opacity-80" />
-                          </a>
-                        )}
-
-                        {/* Optional Contact or Website */}
-                        {popupContact && (
-                          <a
-                            href={popupContact.startsWith("http") ? popupContact : `mailto:${popupContact}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-full py-2.5 px-4 rounded-2xl bg-white dark:bg-[#2A2622] hover:bg-zinc-50 border border-[#181615]/10 text-zinc-800 dark:text-zinc-200 font-bold text-xs flex items-center justify-center gap-2 shadow-2xs transition-colors"
-                          >
-                            <Globe className="w-3.5 h-3.5 text-zinc-500" />
-                            <span>{popupContact.startsWith("http") ? "Official Website / Inquiries" : `Inquiries: ${popupContact}`}</span>
-                          </a>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex items-center justify-between">
-                          <span className="px-3 py-1 rounded-full bg-[#E84A27] text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-xs">
-                            <Flame className="w-3.5 h-3.5 fill-white" />
-                            <span>Live Now in Oslo</span>
-                          </span>
-                          {popupMeta?.portion_cap && (
-                            <span className="text-xs font-bold text-[#E84A27] font-mono">
-                              {popupMeta.portion_cap}
+                  {/* Content Card: Glides smoothly up over the hero photo with solid background */}
+                  <div className="relative z-10 bg-[#FAF7F2] dark:bg-[#181615] rounded-t-3xl px-4 pt-4 pb-14 space-y-4 shadow-xl border-t border-black/5 dark:border-white/5">
+                    {/* Primary Residency Status & Schedule Card */}
+                    <div className="p-4 sm:p-5 rounded-3xl bg-[#F5EFE4] dark:bg-[#1E1C1A] border border-[#181615]/10 space-y-3.5 shadow-xs">
+                      {isDormant ? (
+                        <>
+                          <div className="flex items-center justify-between">
+                            <span className="px-3 py-1 rounded-full bg-stone-300 dark:bg-stone-700 text-stone-800 dark:text-stone-200 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                              <span>⏳ Dates &amp; Location TBA</span>
                             </span>
-                          )}
-                        </div>
+                          </div>
+                          <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed font-medium">
+                            This pop-up residency is preparing its next Oslo drop. Dates and location are being confirmed. Follow their official Instagram to get drop alerts.
+                          </p>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-                          {popupMeta?.dates_label && (
-                            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/70 dark:bg-black/20 border border-[#181615]/10">
-                              <Calendar className="w-4 h-4 text-[#E84A27] shrink-0" />
-                              <div>
-                                <div className="text-[10px] text-zinc-400 uppercase font-mono">Dates</div>
-                                <div>{popupMeta.dates_label}</div>
-                              </div>
-                            </div>
+                          {/* Prominent Instagram CTA Button */}
+                          {popupMeta?.instagram_url && (
+                            <a
+                              href={popupMeta.instagram_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-pink-600 via-rose-600 to-amber-600 hover:opacity-95 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.98]"
+                            >
+                              <Instagram className="w-4 h-4" />
+                              <span>Follow {instagramHandle ? `@${instagramHandle}` : "on Instagram"} for Drop Alerts</span>
+                              <ExternalLink className="w-3.5 h-3.5 ml-0.5 opacity-80" />
+                            </a>
                           )}
-                          {(popupMeta?.daily_hours || selectedVenue.current_opening_hours_text) && (
-                            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/70 dark:bg-black/20 border border-[#181615]/10">
-                              <Clock className="w-4 h-4 text-[#E84A27] shrink-0" />
-                              <div>
-                                <div className="text-[10px] text-zinc-400 uppercase font-mono">Service Hours</div>
-                                <div>{popupMeta?.daily_hours || selectedVenue.current_opening_hours_text}</div>
-                              </div>
-                            </div>
+
+                          {/* Optional Contact or Website */}
+                          {popupContact && (
+                            <a
+                              href={popupContact.startsWith("http") ? popupContact : `mailto:${popupContact}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-full py-2.5 px-4 rounded-2xl bg-white dark:bg-[#2A2622] hover:bg-zinc-50 border border-[#181615]/10 text-zinc-800 dark:text-zinc-200 font-bold text-xs flex items-center justify-center gap-2 shadow-2xs transition-colors"
+                            >
+                              <Globe className="w-3.5 h-3.5 text-zinc-500" />
+                              <span>{popupContact.startsWith("http") ? "Official Website / Inquiries" : `Inquiries: ${popupContact}`}</span>
+                            </a>
                           )}
-                        </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                            {popupMeta?.dates_label && (
+                              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/70 dark:bg-black/20 border border-[#181615]/10">
+                                <Calendar className="w-4 h-4 text-[#E84A27] shrink-0" />
+                                <div>
+                                  <div className="text-[10px] text-zinc-400 uppercase font-mono">Dates</div>
+                                  <div>{popupMeta.dates_label}</div>
+                                </div>
+                              </div>
+                            )}
+                            {(popupMeta?.daily_hours || selectedVenue.current_opening_hours_text) && (
+                              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/70 dark:bg-black/20 border border-[#181615]/10">
+                                <Clock className="w-4 h-4 text-[#E84A27] shrink-0" />
+                                <div>
+                                  <div className="text-[10px] text-zinc-400 uppercase font-mono">Service Hours</div>
+                                  <div>{popupMeta?.daily_hours || selectedVenue.current_opening_hours_text}</div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
 
                         {popupHostVenue && (
                           <div className="p-2.5 rounded-xl bg-white/70 dark:bg-black/20 border border-[#181615]/10 flex items-center justify-between gap-2">
@@ -790,7 +780,8 @@ export function VenueBottomSheet() {
                     <Plus className="w-3.5 h-3.5 text-[#e84a27]" />
                     <span>Log a Dish for this Pop-Up</span>
                   </button>
-                </div>
+                  </div>
+                </>
               ) : (
                 /* =========================================================================
                    STANDARD RESTAURANT SHEET

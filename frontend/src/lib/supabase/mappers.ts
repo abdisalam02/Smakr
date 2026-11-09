@@ -339,6 +339,35 @@ function mapItemAvailability(raw?: string | null): FoodPost["item_availability"]
   return undefined;
 }
 
+function formatNeighborhoodLabel(raw?: string | null): string {
+  if (!raw || !raw.trim()) return "Oslo";
+  const key = raw.trim().toLowerCase();
+  const map: Record<string, string> = {
+    bjorvika: "Bjørvika",
+    "bjørvika": "Bjørvika",
+    oslobukta: "Bjørvika",
+    grunerlokka: "Grünerløkka",
+    "grünerløkka": "Grünerløkka",
+    gronland: "Grønland",
+    "grønland": "Grønland",
+    toyen: "Tøyen",
+    "tøyen": "Tøyen",
+    torggata: "Torggata",
+    sentrum: "Sentrum",
+    frogner: "Frogner",
+    majorstuen: "Majorstuen",
+    st_hanshaugen: "St. Hanshaugen",
+    sthanshaugen: "St. Hanshaugen",
+    sagene: "Sagene",
+    torshov: "Torshov",
+    kampen: "Kampen",
+    hasle: "Hasle",
+    vulkan: "Vulkan",
+    groruddalen: "Groruddalen",
+  };
+  return map[key] || raw.trim().charAt(0).toUpperCase() + raw.trim().slice(1);
+}
+
 export function mapFoodPostRow(row: FoodPostRow): FoodPost {
   const venue = row.venue ?? null;
   const author = row.author ?? null;
@@ -349,9 +378,7 @@ export function mapFoodPostRow(row: FoodPostRow): FoodPost {
     spot_id: row.venue_id,
     spot_name: venue?.name ?? "Smakr Spot",
     spot_address: venue?.address ?? "",
-    spot_neighborhood: venue?.neighborhood
-      ? venue.neighborhood.charAt(0).toUpperCase() + venue.neighborhood.slice(1)
-      : "Oslo",
+    spot_neighborhood: formatNeighborhoodLabel(venue?.neighborhood),
     spot_coords: [lng, lat],
     dish_name: row.dish_name ?? "Untitled dish",
     category: (() => {

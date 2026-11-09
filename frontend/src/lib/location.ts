@@ -39,6 +39,39 @@ export function resolveOsloPostalCode(postalCodeStr: string): string | null {
   return null;
 }
 
+const NEIGHBORHOOD_DISPLAY_MAP: Record<string, string> = {
+  bjorvika: "Bjørvika",
+  "bjørvika": "Bjørvika",
+  oslobukta: "Bjørvika",
+  grunerlokka: "Grünerløkka",
+  "grünerløkka": "Grünerløkka",
+  gronland: "Grønland",
+  "grønland": "Grønland",
+  toyen: "Tøyen",
+  "tøyen": "Tøyen",
+  torggata: "Torggata",
+  sentrum: "Sentrum",
+  frogner: "Frogner",
+  majorstuen: "Majorstuen",
+  st_hanshaugen: "St. Hanshaugen",
+  sthanshaugen: "St. Hanshaugen",
+  "st. hanshaugen": "St. Hanshaugen",
+  sagene: "Sagene",
+  torshov: "Torshov",
+  kampen: "Kampen",
+  hasle: "Hasle",
+  vulkan: "Vulkan",
+  groruddalen: "Groruddalen",
+};
+
+export function normalizeOsloNeighborhoodDisplay(raw?: string | null): string {
+  if (!raw || !raw.trim()) return "Oslo";
+  const trimmed = raw.trim();
+  const key = trimmed.toLowerCase();
+  if (NEIGHBORHOOD_DISPLAY_MAP[key]) return NEIGHBORHOOD_DISPLAY_MAP[key];
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
 /**
  * Strips redundant ", Norway", ", Oslo", repeating city labels, and extracts clean street address
  * and postal-code-resolved neighborhood.
@@ -48,7 +81,7 @@ export function formatOsloLocation(
   fallbackNeighborhood?: string | null
 ): FormattedOsloLocation {
   if (!rawAddress || !rawAddress.trim()) {
-    const nh = fallbackNeighborhood?.trim() || 'Oslo';
+    const nh = normalizeOsloNeighborhoodDisplay(fallbackNeighborhood);
     return {
       street: nh,
       neighborhood: nh,
@@ -89,11 +122,12 @@ export function formatOsloLocation(
   street = street.replace(/^[,\s]+|[,\s]+$/g, '').trim();
 
   // Neighborhood resolution precedence: Postal code match > fallback neighborhood > 'Oslo'
-  const neighborhood =
+  const neighborhood = normalizeOsloNeighborhoodDisplay(
     resolvedNeighborhood ||
     (fallbackNeighborhood && fallbackNeighborhood.toLowerCase() !== 'all' && fallbackNeighborhood.toLowerCase() !== 'oslo'
       ? fallbackNeighborhood
-      : (extractedCity || 'Oslo'));
+      : (extractedCity || 'Oslo'))
+  );
 
   const fullClean = street ? `${street} · ${neighborhood}` : neighborhood;
 

@@ -868,7 +868,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                           : viewMode === "feed"
                           ? "grid-cols-2 xl:grid-cols-3"
                           : "grid-cols-1"
-                      } gap-2.5`}
+                      } gap-2.5 pb-28`}
                     >
                       {filteredPosts.slice(0, visiblePostsCount).map((post, index) =>
                         index < 5 ? (
@@ -930,7 +930,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                           : viewMode === "feed"
                           ? "grid-cols-2 xl:grid-cols-3"
                           : "grid-cols-1"
-                      } gap-2.5`}
+                      } gap-2.5 pb-28`}
                     >
                       {filteredVenues.map((venue, index) => {
                         if (venue.spot_type === "popup") {
@@ -1109,7 +1109,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                 <FeedEmptyState />
               ) : (
                 <div
-                  className={`grid ${feedLayout === "grid" ? "grid-cols-2" : "grid-cols-1"} gap-2.5 ${
+                  className={`grid ${feedLayout === "grid" ? "grid-cols-2" : "grid-cols-1"} gap-2.5 pb-28 ${
                     mobileSheet === "peek" ? "pointer-events-none" : ""
                   }`}
                 >

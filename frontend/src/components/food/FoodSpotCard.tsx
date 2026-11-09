@@ -253,14 +253,17 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
             )
           ) : (
             <div className="flex items-center gap-1 shrink-0">
-              {venue.spot_type === "popup" && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#e84a27] text-white font-comico shrink-0 tracking-wide">
-                  Pop-up
-                </span>
-              )}
-
-              {/* Refined Live Status Pill */}
-              {liveOpenStatus.isOpen ? (
+              {venue.spot_type === "popup" ? (
+                <>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#e84a27] text-white font-comico shrink-0 tracking-wide">
+                    Pop-up
+                  </span>
+                  <span className="bg-[#e84a27]/10 text-[#e84a27] border border-[#e84a27]/25 px-2 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#e84a27] animate-pulse" />
+                    <span>Drop Radar</span>
+                  </span>
+                </>
+              ) : liveOpenStatus.isOpen ? (
                 <span className="bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold inline-flex items-center gap-1 shadow-2xs">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   <span className="truncate max-w-[70px] sm:max-w-none">{liveOpenStatus.badgeText}</span>

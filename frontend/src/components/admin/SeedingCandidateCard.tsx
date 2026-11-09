@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import {
   Check,
@@ -16,6 +16,10 @@ import {
   Link as LinkIcon,
   Search,
   RefreshCw,
+  Upload,
+  Trash2,
+  Rocket,
+  Sparkles,
 } from "lucide-react";
 import { IconPickerModal } from "@/components/admin/IconPickerModal";
 import {
@@ -34,6 +38,7 @@ import type {
   StagedDishHighlight,
   VerificationStatus,
 } from "@/app/api/admin/seeding-lab/route";
+import type { AiShiftSpotProposal } from "@/app/api/admin/ai-shift-spot/route";
 
 interface SeedingCandidateCardProps {
   spot: StagedCandidateSpot;
@@ -50,9 +55,83 @@ export function SeedingCandidateCard({
   onUpdateSpot,
   onUpdateDish,
 }: SeedingCandidateCardProps) {
+  const isPopupSpot = spot.spot_type === "popup" || spot.spot_type === "pop_up";
+  const instagramUrl =
+    (spot as any).instagram_url ||
+    (spot.notes?.match(/https:\/\/(www\.)?instagram\.com\/[^\s"')]+/i)?.[0] ?? null);
+  const instagramHandle = instagramUrl
+    ? instagramUrl.replace(/\/$/, "").split("/").pop()
+    : null;
+
   const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
   const [editingDish, setEditingDish] = useState<StagedDishHighlight | null>(null);
   const [isEditingRestaurantCard, setIsEditingRestaurantCard] = useState(false);
+
+  // AI Quick Shift Modal State
+  const [isAiShiftOpen, setIsAiShiftOpen] = useState(false);
+  const [aiShiftInput, setAiShiftInput] = useState("");
+  const [isParsingAiShift, setIsParsingAiShift] = useState(false);
+  const [isApplyingAiShift, setIsApplyingAiShift] = useState(false);
+  const [aiShiftError, setAiShiftError] = useState<string | null>(null);
+  const [aiShiftProposal, setAiShiftProposal] = useState<AiShiftSpotProposal | null>(null);
+
+  const handleParseAiShift = async (customText?: string) => {
+    const textToParse = (customText ?? aiShiftInput).trim();
+    if (!textToParse) {
+      setAiShiftError("Paste an Instagram drop announcement or natural language update first.");
+      return;
+    }
+    setIsParsingAiShift(true);
+    setAiShiftError(null);
+    try {
+      const res = await fetch("/api/admin/ai-shift-spot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "preview",
+          spotId: spot.id,
+          rawText: textToParse,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to parse announcement.");
+      setAiShiftProposal(data.proposal);
+    } catch (err: any) {
+      setAiShiftError(err.message || "Error parsing announcement.");
+    } finally {
+      setIsParsingAiShift(false);
+    }
+  };
+
+  const handleApplyAiShift = async () => {
+    if (!aiShiftProposal) return;
+    setIsApplyingAiShift(true);
+    setAiShiftError(null);
+    try {
+      const res = await fetch("/api/admin/ai-shift-spot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "apply",
+          spotId: spot.id,
+          proposal: aiShiftProposal,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to apply AI Shift.");
+
+      if (data.spot) {
+        await onUpdateSpot(spot.id, data.spot);
+      }
+      setIsAiShiftOpen(false);
+      setAiShiftProposal(null);
+      setAiShiftInput("");
+    } catch (err: any) {
+      setAiShiftError(err.message || "Failed to apply AI Shift to production.");
+    } finally {
+      setIsApplyingAiShift(false);
+    }
+  };
 
   // Restaurant Card Modal state
   const [spotName, setSpotName] = useState(spot.name);
@@ -68,13 +147,70 @@ export function SeedingCandidateCard({
   );
   const [spotCoverUrl, setSpotCoverUrl] = useState(spot.cover_image_url || "");
   const [spotWhyCurated, setSpotWhyCurated] = useState(spot.why_curated || "");
-  const [spotPhotoTab, setSpotPhotoTab] = useState<"google" | "url">("google");
+  const [spotPhotoTab, setSpotPhotoTab] = useState<"upload" | "google" | "url">(
+    isPopupSpot ? "upload" : "google"
+  );
   const [spotGoogleQuery, setSpotGoogleQuery] = useState(`${spot.name} Oslo`);
   const [spotGooglePhotos, setSpotGooglePhotos] = useState<string[]>(
     () => getCachedPhotosForQuery(`${spot.name} Oslo`) || []
   );
   const [isLoadingSpotGoogle, setIsLoadingSpotGoogle] = useState(false);
   const [isSavingSpot, setIsSavingSpot] = useState(false);
+
+  // Direct Cover Upload & Clipboard Paste state
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const [coverUploadError, setCoverUploadError] = useState<string | null>(null);
+  const [isDraggingCover, setIsDraggingCover] = useState(false);
+  const coverFileInputRef = useRef<HTMLInputElement>(null);
+
+  const uploadCoverFile = async (file: File) => {
+    setIsUploadingCover(true);
+    setCoverUploadError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("spotId", spot.id || spotName);
+      formData.append("dishId", "cover");
+
+      const res = await fetch("/api/admin/upload-seed-image", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Upload failed");
+
+      setSpotCoverUrl(data.url);
+      setSpotPhotoTab("upload");
+
+      // Persist cover image immediately to spot
+      await onUpdateSpot(spot.id, { cover_image_url: data.url });
+    } catch (err: any) {
+      setCoverUploadError(err.message || "Failed to upload cover image.");
+    } finally {
+      setIsUploadingCover(false);
+    }
+  };
+
+  // Clipboard paste listener when editing restaurant card
+  useEffect(() => {
+    if (!isEditingRestaurantCard) return;
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith("image/")) {
+          const file = items[i].getAsFile();
+          if (file) {
+            e.preventDefault();
+            void uploadCoverFile(file);
+            break;
+          }
+        }
+      }
+    };
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [isEditingRestaurantCard, spot.id, spotName]);
 
   // Keep local state synced when parent spot updates
   useEffect(() => {
@@ -185,6 +321,8 @@ export function SeedingCandidateCard({
         !/streetview|facade|building|\/icons\/food\//i.test(d.dish_image)
     );
 
+  const [isCommittingSpot, setIsCommittingSpot] = useState(false);
+
   const handleStatusChange = async (newStatus: VerificationStatus) => {
     const anyMissingPhoto = spot.dish_highlights.some(
       (d) => !d.dish_image || /\/icons\/food\//i.test(d.dish_image)
@@ -194,6 +332,73 @@ export function SeedingCandidateCard({
       return;
     }
     await onUpdateSpot(spot.id, { verification_status: newStatus });
+  };
+
+  const handleCommitSingleSpot = async () => {
+    if (!allDishesVerified) {
+      alert(`Cannot commit "${spot.name}": Every active dish must have a verified photo first.`);
+      return;
+    }
+
+    if (
+      !confirm(
+        `Commit "${spot.name}" with ${spot.dish_highlights.length} dish(es) directly to Supabase production?`
+      )
+    ) {
+      return;
+    }
+
+    setIsCommittingSpot(true);
+    try {
+      const res = await fetch("/api/admin/seeding-lab", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ spotIds: [spot.id] }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Commit failed.");
+
+      await onUpdateSpot(spot.id, { verification_status: "seeded" });
+      alert(`Successfully seeded "${spot.name}" and ${spot.dish_highlights.length} dish(es) to production!`);
+    } catch (err: any) {
+      alert(`Commit error: ${err.message}`);
+    } finally {
+      setIsCommittingSpot(false);
+    }
+  };
+
+  const handleUseOnlyThisDish = async (dishToKeep: StagedDishHighlight) => {
+    if (
+      !confirm(
+        `Use only "${dishToKeep.dish_name}" for ${spot.name}? This will remove other unverified dishes.`
+      )
+    ) {
+      return;
+    }
+    await onUpdateSpot(spot.id, {
+      dish_highlights: [dishToKeep],
+      signature_dish: dishToKeep.dish_name,
+      verification_status: dishToKeep.is_verified_food_photo ? "approved" : "needs_photo",
+    });
+  };
+
+  const handleRemoveDish = async (dishToRemoveId: string, dishToRemoveName: string) => {
+    if (spot.dish_highlights.length <= 1) {
+      alert("A candidate spot must have at least one dish.");
+      return;
+    }
+    if (!confirm(`Remove "${dishToRemoveName}" from ${spot.name}?`)) {
+      return;
+    }
+    const remaining = spot.dish_highlights.filter((d) => d.id !== dishToRemoveId);
+    const allRemainingVerified = remaining.every(
+      (d) => d.is_verified_food_photo && Boolean(d.dish_image)
+    );
+    await onUpdateSpot(spot.id, {
+      dish_highlights: remaining,
+      signature_dish: remaining[0]?.dish_name,
+      verification_status: allRemainingVerified ? "approved" : "needs_photo",
+    });
   };
 
   const displayRating = typeof spot.google_rating === "number" ? spot.google_rating : 4.7;
@@ -223,23 +428,69 @@ export function SeedingCandidateCard({
           </span>
         </div>
 
-        {/* Interactive Map Pin Selector */}
-        <button
-          type="button"
-          onClick={() => setIsIconPickerOpen(true)}
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white hover:bg-zinc-50 border border-[#EAE5DC] text-xs font-bold transition-all shadow-xs text-zinc-800 hover:border-[#E84A27]/40 cursor-pointer"
-          title="Click to customize map radar pin icon"
-        >
-          <span className="w-5 h-5 flex items-center justify-center">
-            {isCustomFoodIcon(spot.icon) ? (
-              <SmakrFoodIcon name={spot.icon} className="w-5 h-5 object-contain" />
-            ) : (
-              <span className="text-sm">{spot.icon || "📍"}</span>
-            )}
-          </span>
-          <span className="text-xs font-extrabold text-[#E84A27]">Map Pin: {spot.icon}</span>
-        </button>
+        {/* Interactive Map Pin Selector + AI Quick Shift */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setIsAiShiftOpen(true);
+              setAiShiftError(null);
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-gradient-to-r from-[#E84A27] to-amber-600 hover:opacity-95 text-white text-xs font-black transition-all shadow-sm cursor-pointer"
+            title="Paste raw Instagram drop dates, host venue or price changes to update card & production DB"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>✨ AI Shift</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsIconPickerOpen(true)}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white hover:bg-zinc-50 border border-[#EAE5DC] text-xs font-bold transition-all shadow-xs text-zinc-800 hover:border-[#E84A27]/40 cursor-pointer"
+            title="Click to customize map radar pin icon"
+          >
+            <span className="w-5 h-5 flex items-center justify-center">
+              {isCustomFoodIcon(spot.icon) ? (
+                <SmakrFoodIcon name={spot.icon} className="w-5 h-5 object-contain" />
+              ) : (
+                <span className="text-sm">{spot.icon || "📍"}</span>
+              )}
+            </span>
+            <span className="text-xs font-extrabold text-[#E84A27]">Map Pin: {spot.icon}</span>
+          </button>
+        </div>
       </div>
+
+      {/* ── POP-UP RADAR DETAILS & SOCIAL ANCHOR ── */}
+      {isPopupSpot && (
+        <div className="px-5 py-3 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-pink-500/10 border-b border-[#EAE5DC] flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="px-2.5 py-0.5 rounded-full bg-[#E84A27] text-white text-[10px] font-black uppercase tracking-wider font-comico shrink-0 shadow-xs">
+              ✦ Pop-Up Radar
+            </span>
+            {spot.notes && (
+              <p className="text-xs text-zinc-800 font-medium truncate max-w-xl">
+                <span className="font-extrabold text-[#181615]">Drop Pattern:</span>{" "}
+                {spot.notes.replace(/Instagram:\s*https:\/\/[^\s]+/i, "").trim()}
+              </p>
+            )}
+          </div>
+
+          {instagramUrl && (
+            <a
+              href={instagramUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-zinc-50 border border-pink-300 text-pink-700 hover:text-pink-900 text-xs font-black transition-all shadow-xs shrink-0 cursor-pointer"
+              title="Open Instagram page in new tab to inspect drops & photos"
+            >
+              <span className="w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
+              <span>@{instagramHandle || "instagram"}</span>
+              <span className="text-[11px] text-zinc-400">↗</span>
+            </a>
+          )}
+        </div>
+      )}
 
       {/* ── MAIN WORKSPACE: RESTAURANT CARD (LEFT) + DISH FEED CARDS (RIGHT) ── */}
       <div className="p-5 sm:p-6 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 bg-white items-start">
@@ -297,15 +548,19 @@ export function SeedingCandidateCard({
                 <rect width="100%" height="100%" fill={`url(#smakr-lab-spot-${spot.id})`} />
               </svg>
 
-              {/* Left Column — 1:1 Square Thumbnail (128x128px) */}
-              <div className="relative z-10 w-[114px] h-[114px] sm:w-[128px] sm:h-[128px] rounded-2xl overflow-hidden shrink-0 bg-[#EAE6DF] shadow-sm ring-1 ring-black/10">
+              {/* Left Column — 1:1 Square Thumbnail (128x128px) with quick-edit trigger */}
+              <div
+                onClick={() => setIsEditingRestaurantCard(true)}
+                className="relative z-10 w-[114px] h-[114px] sm:w-[128px] sm:h-[128px] rounded-2xl overflow-hidden shrink-0 bg-[#EAE6DF] shadow-sm ring-1 ring-black/10 group/thumb cursor-pointer"
+                title="Click to change Venue Cover Image (upload, paste or search)"
+              >
                 {effectiveCoverUrl ? (
                   <Image
                     src={effectiveCoverUrl}
                     alt={spot.name}
                     fill
                     unoptimized
-                    className="object-cover"
+                    className="object-cover transition-transform duration-200 group-hover/thumb:scale-105"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center p-4">
@@ -320,6 +575,12 @@ export function SeedingCandidateCard({
                   </div>
                 )}
 
+                {/* Hover overlay with Camera icon */}
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10.5px] font-extrabold gap-1 z-[4] pointer-events-none">
+                  <Camera className="w-4 h-4 text-white drop-shadow-sm" />
+                  <span>Change Cover</span>
+                </div>
+
                 <div className="absolute inset-y-0 right-0 w-6 bg-gradient-to-r from-transparent to-black/20 pointer-events-none z-[2]" />
 
                 {/* Google Rating Badge bottom-left */}
@@ -333,7 +594,7 @@ export function SeedingCandidateCard({
 
               {/* Right Column — 4 Clean Lines */}
               <div className="relative z-10 flex-1 min-w-0 flex flex-col justify-between py-0.5 h-[114px] sm:h-[128px]">
-                {/* Line 1: Category Icon/Name + Open Pill */}
+                {/* Line 1: Category Icon/Name + Open Pill / Pop-up Badge */}
                 <div className="flex items-center justify-between gap-1.5 min-w-0">
                   <span className="text-[11px] font-semibold text-[#e84a27] uppercase tracking-wider flex items-center gap-1 font-comico truncate">
                     <SmakrFoodIcon
@@ -347,10 +608,22 @@ export function SeedingCandidateCard({
                     <span className="truncate">{taxonomy.spotLabel}</span>
                   </span>
 
-                  <span className="bg-[#4E8752]/10 text-[#4E8752] border border-[#4E8752]/20 px-2 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1 shrink-0">
-                    <Clock className="w-2.5 h-2.5 shrink-0" />
-                    <span>Open now</span>
-                  </span>
+                  {isPopupSpot ? (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E84A27] text-white font-comico shrink-0 tracking-wide">
+                        Pop-up
+                      </span>
+                      <span className="bg-[#E84A27]/10 text-[#E84A27] border border-[#E84A27]/25 px-2 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#E84A27] animate-pulse" />
+                        <span>Drop Radar</span>
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="bg-[#4E8752]/10 text-[#4E8752] border border-[#4E8752]/20 px-2 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1 shrink-0">
+                      <Clock className="w-2.5 h-2.5 shrink-0" />
+                      <span>Open now</span>
+                    </span>
+                  )}
                 </div>
 
                 {/* Line 2: Venue Title + Price Tier */}
@@ -363,25 +636,36 @@ export function SeedingCandidateCard({
                   </span>
                 </div>
 
-                {/* Line 3: Neighborhood + Address */}
+                {/* Line 3: Neighborhood + Address (or Roving Pop-Up Host) */}
                 <p className="text-xs font-medium text-[#6E655F] flex items-center gap-1 truncate">
                   <MapPin className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
-                  <span className="capitalize truncate">{spot.neighborhood}</span>
+                  <span className="capitalize font-bold text-[#181615] truncate">{spot.neighborhood}</span>
                   <span className="text-zinc-400">·</span>
-                  <span className="truncate text-[11px]">{spot.address}</span>
+                  <span className="truncate text-[11px] text-zinc-600">
+                    {isPopupSpot
+                      ? spot.address.replace(/,\s*0\d{3}\s*Oslo/i, "").replace(/,\s*Oslo/i, "").trim() || "Roving Pop-Up"
+                      : spot.address}
+                  </span>
                 </p>
 
-                {/* Line 4: Signature Dish + Map Pill */}
+                {/* Line 4: Signature Dish + Map Pill / Pop-up Drop Pill */}
                 <div className="border-t border-[#181615]/8 pt-1.5 flex items-center justify-between gap-2 min-w-0">
                   <span className="text-xs font-bold text-[#181615] truncate flex items-center gap-1">
                     <span className="text-[#e84a27]">✦</span>
                     <span className="truncate">{displaySignature}</span>
                   </span>
 
-                  <span className="px-2.5 py-1 rounded-xl bg-[#FAF6EE] text-[#181615] border border-[#181615]/12 text-[11px] font-bold shrink-0 flex items-center gap-1 shadow-2xs">
-                    <Compass className="w-3 h-3 text-[#E84A27]" />
-                    <span>Map</span>
-                  </span>
+                  {isPopupSpot ? (
+                    <span className="px-2.5 py-1 rounded-xl bg-orange-50 text-[#E84A27] border border-orange-200 text-[10.5px] font-black shrink-0 flex items-center gap-1 shadow-2xs">
+                      <span>✦</span>
+                      <span>Pop-Up Drop</span>
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-1 rounded-xl bg-[#FAF6EE] text-[#181615] border border-[#181615]/12 text-[11px] font-bold shrink-0 flex items-center gap-1 shadow-2xs">
+                      <Compass className="w-3 h-3 text-[#E84A27]" />
+                      <span>Map</span>
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -469,8 +753,18 @@ export function SeedingCandidateCard({
                         {dish.dish_name}
                       </h3>
 
+                      {isPopupSpot && (spot as any).popup_meta?.dates_label && (
+                        <div className="mt-1 text-[11.5px] font-bold text-[#FF8566] drop-shadow-xs">
+                          {String((spot as any).popup_meta.dates_label).replace(/\s*Drop$/i, "").trim()}
+                        </div>
+                      )}
+
                       <div className="text-[12.5px] font-semibold text-white/95 drop-shadow-xs mt-1 flex items-center gap-1.5 flex-wrap">
-                        <MapPin className="w-[13px] h-[13px] text-[#e84a27] shrink-0" />
+                        {isPopupSpot ? (
+                          <SmakrFoodIcon name="popup" className="w-3.5 h-3.5 shrink-0" />
+                        ) : (
+                          <MapPin className="w-[13px] h-[13px] text-[#e84a27] shrink-0" />
+                        )}
                         <span className="font-semibold text-white">{spot.name}</span>
                         <span className="text-zinc-400">·</span>
                         <span className="text-zinc-300 capitalize">{spot.neighborhood}</span>
@@ -497,32 +791,61 @@ export function SeedingCandidateCard({
                     </div>
                   </div>
 
-                  {/* Card Action Strip */}
-                  <div className="p-3 bg-[#FAF7F2] border-t border-[#EAE5DC] flex items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onUpdateDish(spot.id, dish.id, {
-                          is_verified_food_photo: !dish.is_verified_food_photo,
-                        })
-                      }
-                      title="Click to toggle dish photo verification"
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${
-                        dish.is_verified_food_photo
-                          ? "bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100"
-                          : "bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100"
-                      }`}
-                    >
-                      {dish.is_verified_food_photo ? "🟢 Food Verified" : "🟡 Verify Photo"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEditingDish(dish)}
-                      className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-[#E84A27] hover:text-white text-[#181615] border border-[#DDD6C9] hover:border-[#E84A27] text-xs font-black flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                      <span>Edit / AI Shift</span>
-                    </button>
+                  {/* Card Action Strip with Solo Dish & Delete options */}
+                  <div className="p-3 bg-[#FAF7F2] border-t border-[#EAE5DC] flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onUpdateDish(spot.id, dish.id, {
+                            is_verified_food_photo: !dish.is_verified_food_photo,
+                          })
+                        }
+                        title="Click to toggle dish photo verification"
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${
+                          dish.is_verified_food_photo
+                            ? "bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100"
+                            : "bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100"
+                        }`}
+                      >
+                        {dish.is_verified_food_photo ? "🟢 Food Verified" : "🟡 Verify Photo"}
+                      </button>
+
+                      {/* Solo Dish Selection button when spot has multiple dishes */}
+                      {spot.dish_highlights.length > 1 && dish.is_verified_food_photo && (
+                        <button
+                          type="button"
+                          onClick={() => handleUseOnlyThisDish(dish)}
+                          className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-[10.5px] font-black flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
+                          title={`Select and use only "${dish.dish_name}" for this spot (removes other unverified dishes)`}
+                        >
+                          <Sparkles className="w-3 h-3 text-amber-600" />
+                          <span>Use Only This Dish</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setEditingDish(dish)}
+                        className="px-3 py-1.5 rounded-xl bg-white hover:bg-[#E84A27] hover:text-white text-[#181615] border border-[#DDD6C9] hover:border-[#E84A27] text-xs font-black flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        <span>Edit / AI Shift</span>
+                      </button>
+
+                      {spot.dish_highlights.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveDish(dish.id, dish.dish_name)}
+                          className="p-1.5 rounded-xl text-zinc-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors cursor-pointer"
+                          title={`Remove "${dish.dish_name}" from candidate spot`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -579,16 +902,48 @@ export function SeedingCandidateCard({
           )}
         </div>
 
-        {/* Verification helper summary */}
-        <div className="text-xs">
+        {/* Verification helper summary & Individual Spot Commit Button */}
+        <div className="flex items-center gap-3 flex-wrap">
           {!allDishesVerified ? (
-            <span className="text-amber-700 font-bold bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
+            <span className="text-amber-700 font-bold bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 text-xs">
               ⚠️ {spot.dish_highlights.filter((d) => !d.is_verified_food_photo).length} dish requires macro photo
             </span>
           ) : (
-            <span className="text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-              ✓ Restaurant Card + Dish Cards ready for production seed
+            <span className="text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 text-xs">
+              ✓ Ready for production
             </span>
+          )}
+
+          {/* AI Shift Button (works for both staged & seeded spots) */}
+          <button
+            type="button"
+            onClick={() => {
+              setIsAiShiftOpen(true);
+              setAiShiftError(null);
+            }}
+            className="px-3.5 py-2 rounded-xl bg-white hover:bg-amber-50 text-[#181615] border border-amber-300 text-xs font-black flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+            title="AI Quick Shift: Paste drop announcement to update dates, host venue & sync to Supabase"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-[#E84A27]" />
+            <span>✨ AI Shift</span>
+          </button>
+
+          {/* Individual Spot Commit Button */}
+          {spot.verification_status !== "seeded" && (
+            <button
+              type="button"
+              onClick={handleCommitSingleSpot}
+              disabled={isCommittingSpot || !allDishesVerified}
+              className="px-4 py-2 rounded-xl bg-[#E84A27] hover:bg-[#d03d1b] text-white text-xs font-black flex items-center gap-1.5 transition-all shadow-md shadow-[#E84A27]/25 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              title={
+                !allDishesVerified
+                  ? "Verify all dishes or click 'Use Only This Dish' first"
+                  : `Commit ${spot.name} directly to production database`
+              }
+            >
+              <Rocket className={`w-3.5 h-3.5 ${isCommittingSpot ? "animate-bounce" : ""}`} />
+              <span>{isCommittingSpot ? "Committing..." : "Commit Spot 🚀"}</span>
+            </button>
           )}
         </div>
       </div>
@@ -610,6 +965,8 @@ export function SeedingCandidateCard({
         <QuickDishEditModal
           dish={editingDish}
           spotName={spot.name}
+          spotId={spot.id}
+          isPopup={isPopupSpot}
           onSave={async (dishUpdates) => {
             await onUpdateDish(spot.id, editingDish.id, dishUpdates);
           }}
@@ -679,34 +1036,113 @@ export function SeedingCandidateCard({
 
               {/* Cover Photo Source Switcher */}
               <div className="space-y-2.5">
-                <div className="grid grid-cols-2 gap-1 bg-[#EFEAE1] p-1 rounded-xl">
+                <div className="grid grid-cols-3 gap-1 bg-[#EFEAE1] p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setSpotPhotoTab("upload")}
+                    className={`py-1.5 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+                      spotPhotoTab === "upload"
+                        ? "bg-[#E84A27] text-white shadow-xs"
+                        : "text-zinc-600 hover:text-black"
+                    }`}
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Upload / Paste</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => setSpotPhotoTab("google")}
-                    className={`py-1.5 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer ${
+                    className={`py-1.5 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
                       spotPhotoTab === "google"
                         ? "bg-white text-[#181615] shadow-xs"
                         : "text-zinc-600"
                     }`}
                   >
                     <Camera className="w-3.5 h-3.5" />
-                    <span>Google Places ({spotGooglePhotos.length})</span>
+                    <span>Google ({spotGooglePhotos.length})</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setSpotPhotoTab("url")}
-                    className={`py-1.5 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer ${
+                    className={`py-1.5 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
                       spotPhotoTab === "url"
                         ? "bg-white text-[#181615] shadow-xs"
                         : "text-zinc-600"
                     }`}
                   >
                     <LinkIcon className="w-3.5 h-3.5" />
-                    <span>Direct Cover URL</span>
+                    <span>Direct URL</span>
                   </button>
                 </div>
 
-                {spotPhotoTab === "google" ? (
+                {spotPhotoTab === "upload" ? (
+                  <div className="p-4 rounded-2xl bg-white border border-[#EAE5DC] space-y-3">
+                    <div
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setIsDraggingCover(true);
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault();
+                        setIsDraggingCover(false);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setIsDraggingCover(false);
+                        const files = e.dataTransfer.files;
+                        if (files && files[0]) {
+                          void uploadCoverFile(files[0]);
+                        }
+                      }}
+                      onClick={() => coverFileInputRef.current?.click()}
+                      className={`relative border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${
+                        isDraggingCover
+                          ? "border-[#E84A27] bg-[#E84A27]/5 scale-[0.99]"
+                          : "border-[#DDD6C9] hover:border-[#E84A27]/60 bg-[#FAF7F2] hover:bg-white"
+                      }`}
+                    >
+                      <input
+                        ref={coverFileInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg,image/webp,image/avif"
+                        className="hidden"
+                        onChange={(e) => {
+                          const files = e.target.files;
+                          if (files && files[0]) {
+                            void uploadCoverFile(files[0]);
+                          }
+                        }}
+                      />
+
+                      <div className="flex flex-col items-center justify-center gap-1.5">
+                        {isUploadingCover ? (
+                          <>
+                            <RefreshCw className="w-6 h-6 text-[#E84A27] animate-spin" />
+                            <p className="text-xs font-bold text-[#181615]">Processing & uploading cover...</p>
+                            <p className="text-[10.5px] text-zinc-500">Optimizing with Sharp to 1080px WebP</p>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-6 h-6 text-[#E84A27]" />
+                            <p className="text-xs font-extrabold text-[#181615]">
+                              Click to browse or drop venue cover photo
+                            </p>
+                            <p className="text-[10.5px] text-zinc-500">
+                              Or press <kbd className="px-1.5 py-0.5 rounded bg-zinc-100 border border-zinc-300 font-mono text-[10px] text-zinc-800 font-black">Ctrl+V</kbd> anywhere in modal
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {coverUploadError && (
+                      <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-xs font-bold text-rose-700 flex items-center gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{coverUploadError}</span>
+                      </div>
+                    )}
+                  </div>
+                ) : spotPhotoTab === "google" ? (
                   <div className="p-3 rounded-2xl bg-white border border-[#EAE5DC] space-y-2.5">
                     <div className="flex items-center gap-2">
                       <input
@@ -908,6 +1344,397 @@ export function SeedingCandidateCard({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── AI QUICK SHIFT MODAL (NLP DROP UPDATER + LIVE DIFF PREVIEW) ── */}
+      {isAiShiftOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+          onClick={() => setIsAiShiftOpen(false)}
+        >
+          <div
+            className="bg-white border border-[#EAE5DC] rounded-3xl max-w-3xl w-full p-6 shadow-2xl space-y-5 my-8 max-h-[92vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-[#EAE5DC] pb-3.5">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 rounded-2xl bg-[#E84A27]/10 text-[#E84A27]">
+                  <Sparkles className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="text-lg font-black text-[#181615]">
+                    ✨ AI Quick Shift: {spot.name}
+                  </h3>
+                  <p className="text-xs text-zinc-500">
+                    Paste an Instagram drop announcement or type changes in plain language to update{" "}
+                    <code className="font-mono text-[#E84A27]">staged_candidates.json</code>,{" "}
+                    <code className="font-mono text-[#E84A27]">venues</code>, and{" "}
+                    <code className="font-mono text-[#E84A27]">food_posts</code> simultaneously.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAiShiftOpen(false)}
+                className="p-1.5 rounded-full hover:bg-zinc-100 text-zinc-500 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Step 1: Natural Language Input */}
+            <div className="space-y-2.5">
+              <label className="block text-xs font-black uppercase tracking-wider text-zinc-600">
+                1. Paste Drop Update or Announcement Text
+              </label>
+              <textarea
+                rows={3}
+                value={aiShiftInput}
+                onChange={(e) => setAiShiftInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                    e.preventDefault();
+                    void handleParseAiShift();
+                  }
+                }}
+                placeholder="e.g. Next pop-up is on Nov 14th at Mike's Corner in Oslobukta at 12pm, serving Double Biscoff matcha 75 kr (80 cups only)..."
+                className="w-full px-3.5 py-2.5 text-xs font-medium rounded-2xl bg-[#FAF7F2] border border-[#DDD6C9] focus:outline-none focus:border-[#E84A27] resize-none"
+              />
+
+              {/* Quick Sample Chips */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10.5px] font-bold text-zinc-400">Quick presets:</span>
+                {[
+                  "Next pop-up Thursday Nov 14th at Mike's Corner in Oslobukta at 12:00 · 75 kr",
+                  "Live weekend drop at Trekanten, Pilestredet 24 from 12:00 until sold out",
+                  "Seasonal pause / between residencies — next drop dates TBA on Instagram",
+                ].map((sample) => (
+                  <button
+                    key={sample}
+                    type="button"
+                    onClick={() => {
+                      setAiShiftInput(sample);
+                      void handleParseAiShift(sample);
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-[#FAF7F2] hover:bg-amber-50 border border-[#E0D9CE] hover:border-amber-300 text-[10.5px] font-semibold text-zinc-700 transition-colors cursor-pointer truncate max-w-xs"
+                  >
+                    {sample}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => void handleParseAiShift()}
+                  disabled={isParsingAiShift || !aiShiftInput.trim()}
+                  className="px-4 py-2 rounded-xl bg-[#181615] hover:bg-[#E84A27] text-white text-xs font-black flex items-center gap-1.5 transition-colors disabled:opacity-40 cursor-pointer"
+                >
+                  <Sparkles className={`w-3.5 h-3.5 ${isParsingAiShift ? "animate-spin" : ""}`} />
+                  <span>{isParsingAiShift ? "Parsing with AI..." : "Parse Update & Preview Diff"}</span>
+                </button>
+              </div>
+            </div>
+
+            {aiShiftError && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold">
+                {aiShiftError}
+              </div>
+            )}
+
+            {/* Step 2: Live Diff & Editable Override Form */}
+            {aiShiftProposal && (
+              <div className="space-y-4 pt-3 border-t border-[#EAE5DC]">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase tracking-wider text-[#E84A27]">
+                    2. Review &amp; Tweak Proposed Updates Before Pushing
+                  </span>
+                  <span className="text-[11px] font-semibold text-zinc-400">
+                    All fields below are editable
+                  </span>
+                </div>
+
+                {/* Live Feed Card Simulation Banner */}
+                <div className="p-4 rounded-2xl bg-[#181615] text-white space-y-2 shadow-inner">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="px-3 py-1 rounded-full bg-[#E84A27] text-white text-xs font-bold whitespace-nowrap">
+                      {aiShiftProposal.popup_meta.residency_status === "next_confirmed"
+                        ? `⏳ ${aiShiftProposal.popup_meta.dates_label}`
+                        : aiShiftProposal.popup_meta.residency_status === "between_residencies"
+                        ? "✦ Pop-Up · Seasonal"
+                        : "🔥 Pop-Up · Live"}
+                    </span>
+                    {aiShiftProposal.price_nok && (
+                      <span className="px-2.5 py-1 rounded-full bg-[#E84A27] text-white text-xs font-bold whitespace-nowrap">
+                        {aiShiftProposal.price_nok} kr
+                      </span>
+                    )}
+                  </div>
+                  <div className="pt-2">
+                    <div className="text-xs font-extrabold text-[#E84A27]">
+                      {aiShiftProposal.popup_meta.daily_hours}
+                      {aiShiftProposal.popup_meta.portion_cap
+                        ? ` · ${aiShiftProposal.popup_meta.portion_cap}`
+                        : ""}
+                    </div>
+                    <div className="font-comico font-black text-lg text-white leading-tight mt-0.5">
+                      {aiShiftProposal.signature_dish}
+                    </div>
+                    <div className="text-xs font-semibold text-white/90 flex items-center gap-1 mt-1">
+                      <MapPin className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
+                      <span>
+                        {spot.name}
+                        {aiShiftProposal.popup_meta.host_venue_name
+                          ? ` @ ${aiShiftProposal.popup_meta.host_venue_name.split(",")[0].trim()}`
+                          : ""}{" "}
+                        · {aiShiftProposal.neighborhood}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Side-by-Side Diff + Editable Fields */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-[#FAF7F2] p-4 rounded-2xl border border-[#EAE5DC]">
+                  <div>
+                    <label className="block text-[11px] font-bold text-zinc-600 mb-1">
+                      Residency Status
+                    </label>
+                    <select
+                      value={aiShiftProposal.popup_meta.residency_status}
+                      onChange={(e) =>
+                        setAiShiftProposal({
+                          ...aiShiftProposal,
+                          popup_meta: {
+                            ...aiShiftProposal.popup_meta,
+                            residency_status: e.target.value as any,
+                          },
+                        })
+                      }
+                      className="w-full px-3 py-2 text-xs font-bold rounded-xl bg-white border border-[#DDD6C9]"
+                    >
+                      <option value="next_confirmed">⏳ next_confirmed (Upcoming Date)</option>
+                      <option value="active">🔥 active (Live Drop Now)</option>
+                      <option value="between_residencies">✦ between_residencies (Seasonal / TBA)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-zinc-600 mb-1">
+                      Top-Left Dates Badge (`dates_label`)
+                    </label>
+                    <input
+                      type="text"
+                      value={aiShiftProposal.popup_meta.dates_label}
+                      onChange={(e) =>
+                        setAiShiftProposal({
+                          ...aiShiftProposal,
+                          popup_meta: {
+                            ...aiShiftProposal.popup_meta,
+                            dates_label: e.target.value,
+                          },
+                        })
+                      }
+                      className="w-full px-3 py-2 text-xs font-bold rounded-xl bg-white border border-[#DDD6C9]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-zinc-600 mb-1">
+                      Host Venue Name (`host_venue_name`)
+                    </label>
+                    <input
+                      type="text"
+                      value={aiShiftProposal.popup_meta.host_venue_name}
+                      onChange={(e) =>
+                        setAiShiftProposal({
+                          ...aiShiftProposal,
+                          popup_meta: {
+                            ...aiShiftProposal.popup_meta,
+                            host_venue_name: e.target.value,
+                          },
+                        })
+                      }
+                      className="w-full px-3 py-2 text-xs font-bold rounded-xl bg-white border border-[#DDD6C9]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-zinc-600 mb-1">
+                      Neighborhood (`was: {spot.neighborhood}`)
+                    </label>
+                    <input
+                      type="text"
+                      value={aiShiftProposal.neighborhood}
+                      onChange={(e) =>
+                        setAiShiftProposal({
+                          ...aiShiftProposal,
+                          neighborhood: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 text-xs font-bold rounded-xl bg-white border border-[#DDD6C9]"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-[11px] font-bold text-zinc-600 mb-1">
+                      Host Address (`was: {spot.address}`)
+                    </label>
+                    <input
+                      type="text"
+                      value={aiShiftProposal.address}
+                      onChange={(e) =>
+                        setAiShiftProposal({
+                          ...aiShiftProposal,
+                          address: e.target.value,
+                          popup_meta: {
+                            ...aiShiftProposal.popup_meta,
+                            host_address: e.target.value,
+                          },
+                        })
+                      }
+                      className="w-full px-3 py-2 text-xs font-bold rounded-xl bg-white border border-[#DDD6C9]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-zinc-600 mb-1">
+                      Drop Subtitle / Hours (`daily_hours`)
+                    </label>
+                    <input
+                      type="text"
+                      value={aiShiftProposal.popup_meta.daily_hours}
+                      onChange={(e) =>
+                        setAiShiftProposal({
+                          ...aiShiftProposal,
+                          opening_hours_text: e.target.value,
+                          popup_meta: {
+                            ...aiShiftProposal.popup_meta,
+                            daily_hours: e.target.value,
+                          },
+                        })
+                      }
+                      className="w-full px-3 py-2 text-xs font-bold rounded-xl bg-white border border-[#DDD6C9]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-zinc-600 mb-1">
+                      Batch / Portion Cap (`portion_cap`)
+                    </label>
+                    <input
+                      type="text"
+                      value={aiShiftProposal.popup_meta.portion_cap || ""}
+                      onChange={(e) =>
+                        setAiShiftProposal({
+                          ...aiShiftProposal,
+                          popup_meta: {
+                            ...aiShiftProposal.popup_meta,
+                            portion_cap: e.target.value,
+                          },
+                        })
+                      }
+                      className="w-full px-3 py-2 text-xs font-bold rounded-xl bg-white border border-[#DDD6C9]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-zinc-600 mb-1">
+                      Signature Dish
+                    </label>
+                    <input
+                      type="text"
+                      value={aiShiftProposal.signature_dish}
+                      onChange={(e) =>
+                        setAiShiftProposal({
+                          ...aiShiftProposal,
+                          signature_dish: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 text-xs font-bold rounded-xl bg-white border border-[#DDD6C9]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-zinc-600 mb-1">
+                      Dish Price (NOK)
+                    </label>
+                    <input
+                      type="number"
+                      value={aiShiftProposal.price_nok ?? ""}
+                      onChange={(e) =>
+                        setAiShiftProposal({
+                          ...aiShiftProposal,
+                          price_nok: e.target.value ? Number(e.target.value) : null,
+                        })
+                      }
+                      placeholder="e.g. 75"
+                      className="w-full px-3 py-2 text-xs font-bold rounded-xl bg-white border border-[#DDD6C9]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-zinc-600 mb-1">
+                      Latitude (`was: {spot.latitude}`)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.0001"
+                      value={aiShiftProposal.latitude}
+                      onChange={(e) =>
+                        setAiShiftProposal({
+                          ...aiShiftProposal,
+                          latitude: Number(e.target.value),
+                        })
+                      }
+                      className="w-full px-3 py-2 text-xs font-mono font-bold rounded-xl bg-white border border-[#DDD6C9]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-zinc-600 mb-1">
+                      Longitude (`was: {spot.longitude}`)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.0001"
+                      value={aiShiftProposal.longitude}
+                      onChange={(e) =>
+                        setAiShiftProposal({
+                          ...aiShiftProposal,
+                          longitude: Number(e.target.value),
+                        })
+                      }
+                      className="w-full px-3 py-2 text-xs font-mono font-bold rounded-xl bg-white border border-[#DDD6C9]"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#EAE5DC]">
+                  <button
+                    type="button"
+                    onClick={() => setIsAiShiftOpen(false)}
+                    className="px-4 py-2 text-xs font-bold rounded-xl text-zinc-500 hover:text-[#181615] cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleApplyAiShift()}
+                    disabled={isApplyingAiShift}
+                    className="px-6 py-2.5 text-xs font-black rounded-xl bg-[#E84A27] hover:bg-[#d03d1b] text-white shadow-md shadow-[#E84A27]/25 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <Rocket className={`w-3.5 h-3.5 ${isApplyingAiShift ? "animate-bounce" : ""}`} />
+                    <span>
+                      {isApplyingAiShift
+                        ? "Syncing JSON + Venues + Food Posts..."
+                        : "Apply & Push to Production 🚀"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

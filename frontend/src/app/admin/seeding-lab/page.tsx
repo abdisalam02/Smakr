@@ -14,6 +14,7 @@ export default function SeedingLabPage() {
   const [candidates, setCandidates] = useState<StagedCandidateSpot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCommitting, setIsCommitting] = useState(false);
+  const [activeMode, setActiveMode] = useState<"regular" | "popup">("regular");
   const [activeFilter, setActiveFilter] = useState<string>("all");
   const [notification, setNotification] = useState<{
     type: "success" | "error";
@@ -38,6 +39,19 @@ export default function SeedingLabPage() {
   useEffect(() => {
     void loadCandidates();
   }, []);
+
+  // Separate Regular Spots vs. Pop-Up Radar candidates
+  const regularCandidates = useMemo(
+    () => candidates.filter((s) => s.spot_type !== "popup" && s.spot_type !== "pop_up"),
+    [candidates]
+  );
+
+  const popupCandidates = useMemo(
+    () => candidates.filter((s) => s.spot_type === "popup" || s.spot_type === "pop_up"),
+    [candidates]
+  );
+
+  const currentModeCandidates = activeMode === "regular" ? regularCandidates : popupCandidates;
 
   // Update spot metadata
   const handleUpdateSpot = async (spotId: string, updates: Partial<StagedCandidateSpot>) => {
@@ -81,17 +95,19 @@ export default function SeedingLabPage() {
     }
   };
 
-  // Safe Seeding Commit
+  // Safe Seeding Commit (Scoped to active view mode)
   const handleCommitApproved = async () => {
-    const approvedCount = candidates.filter((s) => s.verification_status === "approved").length;
-    if (approvedCount === 0) {
-      alert("No spots marked as 🟢 Approved. Review and approve candidate spots before committing.");
+    const approvedInMode = currentModeCandidates.filter((s) => s.verification_status === "approved");
+    const modeLabel = activeMode === "regular" ? "regular restaurant(s)" : "pop-up radar concept(s)";
+
+    if (approvedInMode.length === 0) {
+      alert(`No ${modeLabel} marked as 🟢 Approved. Review and approve candidate spots in this tab before committing.`);
       return;
     }
 
     if (
       !confirm(
-        `Are you sure you want to commit ${approvedCount} approved spot(s) directly into Supabase?\n\nThis will ingest their food photos into Supabase Storage CDN and create the venues & food_posts in production.`
+        `Are you sure you want to commit ${approvedInMode.length} approved ${modeLabel} directly into Supabase?\n\nThis will ingest their food photos into Supabase Storage CDN and create the venues & food_posts in production.`
       )
     ) {
       return;
@@ -101,7 +117,11 @@ export default function SeedingLabPage() {
     setNotification(null);
 
     try {
-      const res = await fetch("/api/admin/seeding-lab", { method: "POST" });
+      const res = await fetch("/api/admin/seeding-lab", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ spotIds: approvedInMode.map((s) => s.id) }),
+      });
       const data = await res.json();
 
       if (!res.ok) {
@@ -127,21 +147,21 @@ export default function SeedingLabPage() {
     }
   };
 
-  // Filtered view
+  // Filtered view scoped to active mode
   const filteredCandidates = useMemo(() => {
-    if (activeFilter === "all") return candidates;
-    return candidates.filter((s) => s.verification_status === activeFilter);
-  }, [candidates, activeFilter]);
+    if (activeFilter === "all") return currentModeCandidates;
+    return currentModeCandidates.filter((s) => s.verification_status === activeFilter);
+  }, [currentModeCandidates, activeFilter]);
 
   const stats = useMemo(() => {
-    const total = candidates.length;
-    const approved = candidates.filter((s) => s.verification_status === "approved").length;
-    const needsPhoto = candidates.filter((s) => s.verification_status === "needs_photo").length;
-    const seeded = candidates.filter((s) => s.verification_status === "seeded").length;
-    const rejected = candidates.filter((s) => s.verification_status === "rejected").length;
-    const pending = candidates.filter((s) => s.verification_status === "pending").length;
+    const total = currentModeCandidates.length;
+    const approved = currentModeCandidates.filter((s) => s.verification_status === "approved").length;
+    const needsPhoto = currentModeCandidates.filter((s) => s.verification_status === "needs_photo").length;
+    const seeded = currentModeCandidates.filter((s) => s.verification_status === "seeded").length;
+    const rejected = currentModeCandidates.filter((s) => s.verification_status === "rejected").length;
+    const pending = currentModeCandidates.filter((s) => s.verification_status === "pending").length;
     return { total, approved, needsPhoto, seeded, rejected, pending };
-  }, [candidates]);
+  }, [currentModeCandidates]);
 
   return (
     <div className="min-h-screen bg-[#F7F4EE] text-[#181615] font-sans antialiased pt-24 sm:pt-28 pb-28">
@@ -193,6 +213,68 @@ export default function SeedingLabPage() {
               <Rocket className={`w-4 h-4 ${isCommitting ? "animate-bounce" : ""}`} />
               <span>{isCommitting ? "Ingesting to DB..." : `Commit Approved (${stats.approved}) 🚀`}</span>
             </button>
+          </div>
+        </div>
+
+        {/* ── MODE SWITCHER: SLIDING SEGMENTED CONTROL ── */}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="relative inline-flex p-1.5 rounded-2xl bg-white border border-[#EAE5DC] shadow-xs">
+            {/* Smooth sliding pill indicator */}
+            <div
+              className="absolute top-1.5 bottom-1.5 rounded-xl bg-[#FAF7F2] border border-[#DDD6C9] shadow-xs transition-all duration-300 ease-out"
+              style={{
+                left: activeMode === "regular" ? "6px" : "calc(50% + 2px)",
+                width: "calc(50% - 8px)",
+              }}
+            />
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveMode("regular");
+                setActiveFilter("all");
+              }}
+              className={`relative z-10 px-5 py-2 rounded-xl text-xs font-black transition-colors duration-200 flex items-center gap-2 cursor-pointer ${
+                activeMode === "regular" ? "text-[#181615]" : "text-zinc-500 hover:text-black"
+              }`}
+            >
+              <span>🏪 Regular Spots</span>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                  activeMode === "regular"
+                    ? "bg-[#181615] text-white"
+                    : "bg-black/5 text-zinc-500"
+                }`}
+              >
+                {regularCandidates.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveMode("popup");
+                setActiveFilter("all");
+              }}
+              className={`relative z-10 px-5 py-2 rounded-xl text-xs font-black transition-colors duration-200 flex items-center gap-2 cursor-pointer ${
+                activeMode === "popup" ? "text-[#E84A27]" : "text-zinc-500 hover:text-black"
+              }`}
+            >
+              <span>✦ Pop-Up Radar</span>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                  activeMode === "popup"
+                    ? "bg-[#E84A27] text-white"
+                    : "bg-black/5 text-zinc-500"
+                }`}
+              >
+                {popupCandidates.length}
+              </span>
+            </button>
+          </div>
+
+          <div className="text-xs font-semibold text-zinc-500">
+            Viewing <span className="font-extrabold text-[#181615]">{activeMode === "regular" ? "Brick-and-Mortar Restaurants" : "Curated Pop-Up Drops & Residencies"}</span>
           </div>
         </div>
 

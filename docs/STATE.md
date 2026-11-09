@@ -3,13 +3,13 @@
 Updated: 2026-11-09
 
 ## Now
-- Task: Fixed pin icon precedence (curated badge > legacy vibe_signals); Farine/Silin/Mandi taxonomy mapped; avatar audit ready.
-- Status: Implemented & verified with clean tsc. Ready for git commit/push and avatar boot screen migration.
+- Task: Fixed pop-up sheet scroll glitch, removed "Live Now/portion_cap", updated map pin & popup card header, and aligned @handle with circular avatar.
+- Status: Complete across VenueBottomSheet, VenueDetailPane, MapRadarView, and FoodPostCard; tsc clean.
 
 ## Next (max 3)
-1. Complete dynamic avatar boot screen migration per AVATAR_BOOT_AUDIT.md.
-2. Perfect no-shadow studio renders when image quota resets.
-3. Review remaining dependency advisories with `npm run security:audit`.
+1. Curate and verify photos for remaining 9 staged pop-ups in /admin/seeding-lab.
+2. Seed approved pop-up candidates to production radar.
+3. Monitor AI Quick Shift parser accuracy on upcoming IG drop announcements.
 
 ## Decisions (don't reopen)
 - Product is Smakr; the app lives in `frontend/`.
@@ -21,8 +21,8 @@ Updated: 2026-11-09
 - TODO-VERIFY: confirm partner claim copy before launch.
 
 ## Recent (max 5, one line each)
-- 2026-11-09 — Fixed map pin precedence, v4 pin cache key, Farine cinnamon roll & Mandi taxonomy; tsc clean
-- 2026-11-09 — Generated AVATAR_BOOT_AUDIT.md comparing Approach A (Sprite Atlas) vs B (DOM SVGs)
-- 2026-11-09 — Fixed spots feed scroll lag/disappearing cards; restored expanding bottom nav; tsc clean
-- 2026-11-09 — Fixed feed density toggle stacking context (z-0 orange pill under active icon); tsc clean
-- 2026-11-09 — +20% spot card/image size, tighter 10px card gap, 1x/2x grid toggle & smooth bottom nav pill; tsc clean
+- 2026-11-09 — Polished pop-up sheet background & map popup card, aligned @smak inline, removed fire reaction; tsc clean
+- 2026-11-09 — Fixed pop-up map pin die-cut rendering & cleaned pop-up card text/footer; tsc clean
+- 2026-11-09 — Polished 2-col FoodPostCard grid, dynamic pop-up status/host/IG pills, and AI Quick Shift modal; tsc clean
+- 2026-11-09 — Corrected Mint on Wheels to Mike's Corner Nov 14 drop; wrote Seeding Lab AI audit; tsc clean
+- 2026-11-09 — Aligned pop-up detail, map card & route to U WAN SUM standard with popup_meta; tsc clean

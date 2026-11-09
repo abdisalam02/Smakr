@@ -37,12 +37,13 @@ import {
   resolveCustomIconKey,
   DISH_ICON_WEBP,
   FILTER_CATEGORY_WEBP,
+  SMAKR_ICON_SVG_BODIES,
 } from "@/components/food/FoodIcons";
 import { resolveEntityTaxonomy, resolveVenueDisplayBadge, resolveDishIconKey } from "@/lib/taxonomy";
 import { getIconDisplay } from "@/lib/iconRegistry";
 import { formatDistance } from "@/lib/math";
 import { getDirectionsUrl } from "@/lib/location";
-import { getPopupStatus, getPopupUrgencyLabel } from "@/lib/popupUtils";
+import { getPopupStatus, getPopupUrgencyLabel, getPopupMeta, isPopupVenue } from "@/lib/popupUtils";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import {
   buildOpenPeepsSvg,
@@ -109,28 +110,14 @@ function applyPinState(root: HTMLElement, isSelected: boolean) {
   const baseIconPx = isWeeklyPick ? 44 : 39;
   const selectedIconPx = isWeeklyPick ? 48 : 43;
   if (puck) {
-    if (isPopup) {
-      if (isSelected) {
-        puck.style.background = "#FFFFFF";
-        puck.style.border = "1.5px solid #E84A27";
-        puck.style.boxShadow = "0 0 0 3px rgba(232, 74, 39, 0.18), 0 6px 16px rgba(232, 74, 39, 0.20)";
-      } else {
-        puck.style.background = "#FAF7F2";
-        puck.style.border = "1.5px solid rgba(232, 74, 39, 0.65)";
-        puck.style.boxShadow = "0 3px 8px rgba(24, 22, 21, 0.12)";
-      }
-    } else {
-      puck.style.background = "transparent";
-      puck.style.border = "none";
-      puck.style.borderRadius = "0";
-      puck.style.boxShadow = "none";
-      puck.style.overflow = "visible";
-    }
+    puck.style.background = "transparent";
+    puck.style.border = "none";
+    puck.style.borderRadius = "0";
+    puck.style.boxShadow = "none";
+    puck.style.overflow = "visible";
   }
   if (iconContainer) {
-    if (isPopup) {
-      iconContainer.style.filter = "none";
-    } else if (isSelected) {
+    if (isSelected) {
       iconContainer.style.width = `${selectedIconPx}px`;
       iconContainer.style.height = `${selectedIconPx}px`;
       iconContainer.style.filter = "url(#smakr-diecut-default)";
@@ -164,12 +151,12 @@ function applyPinState(root: HTMLElement, isSelected: boolean) {
     if (isSelected) {
       dot.style.background = "#E84A27";
       dot.style.borderColor = "#E84A27";
-      dot.style.transform = isPopup ? "translateX(-50%) scale(1.35)" : "scale(1.35)";
+      dot.style.transform = "scale(1.35)";
       dot.style.boxShadow = "0 0 0 2px rgba(232, 74, 39, 0.25), 0 2px 5px rgba(232, 74, 39, 0.4)";
     } else {
       dot.style.background = "#FAF7F2";
       dot.style.borderColor = isPopup ? "#E84A27" : "rgba(24, 22, 21, 0.28)";
-      dot.style.transform = isPopup ? "translateX(-50%) scale(1.0)" : "scale(1.0)";
+      dot.style.transform = "scale(1.0)";
       dot.style.boxShadow = isPopup ? "0 1px 3px rgba(232, 74, 39, 0.35)" : "0 1px 3px rgba(24, 22, 21, 0.35)";
     }
   }
@@ -365,9 +352,7 @@ function createAquarellePinElement(
   inner.style.transformOrigin = "bottom center";
   inner.style.transition = "transform 0.18s cubic-bezier(0.16, 1, 0.3, 1)";
 
-  const haloHtml = isPopup
-    ? `<div style="position:absolute;top:-6px;left:-6px;width:50px;height:50px;border-radius:16px;border:2px solid #E84A27;background:rgba(232,74,39,0.22);animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;pointer-events:none;"></div>`
-    : isFreshBatch
+  const haloHtml = isFreshBatch
     ? `<div style="position:absolute;top:-6px;left:-6px;width:46px;height:46px;border-radius:9999px;border:2px solid #e84a27;background:rgba(232,74,39,0.25);animation:ping 1.4s cubic-bezier(0,0,0.2,1) infinite;pointer-events:none;"></div>`
     : popupStatus.isPulsingMarker
     ? `<div style="position:absolute;top:-5px;left:-5px;width:44px;height:44px;border-radius:9999px;border:2px solid #f59e0b;background:rgba(245,158,11,0.2);animation:ping 1.6s cubic-bezier(0,0,0.2,1) infinite;pointer-events:none;"></div>`
@@ -382,96 +367,68 @@ function createAquarellePinElement(
     kitchenBadgeHtml = `<div title="Sold Out" style="position:absolute;top:-5px;right:-5px;width:16px;height:16px;border-radius:9999px;background:#57534e;color:white;font-size:9px;display:grid;place-items:center;box-shadow:0 1px 4px rgba(0,0,0,0.3);border:1.5px solid #fff;line-height:1;z-index:2;">✕</div>`;
   }
 
-  if (isPopup) {
-    inner.innerHTML = `
-      <!-- Distinct Pop-up Ticket Badge (38x38px rounded-xl, #FAF7F2, #E84A27 border) -->
-      ${haloHtml}
-      <div class="smakr-map-puck" style="
-        width: 31px;
-        height: 31px;
-        border-radius: 10px;
-        background: #FAF7F2;
-        border: 2px solid #E84A27;
-        box-shadow: 0 4px 12px rgba(232, 74, 39, 0.22);
-        display: grid;
-        place-items: center;
-        padding: 0;
-        position: relative;
-        transition: transform 150ms cubic-bezier(0.22, 1, 0.36, 1), background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-        cursor: pointer;
+  const popupTopBadgeHtml = isPopup
+    ? `<div style="
+        position: absolute;
+        top: -12px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 18px;
+        height: 18px;
+        filter: drop-shadow(0 2px 4px rgba(24, 22, 21, 0.35));
+        pointer-events: none;
+        z-index: 10;
       ">
-        <!-- Floating Micro-Pill: 🔥 POP-UP -->
-        <div style="
-          position: absolute;
-          top: -12px;
-          left: 50%;
-          transform: translateX(-50%);
-          background: #E84A27;
-          color: #FFFFFF;
-          font-family: var(--font-comico, sans-serif);
-          font-size: 7.5px;
-          font-weight: 900;
-          letter-spacing: 0.04em;
-          padding: 1px 5.5px;
-          border-radius: 9999px;
-          white-space: nowrap;
-          box-shadow: 0 2px 6px rgba(232, 74, 39, 0.35);
-          pointer-events: none;
-          z-index: 10;
-        ">🔥 POP-UP</div>
-        ${kitchenBadgeHtml}
-        <div class="smakr-puck-icon" style="width:18px;height:18px;display:grid;place-items:center;line-height:1;margin:0;padding:0;">
-          ${pinGlyph}
-        </div>
-        <!-- Ground GPS anchor dot -->
-        <div class="smakr-puck-dot" style="position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); width: 5.5px; height: 5.5px; border-radius: 9999px; background: #FAF7F2; border: 1px solid #E84A27; box-shadow: 0 1px 3px rgba(232, 74, 39, 0.35); transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;"></div>
-      </div>
-    `;
-  } else {
-    inner.innerHTML = `
-      <!-- Die-Cut Floating Dish Silhouette Pin (Crisp, perfectly centered ground dot) -->
-      ${haloHtml}
-      <div class="smakr-map-puck" style="
-        width: 100%;
-        height: 100%;
-        box-sizing: border-box;
-        padding: 0;
-        margin: 0;
-        background: transparent !important;
-        border: none !important;
-        border-radius: 0 !important;
-        box-shadow: none !important;
-        overflow: visible !important;
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" style="display:block; overflow:visible;">
+          ${SMAKR_ICON_SVG_BODIES.popup}
+        </svg>
+      </div>`
+    : "";
+
+  inner.innerHTML = `
+    <!-- Die-Cut Floating Dish Silhouette Pin (Crisp, perfectly centered ground dot) -->
+    ${haloHtml}
+    <div class="smakr-map-puck" style="
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      padding: 0;
+      margin: 0;
+      background: transparent !important;
+      border: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      overflow: visible !important;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      transition: transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
+      cursor: pointer;
+    ">
+      ${popupTopBadgeHtml}
+      ${kitchenBadgeHtml}
+      <div class="smakr-puck-icon" style="
+        width: ${pinIconPx}px;
+        height: ${pinIconPx}px;
         display: flex;
-        flex-direction: column;
         align-items: center;
         justify-content: center;
-        position: relative;
-        transition: transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
-        cursor: pointer;
+        line-height: 1;
+        margin: 0;
+        padding: 0;
+        flex-shrink: 0;
+        overflow: visible !important;
+        filter: url(#smakr-diecut-default);
+        transition: filter 0.2s ease, width 0.15s ease, height 0.15s ease;
       ">
-        ${kitchenBadgeHtml}
-        <div class="smakr-puck-icon" style="
-          width: ${pinIconPx}px;
-          height: ${pinIconPx}px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          line-height: 1;
-          margin: 0;
-          padding: 0;
-          flex-shrink: 0;
-          overflow: visible !important;
-          filter: url(#smakr-diecut-default);
-          transition: filter 0.2s ease, width 0.15s ease, height 0.15s ease;
-        ">
-          ${pinGlyph}
-        </div>
-        <!-- Ground GPS anchor dot centered directly beneath the floating icon -->
-        <div class="smakr-puck-dot" style="width: 6px; height: 6px; border-radius: 9999px; background: #FAF7F2; border: 1px solid rgba(24, 22, 21, 0.28); box-shadow: 0 1px 3px rgba(24, 22, 21, 0.35); margin-top: 1px; flex-shrink: 0; transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;"></div>
+        ${pinGlyph}
       </div>
-    `;
-  }
+      <!-- Ground GPS anchor dot centered directly beneath the floating icon -->
+      <div class="smakr-puck-dot" style="width: 6px; height: 6px; border-radius: 9999px; background: #FAF7F2; border: 1px solid ${isPopup ? "#E84A27" : "rgba(24, 22, 21, 0.28)"}; box-shadow: ${isPopup ? "0 1px 3px rgba(232, 74, 39, 0.35)" : "0 1px 3px rgba(24, 22, 21, 0.35)"}; margin-top: 1px; flex-shrink: 0; transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;"></div>
+    </div>
+  `;
 
   const puckEl = inner.querySelector<HTMLElement>(".smakr-map-puck");
   if (puckEl) {
@@ -816,7 +773,7 @@ export function MapRadarView() {
       const venueBadge = resolveVenueDisplayBadge(venue);
       const badgePinKey = resolveCustomIconKey(venueBadge.pinIcon) || "";
       const dishKey = resolveCustomIconKey(venueTax.dishCategory) || venueTax.dishCategory;
-      const pinKey = `v4|${badgePinKey}|${venue.icon ?? ""}|${dishKey}|${venue.spot_type ?? ""}|${popupStatus.status}|${kitchenStatus}|${venue.food_category}|${venue.name}|${venue.popup_end_date ?? ""}|${overrideIconKey ?? ""}|${isWeeklyPickVenue ? "1" : "0"}`;
+      const pinKey = `v5|${badgePinKey}|${venue.icon ?? ""}|${dishKey}|${venue.spot_type ?? ""}|${popupStatus.status}|${kitchenStatus}|${venue.food_category}|${venue.name}|${venue.popup_end_date ?? ""}|${overrideIconKey ?? ""}|${isWeeklyPickVenue ? "1" : "0"}`;
 
       let existing = markerPoolRef.current.get(venue.id);
       if (existing && existing.rootEl.dataset.pinKey !== pinKey) {
@@ -1574,17 +1531,22 @@ export function MapRadarView() {
       ? selectedVenue.google_rating.toFixed(1)
       : "4.8";
 
+    const isPopup = isPopupVenue(selectedVenue);
+    const popupMeta = getPopupMeta(selectedVenue);
     const openStatus = getVenueLiveOpenStatus(selectedVenue);
 
     const distanceText = selectedVenue.distance_meters
       ? formatDistance(selectedVenue.distance_meters)
       : "";
 
-    const addressText = selectedVenue.address
+    const rawAddress = selectedVenue.address
       ? selectedVenue.address
       : selectedVenue.neighborhood
       ? `${selectedVenue.neighborhood}, Oslo`
       : "Oslo";
+    const addressText = isPopup
+      ? rawAddress.replace(/,\s*0\d{3}\s*Oslo/i, "").replace(/,\s*Oslo/i, "").trim() || "Roving Pop-Up"
+      : rawAddress;
 
     const curatedDishPhoto = useCityPulseStore
       .getState()
@@ -1672,16 +1634,27 @@ export function MapRadarView() {
           z-index: 10;
         ">✕</button>
 
-        <!-- Header: Flag + ONE Main Tag (e.g. 🇮🇳 INDIAN, 🇻🇳 VIETNAMESE, 🇯🇵 MATCHA) + Price Level -->
+        <!-- Header: Pop-Up Ticket Badge for Pop-Ups, or Flag + ONE Main Tag for Regular Spots -->
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:7px;padding-bottom:5px;border-bottom:1px solid rgba(24,22,21,0.06);padding-right:24px;">
-          ${venueBadge.flag ? `
-            <span style="display:inline-flex;align-items:center;justify-content:center;font-size:14px;line-height:1;flex-shrink:0;">
-              ${venueBadge.flag}
+          ${isPopup ? `
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;flex-shrink:0;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" style="display:block;">
+                ${SMAKR_ICON_SVG_BODIES.popup}
+              </svg>
             </span>
-          ` : ""}
-          <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:#e84a27;font-family:var(--font-comico, sans-serif);">
-            ${venueBadge.mainTag}
-          </span>
+            <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:#e84a27;font-family:var(--font-comico, sans-serif);">
+              Pop-Up
+            </span>
+          ` : `
+            ${venueBadge.flag ? `
+              <span style="display:inline-flex;align-items:center;justify-content:center;font-size:14px;line-height:1;flex-shrink:0;">
+                ${venueBadge.flag}
+              </span>
+            ` : ""}
+            <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:#e84a27;font-family:var(--font-comico, sans-serif);">
+              ${venueBadge.mainTag}
+            </span>
+          `}
           ${selectedVenue.price_level ? `
             <span style="font-size:10px;color:#78716c;font-weight:700;">
               · ${selectedVenue.price_level}
@@ -1757,21 +1730,40 @@ export function MapRadarView() {
               ">
                 <span style="color: #f59e0b;">★</span> ${ratingVal}
               </span>
-              <span style="
-                background: ${openStatus.isOpen ? 'rgba(236, 253, 245, 0.85)' : 'rgba(254, 242, 242, 0.85)'};
-                color: ${openStatus.isOpen ? '#047857' : '#b91c1c'};
-                border: 1px solid ${openStatus.isOpen ? '#a7f3d0' : '#fecaca'};
-                font-size: 9px;
-                font-weight: 700;
-                padding: 1px 6px;
-                border-radius: 999px;
-                display: inline-flex;
-                align-items: center;
-                gap: 3px;
-              ">
-                <span style="width: 5px; height: 5px; border-radius: 50%; background: ${openStatus.isOpen ? '#10b981' : '#ef4444'};"></span>
-                ${openStatus.statusText}
-              </span>
+              ${isPopup ? `
+                <span style="
+                  background: rgba(232, 74, 39, 0.12);
+                  color: #e84a27;
+                  border: 1px solid rgba(232, 74, 39, 0.25);
+                  font-size: 9px;
+                  font-weight: 800;
+                  padding: 1.5px 7px;
+                  border-radius: 999px;
+                  display: inline-flex;
+                  align-items: center;
+                  gap: 3.5px;
+                  font-family: var(--font-comico, sans-serif);
+                ">
+                  <span style="width: 5px; height: 5px; border-radius: 50%; background: #e84a27;"></span>
+                  ${popupMeta?.dates_label ? popupMeta.dates_label : "Pop-Up Drop"}
+                </span>
+              ` : `
+                <span style="
+                  background: ${openStatus.isOpen ? 'rgba(236, 253, 245, 0.85)' : 'rgba(254, 242, 242, 0.85)'};
+                  color: ${openStatus.isOpen ? '#047857' : '#b91c1c'};
+                  border: 1px solid ${openStatus.isOpen ? '#a7f3d0' : '#fecaca'};
+                  font-size: 9px;
+                  font-weight: 700;
+                  padding: 1px 6px;
+                  border-radius: 999px;
+                  display: inline-flex;
+                  align-items: center;
+                  gap: 3px;
+                ">
+                  <span style="width: 5px; height: 5px; border-radius: 50%; background: ${openStatus.isOpen ? '#10b981' : '#ef4444'};"></span>
+                  ${openStatus.statusText}
+                </span>
+              `}
               ${distanceText ? `<span style="font-size: 9.5px; color: #059669; font-weight: 600;">· ${distanceText}</span>` : ""}
             </div>
 

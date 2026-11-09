@@ -64,7 +64,7 @@ export interface StagedCandidateSpot {
   longitude: number;
   food_category: string;
   icon: string;
-  spot_type: "restaurant" | "cafe" | "food_truck" | "popup";
+  spot_type: "restaurant" | "cafe" | "food_truck" | "popup" | "pop_up";
   cover_image_url: string;
   price_level?: "$" | "$$" | "$$$";
   google_rating?: number | null;
@@ -72,6 +72,8 @@ export interface StagedCandidateSpot {
   why_curated: string;
   verification_status: VerificationStatus;
   notes?: string;
+  instagram_url?: string;
+  popup_meta?: Record<string, any>;
   dish_highlights: StagedDishHighlight[];
 }
 
@@ -267,8 +269,20 @@ export async function PATCH(req: NextRequest) {
 }
 
 // POST: Safe Seeding Pipeline (Only processes spots with verification_status === "approved")
-export async function POST() {
+export async function POST(req: NextRequest) {
   try {
+    let targetSpotIds: string[] | null = null;
+    if (req) {
+      try {
+        const body = await req.json();
+        if (body && Array.isArray(body.spotIds) && body.spotIds.length > 0) {
+          targetSpotIds = body.spotIds;
+        }
+      } catch {
+        // No JSON body provided, default to committing all approved
+      }
+    }
+
     const supabase = getAdminClient();
     if (!supabase) {
       return NextResponse.json(
@@ -285,10 +299,16 @@ export async function POST() {
     const raw = fs.readFileSync(filePath, "utf8");
     const candidates: StagedCandidateSpot[] = JSON.parse(raw);
 
-    const approved = candidates.filter((s) => s.verification_status === "approved");
+    let approved: StagedCandidateSpot[] = [];
+    if (targetSpotIds && targetSpotIds.length > 0) {
+      approved = candidates.filter((s) => targetSpotIds!.includes(s.id));
+    } else {
+      approved = candidates.filter((s) => s.verification_status === "approved");
+    }
+
     if (approved.length === 0) {
       return NextResponse.json(
-        { error: "No candidates marked as approved for seeding." },
+        { error: "No candidates selected or marked as approved for seeding." },
         { status: 400 }
       );
     }
@@ -347,6 +367,31 @@ export async function POST() {
 
         // 3. Insert or Find Venue using exact `public.venues` column schema
         let venueId: string;
+        const isPopup = spot.spot_type === "popup" || spot.spot_type === "pop_up";
+        const extractedIg =
+          (spot as any).instagram_url ||
+          spot.notes?.match(/https:\/\/(www\.)?instagram\.com\/[^\s"')]+/i)?.[0] ||
+          null;
+        const dropScheduleMatch = spot.notes?.match(/Drop schedule:\s*([^.\n]+(?:\([^)]*\))?[^.\n]*)/i);
+        const dropScheduleText = dropScheduleMatch
+          ? dropScheduleMatch[1].trim()
+          : (spot.notes?.split(".")[0]?.trim() || "Pop-Up Drops");
+
+        const popupMeta = isPopup
+          ? {
+              brand_id: slugify(spot.id || spot.name),
+              residency_status: "active" as const,
+              dates_label: dropScheduleText.length > 55 ? dropScheduleText.slice(0, 52) + "..." : dropScheduleText,
+              daily_hours: "Drop Days · See Instagram",
+              portion_cap: "Limited Batches",
+              host_venue_name: spot.address.replace(/,\s*0\d{3}\s*Oslo/i, "").replace(/,\s*Oslo/i, "").trim() || "Oslo Residency",
+              host_address: spot.address,
+              instagram_url: extractedIg,
+              entry_type: "walk_in" as const,
+              ...(spot.popup_meta || {}),
+            }
+          : undefined;
+
         const { data: existingVenue } = await supabase
           .from("venues")
           .select("id, name, vibe_signals")
@@ -374,10 +419,13 @@ export async function POST() {
               spot_type: spot.spot_type || "restaurant",
               description: spot.why_curated || null,
               signature_dishes: signatureDishes,
+              website_uri: extractedIg || undefined,
+              current_opening_hours_text: isPopup ? dropScheduleText : undefined,
               vibe_signals: {
                 ...prevSignals,
                 icon: spot.icon,
                 spot_type: spot.spot_type || "restaurant",
+                ...(popupMeta ? { popup_meta: popupMeta } : {}),
               },
             })
             .eq("id", venueId);
@@ -410,9 +458,12 @@ export async function POST() {
                 spot_type: spot.spot_type || "restaurant",
                 description: spot.why_curated || null,
                 signature_dishes: signatureDishes,
+                website_uri: extractedIg || null,
+                current_opening_hours_text: isPopup ? dropScheduleText : null,
                 vibe_signals: {
                   icon: spot.icon,
                   spot_type: spot.spot_type || "restaurant",
+                  ...(popupMeta ? { popup_meta: popupMeta } : {}),
                 },
               })
               .select("id")

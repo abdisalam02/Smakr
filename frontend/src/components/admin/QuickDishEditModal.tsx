@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import {
   X,
@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Camera,
   Wand2,
+  Upload,
 } from "lucide-react";
 import type { StagedDishHighlight } from "@/app/api/admin/seeding-lab/route";
 import {
@@ -26,6 +27,8 @@ import {
 interface QuickDishEditModalProps {
   dish: StagedDishHighlight;
   spotName: string;
+  spotId?: string;
+  isPopup?: boolean;
   onSave: (updated: Partial<StagedDishHighlight>) => Promise<void>;
   onClose: () => void;
 }
@@ -104,6 +107,8 @@ const CURATED_FOOD_PRESETS: Record<string, string[]> = {
 export function QuickDishEditModal({
   dish,
   spotName,
+  spotId = "",
+  isPopup = false,
   onSave,
   onClose,
 }: QuickDishEditModalProps) {
@@ -118,8 +123,72 @@ export function QuickDishEditModal({
   const [imgError, setImgError] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Source selection tabs
-  const [activeTab, setActiveTab] = useState<"restyle" | "google" | "url" | "presets">("restyle");
+  // Source selection tabs — defaults to "upload" if editing a pop-up
+  const [activeTab, setActiveTab] = useState<"upload" | "restyle" | "google" | "url" | "presets">(
+    isPopup ? "upload" : "restyle"
+  );
+
+  // Direct File Upload & Clipboard Paste state
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const uploadFile = async (file: File) => {
+    setIsUploading(true);
+    setUploadError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("spotId", spotId || spotName);
+      formData.append("dishId", dish.id || dishName);
+
+      const res = await fetch("/api/admin/upload-seed-image", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Upload failed");
+
+      const newUrl = data.url;
+      setDishImage(newUrl);
+      setOriginalBeforeRemixImage(newUrl);
+      setTransformedImageUrl(null);
+      setImgError(false);
+      setIsVerified(true);
+      setActiveTab("upload");
+
+      // Auto-save the verified photo to the candidate spot immediately
+      await onSave({
+        dish_image: newUrl,
+        is_verified_food_photo: true,
+      });
+    } catch (err: any) {
+      setUploadError(err.message || "Failed to upload image.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Clipboard paste listener: catches Ctrl+V screenshot paste
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith("image/")) {
+          const file = items[i].getAsFile();
+          if (file) {
+            e.preventDefault();
+            void uploadFile(file);
+            break;
+          }
+        }
+      }
+    };
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [spotId, spotName, dish.id, dishName]);
 
   // Google Places Photos state (initialized synchronously from cache if available)
   const initialQuery = `${spotName} Oslo`;
@@ -458,17 +527,29 @@ export function QuickDishEditModal({
 
           {/* ── PHOTO & AI REMIX TABS ── */}
           <div className="space-y-3">
-            <div className="grid grid-cols-4 gap-1 bg-[#EFEAE1] p-1 rounded-xl">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-1 bg-[#EFEAE1] p-1 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setActiveTab("upload")}
+                className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  activeTab === "upload"
+                    ? "bg-[#E84A27] text-white shadow-xs"
+                    : "text-[#181615] hover:bg-white/60"
+                }`}
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span>Upload / Paste</span>
+              </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("restyle")}
                 className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                   activeTab === "restyle"
-                    ? "bg-[#E84A27] text-white shadow-xs"
-                    : "text-[#181615] hover:bg-white/60"
+                    ? "bg-[#181615] text-white shadow-xs"
+                    : "text-zinc-600 hover:text-[#181615]"
                 }`}
               >
-                <span>✨ AI Angle Shift</span>
+                <span>✨ AI Shift</span>
               </button>
               <button
                 type="button"
@@ -497,7 +578,7 @@ export function QuickDishEditModal({
               <button
                 type="button"
                 onClick={() => setActiveTab("presets")}
-                className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer col-span-2 sm:col-span-1 ${
                   activeTab === "presets"
                     ? "bg-white text-[#181615] shadow-xs"
                     : "text-zinc-600 hover:text-[#181615]"
@@ -507,6 +588,100 @@ export function QuickDishEditModal({
                 <span>Presets</span>
               </button>
             </div>
+
+            {/* Tab: 📤 Upload & Clipboard Paste (Dropzone) */}
+            {activeTab === "upload" && (
+              <div className="p-4 rounded-2xl bg-white border border-[#EAE5DC] space-y-3.5 shadow-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-[#FAF7F2]">
+                  <div>
+                    <span className="text-xs font-black text-[#181615] block">
+                      📤 Direct Image Upload & Clipboard Paste
+                    </span>
+                    <span className="text-[11px] text-zinc-500 block mt-0.5">
+                      Upload from disk, drag & drop, or press <kbd className="px-1.5 py-0.5 rounded bg-zinc-100 border border-zinc-300 font-mono text-[10px] text-zinc-800 font-bold">Ctrl+V</kbd> to paste a screenshot directly.
+                    </span>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full bg-orange-50 border border-orange-200 text-[10px] font-extrabold text-[#E84A27]">
+                    1080px WebP
+                  </span>
+                </div>
+
+                {/* Dropzone */}
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragging(true);
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                    const files = e.dataTransfer.files;
+                    if (files && files[0]) {
+                      void uploadFile(files[0]);
+                    }
+                  }}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`relative border-2 border-dashed rounded-2xl p-7 text-center cursor-pointer transition-all ${
+                    isDragging
+                      ? "border-[#E84A27] bg-[#E84A27]/5 scale-[0.99]"
+                      : "border-[#DDD6C9] hover:border-[#E84A27]/60 bg-[#FAF7F2] hover:bg-white"
+                  }`}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp,image/avif"
+                    className="hidden"
+                    onChange={(e) => {
+                      const files = e.target.files;
+                      if (files && files[0]) {
+                        void uploadFile(files[0]);
+                      }
+                    }}
+                  />
+
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    {isUploading ? (
+                      <>
+                        <RefreshCw className="w-8 h-8 text-[#E84A27] animate-spin" />
+                        <p className="text-xs font-bold text-[#181615]">Optimizing & uploading WebP...</p>
+                        <p className="text-[10.5px] text-zinc-500">Processing with Sharp & saving to Supabase CDN</p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-12 h-12 rounded-2xl bg-white border border-[#DDD6C9] flex items-center justify-center text-[#E84A27] shadow-xs">
+                          <Upload className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-extrabold text-[#181615]">
+                            Click to browse or drag & drop food photo
+                          </p>
+                          <p className="text-[11px] text-zinc-500 mt-0.5">
+                            JPEG, PNG, WebP, AVIF up to 10MB
+                          </p>
+                        </div>
+                        <div className="mt-1 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#DDD6C9] text-[11px] font-bold text-zinc-700 shadow-xs">
+                          <span>📋 Screenshot ready? Just press</span>
+                          <kbd className="px-1.5 py-0.5 rounded bg-zinc-100 border border-zinc-300 font-mono text-[10px] text-zinc-800 font-black">Ctrl+V</kbd>
+                          <span>here</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {uploadError && (
+                  <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-xs font-bold text-rose-700 flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    <span>{uploadError}</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Tab 0: ✨ AI Angle & Background Shift (Multimodal Input) */}
             {activeTab === "restyle" && (

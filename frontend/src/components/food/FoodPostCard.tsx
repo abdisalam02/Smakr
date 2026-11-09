@@ -3,11 +3,12 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { motion } from "motion/react";
-import { ThumbsUp, MapPin, Bookmark, Pencil, Flame, Send, Compass, ArrowUpRight } from "lucide-react";
+import { ThumbsUp, MapPin, Bookmark, Pencil, Flame, Send, Compass, ArrowUpRight, Calendar } from "lucide-react";
 import { FoodPost, Venue } from "@/types";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { setPostLike, setPostSave } from "@/lib/supabase/data";
 import { OfficialSmakrMascot } from "@/lib/officialSmakrMascot";
+import { SmakrFoodIcon } from "@/components/food/FoodIcons";
 import {
   openPeepsConfigFromPreset,
   buildOpenPeepsDataUri,
@@ -387,6 +388,42 @@ export const FoodPostCard = React.memo(function FoodPostCard({
     }
   };
 
+  const popupInstagramUrl =
+    popupMeta?.instagram_url ||
+    (linkedVenue?.website_uri?.includes("instagram.com") ? linkedVenue.website_uri : null) ||
+    ((linkedVenue?.vibe_signals as any)?.instagram_url ?? null);
+
+  const popupTopLeftBadge = React.useMemo(() => {
+    if (!isPopup) return null;
+    const status = popupMeta?.residency_status as string | undefined;
+    const rawDates = (popupMeta?.dates_label || post.drop_badge || "").replace(/\s*Drop$/i, "").trim();
+    if (status === "next_confirmed" && rawDates && !rawDates.toLowerCase().includes("tba")) {
+      return { text: `⏳ ${rawDates}`, isHighlight: true };
+    }
+    if (
+      status === "between_residencies" ||
+      status === "seasonal_inactive" ||
+      isPopupInactive
+    ) {
+      return { text: "✦ Pop-Up · Seasonal", isHighlight: false };
+    }
+    return { text: "🔥 Pop-Up · Live", isHighlight: true };
+  }, [isPopup, popupMeta?.residency_status, popupMeta?.dates_label, post.drop_badge, isPopupInactive]);
+
+  const popupDateOnlyLine = React.useMemo(() => {
+    if (!isPopup) return null;
+    const rawDates = (popupMeta?.dates_label || post.drop_badge || "").replace(/\s*Drop$/i, "").trim();
+    if (rawDates && !rawDates.toLowerCase().includes("tba")) {
+      return rawDates;
+    }
+    const hours = popupMeta?.daily_hours || linkedVenue?.current_opening_hours_text;
+    if (hours && !hours.toLowerCase().includes("tba")) {
+      return hours.replace(/\s*until sold out/i, "").trim();
+    }
+    if (isPopupInactive) return "Next Drop TBA";
+    return "Weekend Drop";
+  }, [isPopup, popupMeta?.dates_label, popupMeta?.daily_hours, post.drop_badge, linkedVenue?.current_opening_hours_text, isPopupInactive]);
+
   return (
     <article
       style={{ contain: "layout paint style" }}
@@ -440,94 +477,102 @@ export const FoodPostCard = React.memo(function FoodPostCard({
         {/* Floating Top Badges (Over Image) */}
         <div className="absolute top-3 inset-x-3 flex items-start justify-between gap-2 z-10 pointer-events-auto">
           {/* Top-Left: Pop-up / Price / Kitchen Badge */}
-          <div className="flex flex-wrap items-center gap-1.5 max-w-[70%]">
-            {/* Pop-up Badge in Top-Left so the fact that it's a popup immediately sticks out! */}
-            {isPopup && (
+          <div className="flex flex-wrap items-center gap-1.5 max-w-[75%]">
+            {/* Pop-up Badge in Top-Left dynamically reflecting residency_status */}
+            {isPopup && popupTopLeftBadge && (
               <span
-                className={`font-sans font-bold tracking-tight px-3 py-1 rounded-full text-xs shadow-md flex items-center gap-1.5 ${
-                  isPopupActive
+                className={`font-sans font-bold tracking-tight px-3 py-1 rounded-full text-xs shadow-md flex items-center gap-1.5 whitespace-nowrap ${
+                  popupTopLeftBadge.isHighlight
                     ? "bg-[#E84A27] text-white"
                     : "bg-[#FAF7F2] text-[#181615] border border-black/10"
                 }`}
               >
-                <span>{isPopupActive ? "Pop-Up · Live" : "Pop-Up · Dates TBA"}</span>
+                <span>{popupTopLeftBadge.text}</span>
               </span>
             )}
 
-            {/* Price (ONLY if there is a real NOK price; never show the '$$ · + kr' money thing for popups) */}
-            {typeof post.price_nok === "number" && post.price_nok > 0 ? (
-              <span className="font-sans font-bold tracking-tight bg-[#e84a27] text-white px-3 py-1 rounded-full text-xs shadow-md rotate-[-1deg]">
+            {/* Price for non-popups in Top-Left (Pop-ups render price in Top-Right) */}
+            {!isPopup && typeof post.price_nok === "number" && post.price_nok > 0 ? (
+              <span
+                className={`font-comico font-bold tracking-tight bg-[#e84a27] text-white rounded-full shadow-md rotate-[-1deg] whitespace-nowrap ${
+                  isGridMode ? "px-2.5 py-1 text-[11px]" : "px-3 py-1 text-xs"
+                }`}
+              >
                 {post.price_nok} kr
               </span>
-            ) : !isPopup && isViewerAdmin ? (
+            ) : !isPopup && !isGridMode && isViewerAdmin ? (
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setQuickEditPost(post);
                 }}
-                className="font-sans font-bold tracking-tight bg-black/65 hover:bg-[#e84a27] text-zinc-100 border border-white/20 px-2.5 py-1 rounded-full text-[11px] shadow-md transition-colors"
+                className="font-comico font-bold tracking-tight bg-black/65 hover:bg-[#e84a27] text-zinc-100 border border-white/20 px-2.5 py-1 rounded-full text-[11px] shadow-md transition-colors whitespace-nowrap"
                 title="Add NOK price"
               >
                 {post.price_tier || linkedVenue?.price_level ? `${post.price_tier || linkedVenue?.price_level} · + kr` : "+ Add kr"}
               </button>
             ) : !isPopup && (post.price_tier || linkedVenue?.price_level) ? (
-              <span className="font-sans font-bold tracking-tight bg-black/75 text-zinc-200 border border-white/15 px-2.5 py-1 rounded-full text-xs shadow-md">
+              <span
+                className={`font-comico font-bold tracking-tight bg-black/75 text-zinc-200 border border-white/15 rounded-full shadow-md whitespace-nowrap ${
+                  isGridMode ? "px-2.5 py-1 text-[11px]" : "px-2.5 py-1 text-xs"
+                }`}
+              >
                 {post.price_tier || linkedVenue?.price_level}
               </span>
             ) : null}
 
-            {/* Live Kitchen Batch Badges */}
-            {activeKitchenStatus === "fresh_batch" && (
-              <span className="bg-[#e84a27] text-white font-bold px-2.5 py-1 rounded-full text-[11px] shadow-md flex items-center gap-1 animate-pulse">
+            {/* Live Kitchen Batch Badges (1-column mode only to keep 2-col grid clean) */}
+            {!isGridMode && activeKitchenStatus === "fresh_batch" && (
+              <span className="bg-[#e84a27] text-white font-bold px-2.5 py-1 rounded-full text-[11px] shadow-md flex items-center gap-1 animate-pulse whitespace-nowrap">
                 <span>🔥</span>
                 <span>Fresh Batch</span>
               </span>
             )}
-            {activeKitchenStatus === "low_stock" && (
-              <span className="bg-amber-500 text-zinc-950 font-bold px-2.5 py-1 rounded-full text-[11px] shadow-md flex items-center gap-1">
+            {!isGridMode && activeKitchenStatus === "low_stock" && (
+              <span className="bg-amber-500 text-zinc-950 font-bold px-2.5 py-1 rounded-full text-[11px] shadow-md flex items-center gap-1 whitespace-nowrap">
                 <span>⚡</span>
                 <span>Few Left Today</span>
               </span>
             )}
-            {activeKitchenStatus === "sold_out" && (
-              <span className="bg-zinc-900/90 text-zinc-300 font-bold px-2.5 py-1 rounded-full text-[11px] border border-white/20 flex items-center gap-1">
+            {!isGridMode && activeKitchenStatus === "sold_out" && (
+              <span className="bg-zinc-900/90 text-zinc-300 font-bold px-2.5 py-1 rounded-full text-[11px] border border-white/20 flex items-center gap-1 whitespace-nowrap">
                 <span>❌</span>
                 <span>Sold Out Today</span>
               </span>
             )}
 
-            {!isPopup && popupStatus.status === "active" && (
-              <span className="bg-[#E84A27] text-white font-bold px-2.5 py-1 rounded-full text-[11px] shadow-sm flex items-center gap-1">
+            {!isPopup && !isGridMode && popupStatus.status === "active" && (
+              <span className="bg-[#E84A27] text-white font-bold px-2.5 py-1 rounded-full text-[11px] shadow-sm flex items-center gap-1 whitespace-nowrap">
                 <Flame className="w-3 h-3 fill-white" />
                 <span>{popupStatus.label}</span>
               </span>
             )}
-            {!isPopup && popupStatus.status === "grace" && (
-              <span className="bg-zinc-800/90 text-zinc-300 font-medium px-2.5 py-1 rounded-full text-[11px] border border-white/10">
+            {!isPopup && !isGridMode && popupStatus.status === "grace" && (
+              <span className="bg-zinc-800/90 text-zinc-300 font-medium px-2.5 py-1 rounded-full text-[11px] border border-white/10 whitespace-nowrap">
                 {popupStatus.label}
               </span>
             )}
 
             {/* Food Truck Badge */}
-            {linkedVenue?.spot_type === "food_truck" && (
-              <span className="bg-emerald-600 text-white font-bold px-2.5 py-1 rounded-full text-[11px] shadow-md flex items-center gap-1">
+            {!isGridMode && linkedVenue?.spot_type === "food_truck" && (
+              <span className="bg-emerald-600 text-white font-bold px-2.5 py-1 rounded-full text-[11px] shadow-md flex items-center gap-1 whitespace-nowrap">
                 <span>🚚</span>
                 <span>Food Truck</span>
               </span>
             )}
           </div>
 
-          {/* Top-Right: Admin Quick Edit + Rating pill + Save bookmark */}
+          {/* Top-Right: Admin Quick Edit + Rating pill (or Pop-Up Price Pill) + Save bookmark */}
           <div className="flex items-center gap-1.5 shrink-0">
-            {isViewerAdmin && (
+            {isViewerAdmin && !isGridMode && (
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setQuickEditPost(post);
                 }}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/95 hover:bg-white text-[#e84a27] shadow-md border border-white/50 text-[11px] font-bold tracking-wide transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/95 hover:bg-white text-[#e84a27] shadow-md border border-white/50 text-[11px] font-bold tracking-wide transition-all hover:scale-105 active:scale-95 cursor-pointer whitespace-nowrap"
                 title="Admin Quick Edit"
                 aria-label="Admin Quick Edit"
               >
@@ -536,8 +581,16 @@ export const FoodPostCard = React.memo(function FoodPostCard({
               </button>
             )}
 
-            {!isPopup && (
-              <span className="bg-black/75 text-amber-400 font-bold px-2.5 py-1 rounded-full text-xs border border-white/10 flex items-center gap-1 shadow-xs">
+            {/* Pop-Up Price Pill in Top-Right next to Bookmark */}
+            {isPopup && typeof post.price_nok === "number" && post.price_nok > 0 && (
+              <span className="font-comico font-bold tracking-tight bg-[#e84a27] text-white px-2.5 py-1 rounded-full text-xs shadow-md whitespace-nowrap">
+                {post.price_nok} kr
+              </span>
+            )}
+
+            {/* Regular Spot Rating Pill (hidden in 2-col grid mode to de-clutter top row) */}
+            {!isPopup && !isGridMode && (
+              <span className="bg-black/75 text-amber-400 font-bold px-2.5 py-1 rounded-full text-xs border border-white/10 flex items-center gap-1 shadow-xs whitespace-nowrap">
                 <span className="text-amber-400 text-xs">★</span>
                 <span className="font-sans font-bold text-white text-xs tracking-tight">{displayRating}</span>
               </span>
@@ -574,24 +627,33 @@ export const FoodPostCard = React.memo(function FoodPostCard({
         <div className={`absolute bottom-0 inset-x-0 z-10 flex flex-col justify-end pointer-events-auto ${
           isGridMode ? "p-2.5 sm:p-3" : "p-3.5 sm:p-4"
         }`}>
-          {/* Pop-up dates line only when confirmed; status already shows in the top badge */}
-          {isPopupActive && popupMeta?.dates_label && (
-            <div className="mb-1 text-[11px] font-bold tracking-wide text-[#FF8566]">
-              {popupMeta.dates_label}
-            </div>
-          )}
-
-          {/* Dish Title (Comico brand font — food title only, not location) */}
-          <h3 className={`font-comico font-black tracking-wide leading-[1.15] text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] line-clamp-1 capitalize ${
-            isGridMode ? "text-[15px] sm:text-[18px]" : "text-[21px] sm:text-[23px]"
+          {/* Dish Title (Comico brand font — 2 lines allowed in grid mode) */}
+          <h3 className={`font-comico font-black tracking-wide leading-[1.15] text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] capitalize ${
+            isGridMode
+              ? "text-[14px] sm:text-[15px] line-clamp-2"
+              : "text-[21px] sm:text-[23px] line-clamp-1"
           }`}>
             {post.dish_name}
           </h3>
 
-          {/* Venue & Location (Clean neighborhood & walking distance) */}
-          <div className={`${isGridMode ? "text-[11.5px]" : "text-[13.5px]"} font-semibold text-white/95 drop-shadow-xs mt-1 flex items-center gap-1 flex-wrap`}>
-            <MapPin className={`${isGridMode ? "w-3.5 h-3.5" : "w-[15px] h-[15px]"} text-[#e84a27] shrink-0`} />
-            <span className="font-semibold text-white truncate max-w-[120px] sm:max-w-none">{post.spot_name}</span>
+          {/* Pop-Up Date Only Under Title */}
+          {isPopup && popupDateOnlyLine && !isGridMode && (
+            <div className="mt-1 flex items-center gap-1.5 text-[12px] font-bold text-[#FF8566] drop-shadow-xs">
+              <Calendar className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
+              <span>{popupDateOnlyLine}</span>
+            </div>
+          )}
+
+          {/* Venue & Location (Pop-Up Icon + Pop-Up Name for pop-ups; MapPin + Venue Name for regular spots) */}
+          <div className={`${isGridMode ? "text-[11.5px]" : "text-[13.5px]"} font-semibold text-white/95 drop-shadow-xs mt-1 flex items-center gap-1.5 flex-wrap`}>
+            {isPopup ? (
+              <SmakrFoodIcon name="popup" className={`${isGridMode ? "w-4 h-4" : "w-4 h-4"} shrink-0`} />
+            ) : (
+              <MapPin className={`${isGridMode ? "w-3.5 h-3.5" : "w-[15px] h-[15px]"} text-[#e84a27] shrink-0`} />
+            )}
+            <span className="font-semibold text-white truncate max-w-[175px] sm:max-w-none">
+              {post.spot_name}
+            </span>
             {!isGridMode && (
               <>
                 <span className="text-zinc-400">·</span>
@@ -621,56 +683,37 @@ export const FoodPostCard = React.memo(function FoodPostCard({
             </div>
           )}
 
-          {/* Author & Interactive Foodie Reactions Footer */}
-          <div className="flex items-center justify-between gap-1.5 pt-1 mt-0.5 flex-wrap">
-            {/* Left: Author Avatar Bust + @handle */}
-            {!isGridMode && (
-              <div className="flex items-center gap-1.5 min-w-0">
-                {isNiwacheAdmin ? (
-                  <div className="w-11 h-12 shrink-0 flex items-end justify-center drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)] select-none overflow-visible -my-1">
-                    <OfficialSmakrMascot size={44} />
-                  </div>
-                ) : (
-                  <div className="w-11 h-12 shrink-0 flex items-end justify-center drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)] select-none overflow-visible -my-1">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={avatarSrc}
-                      alt={post.author?.handle || "author"}
-                      className="w-full h-full object-contain pointer-events-none"
-                    />
-                  </div>
-                )}
-                <span className="text-[11.5px] font-semibold text-zinc-200 truncate max-w-[90px]">
-                  {post.author?.handle?.startsWith("@") ? post.author.handle : `@${post.author?.handle || "smak"}`}
-                </span>
-              </div>
-            )}
+          {/* Author & Interactive Actions Footer (Hidden in 2-col Grid Mode) */}
+          {!isGridMode && (
+            <div className={`flex items-center ${isPopup ? "justify-end" : "justify-between"} gap-2 pt-1.5 mt-0.5 flex-wrap`}>
+              {/* Left: Author Avatar Badge + @handle (inline and grounded) */}
+              {!isPopup && (
+                <div className="flex items-center gap-2 min-w-0">
+                  {isNiwacheAdmin ? (
+                    <div className="w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-full overflow-hidden bg-black/40 border border-white/25 shrink-0 flex items-center justify-center shadow-xs">
+                      <div className="w-9 h-9 translate-y-1">
+                        <OfficialSmakrMascot size={36} />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-full overflow-hidden bg-black/40 border border-white/25 shrink-0 flex items-center justify-center shadow-xs">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={avatarSrc}
+                        alt={post.author?.handle || "author"}
+                        className="w-full h-full object-cover pointer-events-none"
+                      />
+                    </div>
+                  )}
+                  <span className="text-[12px] font-bold text-zinc-100 truncate max-w-[110px] leading-none self-center drop-shadow-xs">
+                    {post.author?.handle?.startsWith("@") ? post.author.handle : `@${post.author?.handle || "smak"}`}
+                  </span>
+                </div>
+              )}
 
-            {/* Right Group: 3 Clean Balanced Tactile Actions */}
-            <div className={`flex items-center gap-1.5 shrink-0 ${isGridMode ? "w-full justify-between pt-0.5" : ""}`}>
-              {/* Action 1: Single Tactile Flame Reaction Pill */}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleToggleLike();
-                }}
-                className={`relative before:absolute before:-inset-2 before:content-[''] touch-manipulation ${
-                  isGridMode ? "h-7 px-2.5 text-[11px]" : "h-9 px-3 text-xs"
-                } rounded-full font-bold flex items-center gap-1 active:scale-95 transition-all cursor-pointer ${
-                  isLiked
-                    ? "bg-[#E84A27] border border-[#FF7A5C] text-white shadow-[0_4px_12px_rgba(232,74,39,0.4)]"
-                    : "bg-[#181615]/75 border border-white/20 text-[#FAF7F2] hover:bg-[#181615]"
-                }`}
-                title={isLiked ? "Liked" : "Worth It"}
-                aria-label="React with fire"
-              >
-                <Flame className={`w-3.5 h-3.5 ${isLiked ? "fill-white text-white" : "text-[#E84A27]"}`} />
-                <span className="font-mono text-xs">{worthItCount}</span>
-              </button>
-
-              {/* Action 2: Clean Circular Share Icon Button */}
-              {!isGridMode && (
+              {/* Right Group: Tactile Actions */}
+              <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+                {/* Action 1: Clean Circular Share Icon Button */}
                 <button
                   type="button"
                   onClick={handleShareDish}
@@ -680,41 +723,53 @@ export const FoodPostCard = React.memo(function FoodPostCard({
                 >
                   <Send className="w-3.5 h-3.5 stroke-[2] -translate-x-[0.5px] translate-y-[0.5px]" />
                 </button>
-              )}
 
-              {/* Action 3: Clean Solid Cream [Map ↗] Button */}
-              {hasConfirmedLocation ? (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleFlyToRadar(e);
-                  }}
-                  className={`relative before:absolute before:-inset-2 before:content-[''] touch-manipulation ${
-                    isGridMode ? "h-7 px-2.5 text-[11px]" : "h-9 px-3.5 text-xs"
-                  } rounded-full bg-[#FAF7F2] hover:bg-white text-[#181615] border border-[#181615]/15 shadow-sm active:scale-95 transition-transform duration-100 font-bold flex items-center gap-1 cursor-pointer shrink-0`}
-                  title="Locate on map"
-                  aria-label="Locate on map"
-                >
-                  <span className="font-comico font-bold tracking-tight text-[#181615]">Map</span>
-                  <ArrowUpRight className="w-3 h-3 stroke-[2.8] text-[#E84A27]" />
-                </button>
-              ) : isPopup ? (
-                <button
-                  type="button"
-                  onClick={handleOpenDetails}
-                  className={`${
-                    isGridMode ? "h-7 px-2.5 text-[11px]" : "h-9 px-3.5 text-xs"
-                  } rounded-full bg-[#FAF7F2] text-[#181615] border-2 border-[#181615] shadow-[0_2px_0_#181615] hover:bg-[#E84A27] hover:text-white hover:border-[#181615] active:translate-y-[1px] active:shadow-none transition-all font-extrabold flex items-center gap-1 cursor-pointer shrink-0`}
-                  title="View drop details"
-                  aria-label="View drop details"
-                >
-                  <span>Details</span>
-                  <ArrowUpRight className="w-3 h-3 stroke-[2.5]" />
-                </button>
-              ) : null}
+                {/* Pop-Up IG ↗ Pill right next to MAP ↗ */}
+                {isPopup && popupInstagramUrl && (
+                  <a
+                    href={popupInstagramUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="relative before:absolute before:-inset-2 before:content-[''] touch-manipulation h-9 px-3 text-xs rounded-full bg-[#181615]/80 hover:bg-[#E84A27] text-[#FAF7F2] hover:text-white border border-white/20 shadow-sm active:scale-95 transition-all font-bold flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap"
+                    title="Follow on Instagram for drop alerts"
+                    aria-label="Follow on Instagram"
+                  >
+                    <span className="font-comico font-bold tracking-tight">IG</span>
+                    <ArrowUpRight className="w-3 h-3 stroke-[2.8] text-[#E84A27]" />
+                  </a>
+                )}
+
+                {/* Action 2: Clean Solid Cream [Map ↗] Button */}
+                {hasConfirmedLocation ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleFlyToRadar(e);
+                    }}
+                    className="relative before:absolute before:-inset-2 before:content-[''] touch-manipulation h-9 px-3.5 text-xs rounded-full bg-[#FAF7F2] hover:bg-white text-[#181615] border border-[#181615]/15 shadow-sm active:scale-95 transition-transform duration-100 font-bold flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap"
+                    title="Locate on map"
+                    aria-label="Locate on map"
+                  >
+                    <span className="font-comico font-bold tracking-tight text-[#181615]">Map</span>
+                    <ArrowUpRight className="w-3 h-3 stroke-[2.8] text-[#E84A27]" />
+                  </button>
+                ) : isPopup ? (
+                  <button
+                    type="button"
+                    onClick={handleOpenDetails}
+                    className="h-9 px-3.5 text-xs rounded-full bg-[#FAF7F2] text-[#181615] border-2 border-[#181615] shadow-[0_2px_0_#181615] hover:bg-[#E84A27] hover:text-white hover:border-[#181615] active:translate-y-[1px] active:shadow-none transition-all font-extrabold flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap"
+                    title="View drop details"
+                    aria-label="View drop details"
+                  >
+                    <span>Details</span>
+                    <ArrowUpRight className="w-3 h-3 stroke-[2.5]" />
+                  </button>
+                ) : null}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </article>

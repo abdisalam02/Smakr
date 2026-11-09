@@ -42,10 +42,11 @@ export function getPopupStatus(venue?: Venue | null): PopupStatus {
         hideMapPin: true,
       };
     }
+    const dateLabel = meta.date_label || meta.dates_label;
     if (meta.residency_status === "next_confirmed") {
       return {
         status: "upcoming",
-        label: meta.date_label ? `Next Drop · ${meta.date_label}` : "Next Drop Confirmed",
+        label: dateLabel ? `Next Drop · ${dateLabel}` : "Next Drop Confirmed",
         isPulsingMarker: false,
         isDimmedCard: false,
         hideMapPin: false,
@@ -55,7 +56,7 @@ export function getPopupStatus(venue?: Venue | null): PopupStatus {
       return {
         status: "active",
         daysLeft: 3,
-        label: meta.date_label ? `Live Now · ${meta.date_label}` : "Live Now",
+        label: dateLabel ? `Live Now · ${dateLabel}` : "Live Now",
         isPulsingMarker: true,
         isDimmedCard: false,
         hideMapPin: false,

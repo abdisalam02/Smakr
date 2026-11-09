@@ -174,8 +174,13 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
     !popupMeta.host_venue_name.toLowerCase().includes("host")
       ? popupMeta.host_venue_name
       : null;
-  const instagramHandle = popupMeta?.instagram_url
-    ? popupMeta.instagram_url
+  const instagramUrl =
+    popupMeta?.instagram_url ||
+    (venue?.website_uri?.includes("instagram.com") ? venue.website_uri : null) ||
+    ((venue?.vibe_signals as any)?.instagram_url ?? null) ||
+    (venue?.description?.match(/https:\/\/(www\.)?instagram\.com\/[^\s"')]+/i)?.[0] ?? null);
+  const instagramHandle = instagramUrl
+    ? instagramUrl
         .replace(/^https?:\/\/(www\.)?instagram\.com\//i, "")
         .replace(/\/$/, "")
         .replace(/^@/, "")
@@ -355,9 +360,11 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
               <span className="text-xs text-zinc-500 font-medium">
                 {isDormant
                   ? "Oslo · Dates & location announcing soon"
+                  : popupMeta?.dates_label
+                  ? `Oslo · ${popupMeta.dates_label}`
                   : popupHostVenue
                   ? `Hosted at ${popupHostVenue}`
-                  : "Oslo Pop-Up Residency"}
+                  : `${formatOsloLocation(venue.address, venue.city || neighborhoodLabel).neighborhood || "Oslo"} · Pop-Up Drop`}
               </span>
             ) : (
               <>
@@ -411,9 +418,9 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
                     <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
                       Next residency dates and location are being confirmed. Follow Instagram for drop updates.
                     </p>
-                    {popupMeta?.instagram_url && (
+                    {instagramUrl && (
                       <a
-                        href={popupMeta.instagram_url}
+                        href={instagramUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-amber-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
@@ -437,65 +444,70 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
                   </>
                 ) : (
                   <>
-                    <div className="flex items-center justify-between">
-                      <span className="px-2.5 py-1 rounded-full bg-[#E84A27] text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                        <Flame className="w-3.5 h-3.5 fill-white" />
-                        <span>Live Now</span>
-                      </span>
-                      {popupMeta?.portion_cap && (
-                        <span className="text-xs font-bold text-[#E84A27] font-mono">{popupMeta.portion_cap}</span>
-                      )}
-                    </div>
-
                     <div className="text-xs font-semibold space-y-1 text-zinc-800 dark:text-zinc-200">
-                      {popupMeta?.dates_label && (
+                      {(popupMeta?.dates_label || venue.current_opening_hours_text) && (
                         <div className="flex items-center gap-1.5">
                           <Calendar className="w-3.5 h-3.5 text-[#E84A27]" />
-                          <span>{popupMeta.dates_label}</span>
+                          <span>{popupMeta?.dates_label || venue.current_opening_hours_text}</span>
                         </div>
                       )}
-                      {(popupMeta?.daily_hours || venue.current_opening_hours_text) && (
+                      {popupMeta?.daily_hours && popupMeta.daily_hours !== popupMeta.dates_label && (
                         <div className="flex items-center gap-1.5">
                           <Clock className="w-3.5 h-3.5 text-[#E84A27]" />
-                          <span>{popupMeta?.daily_hours || venue.current_opening_hours_text}</span>
+                          <span>{popupMeta.daily_hours}</span>
                         </div>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2 flex-wrap pt-1">
-                      {popupHostVenue && (
+                    <div className="space-y-2 pt-1">
+                      {instagramUrl && (
                         <a
-                          href={googleMapsUrl}
+                          href={instagramUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex-1 py-2.5 px-3 rounded-xl bg-[#181615] text-white hover:bg-black text-xs font-bold flex items-center justify-center gap-1.5"
+                          className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-amber-600 hover:opacity-95 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
                         >
-                          <MapPin className="w-3.5 h-3.5 text-[#E84A27]" />
-                          <span>Directions to {popupHostVenue}</span>
-                          <ExternalLink className="w-3 h-3" />
+                          <Instagram className="w-4 h-4" />
+                          <span>Follow {instagramHandle ? `@${instagramHandle}` : "on Instagram"} for Drop Alerts</span>
+                          <ExternalLink className="w-3.5 h-3.5 opacity-80" />
                         </a>
                       )}
-                      {popupMeta?.ticket_url && (
-                        <a
-                          href={popupMeta.ticket_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="py-2.5 px-4 rounded-xl bg-[#E84A27] hover:bg-[#D43D1C] text-white text-xs font-bold"
-                        >
-                          RSVP / Tickets
-                        </a>
-                      )}
-                      {popupMeta?.instagram_url && (
-                        <a
-                          href={popupMeta.instagram_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="py-2.5 px-3 rounded-xl bg-white dark:bg-[#2A2622] border border-[#181615]/10 text-xs font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1"
-                        >
-                          <Instagram className="w-3.5 h-3.5 text-pink-600" />
-                          <span>Instagram</span>
-                        </a>
-                      )}
+
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {popupHostVenue && (
+                          <a
+                            href={googleMapsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 py-2 px-3 rounded-xl bg-[#181615] text-white hover:bg-black text-xs font-bold flex items-center justify-center gap-1.5"
+                          >
+                            <MapPin className="w-3.5 h-3.5 text-[#E84A27]" />
+                            <span>Directions to {popupHostVenue}</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                        {popupMeta?.ticket_url && (
+                          <a
+                            href={popupMeta.ticket_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="py-2 px-4 rounded-xl bg-[#E84A27] hover:bg-[#D43D1C] text-white text-xs font-bold"
+                          >
+                            RSVP / Tickets
+                          </a>
+                        )}
+                        {venue.website_uri && !venue.website_uri.includes("instagram.com") && (
+                          <a
+                            href={venue.website_uri}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="py-2 px-3 rounded-xl bg-white dark:bg-[#2A2622] border border-[#181615]/10 text-xs font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1"
+                          >
+                            <Globe className="w-3.5 h-3.5 text-zinc-500" />
+                            <span>Website</span>
+                          </a>
+                        )}
+                      </div>
                     </div>
                   </>
                 )}
