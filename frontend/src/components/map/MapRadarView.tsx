@@ -314,15 +314,15 @@ function createAquarellePinElement(
   const dishCustomKey = resolveCustomIconKey(taxonomy.dishCategory);
   const explicitVenueIcon = venue.icon ? resolveCustomIconKey(venue.icon) : null;
   const badgePinKey = resolveCustomIconKey(venueBadge.pinIcon);
-  const categoryKey = overrideIconKey || explicitVenueIcon || badgePinKey || taxonomy.dishCategory || venue.food_category || "all";
+  const categoryKey = overrideIconKey || badgePinKey || explicitVenueIcon || taxonomy.dishCategory || venue.food_category || "all";
   const rawIcon =
     !overrideIconKey && venue.icon
       ? String(venue.icon).replace(/[<>&"']/g, "").trim()
       : "";
   const customKey =
     (overrideIconKey ? resolveCustomIconKey(overrideIconKey) : null) ||
-    explicitVenueIcon ||
     badgePinKey ||
+    explicitVenueIcon ||
     dishCustomKey ||
     resolveCustomIconKey(rawIcon) ||
     resolveCustomIconKey(categoryKey);
@@ -813,8 +813,10 @@ export function MapRadarView() {
       const kitchenStatus = venue.kitchen_status?.status ?? "normal";
       const overrideIconKey = overrideIconByVenueId.get(venue.id) ?? null;
       const venueTax = resolveEntityTaxonomy(venue);
+      const venueBadge = resolveVenueDisplayBadge(venue);
+      const badgePinKey = resolveCustomIconKey(venueBadge.pinIcon) || "";
       const dishKey = resolveCustomIconKey(venueTax.dishCategory) || venueTax.dishCategory;
-      const pinKey = `v3|${venue.icon ?? ""}|${dishKey}|${venue.spot_type ?? ""}|${popupStatus.status}|${kitchenStatus}|${venue.food_category}|${venue.name}|${venue.popup_end_date ?? ""}|${overrideIconKey ?? ""}|${isWeeklyPickVenue ? "1" : "0"}`;
+      const pinKey = `v4|${badgePinKey}|${venue.icon ?? ""}|${dishKey}|${venue.spot_type ?? ""}|${popupStatus.status}|${kitchenStatus}|${venue.food_category}|${venue.name}|${venue.popup_end_date ?? ""}|${overrideIconKey ?? ""}|${isWeeklyPickVenue ? "1" : "0"}`;
 
       let existing = markerPoolRef.current.get(venue.id);
       if (existing && existing.rootEl.dataset.pinKey !== pinKey) {

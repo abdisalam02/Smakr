@@ -123,12 +123,13 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   const foodPosts = useCityPulseStore((state) => state.foodPosts);
   // O(1) top curated dish post lookup per venue for instant card rendering
   const topPostByVenueId = useMemo(() => {
-    const map = new Map<string, { photo?: string; dishName?: string }>();
+    const map = new Map<string, { photo?: string; dishName?: string; priceNok?: number | null }>();
     for (const post of foodPosts) {
       if (post.spot_id && post.image_url && !post.is_archived && !map.has(post.spot_id)) {
         map.set(post.spot_id, {
           photo: post.image_url,
           dishName: post.dish_name,
+          priceNok: post.price_nok,
         });
       }
     }
@@ -944,12 +945,13 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                         }
                         const topPost = topPostByVenueId.get(venue.id);
                         return (
-                          <div key={venue.id}>
+                          <div key={venue.id} className={feedLayout === "grid" ? "h-full" : undefined}>
                             <FoodSpotCard
                               venue={venue}
                               index={index}
                               primaryDishPhoto={topPost?.photo}
                               topDishName={topPost?.dishName}
+                              signaturePrice={topPost?.priceNok}
                               priority={isDesktop && index === 0}
                             />
                           </div>
@@ -1079,7 +1081,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                 </div>
               ) : (
                 <div
-                  className={`grid ${feedLayout === "grid" ? "grid-cols-2 grid-flow-row-dense" : "grid-cols-1"} gap-2.5 ${
+                  className={`grid ${feedLayout === "grid" ? "grid-cols-2" : "grid-cols-1"} gap-2.5 ${
                     mobileSheet === "peek" ? "pointer-events-none" : ""
                   }`}
                 >
@@ -1098,7 +1100,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
             {/* 2. Mobile Dishes Feed Panel (Two-Frame Progressive Mount + 120fps Cascade) */}
             <div className={feedMode === "food" ? "block" : "hidden"}>
               {foodPosts.length === 0 && isHydratingData ? (
-                <div className={`grid ${feedLayout === "grid" ? "grid-cols-2 grid-flow-row-dense" : "grid-cols-1"} gap-2.5`}>
+                <div className={`grid ${feedLayout === "grid" ? "grid-cols-2" : "grid-cols-1"} gap-2.5`}>
                   {Array.from({ length: 3 }).map((_, i) => (
                     <FoodPostCardSkeleton key={`m-post-skeleton-${i}`} />
                   ))}
@@ -1107,7 +1109,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                 <FeedEmptyState />
               ) : (
                 <div
-                  className={`grid ${feedLayout === "grid" ? "grid-cols-2 grid-flow-row-dense" : "grid-cols-1"} gap-2.5 ${
+                  className={`grid ${feedLayout === "grid" ? "grid-cols-2" : "grid-cols-1"} gap-2.5 ${
                     mobileSheet === "peek" ? "pointer-events-none" : ""
                   }`}
                 >
@@ -1146,7 +1148,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
             {/* 3. Mobile Spots Feed Panel */}
             <div className={feedMode === "places" ? "block" : "hidden"}>
               {venues.length === 0 && isHydratingData ? (
-                <div className={`grid ${feedLayout === "grid" ? "grid-cols-2 grid-flow-row-dense" : "grid-cols-1"} gap-2.5`}>
+                <div className={`grid ${feedLayout === "grid" ? "grid-cols-2" : "grid-cols-1"} gap-2.5`}>
                   {Array.from({ length: 3 }).map((_, i) => (
                     <FoodSpotCardSkeleton key={`m-spot-skeleton-${i}`} />
                   ))}
@@ -1166,7 +1168,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                 </div>
               ) : (
                 <div
-                  className={`grid ${feedLayout === "grid" ? "grid-cols-2 grid-flow-row-dense" : "grid-cols-1"} gap-2.5 ${
+                  className={`grid ${feedLayout === "grid" ? "grid-cols-2" : "grid-cols-1"} gap-2.5 ${
                     mobileSheet === "peek" ? "pointer-events-none" : ""
                   }`}
                 >
@@ -1183,12 +1185,13 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                     }
                     const topPost = topPostByVenueId.get(venue.id);
                     return (
-                      <div key={venue.id}>
+                      <div key={venue.id} className={feedLayout === "grid" ? "h-full" : undefined}>
                         <FoodSpotCard
                           venue={venue}
                           index={index}
                           primaryDishPhoto={topPost?.photo}
                           topDishName={topPost?.dishName}
+                          signaturePrice={topPost?.priceNok}
                           priority={!isDesktop && index === 0}
                         />
                       </div>

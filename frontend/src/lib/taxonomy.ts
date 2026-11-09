@@ -491,7 +491,7 @@ export function resolveVenueDisplayBadge(venue?: Partial<Venue> | null): VenueDi
   if (nameLower.includes("fuglen")) {
     return { mainTag: "COFFEE", pinIcon: "coffee", filterTags: ["coffee", "specialty_coffee", "roastery"] };
   }
-  if (nameLower.includes("mandi house")) {
+  if (nameLower.includes("mandi house") || nameLower.includes("mandi") || nameLower.includes("madi")) {
     return { flag: "🇾🇪", mainTag: "YEMENI", pinIcon: "mandi_rice", filterTags: ["mandi_rice", "yemeni", "halal", "dinner"] };
   }
   if (nameLower.includes("yum cha")) {
@@ -530,7 +530,7 @@ export function resolveVenueDisplayBadge(venue?: Partial<Venue> | null): VenueDi
 
   // 2. Additional Known Candidates & Pop-Ups
   if (nameLower.includes("farine")) {
-    return { mainTag: "BAKERY", pinIcon: "croissant", filterTags: ["bakery", "sourdough", "pastries"] };
+    return { mainTag: "BAKERY", pinIcon: "cinnamon_roll", filterTags: ["bakery", "cinnamon_roll", "sourdough", "pastries"] };
   }
   if (nameLower.includes("tomodomo")) {
     return { flag: "🇯🇵", mainTag: "RAMEN & UDON", pinIcon: "ramen", filterTags: ["ramen", "udon", "noodle", "japanese", "popup"] };
@@ -588,9 +588,6 @@ export function resolveVenueDisplayBadge(venue?: Partial<Venue> | null): VenueDi
   }
   if (nameLower.includes("gazakjøkken") || nameLower.includes("gazakjokken")) {
     return { flag: "🇵🇸", mainTag: "MIDDLE EASTERN", pinIcon: "kebab", filterTags: ["palestinian", "middle_eastern", "halal", "shawarma"] };
-  }
-  if (nameLower.includes("silin bakeri")) {
-    return { mainTag: "BAKERY", pinIcon: "croissant", filterTags: ["bakery", "flatbread", "halal"] };
   }
   if (nameLower.includes("becco")) {
     return { mainTag: "NATURAL WINE", pinIcon: "natural_wine", filterTags: ["natural_wine", "wine_bar", "popup", "drinks"] };

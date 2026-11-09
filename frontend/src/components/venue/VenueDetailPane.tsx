@@ -35,7 +35,7 @@ import { getPopupStatus, getPopupMeta, isPopupVenue } from "@/lib/popupUtils";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import { formatOsloLocation } from "@/lib/location";
 import { SmakrFoodIcon, isCustomFoodIcon, resolveCustomIconKey } from "@/components/food/FoodIcons";
-import { resolveEntityTaxonomy } from "@/lib/taxonomy";
+import { resolveEntityTaxonomy, resolveVenueDisplayBadge } from "@/lib/taxonomy";
 import { ExpandableReviewText } from "./ExpandableReviewText";
 import { FEED_BLUR_DARK } from "@/lib/feedImages";
 
@@ -307,7 +307,8 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
           ) : (
             <div className="w-full h-full flex items-center justify-center text-4xl">
               {(() => {
-                const customKey = resolveCustomIconKey(venue.icon) || resolveCustomIconKey(venue.food_category);
+                const venueBadge = resolveVenueDisplayBadge(venue);
+                const customKey = resolveCustomIconKey(venueBadge.pinIcon) || resolveCustomIconKey(venue.icon) || resolveCustomIconKey(venue.food_category);
                 if (customKey) {
                   return <SmakrFoodIcon name={customKey} className="w-16 h-16 object-contain" />;
                 }

@@ -21,6 +21,7 @@ interface FoodSpotCardProps {
   index?: number;
   primaryDishPhoto?: string | null;
   topDishName?: string | null;
+  signaturePrice?: number | null;
 }
 
 
@@ -31,6 +32,7 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
   index,
   primaryDishPhoto,
   topDishName,
+  signaturePrice: propSignaturePrice,
 }: FoodSpotCardProps) {
   const flyToSpot = useCityPulseStore((state) => state.flyToSpot);
   const selectVenueById = useCityPulseStore((state) => state.selectVenueById);
@@ -91,12 +93,8 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
   const displayBadge = resolveVenueDisplayBadge(venue);
   const hasGoogleRating = typeof venue.google_rating === "number" && venue.google_rating > 0;
 
-  // Look up matching food post to pull authentic signature dish name and NOK price
-  const existingPost = useCityPulseStore(
-    React.useCallback((s) => s.foodPosts.find((p) => p.spot_id === venue.id), [venue.id])
-  );
-  const signatureDishName = topDishName || existingPost?.dish_name || signature || taxonomy.dishCategory || taxonomy.spotLabel;
-  const signaturePrice = existingPost?.price_nok;
+  const signatureDishName = topDishName || signature || taxonomy.dishCategory || taxonomy.spotLabel;
+  const signaturePrice = propSignaturePrice;
 
   const handleClick = () => {
     selectVenueById(venue.id);
@@ -118,26 +116,27 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
     taxonomy.spotKind;
 
   return (
-    <div
+    <article
+      style={{ contain: "layout paint style" }}
       onClick={handleClick}
       className={`group relative ${
         isGridMode
           ? "flex flex-col rounded-2xl h-full"
           : "flex items-center gap-3 sm:gap-3.5 p-2.5 sm:p-3 rounded-2xl sm:rounded-3xl min-h-[152px] sm:min-h-[168px]"
-      } bg-[#FAF7F2] hover:bg-[#F5EFE4] dark:bg-[#181615] dark:hover:bg-[#1E1C1A] border border-[#181615]/12 dark:border-white/10 shadow-xs hover:shadow-md transition-[background-color,box-shadow] duration-150 cursor-pointer active:scale-[0.985] select-none overflow-hidden ${
+      } bg-[#FAF7F2] hover:bg-[#F5EFE4] dark:bg-[#181615] dark:hover:bg-[#1E1C1A] border border-[#181615]/12 dark:border-white/10 shadow-xs hover:shadow-md transition-[background-color,box-shadow] duration-150 cursor-pointer select-none overflow-hidden ${
         isSelected ? "ring-2 ring-[#E84A27]" : ""
       } ${popupStatus.isDimmedCard ? "opacity-50 grayscale-[20%]" : ""}`}
     >
       {/* Translucent Restaurant Food Icon Watermark on the Right Side */}
       <div
         aria-hidden="true"
-        className={`pointer-events-none select-none absolute z-[1] opacity-[0.13] dark:opacity-[0.17] transition-transform duration-300 group-hover:scale-105 ${
+        className={`pointer-events-none select-none absolute z-[1] opacity-[0.06] dark:opacity-[0.09] text-[#181615] dark:text-white ${
           isGridMode
-            ? "-right-3 -bottom-3 w-20 h-20 rotate-[-10deg]"
-            : "-right-3 top-1/2 -translate-y-1/2 w-28 h-28 sm:w-32 sm:h-32 rotate-[-8deg]"
+            ? "-right-2 -bottom-2 w-20 h-20 rotate-[-10deg]"
+            : "-right-3 top-1/2 -translate-y-1/2 w-24 h-24 sm:w-28 sm:h-28 rotate-[-8deg]"
         }`}
       >
-        <SmakrFoodIcon name={spotIconKey} className="w-full h-full object-contain" />
+        <SmakrFoodIcon name={spotIconKey} monochrome={true} className="w-full h-full object-contain" />
       </div>
 
       {/* Unified Photo Container (never unmounts when switching 1x <-> 2x) */}
@@ -159,7 +158,7 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
             onLoad={() => setThumbReady(true)}
             placeholder="blur"
             blurDataURL={FEED_BLUR_DARK}
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            className="object-cover"
             sizes="(max-width: 640px) 48vw, 220px"
           />
         ) : (
@@ -183,7 +182,7 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
 
         {/* Google Rating Badge bottom-left */}
         {hasGoogleRating && (
-          <div className="absolute bottom-2 left-2 z-[3] flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#181615]/80 backdrop-blur-md text-white text-[10.5px] font-bold shadow-xs border border-white/15">
+          <div className="absolute bottom-2 left-2 z-[3] flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#181615]/90 text-white text-[10.5px] font-bold shadow-xs border border-white/15">
             <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-amber-400 text-amber-400" />
             <span className="font-comico tracking-tight text-white">{venue.google_rating!.toFixed(1)}</span>
           </div>
@@ -193,12 +192,12 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
         {isGridMode && (
           <div className="absolute top-2 right-2 z-[3]">
             {liveOpenStatus.isOpen ? (
-              <span className="bg-[#181615]/75 backdrop-blur-md text-emerald-300 border border-white/15 px-2 py-0.5 rounded-full text-[9.5px] font-bold inline-flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="bg-[#181615]/90 text-emerald-300 border border-white/15 px-2 py-0.5 rounded-full text-[9.5px] font-bold inline-flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                 <span>Open</span>
               </span>
             ) : (
-              <span className="bg-[#181615]/75 backdrop-blur-md text-stone-300 border border-white/15 px-2 py-0.5 rounded-full text-[9.5px] font-medium inline-flex items-center gap-1">
+              <span className="bg-[#181615]/90 text-stone-300 border border-white/15 px-2 py-0.5 rounded-full text-[9.5px] font-medium inline-flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-stone-400" />
                 <span>Closed</span>
               </span>
@@ -342,6 +341,6 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
           </div>
         </div>
       </div>
-    </div>
+    </article>
   );
 });
