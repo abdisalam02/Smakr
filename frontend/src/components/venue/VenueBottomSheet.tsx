@@ -398,24 +398,28 @@ export function VenueBottomSheet() {
               className="fixed inset-0 bg-black/15 cursor-pointer"
             />
 
-            {/* Slidable Card container with unified useMotionValue drag & exit */}
+            {/* Pop out from bottom spring container */}
             <motion.div
               ref={sheetRef}
               initial={{ y: "100%" }}
               animate={{
                 y: 0,
-                transition: { type: "spring", stiffness: 420, damping: 36, mass: 0.75 },
+                transition: { type: "spring", stiffness: 360, damping: 32, mass: 0.8 },
               }}
               exit={{
                 y: "100%",
-                transition: { duration: 0.2, ease: [0.22, 1, 0.36, 1] },
+                transition: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
               }}
-              style={{
-                y: sheetY,
-                contain: "layout style",
-              }}
-              className="relative z-10 w-full h-[88dvh] max-h-[90vh] bg-[#FAF7F2] dark:bg-[#181615] lg:bg-[#FAF7F2]/95 lg:backdrop-blur-sm rounded-t-3xl border-t border-[#181615]/10 dark:border-white/10 shadow-2xl flex flex-col overflow-hidden will-change-transform smakr-bottom-sheet"
+              className="relative z-10 w-full h-[88dvh] max-h-[90vh] flex flex-col pointer-events-auto"
             >
+              {/* Slidable Card container with unified useMotionValue drag & exit */}
+              <motion.div
+                style={{
+                  y: sheetY,
+                  contain: "layout style",
+                }}
+                className="relative w-full h-full bg-[#FAF7F2] dark:bg-[#181615] lg:bg-[#FAF7F2]/95 lg:backdrop-blur-sm rounded-t-3xl border-t border-[#181615]/10 dark:border-white/10 shadow-2xl flex flex-col overflow-hidden will-change-transform smakr-bottom-sheet"
+              >
               {/* 1. PINNED HERO IMAGE BACKGROUND — Generous, cinematic surface area with subtle parallax */}
               {selectedVenue.cover_image_url && (
                 <div className="absolute top-0 inset-x-0 h-[380px] sm:h-[420px] overflow-hidden rounded-t-3xl pointer-events-none z-0">
@@ -676,15 +680,15 @@ export function VenueBottomSheet() {
 
                   {/* Story & Culinary Concept Section */}
                   {selectedVenue.description && (
-                    <div className="p-4 sm:p-5 rounded-3xl bg-white dark:bg-[#1E1C1A] border border-[#181615]/10 space-y-2">
-                      <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                    <div className="px-1 py-1 space-y-1.5">
+                      <div className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
                         <span>✦ Concept &amp; Story</span>
                       </div>
-                      <p className="text-xs sm:text-sm text-zinc-800 dark:text-zinc-200 leading-relaxed whitespace-pre-line font-medium">
+                      <p className="text-[14px] sm:text-[15.5px] text-[#181615]/90 dark:text-zinc-100 leading-relaxed whitespace-pre-line font-medium">
                         {selectedVenue.description}
                       </p>
                       {popupMeta?.guest_chef && (
-                        <div className="pt-2 border-t border-[#181615]/5 text-xs text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
+                        <div className="pt-1.5 text-xs text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
                           <span className="font-bold text-zinc-900 dark:text-white">Resident Chef:</span>
                           <span>{popupMeta.guest_chef}</span>
                         </div>
@@ -1146,7 +1150,8 @@ export function VenueBottomSheet() {
                 </>
               )}
             </div>
-          </motion.div>
+              </motion.div>
+            </motion.div>
         </div>
       )}
     </AnimatePresence>

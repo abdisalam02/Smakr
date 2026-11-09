@@ -399,7 +399,7 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
           </div>
 
           {venue.description && (
-            <p className="text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed font-medium pt-1">
+            <p className="text-[13.5px] sm:text-[14.5px] text-[#181615]/90 dark:text-zinc-200 leading-relaxed font-medium pt-1">
               {venue.description}
             </p>
           )}

@@ -3,8 +3,8 @@
 Updated: 2026-11-09
 
 ## Now
-- Task: Calibrated map pin size for matcha/dumplings to match visual area, and switched pop-up feed card top-left badge to clean paper Pop-Up icon pill.
-- Status: Complete across MapRadarView & FoodPostCard; tsc clean.
+- Task: Restored bottom pop-out spring animation on restaurant card and removed borderbox from Concept & Story with larger font.
+- Status: Complete in VenueBottomSheet and VenueDetailPane; tsc clean.
 
 ## Next (max 3)
 1. Curate and verify photos for remaining 9 staged pop-ups in /admin/seeding-lab.
