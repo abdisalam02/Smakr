@@ -92,6 +92,19 @@ function getUserAvatarDimensions(zoom: number): { width: number; height: number 
   return { width, height };
 }
 
+function isMatchaOrDumplingIcon(key?: string | null): boolean {
+  if (!key) return false;
+  const k = key.toLowerCase();
+  return (
+    k === "matcha" ||
+    k === "matcha_cup" ||
+    k === "dumplings" ||
+    k === "dumplings_buns" ||
+    k === "gyoza" ||
+    k === "dim_sum"
+  );
+}
+
 /**
  * Updates a pin's selected/unselected visuals IN PLACE. Markers are created once
  * and only mutated afterwards, so store updates never tear down and rebuild the
@@ -99,14 +112,17 @@ function getUserAvatarDimensions(zoom: number): { width: number; height: number 
  */
 function applyPinState(root: HTMLElement, isSelected: boolean) {
   const isWeeklyPick = root.dataset.isWeeklyPick === "1";
+  const isMatchaOrDumpling = isMatchaOrDumplingIcon(root.dataset.iconKey);
   root.dataset.selected = isSelected ? "1" : "0";
   root.style.zIndex = isSelected ? "55" : isWeeklyPick ? "44" : "15";
   const visual = root.querySelector<HTMLElement>(".pin-visual");
   if (visual) visual.style.transform = isSelected ? "scale(1.14)" : "scale(1.0)";
   const puck = root.querySelector<HTMLElement>(".smakr-map-puck");
   const iconContainer = root.querySelector<HTMLElement>(".smakr-puck-icon");
-  const baseIconPx = isWeeklyPick ? 44 : 39;
-  const selectedIconPx = isWeeklyPick ? 48 : 43;
+  // Calibrated size override specifically for wide (dumplings aspect 2.07) and tall (matcha aspect 0.48) icons
+  // so their visual surface area and presence matches standard round/square icons (39px/44px)
+  const baseIconPx = isWeeklyPick ? (isMatchaOrDumpling ? 56 : 44) : (isMatchaOrDumpling ? 51 : 39);
+  const selectedIconPx = isWeeklyPick ? (isMatchaOrDumpling ? 60 : 48) : (isMatchaOrDumpling ? 55 : 43);
   if (puck) {
     puck.style.background = "transparent";
     puck.style.border = "none";
@@ -300,6 +316,7 @@ function createAquarellePinElement(
     resolveCustomIconKey(categoryKey);
   const isCustomVectorKey = Boolean(customKey);
   const iconKey = customKey || overrideIconKey || rawIcon || categoryKey;
+  root.dataset.iconKey = iconKey;
   const iconSvg = FOOD_PIN_SVG_MAP[iconKey] || FOOD_PIN_SVG_MAP[categoryKey] || FOOD_PIN_SVG_MAP.all;
   const curatedIcon = isCustomVectorKey
     ? ""
@@ -310,7 +327,10 @@ function createAquarellePinElement(
     : venue.spot_type === "popup"
     ? "✨"
     : "";
-  const pinIconPx = isWeeklyPickVenue ? 44 : 39;
+  const isMatchaOrDumpling = isMatchaOrDumplingIcon(iconKey);
+  const pinIconPx = isWeeklyPickVenue
+    ? (isMatchaOrDumpling ? 56 : 44)
+    : (isMatchaOrDumpling ? 51 : 39);
   const puckPx = isWeeklyPickVenue ? 50 : 46;
   const webpUrl =
     DISH_ICON_WEBP[iconKey] ||
@@ -964,12 +984,12 @@ export function MapRadarView() {
       imgEl?: HTMLImageElement | null
     ) => {
       // In smakr-pick-pointing.svg, index fingertip is at (0.9387 * width, 0.5145 * height).
-      // The floating food icon radius is ~22px (24px when selected).
-      // Setting the fingertip anchor at -25px (or +25px when flipped) ensures the finger is
+      // The floating food icon radius is ~22px to 26px.
+      // Setting the fingertip anchor at -26px (or +26px when flipped) ensures the finger is
       // completely exposed and pointing directly at the outer edge of the food icon.
       const leftOffset = placeRight
-        ? 25 - Math.round(0.0613 * bustWidth)
-        : -25 - Math.round(0.9387 * bustWidth);
+        ? 26 - Math.round(0.0613 * bustWidth)
+        : -26 - Math.round(0.9387 * bustWidth);
       const topOffset = -Math.round(0.5145 * bustHeight);
       inner.style.left = `${leftOffset}px`;
       inner.style.top = `${topOffset}px`;

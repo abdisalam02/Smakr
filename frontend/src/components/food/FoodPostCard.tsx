@@ -393,23 +393,6 @@ export const FoodPostCard = React.memo(function FoodPostCard({
     (linkedVenue?.website_uri?.includes("instagram.com") ? linkedVenue.website_uri : null) ||
     ((linkedVenue?.vibe_signals as any)?.instagram_url ?? null);
 
-  const popupTopLeftBadge = React.useMemo(() => {
-    if (!isPopup) return null;
-    const status = popupMeta?.residency_status as string | undefined;
-    const rawDates = (popupMeta?.dates_label || post.drop_badge || "").replace(/\s*Drop$/i, "").trim();
-    if (status === "next_confirmed" && rawDates && !rawDates.toLowerCase().includes("tba")) {
-      return { text: `⏳ ${rawDates}`, isHighlight: true };
-    }
-    if (
-      status === "between_residencies" ||
-      status === "seasonal_inactive" ||
-      isPopupInactive
-    ) {
-      return { text: "✦ Pop-Up · Seasonal", isHighlight: false };
-    }
-    return { text: "🔥 Pop-Up · Live", isHighlight: true };
-  }, [isPopup, popupMeta?.residency_status, popupMeta?.dates_label, post.drop_badge, isPopupInactive]);
-
   const popupDateOnlyLine = React.useMemo(() => {
     if (!isPopup) return null;
     const rawDates = (popupMeta?.dates_label || post.drop_badge || "").replace(/\s*Drop$/i, "").trim();
@@ -478,16 +461,15 @@ export const FoodPostCard = React.memo(function FoodPostCard({
         <div className="absolute top-3 inset-x-3 flex items-start justify-between gap-2 z-10 pointer-events-auto">
           {/* Top-Left: Pop-up / Price / Kitchen Badge */}
           <div className="flex flex-wrap items-center gap-1.5 max-w-[75%]">
-            {/* Pop-up Badge in Top-Left dynamically reflecting residency_status */}
-            {isPopup && popupTopLeftBadge && (
+            {/* Pop-up Badge in Top-Left (Clean neutral paper badge, icon + "Pop-Up", no orange background) */}
+            {isPopup && (
               <span
-                className={`font-sans font-bold tracking-tight px-3 py-1 rounded-full text-xs shadow-md flex items-center gap-1.5 whitespace-nowrap ${
-                  popupTopLeftBadge.isHighlight
-                    ? "bg-[#E84A27] text-white"
-                    : "bg-[#FAF7F2] text-[#181615] border border-black/10"
+                className={`font-comico font-bold tracking-tight rounded-full shadow-md flex items-center gap-1.5 whitespace-nowrap bg-[#FAF7F2]/95 backdrop-blur-xs text-[#181615] border border-black/12 ${
+                  isGridMode ? "px-2.5 py-0.5 text-[11px]" : "px-3 py-1 text-xs"
                 }`}
               >
-                <span>{popupTopLeftBadge.text}</span>
+                <SmakrFoodIcon name="popup" className={`${isGridMode ? "w-3.5 h-3.5" : "w-4 h-4"} shrink-0`} />
+                <span>Pop-Up</span>
               </span>
             )}
 

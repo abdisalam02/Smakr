@@ -3,8 +3,8 @@
 Updated: 2026-11-09
 
 ## Now
-- Task: Unified You avatar size with Smakr Pick, removed pin anchor dots (floating die-cut icons), and fixed Smakr Pick pointing finger placement & z-index.
-- Status: Complete in MapRadarView; tsc/build verified.
+- Task: Calibrated map pin size for matcha/dumplings to match visual area, and switched pop-up feed card top-left badge to clean paper Pop-Up icon pill.
+- Status: Complete across MapRadarView & FoodPostCard; tsc clean.
 
 ## Next (max 3)
 1. Curate and verify photos for remaining 9 staged pop-ups in /admin/seeding-lab.
