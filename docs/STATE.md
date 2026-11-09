@@ -3,8 +3,8 @@
 Updated: 2026-11-09
 
 ## Now
-- Task: Fixed pop-up sheet scroll glitch, removed "Live Now/portion_cap", updated map pin & popup card header, and aligned @handle with circular avatar.
-- Status: Complete across VenueBottomSheet, VenueDetailPane, MapRadarView, and FoodPostCard; tsc clean.
+- Task: Unified You avatar size with Smakr Pick, removed pin anchor dots (floating die-cut icons), and fixed Smakr Pick pointing finger placement & z-index.
+- Status: Complete in MapRadarView; tsc/build verified.
 
 ## Next (max 3)
 1. Curate and verify photos for remaining 9 staged pop-ups in /admin/seeding-lab.

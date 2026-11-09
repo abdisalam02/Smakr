@@ -86,8 +86,8 @@ function getMapMascotDimensions(zoom: number): { width: number; height: number }
 }
 
 function getUserAvatarDimensions(zoom: number): { width: number; height: number } {
-  // Calibrated so user bust matches the visual head/torso volume of the Smakr mascot (~48px x 40px at zoom 13.5)
-  const height = Math.round(Math.min(58, Math.max(36, (zoom - 10) * 5 + 31)));
+  // Calibrated so user bust visual head volume matches the Smakr mascot head (head ~21-22px at zoom 13.5)
+  const height = Math.round(Math.min(42, Math.max(26, (zoom - 10) * 3.6 + 23)));
   const width = Math.round(height * 0.82);
   return { width, height };
 }
@@ -98,7 +98,6 @@ function getUserAvatarDimensions(zoom: number): { width: number; height: number 
  * marker DOM (which caused layout thrash and frame drops).
  */
 function applyPinState(root: HTMLElement, isSelected: boolean) {
-  const isPopup = root.dataset.isPopup === "1";
   const isWeeklyPick = root.dataset.isWeeklyPick === "1";
   root.dataset.selected = isSelected ? "1" : "0";
   root.style.zIndex = isSelected ? "55" : isWeeklyPick ? "44" : "15";
@@ -106,7 +105,6 @@ function applyPinState(root: HTMLElement, isSelected: boolean) {
   if (visual) visual.style.transform = isSelected ? "scale(1.14)" : "scale(1.0)";
   const puck = root.querySelector<HTMLElement>(".smakr-map-puck");
   const iconContainer = root.querySelector<HTMLElement>(".smakr-puck-icon");
-  const dot = root.querySelector<HTMLElement>(".smakr-puck-dot");
   const baseIconPx = isWeeklyPick ? 44 : 39;
   const selectedIconPx = isWeeklyPick ? 48 : 43;
   if (puck) {
@@ -145,19 +143,6 @@ function applyPinState(root: HTMLElement, isSelected: boolean) {
         img.style.width = `${baseIconPx}px`;
         img.style.height = `${baseIconPx}px`;
       }
-    }
-  }
-  if (dot) {
-    if (isSelected) {
-      dot.style.background = "#E84A27";
-      dot.style.borderColor = "#E84A27";
-      dot.style.transform = "scale(1.35)";
-      dot.style.boxShadow = "0 0 0 2px rgba(232, 74, 39, 0.25), 0 2px 5px rgba(232, 74, 39, 0.4)";
-    } else {
-      dot.style.background = "#FAF7F2";
-      dot.style.borderColor = isPopup ? "#E84A27" : "rgba(24, 22, 21, 0.28)";
-      dot.style.transform = "scale(1.0)";
-      dot.style.boxShadow = isPopup ? "0 1px 3px rgba(232, 74, 39, 0.35)" : "0 1px 3px rgba(24, 22, 21, 0.35)";
     }
   }
 }
@@ -225,9 +210,9 @@ function buildUserAvatarPuckElement(
   // Subtle warm-paper editorial micro-pill
   const badge = document.createElement("div");
   badge.className =
-    "puck-badge -mt-1.5 relative z-20 bg-[#FAF7F2]/95 backdrop-blur-xs text-[#181615]/85 font-bold text-[7.5px] tracking-[0.06em] uppercase leading-none px-1.5 py-0.5 rounded-full shadow-[0_1px_4px_rgba(24,22,21,0.14)] border border-[#181615]/12 whitespace-nowrap flex items-center gap-1 group-hover:scale-105 transition-transform";
+    "puck-badge -mt-1 relative z-20 bg-[#FAF7F2]/95 backdrop-blur-xs text-[#181615]/85 font-bold text-[7px] tracking-[0.06em] uppercase leading-none px-1 py-0.5 rounded-full shadow-[0_1px_3px_rgba(24,22,21,0.12)] border border-[#181615]/12 whitespace-nowrap flex items-center gap-1 group-hover:scale-105 transition-transform";
   badge.style.fontFamily = "var(--font-comico), sans-serif";
-  badge.innerHTML = `<span style="width:4px;height:4px;border-radius:9999px;background:#10B981;display:inline-block;"></span><span>You</span>`;
+  badge.innerHTML = `<span style="width:3.5px;height:3.5px;border-radius:9999px;background:#10B981;display:inline-block;"></span><span>You</span>`;
 
   // Glowing emerald GPS radar pulse dot directly beneath the bust
   const gpsDotWrapper = document.createElement("div");
@@ -235,12 +220,12 @@ function buildUserAvatarPuckElement(
 
   const ripple = document.createElement("div");
   ripple.className =
-    "absolute w-4 h-4 rounded-full bg-[#10B981]/30 border border-[#10B981]/50 animate-ping pointer-events-none";
+    "absolute w-3 h-3 rounded-full bg-[#10B981]/30 border border-[#10B981]/50 animate-ping pointer-events-none";
   ripple.style.animationDuration = "2s";
 
   const gpsDot = document.createElement("div");
   gpsDot.className =
-    "relative z-10 w-2 h-2 rounded-full bg-[#10B981] border-2 border-white shadow-[0_0_8px_#10B981]";
+    "relative z-10 w-1.5 h-1.5 rounded-full bg-[#10B981] border-[1.5px] border-white shadow-[0_0_6px_#10B981]";
 
   gpsDotWrapper.appendChild(ripple);
   gpsDotWrapper.appendChild(gpsDot);
@@ -425,8 +410,6 @@ function createAquarellePinElement(
       ">
         ${pinGlyph}
       </div>
-      <!-- Ground GPS anchor dot centered directly beneath the floating icon -->
-      <div class="smakr-puck-dot" style="width: 6px; height: 6px; border-radius: 9999px; background: #FAF7F2; border: 1px solid ${isPopup ? "#E84A27" : "rgba(24, 22, 21, 0.28)"}; box-shadow: ${isPopup ? "0 1px 3px rgba(232, 74, 39, 0.35)" : "0 1px 3px rgba(24, 22, 21, 0.35)"}; margin-top: 1px; flex-shrink: 0; transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;"></div>
     </div>
   `;
 
@@ -981,11 +964,13 @@ export function MapRadarView() {
       imgEl?: HTMLImageElement | null
     ) => {
       // In smakr-pick-pointing.svg, index fingertip is at (0.9387 * width, 0.5145 * height).
-      // The 50px weekly pick puck radius is 25px, with inner food icon extending to radius 21px.
+      // The floating food icon radius is ~22px (24px when selected).
+      // Setting the fingertip anchor at -25px (or +25px when flipped) ensures the finger is
+      // completely exposed and pointing directly at the outer edge of the food icon.
       const leftOffset = placeRight
-        ? 16 - Math.round(0.0613 * bustWidth)
-        : -16 - Math.round(0.9387 * bustWidth);
-      const topOffset = -Math.round(0.5145 * bustHeight) - 2;
+        ? 25 - Math.round(0.0613 * bustWidth)
+        : -25 - Math.round(0.9387 * bustWidth);
+      const topOffset = -Math.round(0.5145 * bustHeight);
       inner.style.left = `${leftOffset}px`;
       inner.style.top = `${topOffset}px`;
       inner.style.transform = "none";
@@ -1009,14 +994,14 @@ export function MapRadarView() {
       root.style.margin = "0";
       root.style.padding = "0";
       root.style.pointerEvents = "none";
-      root.style.zIndex = "45";
+      root.style.zIndex = "65";
       root.style.display = "block";
 
       const inner = document.createElement("div");
       inner.className =
         "weekly-pick-bust-inner relative flex flex-col items-center group cursor-pointer select-none pointer-events-auto transition-transform duration-200";
       inner.style.position = "absolute";
-      inner.style.zIndex = "45";
+      inner.style.zIndex = "65";
 
       const badge = buildWeeklyBadge();
       inner.appendChild(badge);
@@ -1068,7 +1053,7 @@ export function MapRadarView() {
       root.style.margin = "0";
       root.style.padding = "0";
       root.style.pointerEvents = "none";
-      root.style.zIndex = "45";
+      root.style.zIndex = "65";
       root.style.display = "block";
       root.innerHTML = "";
 
@@ -1076,7 +1061,7 @@ export function MapRadarView() {
       inner.className =
         "weekly-pick-bust-inner relative flex flex-col items-center group cursor-pointer select-none pointer-events-auto transition-transform duration-200";
       inner.style.position = "absolute";
-      inner.style.zIndex = "45";
+      inner.style.zIndex = "65";
 
       const badge = buildWeeklyBadge();
       inner.appendChild(badge);
