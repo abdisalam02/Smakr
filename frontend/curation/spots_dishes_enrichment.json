@@ -1,0 +1,373 @@
+[
+  {
+    "venue_id": "6952e7c0-1ae9-4865-b81b-272858404d95",
+    "venue_name": "Digg Pizza - Grønland",
+    "description": "Digg Pizza brings Roman-style pizza al taglio to Grønland, fermenting their airy high-hydration dough for over 48 hours to create a shatteringly crisp, focaccia-like crust. Baked in rectangular blue-steel pans, the vibrant neighborhood counter lets diners mix-and-match square cuts topped with fresh local produce and Italian cured meats. It has become a fast neighborhood favorite for casual street-side lunches and late-night slices.",
+    "dishes": [
+      {
+        "dish_id": "dish-digg-cheeesy",
+        "dish_name": "Cheeesy",
+        "price_nok": 148,
+        "review_text": "A thick, airy Roman focaccia base with a crisp bottom crust, drenched in bubbling mozzarella, sharp aged cheddar, and a kick of creamy gorgonzola.",
+        "taste_tags": [
+          "crispy-crust",
+          "cheesy",
+          "savory"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "31fc5cc9-302a-448d-b79b-5d47e4c797fb",
+    "venue_name": "Ochaya - The Matcha",
+    "description": "Tucked near Torggata, Ochaya is Oslo's dedicated Japanese tea bar, sourcing ceremonial and culinary grade green tea directly from historic estates in Uji, Kyoto. Behind the minimalist blonde-wood counter, each bowl of emerald matcha is whisked to order with a bamboo chasen before being layered into cold or steamed milk drinks. It serves as a calm sanctuary for tea purists and dessert lovers seeking genuine bittersweet Japanese flavors.",
+    "dishes": [
+      {
+        "dish_id": "dish-ochaya-biscoff-matcha",
+        "dish_name": "Biscoff Matcha",
+        "price_nok": 78,
+        "review_text": "Vibrant grassy Uji matcha layered over creamy milk and topped with rich, spiced caramelized Lotus cookie butter drizzle.",
+        "taste_tags": [
+          "earthy",
+          "caramelized",
+          "creamy"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "9320b20c-eb48-4a41-a3d5-a5bb34a74488",
+    "venue_name": "Daglig Brød",
+    "description": "Perched in historic Gamlebyen near the medieval park ruins, Daglig Brød is an artisanal neighborhood bakery that champions organic Norwegian heritage grains and wild sourdough leavening. Loaves emerge with dark, blistered crusts and custardy crumb structures alongside hand-twisted sweet buns baked fresh each morning. The warm, flour-dusted storefront draws locals across eastern Oslo for morning coffee and still-warm pastries.",
+    "dishes": [
+      {
+        "dish_id": "dish-daglig-brod-boller",
+        "dish_name": "Søtbakst / Boller",
+        "price_nok": 135,
+        "review_text": "Plump, golden hand-twisted dough infused with coarsely crushed cardamom pods and real butter, caramelized lightly on the baking stone.",
+        "taste_tags": [
+          "cardamom-scented",
+          "buttery",
+          "fluffy"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "58e4a775-e75a-4322-8b48-7ed325e19ec5",
+    "venue_name": "Miso Ramen",
+    "description": "Located near Vika and Aker Brygge, Miso Ramen specializes in authentic northern Japanese noodle bowls centered on deep, fermented miso broths and slow-cooked paitan. Each bowl is assembled with house-made wavy alkaline noodles engineered to hold maximum soup, crowned with torch-seared chashu pork, marinated eggs, and menma bamboo shoots. The steamy, high-energy dining room offers some of the city's most comforting winter slurping.",
+    "dishes": [
+      {
+        "dish_id": "dish-miso-ramen-special",
+        "dish_name": "Miso Ramen",
+        "price_nok": 215,
+        "review_text": "Springy wavy noodles swimming in a rich, wok-tossed pork bone broth deepened with roasted fermented red miso, charred sweetcorn, and tender rolled pork belly.",
+        "taste_tags": [
+          "umami",
+          "rich",
+          "spicy"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "9d71ce5e-89c4-49e0-9da3-11b87a1087f0",
+    "venue_name": "Lai Zai - Viet Street Food",
+    "description": "Perched on upper Thorvald Meyers gate in Grünerløkka, Lai Zai recreates the electric atmosphere and punchy flavors of Saigon night markets. The kitchen emphasizes scratch-made marinades, fresh herbs flown in weekly, and blistered baguettes loaded with rich liver pâté and house pickles. It has become a neighborhood staple for unpretentious Vietnamese street eats and cold imported beers.",
+    "dishes": [
+      {
+        "dish_id": "dish-lai-zai-banh-mi",
+        "dish_name": "Bánh Mì Sa Tế",
+        "price_nok": 130,
+        "review_text": "Warm, crackling baguette filled with savory roasted meat, rich liver pâté, crisp pickled daikon, and a fiery drizzle of house lemongrass chili oil.",
+        "taste_tags": [
+          "crunchy",
+          "fiery",
+          "tangy"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "4f717139-89a1-4180-9e5e-1d5b80896a67",
+    "venue_name": "Em Oi!",
+    "description": "Operating out of a vibrant stall on historic Brugata, Em Oi! delivers fast-paced, deeply aromatic Vietnamese hawker classics to downtown commuters. Their simmer pots bubble with 12-hour spiced bone broths while phin drip filters press rich dark Robusta coffee sweetened with condensed milk. It serves as an essential pitstop for authentic street cooking that cuts through Oslo's chilly weather.",
+    "dishes": [
+      {
+        "dish_id": "dish-em-oi-coconut-coffee",
+        "dish_name": "Coconut Coffee",
+        "price_nok": 79,
+        "review_text": "Bittersweet dark Vietnamese robusta drip poured over an icy, velvety cloud of blended coconut cream and sweetened condensed milk.",
+        "taste_tags": [
+          "creamy",
+          "roasted",
+          "sweet"
+        ]
+      },
+      {
+        "dish_id": "dish-em-oi-pho",
+        "dish_name": "Pho",
+        "price_nok": 200,
+        "review_text": "Silky flat rice noodles bathed in a fragrant, 12-hour star-anise beef bone broth topped with thinly shaved sirloin, scallions, and fresh herbs.",
+        "taste_tags": [
+          "aromatic",
+          "comforting",
+          "savory"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "29305b8b-4938-4989-81e3-4a18813be6cf",
+    "venue_name": "Cocoa Café",
+    "description": "Situated overlooking Birkelunden park, Cocoa Café is Norway's original dedicated hot chocolate lounge, celebrating molten drinking chocolate crafted with single-origin beans and farm milk. The cozy vintage space invites visitors to choose cocoa percentages, warming spices, and mountain-high homemade toppings. It is a cherished Grünerløkka institution for warming hands after cold strolls through the neighborhood flea markets.",
+    "dishes": [
+      {
+        "dish_id": "dish-cocoa-cafe-hot-chocolate",
+        "dish_name": "Hot Chocolate",
+        "price_nok": 70,
+        "review_text": "Thick, glossy single-origin melted chocolate whisked with velvety steamed whole milk and crowned with airy homemade marshmallow cream.",
+        "taste_tags": [
+          "velvety",
+          "rich",
+          "chocolatey"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "d25493ea-1659-4fa0-b7d3-7349d6b07349",
+    "venue_name": "Kuro Oslo",
+    "description": "Hidden on a quiet residential corner of Rathkes gate, Kuro blends Japanese minimalist design with Nordic specialty coffee precision. The cafe works with small-batch specialty roasters and Japanese tea growers, pouring precision hand brews alongside seasonal specialty milk concoctions. Its stripped-back aesthetic, quiet vinyl soundtrack, and thoughtful drink craft make it an insider retreat away from busy thoroughfares.",
+    "dishes": [
+      {
+        "dish_id": "dish-kuro-psl",
+        "dish_name": "Pumpkin Spice Latte",
+        "price_nok": 89,
+        "review_text": "A velvety espresso and micro-foamed milk drink spiced with real roasted pumpkin purée, warming cinnamon, nutmeg, and a touch of brown sugar.",
+        "taste_tags": [
+          "warming",
+          "spiced",
+          "creamy"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "d0cd7f48-b5f5-40f6-81d9-dd18e7a831f7",
+    "venue_name": "Yum Cha",
+    "description": "Located in the quiet streets behind Majorstuen, Yum Cha revives traditional Cantonese dim sum culture with retro 1970s Hong Kong tea house flair. Bamboo steamers arrive stacked at the table filled with translucent prawn dumplings, open-topped pork siu mai, and barbecue pork buns made by hand. It provides Oslo diners an authentic weekend brunch ritual steeped in jasmine tea and savory dim sum baskets.",
+    "dishes": [
+      {
+        "dish_id": "dish-yumcha-dumplings",
+        "dish_name": "dumplings",
+        "price_nok": 115,
+        "review_text": "Delicate translucent steamed wheat-starch skins stuffed with sweet, plump whole tiger prawns and crunchy water chestnuts, bursting with savory steam.",
+        "taste_tags": [
+          "steamed",
+          "juicy",
+          "springy"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "6c0c16d2-d919-4ec2-9834-dcd6aa9bc2a1",
+    "venue_name": "Zam Zam avd HASLE",
+    "description": "Stationed in the bustling residential hub of Hasle, Zam Zam has earned legendary status among locals for serving authentic American-style cheesesteaks and loaded street eats. Sizzling beef is griddled to order on the flat-top with sweet onions and molten cheese before being tucked into soft toasted bakery hoagies. Generous portions and punchy seasoning make it one of the city's top casual comfort food destinations.",
+    "dishes": [
+      {
+        "dish_id": "dish-zam-zam-cheesesteak",
+        "dish_name": "Beef Cheesesteak Sandwich",
+        "price_nok": 175,
+        "review_text": "Thin-ribboned grilled beefsteak tossed with caramelized onions and peppers, blanketed in gooey melted cheese inside a warm, soft-toasted roll.",
+        "taste_tags": [
+          "juicy",
+          "cheesy",
+          "savory"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "fc0775b3-cfe4-420d-ad0f-ffe0c50f8195",
+    "venue_name": "Mandi House restaurant Oslo بيت المندي، ،yemeni restaurant",
+    "description": "Situated in the heart of Tøyen, Mandi House introduces Oslo to the ancient culinary traditions of Yemen and the Arabian Peninsula. The kitchen centers on the slow-braising and charcoal-roasting of seasoned whole lamb and chicken over massive mounds of long-grain basmati spiced with dried lime, cardamom, and saffron. Served communally on wide silver platters with fiery tomato-coriander salsa, it is a warm, deeply hospitable feast for families and friends.",
+    "dishes": [
+      {
+        "dish_id": "dish-mandi-lamb-platter",
+        "dish_name": "Lamb Mandi Platter",
+        "price_nok": 225,
+        "review_text": "Fall-apart tender braised lamb shoulder redolent with smoky whole spices, resting on a fragrant bed of golden basmati rice with a bright zahawig tomato-chili salsa.",
+        "taste_tags": [
+          "tender",
+          "fragrant",
+          "smoky"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "d8d80f28-7757-41bc-8b46-e64cbe103992",
+    "venue_name": "U WAN SUM",
+    "description": "U WAN SUM is an itinerant specialty beverage pop-up known for hosting limited-edition weekend takeovers across Oslo creative spaces and coffee bars. Their concept reimagines classic Southeast Asian café culture through artisanal Vietnamese iced coffees, layered matcha infusions, and velvety foam toppings. Operating without a permanent storefront, their drops attract devoted queues of design-conscious locals tracking their announcements on Instagram.",
+    "dishes": [
+      {
+        "dish_id": "dish-uwansum-egg-coffee",
+        "dish_name": "Egg coffee",
+        "price_nok": 75,
+        "review_text": "Dark, bittersweet Vietnamese robusta drip crowned with an impossibly thick, velvety custard foam whipped from egg yolks and sweetened condensed milk.",
+        "taste_tags": [
+          "custard-like",
+          "bold",
+          "sweet"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "579a51b3-ebb5-4638-a64c-8aed027563bd",
+    "venue_name": "Dirty Taco",
+    "description": "Anchoring the corner of Olaf Ryes plass in Grünerløkka, Dirty Taco shakes up the classic Mexican format with irreverent street-fusion tacos and loaded snack bowls. The kitchen blends slow-braised meats, spicy house sauces, and crispy additions onto warm pressed tortillas. Its energetic music and bustling terrace make it a go-to gathering point for park-goers and casual weekend drinks.",
+    "dishes": [
+      {
+        "dish_id": "dish-dirty-taco-birria",
+        "dish_name": "Dirty Taco / Birria",
+        "price_nok": 145,
+        "review_text": "Crisp flat-top griddled corn tortillas stuffed with slow-cooked shredded beef and melted cheese, served with a rich, spiced dipping broth.",
+        "taste_tags": [
+          "savory",
+          "juicy",
+          "crisp"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "a9bc2f3b-0714-4a12-863a-2517e9bab590",
+    "venue_name": "Fuglen Coffee Roasters",
+    "description": "Housed in a spacious former 19th-century grain silo and factory in Gamlebyen, Fuglen's roasting headquarters represents the pinnacle of Nordic light-roast philosophy. The vintage mid-century modern interior showcases vintage Scandinavian design furniture while beans are meticulously roasted on a restored cast-iron machine. It is a world-renowned pilgrimage site for coffee connoisseurs seeking floral, tea-like single origins and bean-to-bar drinking chocolates.",
+    "dishes": [
+      {
+        "dish_id": "dish-fuglen-hot-chocolate",
+        "dish_name": "Hot Chocolate",
+        "price_nok": 80,
+        "review_text": "Silky melted single-origin 70% dark chocolate steamed with fresh Norwegian organic milk, revealing deep notes of roasted dried cherries and raw cocoa.",
+        "taste_tags": [
+          "fruity",
+          "dark-chocolate",
+          "smooth"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "c0e5aaba-cddd-4897-a47f-b7af8c7e8986",
+    "venue_name": "Masala Politics",
+    "description": "Facing the buzz of Karl Johans gate, Masala Politics brings theatrical pan-Indian street kitchen vibrancy to central Oslo. The dynamic dining room pairs retro Bollywood posters with clay tandoor ovens churning out blistered naan, smoky kebabs, and slow-simmered regional curries. Its lively pace, creative cocktail pairings, and uncompromised spice levels draw both late-night city revelers and discerning spice fans.",
+    "dishes": [
+      {
+        "dish_id": "dish-masala-politics-korma",
+        "dish_name": "Chicken Korma",
+        "price_nok": 300,
+        "review_text": "Tender chargrilled chicken breast morsels smothered in an opulent, velvety gravy made from ground cashews, green cardamom, and saffron-infused cream.",
+        "taste_tags": [
+          "creamy",
+          "nutty",
+          "aromatic"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "40d7d83d-8686-47f0-9d78-727f535b5c32",
+    "venue_name": "175°C K-fried",
+    "description": "Located inside the bustling Mathallen food hall at Vulkan, 175°C K-fried is dedicated to perfecting Korean double-fried chicken cooked at the precise temperature in its name. The thin potato-starch batter shatters on first bite, keeping the chicken beneath tender and juicy before being hand-brushed with savory glazes. It is Oslo's definitive stop for authentic Seoul-style chimaek along the Akerselva river.",
+    "dishes": [
+      {
+        "dish_id": "dish-175c-korean-fried-chicken",
+        "dish_name": "Korean Fried Chicken",
+        "price_nok": 159,
+        "review_text": "Extraordinarily crunchy, double-fried golden chicken coated in a sticky-sweet fermented gochujang glaze, showered with toasted sesame seeds and crushed garlic.",
+        "taste_tags": [
+          "crispy",
+          "spicy",
+          "sticky"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "80c10c09-c945-4983-8dd2-3090cf3cc665",
+    "venue_name": "Håndbakt Tøyen",
+    "description": "Håndbakt operates as a pioneering organic, plant-based sourdough bakery and café nestled on Kjølberggata in Tøyen. Working exclusively with sustainably farmed Nordic grains and natural wild yeast, their bakers craft sourdough loaves and laminated pastries that rival traditional butter bakeries. The light-flooded corner shop has become a morning focal point for neighborhood families, artists, and ethical food lovers.",
+    "dishes": [
+      {
+        "dish_id": "dish-handbakt-kardemommebolle",
+        "dish_name": "Kardemommebolle",
+        "price_nok": 59,
+        "review_text": "A rustic hand-twisted sourdough knot bursting with coarsely ground green cardamom, possessing a sticky caramelized base and tender layered crumb.",
+        "taste_tags": [
+          "cardamom-spiced",
+          "caramelized",
+          "tender"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "f137417c-d536-4a14-a169-8e2e5a6615fe",
+    "venue_name": "Crave",
+    "description": "A short train hop from Oslo Central Station in Lillestrøm, Crave specializes in viral Japanese soufflé pancakes and indulgent sweet and savory comfort fare. Their griddle chefs whip egg whites to stiff peaks, cooking the batter slowly under steam to create jiggly, cloud-like pancakes that melt effortlessly on the tongue. The pastel-toned dessert cafe draws continuous weekend pilgrimages from pastry enthusiasts across the greater Oslo region.",
+    "dishes": [
+      {
+        "dish_id": "dish-crave-cloud-pankakes",
+        "dish_name": "Cloud Pankakes",
+        "price_nok": 189,
+        "review_text": "Towering, jiggly Japanese soufflé pancakes with an airy, marshmallow-like interior, smothered in molten pistachio sauce and crushed nuts.",
+        "taste_tags": [
+          "airy",
+          "sweet",
+          "buttery"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "cea02b51-450d-45e7-b8d6-6c98435470b3",
+    "venue_name": "Kveitemjøl",
+    "description": "Overlooking the harbor promenade at Aker Brygge, Kveitemjøl represents the apex of modern French-Nordic laminating and sourdough viennoiserie in Oslo. Using stone-ground flours and cultured European butter, their bakers fold dozens of paper-thin layers into crisp croissants, cruffins, and glazed swirls. The waterfront bakery frequently forms early morning lines of waterfront joggers and office workers waiting for the next oven bell.",
+    "dishes": [
+      {
+        "dish_id": "dish-kveitemjol-kanelbolle",
+        "dish_name": "Kanelbolle",
+        "price_nok": 59,
+        "review_text": "Multi-laminated flaky pastry twisted around rich cinnamon-butter paste, crowned with pearl sugar and baked to an audible golden crunch.",
+        "taste_tags": [
+          "flaky",
+          "cinnamon-swirled",
+          "buttery"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "09bfa8ca-da77-4b62-b15e-e88b9674f561",
+    "venue_name": "Stykke - Hasle",
+    "description": "Anchoring the modern courtyard of Hasle Linje, Stykke brings contemporary Brooklyn-style slice-shop energy to Oslo's inner east. Giant 20-inch round pies and thick square Roman slices are tossed and baked on stone decks, topped with adventurous flavor pairings from hot honey to teriyaki chicken. With counter seating, craft sodas, and grab-and-go convenience, it has become a community clubhouse for the neighborhood.",
+    "dishes": [
+      {
+        "dish_id": "dish-stykke-chicken-teriyaki",
+        "dish_name": "Chicken Teriyaki Slice",
+        "price_nok": 80,
+        "review_text": "A crisp, thin-crusted New York style pizza slice loaded with charred teriyaki glazed chicken, melted fior di latte, sesame seeds, and fresh spring onions.",
+        "taste_tags": [
+          "sweet-savory",
+          "crispy",
+          "cheesy"
+        ]
+      }
+    ]
+  }
+]
