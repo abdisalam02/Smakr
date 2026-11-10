@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Utensils, Store, Plus } from "lucide-react";
+import { Utensils, Map as MapIcon, Plus } from "lucide-react";
 import { motion } from "motion/react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 
@@ -17,26 +17,35 @@ export function FoodViewSlider({
   spotsCount,
   className = "",
 }: FoodViewSliderProps) {
-  const feedMode = useCityPulseStore((state) => state.feedMode);
+  const viewMode = useCityPulseStore((state) => state.viewMode);
+  const setViewMode = useCityPulseStore((state) => state.setViewMode);
   const setFeedMode = useCityPulseStore((state) => state.setFeedMode);
   const mobileSheet = useCityPulseStore((state) => state.mobileSheetState);
   const setMobileSheet = useCityPulseStore((state) => state.setMobileSheetState);
   const openCreateDish = useCityPulseStore((state) => state.openCreateDish);
 
-  const handleSelectMode = (mode: "food" | "places" | "popups") => {
-    if (feedMode === mode) return;
-    setFeedMode(mode);
+  const isMapActive = viewMode === "map";
+  const isFeedActive = !isMapActive;
+
+  const handleSelectFeed = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setViewMode("split");
+    setFeedMode("food");
     if (mobileSheet === "peek") {
       setMobileSheet("half");
     }
   };
 
-  const isFeedActive = feedMode === "food";
-  const isSpotsActive = feedMode === "places";
+  const handleSelectMap = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setViewMode("map");
+  };
 
   return (
     <nav
-      aria-label="Feed mode navigation"
+      aria-label="Feed and Map navigation"
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}
@@ -49,15 +58,11 @@ export function FoodViewSlider({
         touchAction: "manipulation",
       }}
     >
-      {/* 1. Dishes Tab — expanding accordion pill */}
+      {/* 1. Feed Tab — expanding accordion pill */}
       <button
         type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          handleSelectMode("food");
-        }}
-        aria-label="View Dishes Feed"
+        onClick={handleSelectFeed}
+        aria-label="View Food Feed"
         aria-pressed={isFeedActive}
         className={`relative z-10 flex items-center justify-center rounded-full text-[13px] font-bold cursor-pointer outline-none border-0 select-none transition-all duration-200 active:scale-95 h-10 ${
           isFeedActive
@@ -79,7 +84,7 @@ export function FoodViewSlider({
               isFeedActive ? "max-w-[120px] opacity-100" : "max-w-0 opacity-0"
             }`}
           >
-            <span className="tracking-tight">Dishes</span>
+            <span className="tracking-tight">Feed</span>
             {dishesCount > 0 && (
               <span className="text-[10px] tabular-nums font-semibold px-1.5 py-0.2 rounded-full bg-black/15 text-white">
                 {dishesCount}
@@ -104,23 +109,19 @@ export function FoodViewSlider({
         <Plus className="w-4 h-4 stroke-[2.4] pointer-events-none" />
       </button>
 
-      {/* 2. Spots Tab — expanding accordion pill */}
+      {/* 2. Map Tab — expanding accordion pill */}
       <button
         type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          handleSelectMode("places");
-        }}
-        aria-label="View Food Spots"
-        aria-pressed={isSpotsActive}
+        onClick={handleSelectMap}
+        aria-label="View Map Radar"
+        aria-pressed={isMapActive}
         className={`relative z-10 flex items-center justify-center rounded-full text-[13px] font-bold cursor-pointer outline-none border-0 select-none transition-all duration-200 active:scale-95 h-10 ${
-          isSpotsActive
+          isMapActive
             ? "text-white px-3.5"
             : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white w-10 px-0"
         }`}
       >
-        {isSpotsActive && (
+        {isMapActive && (
           <motion.div
             layoutId="activeFeedTabPill"
             className="absolute inset-0 bg-[#e84a27] rounded-full shadow-xs -z-10 pointer-events-none"
@@ -128,13 +129,13 @@ export function FoodViewSlider({
           />
         )}
         <span className="flex items-center gap-1.5 shrink-0 pointer-events-none">
-          <Store className="w-4 h-4 shrink-0" />
+          <MapIcon className="w-4 h-4 shrink-0" />
           <span
             className={`flex items-center gap-1.5 whitespace-nowrap overflow-hidden transition-[max-width,opacity] duration-220 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-              isSpotsActive ? "max-w-[120px] opacity-100" : "max-w-0 opacity-0"
+              isMapActive ? "max-w-[120px] opacity-100" : "max-w-0 opacity-0"
             }`}
           >
-            <span className="tracking-tight">Spots</span>
+            <span className="tracking-tight">Map</span>
             {spotsCount > 0 && (
               <span className="text-[10px] tabular-nums font-semibold px-1.5 py-0.2 rounded-full bg-black/15 text-white">
                 {spotsCount}

@@ -331,6 +331,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
       handleOpenDetails();
       return;
     }
+    useCityPulseStore.getState().setViewMode("map");
     flyToSpot(post.spot_coords, post.spot_id);
   };
 

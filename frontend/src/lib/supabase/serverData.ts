@@ -8,6 +8,7 @@ import {
   type Venue,
   type WeeklyPick,
 } from "@/types";
+import { INITIAL_FOOD_SPOTS, INITIAL_FOOD_POSTS } from "@/lib/foodSeeds";
 import type { OnboardingAvatarConfig } from "@/types/onboarding";
 import { getSupabaseServerClient } from "./server";
 import {
@@ -58,7 +59,7 @@ function getServerClient(): SupabaseClient | null {
 const getCachedVenues = unstable_cache(
   async (): Promise<Venue[]> => {
     const supabase = getServerClient();
-    if (!supabase) return [];
+    if (!supabase) return INITIAL_FOOD_SPOTS;
     try {
       const { data, error } = await supabase
         .from("venues")
@@ -66,13 +67,13 @@ const getCachedVenues = unstable_cache(
           "id, name, address, latitude, longitude, category, image_url, google_place_id, google_rating, google_reviews_count, price_level, neighborhood, spot_type, vibe_signals, is_official_pick, signature_dishes, description, current_opening_hours_text, website_uri, popup_start_date, popup_end_date, location_schedule, created_at, updated_at"
         )
         .order("name", { ascending: true });
-      if (error || !data || data.length === 0) return [];
+      if (error || !data || data.length === 0) return INITIAL_FOOD_SPOTS;
       return (data as VenueRow[])
         .map(mapVenueRow)
         .filter((v) => Number.isFinite(v.latitude) && Number.isFinite(v.longitude) && v.latitude !== 0);
     } catch (err) {
-      console.warn("[serverData] fetchVenuesServer failed — returning []:", err);
-      return [];
+      console.warn("[serverData] fetchVenuesServer failed — returning INITIAL_FOOD_SPOTS:", err);
+      return INITIAL_FOOD_SPOTS;
     }
   },
   ["venues-server-data-v2"],
@@ -87,7 +88,7 @@ export async function fetchVenuesServer(): Promise<Venue[]> {
 const getCachedFoodPosts = unstable_cache(
   async (): Promise<FoodPost[]> => {
     const supabase = getServerClient();
-    if (!supabase) return [];
+    if (!supabase) return INITIAL_FOOD_POSTS;
     try {
       const { data, error } = await supabase
         .from("food_posts")
@@ -95,11 +96,11 @@ const getCachedFoodPosts = unstable_cache(
           "id, venue_id, author_id, dish_name, dish_image, review_text, price_nok, rating, dietary_tags, taste_tags, is_official_pick, likes_count, saves_count, diner_quotes, created_at, category, drop_badge, item_availability, price_tier, is_published, is_archived, venue:venues!food_posts_venue_id_fkey(id, name, address, neighborhood, latitude, longitude, category, image_url, price_level, google_rating, google_reviews_count, spot_type, vibe_signals, website_uri, current_opening_hours_text, popup_start_date, popup_end_date, location_schedule), author:profiles!food_posts_author_id_fkey(handle, name, avatar_url, is_official)"
         )
         .order("created_at", { ascending: false });
-      if (error || !data || data.length === 0) return [];
+      if (error || !data || data.length === 0) return INITIAL_FOOD_POSTS;
       return (data as unknown as FoodPostRow[]).map(mapFoodPostRow);
     } catch (err) {
-      console.warn("[serverData] fetchFoodPostsServer failed — returning []:", err);
-      return [];
+      console.warn("[serverData] fetchFoodPostsServer failed — returning INITIAL_FOOD_POSTS:", err);
+      return INITIAL_FOOD_POSTS;
     }
   },
   ["food-posts-server-data-v2"],

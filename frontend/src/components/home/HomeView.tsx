@@ -2,13 +2,15 @@
 
 import React, { useEffect, useLayoutEffect, useState, useRef, useMemo, useCallback } from "react";
 import { FeedFilterBar } from "@/components/filter/FeedFilterBar";
-import { MascotWeeklyDrop } from "@/components/food/MascotWeeklyDrop";
+import { SmakrWeeklyPickSplitBanner } from "@/components/food/SmakrWeeklyPickSplitBanner";
 import { FoodPostCard } from "@/components/food/FoodPostCard";
 import { FeedEmptyState } from "@/components/food/FeedEmptyState";
 import { FoodPostCardSkeleton, FoodSpotCardSkeleton } from "@/components/food/CardSkeletons";
 import { FoodSpotCard } from "@/components/food/FoodSpotCard";
 import { PopupEventCard } from "@/components/food/PopupEventCard";
 import { FoodViewSlider } from "@/components/food/FoodViewSlider";
+import { MapCategoryFilterStrip } from "@/components/map/MapCategoryFilterStrip";
+import { MapNeighborhoodDock } from "@/components/map/MapNeighborhoodDock";
 import dynamic from "next/dynamic";
 import { VenueBottomSheet } from "@/components/venue/VenueBottomSheet";
 import { LocationPrompt } from "@/components/location/LocationPrompt";
@@ -20,7 +22,7 @@ import { useLiveVibeSync } from "@/hooks/useLiveVibeSync";
 import { useSyncAppData } from "@/hooks/useSyncAppData";
 import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
 import { SmakrSIcon } from "@/components/ui/SmakrSIcon";
-import { UtensilsCrossed, Plus, Map as MapIcon, LayoutGrid } from "lucide-react";
+import { UtensilsCrossed, Plus, Map as MapIcon, LayoutGrid, Rows2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import type { FoodPost, Venue, WeeklyPick } from "@/types";
 import { isVisibleInFeed, getPopupUrgencyScore, isPopupVenue } from "@/lib/popupUtils";
@@ -140,10 +142,12 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   const selectedGroup = useCityPulseStore((state) => state.selectedGroup);
   const selectedDishCategory = useCityPulseStore((state) => state.selectedDishCategory);
   const selectedCuisine = useCityPulseStore((state) => state.selectedCuisine);
+  const selectedSpotKind = useCityPulseStore((state) => state.selectedSpotKind);
   const resetAllFilters = useCityPulseStore((state) => state.resetAllFilters);
   const feedMode = useCityPulseStore((state) => state.feedMode);
   const setFeedMode = useCityPulseStore((state) => state.setFeedMode);
   const feedLayout = useCityPulseStore((state) => state.feedLayout);
+  const setFeedLayout = useCityPulseStore((state) => state.setFeedLayout);
   const selectedDietary = useCityPulseStore((state) => state.selectedDietary);
   const mapNeighborhood = useCityPulseStore((state) => state.mapNeighborhood);
   const openNow = useCityPulseStore((state) => state.filters.open_now);
@@ -164,6 +168,15 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
+    const viewParam = params.get("view");
+    if (viewParam === "map" || viewParam === "feed" || viewParam === "split") {
+      useCityPulseStore.getState().setViewMode(viewParam);
+    }
+    const sheetParam = params.get("sheet");
+    if (sheetParam === "peek" || sheetParam === "half" || sheetParam === "full") {
+      useCityPulseStore.getState().setMobileSheetState(sheetParam);
+    }
+
     const spotParam = params.get("spot");
     if (!spotParam) return;
 
@@ -426,6 +439,234 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
       .sort((a, b) => getPopupUrgencyScore(a) - getPopupUrgencyScore(b));
   }, [venues]);
 
+  // Memoized collections for the 3 editorial swimlanes
+  const matchaPosts = useMemo(() => {
+    return foodPosts.filter((p) => {
+      if (p.is_archived || p.is_published === false) return false;
+      const q = `${p.dish_name} ${p.category} ${p.spot_name} ${(p.taste_tags || []).join(" ")}`.toLowerCase();
+      return (
+        q.includes("matcha") ||
+        q.includes("hojicha") ||
+        q.includes("ochaya") ||
+        q.includes("tea") ||
+        q.includes("kuro") ||
+        q.includes("fuglen") ||
+        q.includes("coffee")
+      );
+    }).slice(0, 8);
+  }, [foodPosts]);
+
+  const featuredKitchens = useMemo(() => {
+    return venues.filter((v) => v.spot_type !== "popup" && isVisibleInFeed(v)).slice(0, 10);
+  }, [venues]);
+
+  const isDefaultFeedView = useMemo(() => {
+    return (
+      feedMode === "food" &&
+      (currentCategory === "all" || !currentCategory) &&
+      !selectedGroup &&
+      !selectedDishCategory &&
+      !selectedSpotKind &&
+      !selectedCuisine &&
+      selectedDietary.length === 0 &&
+      (!spotTypeFilter || spotTypeFilter === "all") &&
+      !priceTierFilter &&
+      !staffPicksOnly &&
+      !savedOnly &&
+      mapNeighborhood === "all" &&
+      !openNow &&
+      !searchQuery.trim()
+    );
+  }, [
+    feedMode,
+    currentCategory,
+    selectedGroup,
+    selectedDishCategory,
+    selectedSpotKind,
+    selectedCuisine,
+    selectedDietary,
+    spotTypeFilter,
+    priceTierFilter,
+    staffPicksOnly,
+    savedOnly,
+    mapNeighborhood,
+    openNow,
+    searchQuery,
+  ]);
+
+  const renderDishesFeedContent = (isDesktopView: boolean) => {
+    if (foodPosts.length === 0 && isHydratingData) {
+      return (
+        <div className={`grid ${feedLayout === "grid" ? "grid-cols-2" : isDesktopView && viewMode === "feed" ? "grid-cols-2 xl:grid-cols-3" : "grid-cols-1"} gap-2.5`}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <FoodPostCardSkeleton key={`skeleton-${i}`} />
+          ))}
+        </div>
+      );
+    }
+
+    if (filteredPosts.length === 0) {
+      return <FeedEmptyState />;
+    }
+
+    const gridClass = `grid ${
+      feedLayout === "grid"
+        ? "grid-cols-2"
+        : isDesktopView && viewMode === "feed"
+        ? "grid-cols-2 xl:grid-cols-3"
+        : "grid-cols-1"
+    } gap-2.5 pb-28`;
+
+    // Filter Override: When any filter pill is active, render filtered results directly without swimlanes
+    if (!isDefaultFeedView) {
+      return (
+        <div className={gridClass}>
+          {filteredPosts.map((post, index) => {
+            const isPopupCard = venueById.get(post.spot_id)?.spot_type === "popup" || post.spot_type === "popup";
+            return (
+              <div key={post.id} className={isPopupCard ? "col-span-full" : undefined}>
+                <FoodPostCard
+                  post={post}
+                  index={index}
+                  linkedVenue={venueById.get(post.spot_id) ?? null}
+                  priority={isDesktopView && index === 0}
+                />
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    // Default mode: Woven editorial magazine rhythm
+    const firstTwo = filteredPosts.slice(0, 2);
+    const nextFourAfterPick = filteredPosts.slice(2, 6);
+    const nextFourAfterMatcha = filteredPosts.slice(6, 10);
+    const nextFourAfterPopups = filteredPosts.slice(10, 14);
+    const remainingDishes = filteredPosts.slice(14);
+
+    const renderCard = (post: FoodPost, index: number) => {
+      const isPopupCard = venueById.get(post.spot_id)?.spot_type === "popup" || post.spot_type === "popup";
+      return (
+        <div key={post.id} className={isPopupCard ? "col-span-full" : undefined}>
+          <FoodPostCard
+            post={post}
+            index={index}
+            linkedVenue={venueById.get(post.spot_id) ?? null}
+            priority={isDesktopView && index === 0}
+          />
+        </div>
+      );
+    };
+
+    return (
+      <div className={gridClass}>
+        {/* Feed Intro Subheader */}
+        <div className="col-span-full pt-0.5 pb-1">
+          <p className="text-[12px] sm:text-[13px] font-semibold text-zinc-500 dark:text-zinc-400">
+            Handpicked dishes, cult micro-bakeries &amp; street food across Oslo.
+          </p>
+        </div>
+
+        {/* 1. First 2 dishes */}
+        {firstTwo.map((post, i) => renderCard(post, i))}
+
+        {/* 2. In-feed Single-Row Split Smakr Weekly Pick Banner */}
+        <div className="col-span-full my-1">
+          <SmakrWeeklyPickSplitBanner />
+        </div>
+
+        {/* 3. Next 4 dishes */}
+        {nextFourAfterPick.map((post, i) => renderCard(post, 2 + i))}
+
+        {/* 4. Horizontal Swimlane 1: 🍵 Matcha & Craft Pours */}
+        {matchaPosts.length > 0 && (
+          <div className="col-span-full my-3 space-y-2">
+            <div>
+              <h3 className="font-comico text-sm sm:text-base text-[#181615] dark:text-zinc-100 uppercase tracking-wide flex items-center gap-1.5">
+                🍵 MATCHA &amp; CRAFT POURS
+              </h3>
+              <p className="text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+                Ceremonial Uji whisks, hojicha &amp; signature iced pours worth crossing town for.
+              </p>
+            </div>
+            <div className="overflow-x-auto snap-x snap-mandatory flex gap-3 pb-2 pt-1 no-scrollbar -mx-1 px-1">
+              {matchaPosts.map((post) => (
+                <div key={`swimlane-matcha-${post.id}`} className="w-[220px] shrink-0 snap-start">
+                  <FoodPostCard
+                    post={post}
+                    index={0}
+                    linkedVenue={venueById.get(post.spot_id) ?? null}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 5. Next 4 dishes */}
+        {nextFourAfterMatcha.map((post, i) => renderCard(post, 6 + i))}
+
+        {/* 6. Horizontal Swimlane 2: 🔥 Pop-Up Radar & Limited Drops */}
+        {popupVenues.length > 0 && (
+          <div className="col-span-full my-3 space-y-2">
+            <div>
+              <h3 className="font-comico text-sm sm:text-base text-[#181615] dark:text-zinc-100 uppercase tracking-wide flex items-center gap-1.5">
+                🔥 POP-UP RADAR &amp; LIMITED DROPS
+              </h3>
+              <p className="text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+                Roving carts, weekend bake drops &amp; kitchen takeovers — catch them before they sell out.
+              </p>
+            </div>
+            <div className="overflow-x-auto snap-x snap-mandatory flex gap-3 pb-2 pt-1 no-scrollbar -mx-1 px-1">
+              {popupVenues.slice(0, 6).map((venue) => (
+                <div key={`swimlane-popup-${venue.id}`} className="w-[280px] shrink-0 snap-start">
+                  <PopupEventCard venue={venue} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 7. Next 4 dishes */}
+        {nextFourAfterPopups.map((post, i) => renderCard(post, 10 + i))}
+
+        {/* 8. Horizontal Swimlane 3: 🏠 The Kitchens Behind the Dishes */}
+        {featuredKitchens.length > 0 && (
+          <div className="col-span-full my-3 space-y-2">
+            <div>
+              <h3 className="font-comico text-sm sm:text-base text-[#181615] dark:text-zinc-100 uppercase tracking-wide flex items-center gap-1.5">
+                🏠 THE KITCHENS BEHIND THE DISHES
+              </h3>
+              <p className="text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+                Swipe through Oslo&apos;s best independent kitchens, bakeries &amp; street canteens.
+              </p>
+            </div>
+            <div className="overflow-x-auto snap-x snap-mandatory flex gap-3 pb-2 pt-1 no-scrollbar -mx-1 px-1">
+              {featuredKitchens.map((venue, idx) => {
+                const topPost = topPostByVenueId.get(venue.id);
+                return (
+                  <div key={`swimlane-kitchen-${venue.id}`} className="w-[240px] shrink-0 snap-start">
+                    <FoodSpotCard
+                      venue={venue}
+                      index={idx}
+                      primaryDishPhoto={topPost?.photo}
+                      topDishName={topPost?.dishName}
+                      signaturePrice={topPost?.priceNok}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 9. Remaining dishes */}
+        {remainingDishes.map((post, i) => renderCard(post, 14 + i))}
+      </div>
+    );
+  };
+
   const activeCategoryDef = FOOD_CATEGORIES.find((c) => c.id === currentCategory) || FOOD_CATEGORIES[0];
 
   // Render all filtered cards stably without 2-frame unmount/remount flicker on filter click
@@ -520,12 +761,17 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   // Synchronize external sheet changes (buttons, pin clicks) to the DOM ref
   useEffect(() => {
     if (sheetRef.current && !isDraggingRef.current) {
+      if (viewMode === "map") {
+        sheetRef.current.style.transition = "transform 0.32s cubic-bezier(0.16, 1, 0.3, 1)";
+        sheetRef.current.style.transform = `translate3d(0, calc(100dvh + 100px), 0)`;
+        return;
+      }
       const targetY = getSnapTranslateY(mobileSheet);
       sheetRef.current.style.transition = "transform 0.28s cubic-bezier(0.16, 1, 0.3, 1)";
       sheetRef.current.style.transform = `translate3d(0, ${targetY}px, 0)`;
       currentYRef.current = targetY;
     }
-  }, [mobileSheet, sheetHeight]);
+  }, [mobileSheet, sheetHeight, viewMode]);
 
   // 1. Header Grab Bar Handlers (rAF-coalesced GPU transform with zero thread blocking)
   const handleHeaderTouchStart = (e: React.TouchEvent) => {
@@ -804,7 +1050,65 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
               className="flex flex-col h-full w-full overflow-hidden"
             >
               <div className="sticky top-0 z-20 bg-[#F5F0E6]/95 dark:bg-[#181615]/95 backdrop-blur-md border-b border-black/[0.06]">
-                <MascotWeeklyDrop feedCount={filteredPosts.length} />
+                <div className="px-4 py-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-comico text-sm sm:text-base tracking-wider text-[#e84a27] uppercase">
+                      FEED
+                    </h2>
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center p-0.5 rounded-full bg-white/95 dark:bg-stone-900/95 border border-[#181615]/10 dark:border-white/10 shadow-2xs ml-0.5 isolate"
+                      role="group"
+                      aria-label="Feed layout density"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setFeedLayout("list")}
+                        aria-pressed={feedLayout === "list"}
+                        title="Single column view (1 per row)"
+                        className={`relative isolate px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer select-none ${
+                          feedLayout === "list"
+                            ? "text-white"
+                            : "text-zinc-500 hover:text-[#181615] dark:hover:text-white"
+                        }`}
+                      >
+                        {feedLayout === "list" && (
+                          <motion.div
+                            layoutId="desktopFeedDensityPill"
+                            className="absolute inset-0 bg-[#e84a27] rounded-full shadow-2xs z-0 pointer-events-none"
+                            transition={{ type: "spring", stiffness: 420, damping: 32, mass: 0.6 }}
+                          />
+                        )}
+                        <Rows2 className="w-3.5 h-3.5 relative z-10" />
+                        <span className="relative z-10">1×</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFeedLayout("grid")}
+                        aria-pressed={feedLayout === "grid"}
+                        title="Grid view (2 per row)"
+                        className={`relative isolate px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer select-none ${
+                          feedLayout === "grid"
+                            ? "text-white"
+                            : "text-zinc-500 hover:text-[#181615] dark:hover:text-white"
+                        }`}
+                      >
+                        {feedLayout === "grid" && (
+                          <motion.div
+                            layoutId="desktopFeedDensityPill"
+                            className="absolute inset-0 bg-[#e84a27] rounded-full shadow-2xs z-0 pointer-events-none"
+                            transition={{ type: "spring", stiffness: 420, damping: 32, mass: 0.6 }}
+                          />
+                        )}
+                        <LayoutGrid className="w-3.5 h-3.5 relative z-10" />
+                        <span className="relative z-10">2×</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 font-mono">
+                    {filteredPosts.length} DISHES
+                  </div>
+                </div>
                 <FeedFilterBar />
               </div>
               <div
@@ -844,62 +1148,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
 
                 {/* Dishes Feed Panel (Two-Frame Progressive Mount + 120fps Cascade) */}
                 <div className={feedMode === "food" ? "block" : "hidden"}>
-                  {foodPosts.length === 0 && isHydratingData ? (
-                    <div
-                      className={`grid ${
-                        feedLayout === "grid"
-                          ? "grid-cols-2"
-                          : viewMode === "feed"
-                          ? "grid-cols-2 xl:grid-cols-3"
-                          : "grid-cols-1"
-                      } gap-2.5`}
-                    >
-                      {Array.from({ length: 4 }).map((_, i) => (
-                        <FoodPostCardSkeleton key={`post-skeleton-${i}`} />
-                      ))}
-                    </div>
-                  ) : filteredPosts.length === 0 ? (
-                    <FeedEmptyState />
-                  ) : (
-                    <div
-                      className={`grid ${
-                        feedLayout === "grid"
-                          ? "grid-cols-2"
-                          : viewMode === "feed"
-                          ? "grid-cols-2 xl:grid-cols-3"
-                          : "grid-cols-1"
-                      } gap-2.5 pb-28`}
-                    >
-                      {filteredPosts.slice(0, visiblePostsCount).map((post, index) =>
-                        index < 5 ? (
-                          <motion.div
-                            key={post.id}
-                            className={(venueById.get(post.spot_id)?.spot_type === "popup" || post.spot_type === "popup") ? "col-span-full" : undefined}
-                            initial={getCardInitial(filteredPosts.length)}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, transition: { duration: 0.08 } }}
-                            transition={getCardTransition(index, filteredPosts.length)}
-                          >
-                            <FoodPostCard
-                              post={post}
-                              index={index}
-                              linkedVenue={venueById.get(post.spot_id) ?? null}
-                              priority={isDesktop && index === 0}
-                            />
-                          </motion.div>
-                        ) : (
-                          <div key={post.id} className={(venueById.get(post.spot_id)?.spot_type === "popup" || post.spot_type === "popup") ? "col-span-full" : undefined}>
-                            <FoodPostCard
-                              post={post}
-                              index={index}
-                              linkedVenue={venueById.get(post.spot_id) ?? null}
-                              priority={isDesktop && index === 0}
-                            />
-                          </div>
-                        )
-                      )}
-                    </div>
-                  )}
+                  {renderDishesFeedContent(true)}
                 </div>
 
                 {/* Spots Feed Panel */}
@@ -995,9 +1244,47 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
               : "lg:w-[54%] lg:xl:w-[58%] lg:opacity-100"
           }
           transition-all duration-350 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[width,opacity]
+          relative
         `}
       >
         <MapRadarView />
+
+        {/* Top-of-Map Category Filter Strip */}
+        <div
+          className={`absolute top-[68px] left-0 right-0 z-20 pointer-events-auto transition-all duration-300 ${
+            isDesktop && viewMode === "map" ? "pl-36" : ""
+          } ${
+            viewMode === "map" || (!isDesktop && mobileSheet === "peek")
+              ? "opacity-100 translate-y-0"
+              : "opacity-0 -translate-y-4 pointer-events-none"
+          }`}
+        >
+          <MapCategoryFilterStrip />
+        </div>
+
+        {/* Desktop Show Feed floating button */}
+        {isDesktop && viewMode === "map" && (
+          <button
+            type="button"
+            onClick={() => useCityPulseStore.getState().setViewMode("split")}
+            className="absolute top-[68px] left-4 z-30 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/95 dark:bg-stone-900/95 text-xs font-bold text-[#181615] dark:text-zinc-100 shadow-md border border-[#181615]/10 hover:bg-white hover:scale-105 active:scale-95 transition-all cursor-pointer pointer-events-auto"
+          >
+            <span>← Show Feed</span>
+          </button>
+        )}
+
+        {/* Bottom-of-Map Neighborhood Dock + Ultra-Compact Spot Cards */}
+        <div
+          className={`absolute left-0 right-0 z-20 pointer-events-auto transition-all duration-300 ${
+            viewMode === "map" || (!isDesktop && mobileSheet === "peek")
+              ? "opacity-100 translate-y-0"
+              : "opacity-0 translate-y-4 pointer-events-none"
+          } ${
+            isDesktop ? "bottom-4" : "bottom-24"
+          }`}
+        >
+          <MapNeighborhoodDock />
+        </div>
       </div>
 
       {/* ========================================================================= */}
@@ -1008,37 +1295,79 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
         ref={sheetRef}
         style={{
           height: `calc(100dvh - 57px + 140px)`,
-          transform: `translate3d(0, ${getSnapTranslateY(mobileSheet)}px, 0)`,
-          transition: isDraggingRef.current ? "none" : "transform 0.28s cubic-bezier(0.16, 1, 0.3, 1)",
+          transform: viewMode === "map"
+            ? "translate3d(0, calc(100dvh + 100px), 0)"
+            : `translate3d(0, ${getSnapTranslateY(mobileSheet)}px, 0)`,
+          transition: isDraggingRef.current ? "none" : "transform 0.32s cubic-bezier(0.16, 1, 0.3, 1)",
           contain: "layout style",
         }}
-        className="lg:hidden absolute left-0 right-0 top-[57px] z-30 bg-[#F5F0E6] dark:bg-[#181615] rounded-t-3xl border-t border-[#181615]/10 dark:border-white/10 shadow-2xl flex flex-col will-change-transform pb-[140px] w-full max-w-[100vw] overflow-x-hidden smakr-bottom-sheet"
+        className={`lg:hidden absolute left-0 right-0 top-[57px] z-30 bg-[#F5F0E6] dark:bg-[#181615] rounded-t-3xl border-t border-[#181615]/10 dark:border-white/10 shadow-2xl flex flex-col will-change-transform pb-[140px] w-full max-w-[100vw] overflow-x-hidden smakr-bottom-sheet ${
+          viewMode === "map" ? "pointer-events-none opacity-0" : "pointer-events-auto opacity-100"
+        }`}
       >
-          {/* Sticky Sheet Header: Grab Handle + Mascot Drop Pill + Category Filter Bar */}
+          {/* Sticky Sheet Header: Grab Handle + Compact Header (1x/2x Density Toggle) + Category Filter Bar */}
           <div className="sticky top-0 z-20 bg-[#F5F0E6] dark:bg-[#181615] border-b border-[#181615]/10 dark:border-white/10 rounded-t-3xl shrink-0 w-full max-w-full overflow-hidden">
             <div
               onTouchStart={handleHeaderTouchStart}
               onTouchMove={handleHeaderTouchMove}
               onTouchEnd={handleHeaderTouchEnd}
               onClick={toggleSheetState}
-              className="w-full max-w-full min-w-0 pt-2 pb-1 cursor-pointer select-none rounded-t-3xl active:bg-black/[0.02] transition-colors touch-none"
+              className="w-full max-w-full min-w-0 pt-2.5 pb-1.5 px-3.5 cursor-pointer select-none rounded-t-3xl active:bg-black/[0.02] transition-colors touch-none"
             >
               {/* Grab pill */}
-              <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-zinc-600 mx-auto mb-1 hover:bg-zinc-400 transition-colors" />
+              <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-zinc-600 mx-auto mb-2 hover:bg-zinc-400 transition-colors" />
 
-              {/* Smakr Feed header + Weekly Drop capsule (touches bubble up so top sheet area drags smoothly) */}
-              <div
-                onClick={(e) => e.stopPropagation()}
-                className="cursor-grab active:cursor-grabbing"
-              >
-                <MascotWeeklyDrop
-                  compact
-                  feedCount={filteredPosts.length}
-                  isPeek={mobileSheet === "peek"}
-                  onOpen={() => {
-                    if (mobileSheet === "peek") setMobileSheet("half");
-                  }}
-                />
+              {/* Feed Title + 1x/2x Density Toggle + Dish Count */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h2 className="font-comico text-sm tracking-wider text-[#e84a27] uppercase">
+                    FEED
+                  </h2>
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex items-center p-0.5 rounded-full bg-white/95 dark:bg-stone-900/95 border border-[#181615]/10 dark:border-white/10 shadow-2xs ml-0.5 isolate"
+                    role="group"
+                    aria-label="Feed layout density"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setFeedLayout("list")}
+                      className={`relative isolate px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer select-none ${
+                        feedLayout === "list" ? "text-white" : "text-zinc-500"
+                      }`}
+                    >
+                      {feedLayout === "list" && (
+                        <motion.div
+                          layoutId="mobileFeedDensityPill"
+                          className="absolute inset-0 bg-[#e84a27] rounded-full shadow-2xs z-0 pointer-events-none"
+                          transition={{ type: "spring", stiffness: 420, damping: 32, mass: 0.6 }}
+                        />
+                      )}
+                      <Rows2 className="w-3 h-3 relative z-10" />
+                      <span className="relative z-10">1×</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFeedLayout("grid")}
+                      className={`relative isolate px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer select-none ${
+                        feedLayout === "grid" ? "text-white" : "text-zinc-500"
+                      }`}
+                    >
+                      {feedLayout === "grid" && (
+                        <motion.div
+                          layoutId="mobileFeedDensityPill"
+                          className="absolute inset-0 bg-[#e84a27] rounded-full shadow-2xs z-0 pointer-events-none"
+                          transition={{ type: "spring", stiffness: 420, damping: 32, mass: 0.6 }}
+                        />
+                      )}
+                      <LayoutGrid className="w-3 h-3 relative z-10" />
+                      <span className="relative z-10">2×</span>
+                    </button>
+                  </div>
+                </div>
+                <div className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 font-mono">
+                  {filteredPosts.length} DISHES
+                </div>
               </div>
             </div>
 
@@ -1099,50 +1428,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
 
             {/* 2. Mobile Dishes Feed Panel (Two-Frame Progressive Mount + 120fps Cascade) */}
             <div className={feedMode === "food" ? "block" : "hidden"}>
-              {foodPosts.length === 0 && isHydratingData ? (
-                <div className={`grid ${feedLayout === "grid" ? "grid-cols-2" : "grid-cols-1"} gap-2.5`}>
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <FoodPostCardSkeleton key={`m-post-skeleton-${i}`} />
-                  ))}
-                </div>
-              ) : filteredPosts.length === 0 ? (
-                <FeedEmptyState />
-              ) : (
-                <div
-                  className={`grid ${feedLayout === "grid" ? "grid-cols-2" : "grid-cols-1"} gap-2.5 pb-28 ${
-                    mobileSheet === "peek" ? "pointer-events-none" : ""
-                  }`}
-                >
-                  {filteredPosts.slice(0, visiblePostsCount).map((post, index) =>
-                    index < 5 ? (
-                      <motion.div
-                        key={post.id}
-                        className={(venueById.get(post.spot_id)?.spot_type === "popup" || post.spot_type === "popup") ? "col-span-full" : undefined}
-                        initial={getCardInitial(filteredPosts.length)}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, transition: { duration: 0.08 } }}
-                        transition={getCardTransition(index, filteredPosts.length)}
-                      >
-                        <FoodPostCard
-                          post={post}
-                          index={index}
-                          linkedVenue={venueById.get(post.spot_id) ?? null}
-                          priority={!isDesktop && index === 0}
-                        />
-                      </motion.div>
-                    ) : (
-                      <div key={post.id} className={(venueById.get(post.spot_id)?.spot_type === "popup" || post.spot_type === "popup") ? "col-span-full" : undefined}>
-                        <FoodPostCard
-                          post={post}
-                          index={index}
-                          linkedVenue={venueById.get(post.spot_id) ?? null}
-                          priority={!isDesktop && index === 0}
-                        />
-                      </div>
-                    )
-                  )}
-                </div>
-              )}
+              {renderDishesFeedContent(false)}
             </div>
 
             {/* 3. Mobile Spots Feed Panel */}

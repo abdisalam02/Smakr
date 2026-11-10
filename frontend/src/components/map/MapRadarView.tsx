@@ -105,18 +105,31 @@ function isMatchaOrDumplingIcon(key?: string | null): boolean {
   );
 }
 
+function getZoomMarkerScale(zoom: number): number {
+  if (zoom < 12.2) return 0.58;
+  if (zoom < 13.8) return 0.80;
+  return 1.0;
+}
+
+function getZoomMascotScale(zoom: number): number {
+  if (zoom < 12.2) return 0.68;
+  if (zoom < 13.8) return 0.85;
+  return 1.0;
+}
+
 /**
  * Updates a pin's selected/unselected visuals IN PLACE. Markers are created once
  * and only mutated afterwards, so store updates never tear down and rebuild the
  * marker DOM (which caused layout thrash and frame drops).
  */
-function applyPinState(root: HTMLElement, isSelected: boolean) {
+function applyPinState(root: HTMLElement, isSelected: boolean, currentZoom?: number) {
   const isWeeklyPick = root.dataset.isWeeklyPick === "1";
   const isMatchaOrDumpling = isMatchaOrDumplingIcon(root.dataset.iconKey);
   root.dataset.selected = isSelected ? "1" : "0";
   root.style.zIndex = isSelected ? "55" : isWeeklyPick ? "44" : "15";
   const visual = root.querySelector<HTMLElement>(".pin-visual");
-  if (visual) visual.style.transform = isSelected ? "scale(1.14)" : "scale(1.0)";
+  const baseScale = typeof currentZoom === "number" ? getZoomMarkerScale(currentZoom) : 1.0;
+  if (visual) visual.style.transform = isSelected ? "scale(1.15)" : `scale(${baseScale})`;
   const puck = root.querySelector<HTMLElement>(".smakr-map-puck");
   const iconContainer = root.querySelector<HTMLElement>(".smakr-puck-icon");
   // Calibrated size override specifically for wide (dumplings aspect 2.07) and tall (matcha aspect 0.48) icons
@@ -272,7 +285,8 @@ function createAquarellePinElement(
   isSelected: boolean,
   onClick: () => void,
   overrideIconKey?: string | null,
-  isWeeklyPickVenue = false
+  isWeeklyPickVenue = false,
+  currentZoom?: number
 ): HTMLDivElement {
   const root = document.createElement("div");
   root.className = "maplibregl-marker";
@@ -355,7 +369,7 @@ function createAquarellePinElement(
   inner.style.position = "relative";
   inner.style.boxSizing = "border-box";
   inner.style.transformOrigin = "bottom center";
-  inner.style.transition = "transform 0.18s cubic-bezier(0.16, 1, 0.3, 1)";
+  inner.style.transition = "transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)";
 
   const haloHtml = isFreshBatch
     ? `<div style="position:absolute;top:-6px;left:-6px;width:46px;height:46px;border-radius:9999px;border:2px solid #e84a27;background:rgba(232,74,39,0.25);animation:ping 1.4s cubic-bezier(0,0,0.2,1) infinite;pointer-events:none;"></div>`
@@ -459,7 +473,7 @@ function createAquarellePinElement(
   });
 
   root.appendChild(inner);
-  applyPinState(root, isSelected);
+  applyPinState(root, isSelected, currentZoom);
   return root;
 }
 
@@ -784,10 +798,11 @@ export function MapRadarView() {
         markerPoolRef.current.delete(venue.id);
         existing = undefined;
       }
+      const currentZoom = map.getZoom();
       if (existing) {
         existing.marker.setLngLat([venue.longitude, venue.latitude]);
         existing.rootEl.style.display = "";
-        applyPinState(existing.rootEl, isSelected);
+        applyPinState(existing.rootEl, isSelected, currentZoom);
         return;
       }
 
@@ -814,7 +829,8 @@ export function MapRadarView() {
         isSelected,
         handleSelect,
         overrideIconKey,
-        isWeeklyPickVenue
+        isWeeklyPickVenue,
+        currentZoom
       );
       el.dataset.pinKey = pinKey;
 
@@ -1140,7 +1156,9 @@ export function MapRadarView() {
 
     mapInstance.current = map;
     if (typeof window !== "undefined") {
-      (window as unknown as { __cityPulseMap?: maplibregl.Map }).__cityPulseMap = map;
+      const win = window as unknown as { __cityPulseMap?: maplibregl.Map; __smakrMap?: maplibregl.Map };
+      win.__cityPulseMap = map;
+      win.__smakrMap = map;
     }
     const instanceId = ++MAP_INSTANCE_SEQ;
     console.info("[locate] map created", {
@@ -1214,6 +1232,26 @@ export function MapRadarView() {
           state.setSelectedVenue(null);
         }
       }
+
+      // TASK 3: Fix Zoomed-Out Map Pin Clutter
+      // Imperatively update marker visual scales across pool without rebuilding DOM
+      const markerScale = getZoomMarkerScale(z);
+      markerPoolRef.current.forEach((entry) => {
+        const isSelected = entry.rootEl.dataset.selected === "1";
+        const visual = entry.rootEl.querySelector<HTMLElement>(".pin-visual");
+        if (visual) {
+          visual.style.transform = isSelected ? "scale(1.15)" : `scale(${markerScale})`;
+        }
+      });
+
+      if (weeklyMarkerRef.current) {
+        const mascotInner = weeklyMarkerRef.current.getElement().querySelector<HTMLElement>(".weekly-pick-bust-inner");
+        if (mascotInner) {
+          const mascotScale = getZoomMascotScale(z);
+          mascotInner.style.transform = `scale(${mascotScale})`;
+        }
+      }
+
       if (userLocationMarkerRef.current) {
         const el = userLocationMarkerRef.current.getElement();
         if (el) applyPuckZoomScale(el, z, mapContainer.current?.clientWidth);
@@ -1279,6 +1317,10 @@ export function MapRadarView() {
       }
       isMapReadyRef.current = false;
       setIsMapReady(false);
+      if (typeof window !== "undefined") {
+        delete (window as unknown as { __cityPulseMap?: maplibregl.Map }).__cityPulseMap;
+        delete (window as unknown as { __smakrMap?: maplibregl.Map }).__smakrMap;
+      }
       map.remove();
       mapInstance.current = null;
     };
@@ -1316,16 +1358,17 @@ export function MapRadarView() {
     const prevId = prevSelectedVenueIdRef.current;
     if (prevId === currentId) return;
 
+    const currentZoom = mapInstance.current?.getZoom();
     if (prevId) {
       const prevEntry = markerPoolRef.current.get(prevId);
       if (prevEntry) {
-        applyPinState(prevEntry.rootEl, false);
+        applyPinState(prevEntry.rootEl, false, currentZoom);
       }
     }
     if (currentId) {
       const nextEntry = markerPoolRef.current.get(currentId);
       if (nextEntry) {
-        applyPinState(nextEntry.rootEl, true);
+        applyPinState(nextEntry.rootEl, true, currentZoom);
       }
     }
     prevSelectedVenueIdRef.current = currentId;

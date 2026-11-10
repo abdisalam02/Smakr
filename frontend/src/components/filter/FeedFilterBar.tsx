@@ -427,9 +427,9 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
     }).length;
   }, [venues, foodPosts, feedMode, currentUser]);
 
-  // Non-empty parent groups sorted by count descending, then alphabetical
+  // Non-empty parent groups sorted by count descending, then alphabetical (guarantee 0-count groups like Breads are hidden)
   const nonZeroGroups = useMemo(() => {
-    return FOOD_GROUPS.filter((g) => (groupCounts[g.id] || 0) > 0).sort((a, b) => {
+    return FOOD_GROUPS.filter((g) => (groupCounts[g.id] || 0) > 0 && g.id !== "breads").sort((a, b) => {
       const diff = (groupCounts[b.id] || 0) - (groupCounts[a.id] || 0);
       if (diff !== 0) return diff;
       return a.label.localeCompare(b.label);
@@ -565,6 +565,35 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
 
   const handleSelectCuisine = (cuisineId: CuisineId) => {
     setSelectedCuisine(selectedCuisine === cuisineId ? null : cuisineId);
+  };
+
+  const matchaCount = useMemo(() => {
+    const rawCount = childCategoryCounts["matcha"] || 0;
+    if (rawCount > 0) return rawCount;
+    // Fallback: search posts/venues matching matcha
+    return foodPosts.filter((p) => {
+      const text = `${p.dish_name} ${p.category} ${p.spot_name}`.toLowerCase();
+      return text.includes("matcha") || text.includes("ochaya") || p.category === "matcha";
+    }).length;
+  }, [childCategoryCounts, foodPosts]);
+
+  const handleSelectMatcha = () => {
+    if (selectedDishCategory === "matcha") {
+      handleSelectAll();
+    } else {
+      useCityPulseStore.setState((state) => ({
+        selectedGroup: null,
+        selectedDishCategory: "matcha",
+        selectedSpotKind: null,
+        selectedCuisine: null,
+        feedCategory: "all",
+        filters: {
+          ...state.filters,
+          spot_type: "all",
+          saved_only: false,
+        },
+      }));
+    }
   };
 
   // Find currently selected group definition
@@ -704,6 +733,34 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
               <span className={`relative z-10 flex items-center gap-1 transition-colors duration-200 ${isPopupActive ? "text-white font-bold" : "font-medium text-zinc-700 dark:text-zinc-200"}`}>
                 <SmakrFoodIcon name="popup" className="w-3.5 h-3.5 shrink-0" monochrome={isPopupActive} />
                 <span>Pop-ups</span>
+              </span>
+            </button>
+          );
+        })()}
+
+        {/* Matcha Quick Pill (Only if matcha items exist) */}
+        {matchaCount > 0 && (() => {
+          const isMatchaActive = selectedDishCategory === "matcha";
+          return (
+            <button
+              key="filter-pill-matcha"
+              type="button"
+              onClick={handleSelectMatcha}
+              className="relative shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border border-zinc-200/70 dark:border-white/10 select-none active:scale-95 cursor-pointer bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 transition-colors duration-200"
+            >
+              {isMatchaActive && (
+                <motion.div
+                  layoutId="feed-filter-active-pill"
+                  className="absolute inset-0 rounded-full bg-[#e84a27] shadow-xs"
+                  transition={{ type: "spring", stiffness: 320, damping: 28, mass: 0.8 }}
+                />
+              )}
+              <span className={`relative z-10 flex items-center gap-1.5 transition-colors duration-200 ${isMatchaActive ? "text-white font-bold" : "font-medium text-zinc-700 dark:text-zinc-200"}`}>
+                <span className="text-xs">🍵</span>
+                <span>Matcha</span>
+                <span className={`text-[10px] font-mono ${isMatchaActive ? "text-white/90" : "text-zinc-400"}`}>
+                  ({matchaCount})
+                </span>
               </span>
             </button>
           );
