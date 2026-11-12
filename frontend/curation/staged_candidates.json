@@ -1,5 +1,345 @@
 [
   {
+    "id": "kims-kitchen",
+    "name": "Kim's Kitchen",
+    "address": "Thereses gate 47A, 0354 Oslo",
+    "neighborhood": "st_hanshaugen",
+    "latitude": 59.92644,
+    "longitude": 10.73109,
+    "food_category": "dumplings",
+    "icon": "dumplings",
+    "spot_type": "restaurant",
+    "cover_image_url": "",
+    "price_level": "$",
+    "google_rating": 4.9,
+    "signature_dish": "Stekte Gyoza Dumplings (4 stk)",
+    "why_curated": "Crisp-bottomed, pan-seared gyoza dumplings folded around savory minced filling, served hot from the counter for a quick St. Hanshaugen bite.",
+    "verification_status": "needs_photo",
+    "notes": "Bucket: trending_70 | Source: @matmeg_oslo + Øya 2026 + Foodora/Wolt (4.9★ / 184 reviews) | Founder note: Strong creator momentum; candidate for manual Smakr Pick review.",
+    "dish_highlights": [
+      {
+        "id": "kims-kitchen-dish-1",
+        "dish_name": "Stekte Gyoza Dumplings (4 stk)",
+        "category": "dumplings",
+        "price_nok": 129,
+        "dish_image": "",
+        "is_verified_food_photo": false,
+        "review_text": "Crisp-bottomed, pan-seared gyoza dumplings folded around savory minced filling, served hot from the counter.",
+        "taste_tags": [
+          "pan-seared",
+          "crispy-bottom",
+          "savory"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "jungel-pizza-torshov",
+    "name": "Jungel Pizza Torshov",
+    "address": "Vogts gate 54, 0477 Oslo",
+    "neighborhood": "torshov",
+    "latitude": 59.93537,
+    "longitude": 10.76483,
+    "food_category": "pizza",
+    "icon": "pizza",
+    "spot_type": "restaurant",
+    "cover_image_url": "",
+    "price_level": "$$",
+    "google_rating": 4.8,
+    "signature_dish": "Carne (Merguez & Fermentert Chili)",
+    "why_curated": "Leopard-spotted sourdough crust topped with spiced merguez sausage, fermented chili heat, and melted fior di latte.",
+    "verification_status": "needs_photo",
+    "notes": "Bucket: trending_70 | Source: Vink (Aftenposten 5/5) + Wolt | Founder note: Scored 5/5 in Aftenposten Vink; high-buzz Torshov outpost.",
+    "dish_highlights": [
+      {
+        "id": "jungel-pizza-torshov-dish-1",
+        "dish_name": "Carne (Merguez & Fermentert Chili)",
+        "category": "pizza",
+        "price_nok": 252,
+        "dish_image": "",
+        "is_verified_food_photo": false,
+        "review_text": "Leopard-spotted sourdough crust topped with spiced merguez sausage, fermented chili heat, and melted fior di latte.",
+        "taste_tags": [
+          "sourdough",
+          "spicy",
+          "wood-fired"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "laari-adda-pakistani-street-food",
+    "name": "Laari Adda Pakistani Street Food",
+    "address": "Kjerulfs gate 1, 2000 Lillestrøm",
+    "neighborhood": "lillestrom",
+    "latitude": 59.9562,
+    "longitude": 11.05275,
+    "food_category": "curry",
+    "icon": "curry",
+    "spot_type": "restaurant",
+    "cover_image_url": "",
+    "price_level": "$$",
+    "google_rating": 4.6,
+    "signature_dish": "Butter Chicken",
+    "why_curated": "Tender marinated chicken simmered in a rich tomato, butter, and cashew-cream curry, paired with warm tandoor-baked naan.",
+    "verification_status": "needs_photo",
+    "notes": "Bucket: trending_70 | Source: Wolt + Foodora Lillestrøm (4.6★ / 582 reviews) | Founder note: Top-rated Pakistani street-food & curry spot in Lillestrøm.",
+    "dish_highlights": [
+      {
+        "id": "laari-adda-pakistani-street-food-dish-1",
+        "dish_name": "Butter Chicken",
+        "category": "curry",
+        "price_nok": 230,
+        "dish_image": "",
+        "is_verified_food_photo": false,
+        "review_text": "Tender marinated chicken simmered in a rich tomato, butter, and cashew-cream curry, paired with warm tandoor-baked naan.",
+        "taste_tags": [
+          "creamy",
+          "spiced",
+          "tandoor"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "korndokki-mathallen",
+    "name": "KORNDOKKI - Mathallen",
+    "address": "Vulkan 5, 0178 Oslo",
+    "neighborhood": "vulkan",
+    "latitude": 59.92225,
+    "longitude": 10.75175,
+    "food_category": "street_food",
+    "icon": "street_food",
+    "spot_type": "restaurant",
+    "cover_image_url": "",
+    "price_level": "$",
+    "google_rating": 4.6,
+    "signature_dish": "Half & Half Corndog",
+    "why_curated": "Crunchy Korean-style fried batter on a stick split half-and-half between stretchy mozzarella cheese and savory sausage.",
+    "verification_status": "needs_photo",
+    "notes": "Bucket: trending_70 | Market stall at Mathallen | NEW_ICON_NEEDED: Korean half-mozzarella, half-sausage crispy batter corndog on a stick.",
+    "dish_highlights": [
+      {
+        "id": "korndokki-mathallen-dish-1",
+        "dish_name": "Half & Half Corndog",
+        "category": "street_food",
+        "price_nok": 109,
+        "dish_image": "",
+        "is_verified_food_photo": false,
+        "review_text": "Crunchy Korean-style fried batter on a stick split half-and-half between stretchy mozzarella cheese and savory sausage.",
+        "taste_tags": [
+          "crunchy",
+          "cheesy",
+          "street-food"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "july-tea-and-food",
+    "name": "July Tea & Food",
+    "address": "Pilestredet 53C, 0350 Oslo",
+    "neighborhood": "bislett",
+    "latitude": 59.92178,
+    "longitude": 10.73191,
+    "food_category": "matcha",
+    "icon": "matcha",
+    "spot_type": "cafe",
+    "cover_image_url": "",
+    "price_level": "$",
+    "google_rating": 4.7,
+    "signature_dish": "Strawberry Matcha Latte",
+    "why_curated": "Whisked ceremonial matcha layered over cold milk and sweet strawberry purée for a bright, grassy-sweet iced sip.",
+    "verification_status": "needs_photo",
+    "notes": "Bucket: trending_70 | Source: Wolt Oslo verified menu | Founder note: Strong specialty matcha & tea draw near Bislett.",
+    "dish_highlights": [
+      {
+        "id": "july-tea-and-food-dish-1",
+        "dish_name": "Strawberry Matcha Latte",
+        "category": "matcha",
+        "price_nok": 129,
+        "dish_image": "",
+        "is_verified_food_photo": false,
+        "review_text": "Whisked ceremonial matcha layered over cold milk and sweet strawberry purée for a bright, grassy-sweet iced sip.",
+        "taste_tags": [
+          "matcha",
+          "iced",
+          "fruity"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "boba10",
+    "name": "boba10",
+    "address": "Stovner Senter 3, 0985 Oslo",
+    "neighborhood": "stovner",
+    "latitude": 59.96215,
+    "longitude": 10.92452,
+    "food_category": "boba",
+    "icon": "boba",
+    "spot_type": "cafe",
+    "cover_image_url": "",
+    "price_level": "$",
+    "google_rating": 4.3,
+    "signature_dish": "Boba Dalgona",
+    "why_curated": "Chewy tapioca pearls topped with cold milk and whipped caramelized dalgona coffee foam.",
+    "verification_status": "needs_photo",
+    "notes": "Bucket: trending_70 | Source: Wolt Outer Oslo (4.3★ / 50 reviews) | Founder note: Fills Outer East Oslo (Stovner) specialty boba coverage.",
+    "dish_highlights": [
+      {
+        "id": "boba10-dish-1",
+        "dish_name": "Boba Dalgona",
+        "category": "boba",
+        "price_nok": 92,
+        "dish_image": "",
+        "is_verified_food_photo": false,
+        "review_text": "Chewy tapioca pearls topped with cold milk and whipped caramelized dalgona coffee foam.",
+        "taste_tags": [
+          "chewy-boba",
+          "caramelized",
+          "iced"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "render-burger",
+    "name": "Render Burger",
+    "address": "Toftes gate 19B, 0556 Oslo",
+    "neighborhood": "grunerlokka",
+    "latitude": 59.92961,
+    "longitude": 10.76086,
+    "food_category": "burger",
+    "icon": "burger",
+    "spot_type": "restaurant",
+    "cover_image_url": "",
+    "price_level": "$$",
+    "google_rating": 4.6,
+    "signature_dish": "Oslohoma Smash",
+    "why_curated": "Lacy-edged smashed beef patties seared with paper-thin shaved onions, melted American cheese, and tangy house sauce on a soft potato bun.",
+    "verification_status": "needs_photo",
+    "notes": "Bucket: trending_70 | Source: Good Shit Oslo (8.9/10) + Foodora (4.6★ / 1000+) | Founder note: High-momentum Grünerløkka smash burger specialist.",
+    "dish_highlights": [
+      {
+        "id": "render-burger-dish-1",
+        "dish_name": "Oslohoma Smash",
+        "category": "burger",
+        "price_nok": 225,
+        "dish_image": "",
+        "is_verified_food_photo": false,
+        "review_text": "Lacy-edged smashed beef patties seared with paper-thin shaved onions, melted American cheese, and tangy house sauce on a soft potato bun.",
+        "taste_tags": [
+          "smash-burger",
+          "crispy-edges",
+          "cheesy"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "mimis-scones",
+    "name": "Mimi's Scones",
+    "address": "Thereses gate 24B, 0354 Oslo",
+    "neighborhood": "bislett",
+    "latitude": 59.9288,
+    "longitude": 10.73287,
+    "food_category": "bakery",
+    "icon": "bakery",
+    "spot_type": "restaurant",
+    "cover_image_url": "",
+    "price_level": "$",
+    "google_rating": 5.0,
+    "signature_dish": "Blåbær & Sitron Scone",
+    "why_curated": "Tender, buttery crumb studded with wild blueberries and topped with a tart lemon glaze, baked fresh in small batches.",
+    "verification_status": "needs_photo",
+    "notes": "Bucket: under_the_radar_30 | Source: Vink (Oct 2026) + Google Maps (5.0★ / 67 reviews) | NEW_ICON_NEEDED: Rustic golden-baked blueberry-lemon scone.",
+    "dish_highlights": [
+      {
+        "id": "mimis-scones-dish-1",
+        "dish_name": "Blåbær & Sitron Scone",
+        "category": "bakery",
+        "price_nok": 59,
+        "dish_image": "",
+        "is_verified_food_photo": false,
+        "review_text": "Tender, buttery crumb studded with wild blueberries and topped with a tart lemon glaze, baked fresh in small batches.",
+        "taste_tags": [
+          "vegetarian",
+          "buttery",
+          "citrus"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dirty-v-torggata",
+    "name": "Dirty V - Torggata",
+    "address": "Torggata 23, 0183 Oslo",
+    "neighborhood": "sentrum",
+    "latitude": 59.91662,
+    "longitude": 10.75277,
+    "food_category": "burger",
+    "icon": "burger",
+    "spot_type": "restaurant",
+    "cover_image_url": "",
+    "price_level": "$$",
+    "google_rating": 4.9,
+    "signature_dish": "Future Classic",
+    "why_curated": "100% plant-based smashed patty with melted vegan cheddar, crisp pickles, raw onion, and signature burger dressing in a toasted brioche-style bun.",
+    "verification_status": "needs_photo",
+    "notes": "Bucket: under_the_radar_30 | Source: dirtyv.no + Wolt + Foodora (4.9★ / 106 reviews) | Verified 100% vegan.",
+    "dish_highlights": [
+      {
+        "id": "dirty-v-torggata-dish-1",
+        "dish_name": "Future Classic",
+        "category": "burger",
+        "price_nok": 179,
+        "dish_image": "",
+        "is_verified_food_photo": false,
+        "review_text": "100% plant-based smashed patty with melted vegan cheddar, crisp pickles, raw onion, and signature burger dressing.",
+        "taste_tags": [
+          "vegan",
+          "smash-burger",
+          "tangy"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "matsaya-boba-kbbq-streetfoods",
+    "name": "Matsaya Boba, KBBQ & Streetfoods",
+    "address": "Storgata 44, 2000 Lillestrøm",
+    "neighborhood": "lillestrom",
+    "latitude": 59.95974,
+    "longitude": 11.04926,
+    "food_category": "k_chicken",
+    "icon": "k_chicken",
+    "spot_type": "restaurant",
+    "cover_image_url": "",
+    "price_level": "$$",
+    "google_rating": 4.6,
+    "signature_dish": "Crispy Fried Chicken (5 biter)",
+    "why_curated": "Double-fried halal chicken pieces coated in a shattering, spiced Korean-style crust, served hot with dipping sauce.",
+    "verification_status": "needs_photo",
+    "notes": "Bucket: under_the_radar_30 | Source: Wolt + Foodora Lillestrøm (4.6★ / 130 reviews) | Explicitly labeled HALAL on Wolt/Foodora.",
+    "dish_highlights": [
+      {
+        "id": "matsaya-boba-kbbq-streetfoods-dish-1",
+        "dish_name": "Crispy Fried Chicken (5 biter)",
+        "category": "k_chicken",
+        "price_nok": 169,
+        "dish_image": "",
+        "is_verified_food_photo": false,
+        "review_text": "Double-fried halal chicken pieces coated in a shattering, spiced Korean-style crust, served hot with dipping sauce.",
+        "taste_tags": [
+          "halal",
+          "crispy",
+          "k-chicken"
+        ]
+      }
+    ]
+  },
+  {
     "id": "pele-pele",
     "name": "Pele Pele",
     "address": "Smalgangen 31, 0188 Oslo",

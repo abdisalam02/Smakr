@@ -407,15 +407,15 @@ export function SeedingCandidateCard({
   const effectiveCoverUrl = spot.cover_image_url || spot.dish_highlights[0]?.dish_image || "";
 
   return (
-    <div className="relative rounded-3xl bg-white border border-[#EAE5DC] text-[#181615] shadow-[0_8px_30px_rgb(24,22,21,0.06)] overflow-hidden flex flex-col transition-all hover:shadow-[0_12px_36px_rgb(24,22,21,0.10)]">
+    <div className="relative rounded-2xl bg-white border border-[#EAE5DC] text-[#181615] shadow-xs overflow-hidden flex flex-col transition-all hover:border-[#DDD6C9] hover:shadow-sm">
       {/* ── SUMMARY ROW (tap to open the workspace) ── */}
       <button
         type="button"
         onClick={() => setIsExpanded((v) => !v)}
         aria-expanded={isExpanded}
-        className="flex w-full items-center gap-3 p-3.5 text-left transition-colors hover:bg-[#FBF9F5] sm:gap-4 sm:p-4"
+        className="flex w-full items-center gap-3.5 p-3.5 text-left transition-colors hover:bg-[#FAF7F2]/60 sm:px-4"
       >
-        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-[#EAE6DF] ring-1 ring-black/10 sm:h-16 sm:w-16">
+        <div className="relative h-13 w-13 shrink-0 overflow-hidden rounded-xl bg-[#F3EFE7] ring-1 ring-black/8 sm:h-14 sm:w-14">
           {effectiveCoverUrl ? (
             <Image
               src={effectiveCoverUrl}
@@ -439,54 +439,51 @@ export function SeedingCandidateCard({
         </div>
 
         <div className="min-w-0 flex-1">
-          <h2 className="truncate font-comico text-[15.5px] leading-tight tracking-wide text-[#181615] sm:text-lg">
-            {spot.name}
-          </h2>
-          <p className="mt-1 flex items-center gap-1.5 text-[11px] font-semibold text-zinc-500">
-            <MapPin className="h-3 w-3 shrink-0 text-[#E84A27]" />
-            <span className="capitalize">{spot.neighborhood || "Oslo"}</span>
-            <span className="text-zinc-300">·</span>
-            <span>{displayPriceLevel}</span>
-          </p>
-          <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[10.5px] font-medium text-zinc-400">
+          <div className="flex items-center gap-2">
+            <h2 className="truncate text-[15px] font-bold leading-snug text-[#181615] sm:text-base">
+              {spot.name}
+            </h2>
             {isPopupSpot && (
-              <span className="rounded-full bg-[#E84A27]/10 px-1.5 py-0.5 text-[8.5px] font-black uppercase tracking-wider text-[#E84A27]">
+              <span className="shrink-0 rounded-md bg-[#E84A27]/10 px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wider text-[#E84A27]">
                 Pop-up
               </span>
             )}
-            <span>
-              {spot.dish_highlights.length} {spot.dish_highlights.length === 1 ? "dish" : "dishes"}
-            </span>
-            <span className="text-zinc-300">·</span>
-            <span>{spot.dish_highlights.filter((d) => d.is_verified_food_photo).length} photo-verified</span>
           </div>
+          <p className="mt-0.5 flex items-center gap-1.5 text-xs font-medium text-zinc-500 truncate">
+            <MapPin className="h-3 w-3 shrink-0 text-[#E84A27]" />
+            <span className="capitalize text-zinc-700 font-semibold">{spot.neighborhood || "Oslo"}</span>
+            <span className="text-zinc-300">·</span>
+            <span>{displayPriceLevel}</span>
+            <span className="text-zinc-300">·</span>
+            <span className="truncate text-zinc-500">{displaySignature}</span>
+          </p>
         </div>
 
-        <div className="flex shrink-0 flex-col items-end gap-1.5">
+        <div className="flex shrink-0 items-center gap-2.5">
           {spot.verification_status === "seeded" ? (
-            <span title="Seeded" className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-violet-200 bg-violet-50 text-violet-700 sm:h-auto sm:w-auto sm:gap-1 sm:px-2 sm:py-0.5">
+            <span title="Seeded" className="inline-flex items-center gap-1 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1 text-[10.5px] font-bold text-violet-700">
               <Database className="h-3 w-3 shrink-0" />
-              <span className="hidden text-[9.5px] font-black uppercase tracking-wide sm:inline">Seeded</span>
+              <span className="hidden sm:inline">Seeded</span>
             </span>
           ) : spot.verification_status === "approved" ? (
-            <span title="Approved" className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 sm:h-auto sm:w-auto sm:gap-1 sm:px-2 sm:py-0.5">
+            <span title="Approved" className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10.5px] font-bold text-emerald-700">
               <CheckCircle2 className="h-3 w-3 shrink-0" />
-              <span className="hidden text-[9.5px] font-black uppercase tracking-wide sm:inline">Approved</span>
+              <span className="hidden sm:inline">Approved</span>
             </span>
           ) : spot.verification_status === "needs_photo" ? (
-            <span title="Needs photo" className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-amber-200 bg-amber-50 text-amber-700 sm:h-auto sm:w-auto sm:gap-1 sm:px-2 sm:py-0.5">
-              <AlertTriangle className="h-3 w-3 shrink-0" />
-              <span className="hidden text-[9.5px] font-black uppercase tracking-wide sm:inline">Needs photo</span>
+            <span title="Needs photo" className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10.5px] font-bold text-amber-700">
+              <Camera className="h-3 w-3 shrink-0" />
+              <span className="hidden sm:inline">Needs photo</span>
             </span>
           ) : spot.verification_status === "rejected" ? (
-            <span title="Rejected" className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-700 sm:h-auto sm:w-auto sm:gap-1 sm:px-2 sm:py-0.5">
+            <span title="Rejected" className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10.5px] font-bold text-rose-700">
               <X className="h-3 w-3 shrink-0" />
-              <span className="hidden text-[9.5px] font-black uppercase tracking-wide sm:inline">Rejected</span>
+              <span className="hidden sm:inline">Rejected</span>
             </span>
           ) : (
-            <span title="Pending" className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[#EAE5DC] bg-white text-zinc-500 sm:h-auto sm:w-auto sm:gap-1 sm:px-2 sm:py-0.5">
+            <span title="Pending" className="inline-flex items-center gap-1 rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10.5px] font-bold text-sky-700">
               <Clock className="h-3 w-3 shrink-0" />
-              <span className="hidden text-[9.5px] font-black uppercase tracking-wide sm:inline">Pending</span>
+              <span className="hidden sm:inline">Pending</span>
             </span>
           )}
           <ChevronDown
@@ -802,9 +799,35 @@ export function SeedingCandidateCard({
                   key={dish.id}
                   className="group relative rounded-3xl overflow-hidden bg-[#181615] border border-black/10 shadow-md flex flex-col transition-all hover:shadow-xl"
                 >
-                  {/* Full-Bleed 4:3 Photography Container */}
-                  <div className="relative w-full aspect-[4/3] overflow-hidden bg-[#E8E0D2]">
-                    {dish.dish_image && (
+                  {/* Full-Bleed 4:3 Photography Container (or Clean Add Photo state) */}
+                  {!dish.dish_image ? (
+                    <button
+                      type="button"
+                      onClick={() => setEditingDish(dish)}
+                      className="relative w-full aspect-[4/3] bg-[#FAF7F2] border-b border-[#EAE5DC] flex flex-col items-center justify-center p-5 text-center transition-colors hover:bg-[#F3EFE7] cursor-pointer"
+                    >
+                      {dish.price_nok && (
+                        <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-[#E84A27] text-white font-bold text-xs shadow-xs">
+                          {dish.price_nok} NOK
+                        </div>
+                      )}
+                      <div className="grid h-11 w-11 place-items-center rounded-2xl bg-amber-100 text-amber-700 mb-2.5">
+                        <Camera className="h-5 w-5" />
+                      </div>
+                      <p className="text-sm font-bold text-[#181615] line-clamp-1">
+                        {dish.dish_name}
+                      </p>
+                      <p className="mt-1 text-[11px] font-semibold text-amber-700">
+                        Click to add or search dish photo
+                      </p>
+                      {dish.review_text && (
+                        <p className="mt-2 text-[11px] text-zinc-500 line-clamp-2 max-w-[26ch]">
+                          {dish.review_text}
+                        </p>
+                      )}
+                    </button>
+                  ) : (
+                    <div className="relative w-full aspect-[4/3] overflow-hidden bg-[#E8E0D2]">
                       <Image
                         src={dish.dish_image}
                         alt={dish.dish_name}
@@ -812,69 +835,69 @@ export function SeedingCandidateCard({
                         unoptimized
                         className="object-cover w-full opacity-100 transition-transform duration-700 ease-out group-hover:scale-105"
                       />
-                    )}
 
-                    {/* Seamless Dark Gradient Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/55 to-transparent pointer-events-none" />
+                      {/* Seamless Dark Gradient Overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-transparent pointer-events-none" />
 
-                    {/* Warning Overlay if unverified */}
-                    {isBadImage && (
-                      <div className="absolute inset-x-3 top-3 z-20 p-2 rounded-2xl bg-amber-500/95 text-black text-[11px] font-black flex items-center gap-1.5 shadow-lg backdrop-blur-md">
-                        <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-black" />
-                        <span className="truncate">⚠️ Click Edit to verify or swap photo</span>
-                      </div>
-                    )}
-
-                    {/* Floating Price Badge top-right */}
-                    {dish.price_nok && (
-                      <div className="absolute top-3 right-3 z-10 px-3 py-1 rounded-full bg-[#E84A27] text-white font-black text-xs shadow-md">
-                        {dish.price_nok} NOK
-                      </div>
-                    )}
-
-                    {/* Overlaid Editorial Content */}
-                    <div className="absolute bottom-0 inset-x-0 p-4 z-10 flex flex-col justify-end pointer-events-none">
-                      <h3 className="font-comico font-black text-[20px] sm:text-[22px] tracking-wide leading-[1.15] text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] line-clamp-1 capitalize">
-                        {dish.dish_name}
-                      </h3>
-
-                      {isPopupSpot && (spot as any).popup_meta?.dates_label && (
-                        <div className="mt-1 text-[11.5px] font-bold text-[#FF8566] drop-shadow-xs">
-                          {String((spot as any).popup_meta.dates_label).replace(/\s*Drop$/i, "").trim()}
+                      {/* Warning Overlay if unverified */}
+                      {isBadImage && (
+                        <div className="absolute inset-x-3 top-3 z-20 px-2.5 py-1.5 rounded-xl bg-amber-400/95 text-black text-[11px] font-bold flex items-center gap-1.5 shadow-md backdrop-blur-md">
+                          <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-black" />
+                          <span className="truncate">Unverified photo — click Edit to verify</span>
                         </div>
                       )}
 
-                      <div className="text-[12.5px] font-semibold text-white/95 drop-shadow-xs mt-1 flex items-center gap-1.5 flex-wrap">
-                        {isPopupSpot ? (
-                          <SmakrFoodIcon name="popup" className="w-3.5 h-3.5 shrink-0" />
-                        ) : (
-                          <MapPin className="w-[13px] h-[13px] text-[#e84a27] shrink-0" />
+                      {/* Floating Price Badge top-right */}
+                      {dish.price_nok && (
+                        <div className="absolute top-3 right-3 z-10 px-2.5 py-1 rounded-full bg-[#E84A27] text-white font-bold text-xs shadow-md">
+                          {dish.price_nok} NOK
+                        </div>
+                      )}
+
+                      {/* Overlaid Editorial Content */}
+                      <div className="absolute bottom-0 inset-x-0 p-4 z-10 flex flex-col justify-end pointer-events-none">
+                        <h3 className="font-comico font-black text-[19px] sm:text-[21px] tracking-wide leading-[1.15] text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] line-clamp-1 capitalize">
+                          {dish.dish_name}
+                        </h3>
+
+                        {isPopupSpot && (spot as any).popup_meta?.dates_label && (
+                          <div className="mt-1 text-[11px] font-bold text-[#FF8566] drop-shadow-xs">
+                            {String((spot as any).popup_meta.dates_label).replace(/\s*Drop$/i, "").trim()}
+                          </div>
                         )}
-                        <span className="font-semibold text-white">{spot.name}</span>
-                        <span className="text-zinc-400">·</span>
-                        <span className="text-zinc-300 capitalize">{spot.neighborhood}</span>
-                      </div>
 
-                      {dish.review_text && (
-                        <p className="text-[11px] text-zinc-200 line-clamp-2 mt-1 drop-shadow-sm font-medium">
-                          {dish.review_text}
-                        </p>
-                      )}
-
-                      {dish.taste_tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {dish.taste_tags.slice(0, 3).map((tag) => (
-                            <span
-                              key={tag}
-                              className="px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-sm text-[9.5px] font-bold text-white"
-                            >
-                              #{tag}
-                            </span>
-                          ))}
+                        <div className="text-[12px] font-semibold text-white/95 drop-shadow-xs mt-1 flex items-center gap-1.5 flex-wrap">
+                          {isPopupSpot ? (
+                            <SmakrFoodIcon name="popup" className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <MapPin className="w-[13px] h-[13px] text-[#e84a27] shrink-0" />
+                          )}
+                          <span className="font-semibold text-white">{spot.name}</span>
+                          <span className="text-zinc-400">·</span>
+                          <span className="text-zinc-300 capitalize">{spot.neighborhood}</span>
                         </div>
-                      )}
+
+                        {dish.review_text && (
+                          <p className="text-[11px] text-zinc-200 line-clamp-2 mt-1 drop-shadow-sm font-medium">
+                            {dish.review_text}
+                          </p>
+                        )}
+
+                        {dish.taste_tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {dish.taste_tags.slice(0, 3).map((tag) => (
+                              <span
+                                key={tag}
+                                className="px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-sm text-[9.5px] font-bold text-white"
+                              >
+                                #{tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Card Action Strip with Solo Dish & Delete options */}
                   <div className="p-3 bg-[#FAF7F2] border-t border-[#EAE5DC] flex flex-wrap items-center justify-between gap-2">
