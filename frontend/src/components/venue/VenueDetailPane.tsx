@@ -399,9 +399,14 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
           </div>
 
           {venue.description && (
-            <p className="text-[13.5px] sm:text-[14.5px] text-[#181615]/90 dark:text-zinc-200 leading-relaxed font-medium pt-1">
-              {venue.description}
-            </p>
+            <div className="pt-2 space-y-1">
+              <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
+                STORY
+              </div>
+              <p className="text-[13.5px] sm:text-[14.5px] text-[#181615]/90 dark:text-zinc-200 leading-relaxed font-medium">
+                {venue.description}
+              </p>
+            </div>
           )}
 
           {/* Quick Action Links: Distinct for Pop-up vs Restaurant */}

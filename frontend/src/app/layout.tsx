@@ -99,6 +99,15 @@ export default async function RootLayout({
             __html: `(function(){try{var m={'electric-orange':'oat-espresso','oslo-minimalist':'oat-espresso','obsidian-slate':'late-night','cyber-midnight':'late-night','midnight-gastro':'late-night','smoked-espresso':'late-night','nordic-linen':'warm-bakery','nordic-bakery':'warm-bakery','nordic-amber':'warm-bakery','copenhagen-clay':'warm-bakery','alabaster-bronze':'warm-bakery','retro-diner':'warm-bakery','bordeaux-chalk':'warm-bakery','seoul-sunset':'warm-bakery','swiss-monolith':'nordic-minimal','oslo-brutalist':'nordic-minimal','oslo-monolith':'nordic-minimal','stockholm-sage':'nordic-minimal','kyoto-matcha':'nordic-minimal','matcha-botanic':'nordic-minimal','bistro-navy':'nordic-minimal','amalfi-coast':'nordic-minimal'};var t=localStorage.getItem('smakr_theme')||'oat-espresso';t=m[t]||t;var v={'oat-espresso':1,'warm-bakery':1,'late-night':1,'nordic-minimal':1};if(!v[t])t='oat-espresso';document.documentElement.setAttribute('data-theme',t);var f=localStorage.getItem('smakr_font')||'modern-sans';document.documentElement.setAttribute('data-font',f);var bf=localStorage.getItem('smakr_body_font')||'syne';document.documentElement.setAttribute('data-body-font',bf);var fm={'jakarta':"'Plus Jakarta Sans', system-ui, sans-serif",'dmsans':"'DM Sans', system-ui, sans-serif",'space':"'Space Grotesk', system-ui, sans-serif",'geist':"var(--font-geist, 'Geist', system-ui, sans-serif)",'outfit':"'Outfit', system-ui, sans-serif",'syne':"'Syne', system-ui, sans-serif",'inter':"'Inter', system-ui, sans-serif",'cormorant':"'Cormorant Garamond', Georgia, serif"};if(fm[bf]){document.documentElement.style.setProperty('--font-body',fm[bf]);document.documentElement.style.setProperty('--font-main',fm[bf]);}}catch(e){}})();`,
           }}
         />
+        <link rel="preconnect" href="https://api.maptiler.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://api.maptiler.com" />
+        {process.env.NEXT_PUBLIC_SUPABASE_URL && (
+          <link
+            rel="preconnect"
+            href={process.env.NEXT_PUBLIC_SUPABASE_URL}
+            crossOrigin="anonymous"
+          />
+        )}
       </head>
       <body className="min-h-dvh flex flex-col antialiased selection:bg-[var(--accent)] selection:text-white transition-colors duration-300">
         <AutumnLeavesBurst />

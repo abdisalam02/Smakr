@@ -11,12 +11,15 @@ export interface PopupEventCardProps {
   post?: FoodPost | null;
   venue: Venue;
   priority?: boolean;
+  /** Uniform-height swimlane treatment (215x265 wrapper). */
+  compact?: boolean;
 }
 
 export function PopupEventCard({
   post,
   venue,
   priority = false,
+  compact = false,
 }: PopupEventCardProps) {
   const selectVenueById = useCityPulseStore((s) => s.selectVenueById);
   const setIsVenueDetailModalOpen = useCityPulseStore((s) => s.setIsVenueDetailModalOpen);
@@ -27,11 +30,6 @@ export function PopupEventCard({
   const popupMeta = getPopupMeta(venue);
 
   const title = venue.name || "Oslo Pop-Up";
-
-  const story =
-    venue.description ||
-    post?.review_text ||
-    "Limited culinary residency drop in Oslo.";
 
   const displayImage =
     venue.cover_image_url ||
@@ -72,7 +70,11 @@ export function PopupEventCard({
   return (
     <article
       onClick={handleOpenDetails}
-      className={`group relative w-full aspect-[16/10] sm:aspect-[16/9] min-h-[230px] max-h-[270px] rounded-[24px] sm:rounded-[28px] overflow-hidden bg-[#181615] border transition-all duration-300 cursor-pointer select-none flex flex-col justify-between p-3.5 sm:p-4 ${
+      className={`group relative w-full ${
+        compact
+          ? "aspect-auto h-full min-h-0 max-h-none rounded-[24px] p-3"
+          : "aspect-[16/10] sm:aspect-[16/9] min-h-[230px] max-h-[270px] rounded-[24px] sm:rounded-[28px] p-3.5 sm:p-4"
+      } overflow-hidden bg-[#181615] border transition-all duration-300 cursor-pointer select-none flex flex-col justify-between ${
         isDormant
           ? "grayscale-[25%] opacity-90 border-black/10 dark:border-white/10 shadow-md"
           : isActive
@@ -114,12 +116,12 @@ export function PopupEventCard({
               <Flame className="w-2.5 h-2.5 fill-white" />
               <span>Live Now</span>
             </span>
-          ) : (
+          ) : !compact ? (
             <span className="px-2.5 py-0.5 rounded-full bg-[#FAF7F2] text-[#181615] text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-xs">
               <Calendar className="w-2.5 h-2.5" />
               <span>Next Drop</span>
             </span>
-          )}
+          ) : null}
 
           <button
             type="button"
@@ -139,14 +141,11 @@ export function PopupEventCard({
       {/* =====================================================================
           BOTTOM CONTENT: TITLE + CONCEPT STORY + COMPACT FULL-WIDTH CTA PILL
           ===================================================================== */}
-      <div className="relative z-10 space-y-2 pt-2">
+      <div className={`relative z-10 ${compact ? "space-y-1.5 pt-1.5" : "space-y-2 pt-2"}`}>
         <div>
-          <h3 className="font-comico font-black text-xl sm:text-2xl text-white tracking-tight leading-tight line-clamp-1 drop-shadow-md">
+          <h3 className={`font-comico font-normal ${compact ? "text-[15px]" : "text-xl sm:text-2xl"} text-white tracking-tight leading-tight line-clamp-1 drop-shadow-md`}>
             {title}
           </h3>
-          <p className="mt-0.5 text-white/80 text-[11px] sm:text-xs font-medium leading-snug line-clamp-1 drop-shadow-sm">
-            {story}
-          </p>
         </div>
 
         {/* Inactive hint or Drop details indicator */}
@@ -155,15 +154,19 @@ export function PopupEventCard({
             Dates &amp; location announcing soon
           </div>
         ) : popupMeta?.dates_label ? (
-          <div className="flex items-center gap-2 text-[10.5px] font-semibold text-white/90">
-            <span className="flex items-center gap-1 text-[#FF8566]">
-              <Calendar className="w-3 h-3" />
+          <div
+            className={`flex items-center ${
+              compact ? "justify-between gap-2" : "gap-2"
+            } text-[10.5px] font-semibold text-white/90 min-w-0`}
+          >
+            <span className="flex items-center gap-1 text-[#FF8566] whitespace-nowrap shrink-0">
+              <Calendar className="w-3 h-3 shrink-0" />
               <span>{popupMeta.dates_label}</span>
             </span>
             {popupMeta?.host_venue_name && !popupMeta.host_venue_name.toLowerCase().includes("tba") && (
               <>
-                <span>·</span>
-                <span className="truncate">At {popupMeta.host_venue_name}</span>
+                {!compact && <span>·</span>}
+                <span className="truncate min-w-0">At {popupMeta.host_venue_name}</span>
               </>
             )}
           </div>
@@ -176,13 +179,13 @@ export function PopupEventCard({
             e.stopPropagation();
             handleOpenDetails();
           }}
-          className={`w-full py-2 sm:py-2.5 rounded-full font-bold text-xs tracking-wide flex items-center justify-center gap-1.5 shadow-md transition-transform active:scale-[0.98] cursor-pointer ${
+          className={`w-full ${compact ? "py-2 text-[11px]" : "py-2 sm:py-2.5 text-xs"} rounded-full font-bold tracking-wide flex items-center justify-center gap-1.5 shadow-md transition-transform active:scale-[0.98] cursor-pointer ${
             isDormant
               ? "bg-[#FAF7F2]/95 hover:bg-white text-[#181615]"
               : "bg-white hover:bg-stone-100 text-[#181615]"
           }`}
         >
-          <span>{isDormant ? "View Pop-Up Residency" : "View Pop-Up Details"}</span>
+          <span>{isDormant ? "View Pop-Up Residency" : compact ? "View Details" : "View Pop-Up Details"}</span>
         </button>
       </div>
     </article>

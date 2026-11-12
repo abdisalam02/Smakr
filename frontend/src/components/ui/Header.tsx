@@ -88,6 +88,8 @@ export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-transparent pt-safe pt-3 px-3.5 sm:px-6 transition-colors pointer-events-none">
+      {/* Warm-oat frosted bar, revealed once the feed is scrolled so swimlane
+          titles can never bleed behind the logo or account pill. */}
       <div className="w-full max-w-7xl mx-auto flex items-center justify-between gap-3">
         {/* Top-Left Pill: Frosted glass capsule */}
         <div className="flex items-center gap-3 pointer-events-auto shrink-0">

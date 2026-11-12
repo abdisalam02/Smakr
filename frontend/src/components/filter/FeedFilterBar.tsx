@@ -610,7 +610,12 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
   }, [activeGroupDef, childCategoryCounts, selectedDishCategory]);
 
   return (
-    <div data-filter-bar className="w-full max-w-full min-w-0 bg-transparent border-b border-black/[0.06] dark:border-white/[0.08]">
+    <div
+      data-filter-bar
+      className={`w-full max-w-full min-w-0 bg-transparent ${
+        compact ? "" : "border-b border-black/[0.06] dark:border-white/[0.08]"
+      }`}
+    >
       {/* ── TOP HORIZONTAL STRIP (W1–W3: Non-empty only, count desc, short & honest) ── */}
       <div
         ref={filterScrollRef}
@@ -821,7 +826,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                 e.preventDefault();
               }
             }}
-            className="w-full border-t border-black/[0.06] dark:border-white/[0.08] bg-[#FAF7F2] dark:bg-[#151413] px-3.5 pt-2 pb-2.5 space-y-2.5 select-none touch-pan-x cursor-grab active:cursor-grabbing"
+            className="w-full rounded-b-2xl border-t border-white/50 dark:border-white/10 bg-[#FAF7F2]/80 dark:bg-[#181615]/80 backdrop-blur-xl shadow-[0_18px_40px_rgba(24,22,21,0.14)] px-3.5 pt-2 pb-2.5 space-y-2.5 select-none touch-pan-x cursor-grab active:cursor-grabbing"
           >
                 {/* Header: Compact Row (Categories + active on left, Reset on right) */}
                 <div className="flex items-center justify-between">
@@ -863,6 +868,10 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                     {FOOD_GROUPS.map((group) => {
                       const isSelected = selectedGroup === group.id;
                       const count = groupCounts[group.id] || 0;
+
+                      // Hide top-level categories with nothing to show; keep the
+                      // active one visible so the current filter is never ambiguous.
+                      if (count === 0 && !isSelected) return null;
 
                       return (
                         <button

@@ -4,6 +4,7 @@ import React from "react";
 import { Navigation, Plus, Minus } from "lucide-react";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
+import { openLocationPrompt } from "@/lib/locationPrompt";
 
 interface MapControlsProps {
   onZoomIn: () => void;
@@ -23,16 +24,38 @@ export function MapControls({
   const locating = isLocating || loading;
 
   const handleLocateClick = () => {
-    useCityPulseStore.getState().setIsLocating(true);
-    if (onLocate) {
-      onLocate();
-    } else {
-      requestLocation(true);
+    const runLocate = () => {
+      useCityPulseStore.getState().setIsLocating(true);
+      if (onLocate) {
+        onLocate();
+      } else {
+        requestLocation(true);
+      }
+    };
+
+    // Insecure LAN URLs can't access GPS at all — show the in-app help card
+    // instead of letting the browser fail with a toast.
+    if (typeof window !== "undefined" && !window.isSecureContext) {
+      openLocationPrompt();
+      return;
     }
+
+    if (typeof navigator !== "undefined" && navigator.permissions?.query) {
+      navigator.permissions
+        .query({ name: "geolocation" as PermissionName })
+        .then((status) => {
+          if (status.state === "denied") openLocationPrompt();
+          else runLocate();
+        })
+        .catch(runLocate);
+      return;
+    }
+
+    runLocate();
   };
 
   return (
-    <div className="absolute right-3.5 top-20 z-20 flex flex-col items-end gap-2 pointer-events-auto select-none">
+    <div className="absolute right-3.5 top-[122px] z-20 flex flex-col items-end gap-2 pointer-events-auto select-none">
       <style>{`
         @keyframes gentleLocatePulse {
           0%, 100% {

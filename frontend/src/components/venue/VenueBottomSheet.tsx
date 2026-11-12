@@ -18,9 +18,9 @@ import {
   Share2,
   Instagram,
   Calendar,
-  ZoomIn,
 } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
+import { isInstantVenueSheet, getVenueMorphImage } from "@/lib/venueMorph";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "motion/react";
 import { useVenueDetail } from "@/hooks/useVenueDetail";
 import { formatDistance } from "@/lib/math";
@@ -63,6 +63,10 @@ export function VenueBottomSheet() {
   // Expanded detailed slidable card state on mobile
   const isVenueDetailModalOpen = useCityPulseStore((state) => state.isVenueDetailModalOpen);
   const setIsVenueDetailModalOpen = useCityPulseStore((state) => state.setIsVenueDetailModalOpen);
+  // When the sheet is opened from the map spotlight card, it renders directly
+  // in place so the view transition can morph the card photo into the hero.
+  const instantEntry = isInstantVenueSheet();
+  const morphImageRef = React.useRef<string | null>(null);
 
   // Retain the last selected venue while the slide-down exit animation completes
   const lastVenueRef = React.useRef<typeof storeSelectedVenue>(null);
@@ -71,13 +75,19 @@ export function VenueBottomSheet() {
   }
   const selectedVenue = storeSelectedVenue ?? (isVenueDetailModalOpen ? lastVenueRef.current : lastVenueRef.current);
 
+  if (isVenueDetailModalOpen && isInstantVenueSheet()) {
+    morphImageRef.current = getVenueMorphImage();
+  }
+  if (!isVenueDetailModalOpen) {
+    morphImageRef.current = null;
+  }
+  const heroSrc = morphImageRef.current || selectedVenue?.cover_image_url || null;
+
   const [heroImgReady, setHeroImgReady] = useState(false);
   const [loadedDishIds, setLoadedDishIds] = useState<Record<string, boolean>>({});
-  const [zoomImage, setZoomImage] = useState<{ src: string; alt: string } | null>(null);
 
   useEffect(() => {
     setHeroImgReady(false);
-    setZoomImage(null);
   }, [selectedVenue?.id]);
 
   const handleShare = async () => {
@@ -108,9 +118,8 @@ export function VenueBottomSheet() {
   // 1. Title, tags & address smoothly glide up from resting position over the hero photo (y=175) to dock in the header bar (y=0)
   // 2. Title scales down from 1.0 (text-2xl) to 0.85 (text-lg) smoothly
   // 3. Category & open status badges remain visible in both resting & docked states
-  // 4. Frosted glass scrim fades in smoothly over the docked header
+  // 4. Soft scrim fades in over the docked header (lighter, no expensive blur)
   const titleTranslateY = useTransform(scrollY, [0, 175], [175, 0], { clamp: true });
-  const titleScale = useTransform(scrollY, [0, 175], [1, 0.85], { clamp: true });
   const navScrimOpacity = useTransform(scrollY, [40, 175], [0, 1], { clamp: true });
   const imageParallaxY = useTransform(scrollY, [0, 260], [0, -35], { clamp: true });
   const imageScale = useTransform(scrollY, [-100, 0], [1.12, 1], { clamp: true });
@@ -253,20 +262,30 @@ export function VenueBottomSheet() {
   const handleClose = React.useCallback(() => {
     setIsVenueDetailModalOpen(false);
     setBottomSheetOpen(false);
-  }, [setIsVenueDetailModalOpen, setBottomSheetOpen]);
+    // On the mobile map, closing the restaurant sheet should drop back to the
+    // map spotlight card (not clear the selection). Other surfaces keep the
+    // original behavior.
+    const state = useCityPulseStore.getState();
+    const keepMapCard =
+      state.viewMode === "map" &&
+      typeof window !== "undefined" &&
+      window.innerWidth < 1024;
+    if (!keepMapCard) {
+      setSelectedVenue(null);
+    }
+  }, [setIsVenueDetailModalOpen, setBottomSheetOpen, setSelectedVenue]);
 
   // Keyboard Escape dismiss
   useEffect(() => {
     if (!isVenueDetailModalOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (zoomImage) setZoomImage(null);
-        else handleClose();
+        handleClose();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isVenueDetailModalOpen, zoomImage, handleClose]);
+  }, [isVenueDetailModalOpen, handleClose]);
 
   const handleContentScroll = (e: React.UIEvent<HTMLDivElement>) => {
     scrollY.set(e.currentTarget.scrollTop);
@@ -385,7 +404,12 @@ export function VenueBottomSheet() {
       {/* DEDICATED FULL-SCREEN SLIDE-UP DRAWER (View Details / Menu & Vibes)     */}
       {/* Dimmed backdrop, 0.38s cubic-bezier easing matching feed modal, fluid pull */}
       {/* ======================================================================= */}
-      <AnimatePresence>
+      <AnimatePresence
+        // After a drag-to-close, the card keeps its pulled-down offset while it
+        // slides out. Framer restores that offset when the next sheet mounts
+        // (it reads the rendered transform), so clear it once the exit ends.
+        onExitComplete={() => sheetY.set(0)}
+      >
         {isVenueDetailModalOpen && selectedVenue && (
           <div className="fixed inset-0 z-50 flex flex-col justify-end pointer-events-auto">
             {/* Dimmed backdrop overlay that fades in and dismisses the drawer when tapped */}
@@ -401,7 +425,7 @@ export function VenueBottomSheet() {
             {/* Pop out from bottom spring container */}
             <motion.div
               ref={sheetRef}
-              initial={{ y: "100%" }}
+              initial={instantEntry ? false : { y: "100%" }}
               animate={{
                 y: 0,
                 transition: { type: "spring", stiffness: 360, damping: 32, mass: 0.8 },
@@ -418,25 +442,44 @@ export function VenueBottomSheet() {
                   y: sheetY,
                   contain: "layout style",
                 }}
+                initial={instantEntry ? { opacity: 0 } : false}
+                animate={{ opacity: 1 }}
+                transition={
+                  instantEntry
+                    ? { delay: 0.18, duration: 0.2, ease: "easeOut" }
+                    : undefined
+                }
                 className="relative w-full h-full bg-[#FAF7F2] dark:bg-[#181615] lg:bg-[#FAF7F2]/95 lg:backdrop-blur-sm rounded-t-3xl border-t border-[#181615]/10 dark:border-white/10 shadow-2xl flex flex-col overflow-hidden will-change-transform smakr-bottom-sheet"
               >
               {/* 1. PINNED HERO IMAGE BACKGROUND — Generous, cinematic surface area with subtle parallax */}
-              {selectedVenue.cover_image_url && (
-                <div className="absolute top-0 inset-x-0 h-[380px] sm:h-[420px] overflow-hidden rounded-t-3xl pointer-events-none z-0">
+              {heroSrc && (
+                <div
+                  className="absolute top-0 inset-x-0 h-[380px] sm:h-[420px] overflow-hidden rounded-t-3xl pointer-events-none z-0"
+                  data-venue-hero-target
+                >
                   <motion.div
                     style={{ y: imageParallaxY, scale: imageScale }}
                     className="relative w-full h-full origin-top"
                   >
-                    <Image
-                      src={selectedVenue.cover_image_url}
-                      alt={selectedVenue.name}
-                      fill
-                      priority
-                      className="object-cover object-center"
-                      sizes="(max-width: 640px) 100vw, 600px"
-                      placeholder="blur"
-                      blurDataURL={FEED_BLUR_DARK}
-                    />
+                    {morphImageRef.current ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={morphImageRef.current}
+                        alt={selectedVenue.name}
+                        className="absolute inset-0 w-full h-full object-cover object-center"
+                      />
+                    ) : (
+                      <Image
+                        src={heroSrc}
+                        alt={selectedVenue.name}
+                        fill
+                        priority
+                        className="object-cover object-center"
+                        sizes="(max-width: 640px) 100vw, 600px"
+                        placeholder="blur"
+                        blurDataURL={FEED_BLUR_DARK}
+                      />
+                    )}
                     {/* Permanent subtle dark gradients: top for handle/controls, bottom for resting title legibility */}
                     <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/90" />
                   </motion.div>
@@ -449,10 +492,20 @@ export function VenueBottomSheet() {
                 {/* Frosted glass scrim: softened blur and gentle transparency so the photo texture stays visible */}
                 <motion.div
                   style={{ opacity: navScrimOpacity }}
-                  className="absolute top-0 inset-x-0 h-[88px] sm:h-[94px] bg-[#181615]/65 backdrop-blur-md border-b border-white/10 pointer-events-none rounded-t-3xl shadow-md"
+                  className="absolute top-0 inset-x-0 h-[88px] sm:h-[94px] bg-gradient-to-b from-[#181615]/75 via-[#181615]/40 to-transparent pointer-events-none rounded-t-3xl"
                 />
 
-                <div className="relative z-10 w-full flex flex-col">
+                <motion.div
+                  initial={instantEntry ? { opacity: 0 } : false}
+                  animate={{ opacity: 1 }}
+                  transition={
+                    instantEntry
+                      ? { delay: 0.3, duration: 0.16, ease: "easeOut" }
+                      : undefined
+                  }
+                  className="relative z-10 w-full flex flex-col"
+                  data-sheet-header
+                >
                   {/* Centered Drag Handle Pill */}
                   <div
                     onTouchStart={handleHeaderTouchStart}
@@ -468,9 +521,15 @@ export function VenueBottomSheet() {
                     <motion.div
                       style={{
                         y: titleTranslateY,
-                        scale: titleScale,
                         transformOrigin: "top left",
                       }}
+                      initial={instantEntry ? { opacity: 0 } : false}
+                      animate={{ opacity: 1 }}
+                      transition={
+                        instantEntry
+                          ? { delay: 0.3, duration: 0.22, ease: [0.22, 1, 0.36, 1] }
+                          : undefined
+                      }
                       className="min-w-0 pr-24 pointer-events-none select-none will-change-transform flex flex-col gap-1"
                     >
                       {/* Category tag & Closed/Open live badge — always visible in both resting & docked states */}
@@ -499,10 +558,10 @@ export function VenueBottomSheet() {
                         </span>
                       </div>
 
-                      <h3 className="font-comico text-2xl sm:text-3xl text-white tracking-tight leading-tight drop-shadow-md truncate max-w-full">
+                      <h3 className="font-comico text-2xl sm:text-3xl text-white tracking-tight leading-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)] truncate max-w-full">
                         {selectedVenue.name}
                       </h3>
-                      <p className="text-xs sm:text-[13px] text-white/90 flex items-center gap-1 drop-shadow-xs truncate max-w-full">
+                      <p className="text-xs sm:text-[13px] text-white/95 flex items-center gap-1 drop-shadow-[0_1px_6px_rgba(0,0,0,0.9)] truncate max-w-full">
                         <MapPin className="w-3.5 h-3.5 text-[#e84a27] shrink-0" />
                         <span className="truncate">
                           {formatOsloLocation(selectedVenue.address, selectedVenue.city || selectedVenue.neighborhood).fullClean}
@@ -532,7 +591,7 @@ export function VenueBottomSheet() {
                       </button>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               </div>
 
               <div
@@ -543,26 +602,27 @@ export function VenueBottomSheet() {
                 onTouchEnd={handleContentTouchEnd}
                 className="flex-1 overflow-y-auto text-xs no-scrollbar overscroll-contain relative z-10"
               >
-              {isPopup ? (
-                /* =========================================================================
-                   DEDICATED POP-UP RESIDENCY SHEET
-                   ========================================================================= */
-                <>
-                  {/* Top Spacer: Reveals pinned hero photo beneath with generous space above card */}
-                  <div
-                    onClick={() =>
-                      selectedVenue.cover_image_url &&
-                      setZoomImage({ src: selectedVenue.cover_image_url, alt: selectedVenue.name })
-                    }
-                    className="w-full h-[315px] sm:h-[350px] shrink-0 relative cursor-zoom-in"
-                  >
-                    <span className="absolute bottom-3 right-4 px-2 py-1 rounded-lg bg-black/50 hover:bg-black/70 backdrop-blur-md text-white/90 text-[10px] font-semibold flex items-center gap-1 pointer-events-auto transition-colors border border-white/15">
-                      <ZoomIn className="w-3 h-3" />
-                      <span>Zoom</span>
-                    </span>
-                  </div>
+                <motion.div
+                  initial={instantEntry ? { opacity: 0 } : false}
+                  animate={{ opacity: 1 }}
+                  transition={
+                    instantEntry
+                      ? { delay: 0.24, duration: 0.34, ease: "easeOut" }
+                      : undefined
+                  }
+                  className="will-change-transform"
+                  data-sheet-body
+                >
+                {isPopup ? (
+                  /* =========================================================================
+                     DEDICATED POP-UP RESIDENCY SHEET
+                     ========================================================================= */
+                  <>
+                  {/* Top spacer reveals the pinned hero; the content card tucks
+                      over its lower edge for a layered editorial look. */}
+                  <div className="w-full h-[315px] sm:h-[350px] shrink-0" />
 
-                  {/* Content Card: Glides smoothly up over the hero photo with solid background */}
+                  {/* Content Card: Glides smoothly up under the hero photo with solid background */}
                   <div className="relative z-10 bg-[#FAF7F2] dark:bg-[#181615] rounded-t-3xl px-4 pt-4 pb-14 space-y-4 shadow-xl border-t border-black/5 dark:border-white/5">
                     {/* Primary Residency Status & Schedule Card */}
                     <div className="p-4 sm:p-5 rounded-3xl bg-[#F5EFE4] dark:bg-[#1E1C1A] border border-[#181615]/10 space-y-3.5 shadow-xs">
@@ -682,7 +742,7 @@ export function VenueBottomSheet() {
                   {selectedVenue.description && (
                     <div className="px-1 py-1 space-y-1.5">
                       <div className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-                        <span>✦ Concept &amp; Story</span>
+                        <span>✦ STORY</span>
                       </div>
                       <p className="text-[14px] sm:text-[15.5px] text-[#181615]/90 dark:text-zinc-100 leading-relaxed whitespace-pre-line font-medium">
                         {selectedVenue.description}
@@ -791,21 +851,11 @@ export function VenueBottomSheet() {
                    STANDARD RESTAURANT SHEET
                    ========================================================================= */
                 <>
-                  {/* Top Spacer: Reveals pinned hero photo beneath with generous space above card */}
-                  <div
-                    onClick={() =>
-                      selectedVenue.cover_image_url &&
-                      setZoomImage({ src: selectedVenue.cover_image_url, alt: selectedVenue.name })
-                    }
-                    className="w-full h-[315px] sm:h-[350px] shrink-0 relative cursor-zoom-in"
-                  >
-                    <span className="absolute bottom-3 right-4 px-2 py-1 rounded-lg bg-black/50 hover:bg-black/70 backdrop-blur-md text-white/90 text-[10px] font-semibold flex items-center gap-1 pointer-events-auto transition-colors border border-white/15">
-                      <ZoomIn className="w-3 h-3" />
-                      <span>Zoom</span>
-                    </span>
-                  </div>
+                  {/* Top spacer reveals the pinned hero; the content card tucks
+                      over its lower edge for a layered editorial look. */}
+                  <div className="w-full h-[315px] sm:h-[350px] shrink-0" />
 
-                  {/* Content Card: Glides smoothly up over the hero photo as user scrolls */}
+                  {/* Content Card: Glides smoothly up under the hero photo as user scrolls */}
                   <div className="relative z-10 bg-[#FAF7F2] dark:bg-[#181615] rounded-t-3xl px-4 pt-4 pb-14 space-y-4 shadow-xl border-t border-black/5 dark:border-white/5">
                     {/* Food Truck schedule callout */}
                     {selectedVenue.spot_type === "food_truck" && selectedVenue.location_schedule && (
@@ -844,12 +894,12 @@ export function VenueBottomSheet() {
                     </button>
                   </div>
 
-                  {/* Culinary Story & Ambiance — Directly under Directions & Log a Dish */}
+                  {/* STORY — Directly under Directions & Log a Dish */}
                   {selectedVenue.description && (
                     <div className="p-3.5 rounded-2xl bg-white/80 dark:bg-[#1E1C1A] border border-[#181615]/8 dark:border-white/10 shadow-2xs space-y-1.5">
                       <div className="flex items-center justify-between">
                         <h4 className="font-bold text-zinc-700 dark:text-zinc-300 uppercase text-[10px] tracking-wider font-mono">
-                          Culinary Story &amp; Ambiance
+                          STORY
                         </h4>
                       </div>
                       <p
@@ -1149,7 +1199,9 @@ export function VenueBottomSheet() {
                   </div>
                 </>
               )}
+              </motion.div>
             </div>
+
               </motion.div>
             </motion.div>
         </div>
@@ -1164,39 +1216,6 @@ export function VenueBottomSheet() {
       activeReaction={selectedDish ? reactions[selectedDish.id] : null}
       onReaction={handleReaction}
     />
-
-    {/* Fullscreen Smooth Image Zoom Lightbox */}
-    <AnimatePresence>
-      {zoomImage && (
-        <motion.div
-          key="venue-sheet-zoom-lightbox"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          onClick={() => setZoomImage(null)}
-          className="fixed inset-0 z-[80] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 cursor-zoom-out select-none"
-        >
-          <button
-            type="button"
-            onClick={() => setZoomImage(null)}
-            aria-label="Close zoom"
-            className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
-          <motion.img
-            src={zoomImage.src}
-            alt={zoomImage.alt}
-            initial={{ scale: 0.82, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.82, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 380, damping: 30, mass: 0.65 }}
-            className="max-w-full max-h-[85dvh] rounded-2xl object-contain shadow-2xl"
-          />
-        </motion.div>
-      )}
-    </AnimatePresence>
   </>
   );
 }

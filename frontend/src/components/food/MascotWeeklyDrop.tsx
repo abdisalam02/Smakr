@@ -2,8 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { MapPin, ArrowUpRight, X, ChevronDown, Pencil, LayoutGrid, Rows2 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { MapPin, ArrowUpRight, X, ChevronDown, Pencil } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { MascotCharacter } from "@/components/avatar/MascotCharacter";
 import {
@@ -75,8 +74,6 @@ export function MascotWeeklyDrop({
   const flyToSpot = useCityPulseStore((state) => state.flyToSpot);
   const selectVenueById = useCityPulseStore((state) => state.selectVenueById);
   const currentUser = useCityPulseStore((state) => state.currentUser);
-  const feedLayout = useCityPulseStore((state) => state.feedLayout);
-  const setFeedLayout = useCityPulseStore((state) => state.setFeedLayout);
   // Derived slice: only re-renders when the weekly pick's own venue changes.
   const venue = useCityPulseStore(
     (state) => state.venues.find((v) => v.id === state.weeklyPick.venue_id) ?? null
@@ -163,56 +160,6 @@ export function MascotWeeklyDrop({
             <h2 className="font-comico text-sm sm:text-base tracking-wider text-[#e84a27] uppercase">
               FEED
             </h2>
-            {/* 1-per-row vs 2-per-row Grid Layout Toggle */}
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center p-0.5 rounded-full bg-white/95 dark:bg-stone-900/95 border border-[#181615]/10 dark:border-white/10 shadow-2xs ml-0.5 isolate"
-              role="group"
-              aria-label="Feed layout density"
-            >
-              <button
-                type="button"
-                onClick={() => setFeedLayout("list")}
-                aria-pressed={feedLayout === "list"}
-                title="Single column view (1 per row)"
-                className={`relative isolate px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer select-none ${
-                  feedLayout === "list"
-                    ? "text-white"
-                    : "text-zinc-500 hover:text-[#181615] dark:hover:text-white"
-                }`}
-              >
-                {feedLayout === "list" && (
-                  <motion.div
-                    layoutId="feedDensityPill"
-                    className="absolute inset-0 bg-[#e84a27] rounded-full shadow-2xs z-0 pointer-events-none"
-                    transition={{ type: "spring", stiffness: 420, damping: 32, mass: 0.6 }}
-                  />
-                )}
-                <Rows2 className="w-3.5 h-3.5 relative z-10" />
-                <span className="hidden sm:inline relative z-10">1×</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setFeedLayout("grid")}
-                aria-pressed={feedLayout === "grid"}
-                title="Grid view (2 per row)"
-                className={`relative isolate px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer select-none ${
-                  feedLayout === "grid"
-                    ? "text-white"
-                    : "text-zinc-500 hover:text-[#181615] dark:hover:text-white"
-                }`}
-              >
-                {feedLayout === "grid" && (
-                  <motion.div
-                    layoutId="feedDensityPill"
-                    className="absolute inset-0 bg-[#e84a27] rounded-full shadow-2xs z-0 pointer-events-none"
-                    transition={{ type: "spring", stiffness: 420, damping: 32, mass: 0.6 }}
-                  />
-                )}
-                <LayoutGrid className="w-3.5 h-3.5 relative z-10" />
-                <span className="hidden sm:inline relative z-10">2×</span>
-              </button>
-            </div>
           </div>
 
           <button

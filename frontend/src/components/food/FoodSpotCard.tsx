@@ -22,6 +22,8 @@ interface FoodSpotCardProps {
   primaryDishPhoto?: string | null;
   topDishName?: string | null;
   signaturePrice?: number | null;
+  /** Full-bleed dark card for the editorial horizontal swimlanes (215x265). */
+  editorial?: boolean;
 }
 
 
@@ -33,6 +35,7 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
   primaryDishPhoto,
   topDishName,
   signaturePrice: propSignaturePrice,
+  editorial = false,
 }: FoodSpotCardProps) {
   const flyToSpot = useCityPulseStore((state) => state.flyToSpot);
   const selectVenueById = useCityPulseStore((state) => state.selectVenueById);
@@ -114,6 +117,69 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
     resolveCustomIconKey(venue.food_category) ||
     displayBadge.pinIcon ||
     taxonomy.spotKind;
+
+  if (editorial) {
+    return (
+      <article
+        style={{ contain: "layout paint style" }}
+        onClick={handleClick}
+        className={`group relative w-full h-full overflow-hidden rounded-[24px] bg-[#181615] cursor-pointer select-none ${
+          isSelected ? "ring-2 ring-[#E84A27]" : ""
+        }`}
+      >
+        {spotCoverUrl ? (
+          <Image
+            src={spotCoverUrl}
+            alt={venue.name}
+            fill
+            priority={priority}
+            loading={priority ? undefined : "lazy"}
+            decoding="async"
+            className="object-cover"
+            sizes="215px"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center p-5">
+            <SmakrFoodIcon name={spotIconKey} className="w-16 h-16 object-contain" />
+          </div>
+        )}
+
+        <div className="absolute inset-0 bg-gradient-to-t from-[#121110] via-[#121110]/45 to-black/10 pointer-events-none" />
+
+        <div className="absolute inset-x-2.5 top-2.5 z-10 flex items-start justify-between gap-1">
+          <span className="bg-[#FAF7F2]/95 text-[#181615] text-[9.5px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 max-w-[112px] border border-white/60 shadow-xs">
+            {displayBadge.flag ? (
+              <span className="text-[10px] leading-none shrink-0">{displayBadge.flag}</span>
+            ) : (
+              <SmakrFoodIcon name={spotIconKey} className="w-3 h-3 shrink-0" />
+            )}
+            <span className="uppercase tracking-wide truncate">
+              {displayBadge.mainTag || taxonomy.spotLabel}
+            </span>
+          </span>
+
+          {hasGoogleRating && (
+            <span className="bg-black/50 backdrop-blur-md text-white text-[9.5px] font-bold px-2 py-0.5 rounded-full border border-white/15 flex items-center gap-0.5 shrink-0">
+              <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+              <span>{venue.google_rating!.toFixed(1)}</span>
+            </span>
+          )}
+        </div>
+
+        <div className="absolute inset-x-0 bottom-0 z-10 p-2.5">
+          <h3 className="font-comico font-normal text-[15px] leading-tight text-white uppercase truncate">
+            {venue.name}
+          </h3>
+          <p className="text-[10.5px] text-white/75 truncate mt-0.5">
+            📍 {locationInfo.neighborhood}
+          </p>
+          <p className="text-[10.5px] text-[#FDEA6B] font-semibold truncate mt-0.5">
+            ✦ {signatureDishName}
+          </p>
+        </div>
+      </article>
+    );
+  }
 
   return (
     <article

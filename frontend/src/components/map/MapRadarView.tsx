@@ -20,6 +20,7 @@ import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { MapControls } from "@/components/map/MapControls";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { fetchVenueDetail } from "@/lib/api";
+import { selectionFlightDuration } from "@/lib/mapMotion";
 import { Venue } from "@/types";
 import {
   createMascotDOMElement,
@@ -85,6 +86,10 @@ function getMapMascotDimensions(zoom: number): { width: number; height: number }
   return { width, height };
 }
 
+// One fixed DOM size for the weekly mascot; zoom only scales the cached wrapper.
+const WEEKLY_BASE_HEIGHT = 92;
+const WEEKLY_BASE_WIDTH = Math.round(WEEKLY_BASE_HEIGHT * 0.82);
+
 function getUserAvatarDimensions(zoom: number): { width: number; height: number } {
   // Calibrated so user bust visual head volume matches the Smakr mascot head (head ~21-22px at zoom 13.5)
   const height = Math.round(Math.min(42, Math.max(26, (zoom - 10) * 3.6 + 23)));
@@ -111,12 +116,6 @@ function getZoomMarkerScale(zoom: number): number {
   return 1.0;
 }
 
-function getZoomMascotScale(zoom: number): number {
-  if (zoom < 12.2) return 0.68;
-  if (zoom < 13.8) return 0.85;
-  return 1.0;
-}
-
 /**
  * Updates a pin's selected/unselected visuals IN PLACE. Markers are created once
  * and only mutated afterwards, so store updates never tear down and rebuild the
@@ -125,11 +124,25 @@ function getZoomMascotScale(zoom: number): number {
 function applyPinState(root: HTMLElement, isSelected: boolean, currentZoom?: number) {
   const isWeeklyPick = root.dataset.isWeeklyPick === "1";
   const isMatchaOrDumpling = isMatchaOrDumplingIcon(root.dataset.iconKey);
+  const isMapMode = useCityPulseStore.getState().viewMode === "map";
+  const wasSelected = root.dataset.selected === "1";
   root.dataset.selected = isSelected ? "1" : "0";
-  root.style.zIndex = isSelected ? "55" : isWeeklyPick ? "44" : "15";
+  root.style.zIndex = isSelected ? "60" : isWeeklyPick ? "18" : "15";
   const visual = root.querySelector<HTMLElement>(".pin-visual");
-  const baseScale = typeof currentZoom === "number" ? getZoomMarkerScale(currentZoom) : 1.0;
-  if (visual) visual.style.transform = isSelected ? "scale(1.15)" : `scale(${baseScale})`;
+  // The actual transform is pure CSS: .pin-visual uses
+  // scale(var(--pin-visual-scale, var(--pin-scale, 1))), so zoom frames only
+  // update one custom property on the map container instead of looping 32 pins.
+  root.style.setProperty(
+    "--pin-visual-scale",
+    isSelected ? (isMapMode ? "1.55" : "1.15") : "var(--pin-scale, 1)"
+  );
+  if (visual && wasSelected !== isSelected) {
+    // Animate only discrete selection changes. Zoom frames are pure CSS.
+    visual.style.transition = "transform 170ms cubic-bezier(0.22,1,0.36,1)";
+    window.setTimeout(() => {
+      visual.style.transition = "";
+    }, 190);
+  }
   const puck = root.querySelector<HTMLElement>(".smakr-map-puck");
   const iconContainer = root.querySelector<HTMLElement>(".smakr-puck-icon");
   // Calibrated size override specifically for wide (dumplings aspect 2.07) and tall (matcha aspect 0.48) icons
@@ -147,7 +160,6 @@ function applyPinState(root: HTMLElement, isSelected: boolean, currentZoom?: num
     if (isSelected) {
       iconContainer.style.width = `${selectedIconPx}px`;
       iconContainer.style.height = `${selectedIconPx}px`;
-      iconContainer.style.filter = "url(#smakr-diecut-default)";
       const svg = iconContainer.querySelector("svg");
       if (svg) {
         svg.setAttribute("width", `${selectedIconPx}`);
@@ -161,7 +173,6 @@ function applyPinState(root: HTMLElement, isSelected: boolean, currentZoom?: num
     } else {
       iconContainer.style.width = `${baseIconPx}px`;
       iconContainer.style.height = `${baseIconPx}px`;
-      iconContainer.style.filter = "url(#smakr-diecut-default)";
       const svg = iconContainer.querySelector("svg");
       if (svg) {
         svg.setAttribute("width", `${baseIconPx}`);
@@ -369,7 +380,6 @@ function createAquarellePinElement(
   inner.style.position = "relative";
   inner.style.boxSizing = "border-box";
   inner.style.transformOrigin = "bottom center";
-  inner.style.transition = "transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)";
 
   const haloHtml = isFreshBatch
     ? `<div style="position:absolute;top:-6px;left:-6px;width:46px;height:46px;border-radius:9999px;border:2px solid #e84a27;background:rgba(232,74,39,0.25);animation:ping 1.4s cubic-bezier(0,0,0.2,1) infinite;pointer-events:none;"></div>`
@@ -439,8 +449,8 @@ function createAquarellePinElement(
         padding: 0;
         flex-shrink: 0;
         overflow: visible !important;
-        filter: url(#smakr-diecut-default);
-        transition: filter 0.2s ease, width 0.15s ease, height 0.15s ease;
+        filter: drop-shadow(0 3px 6px rgba(24, 22, 21, 0.22));
+        transition: width 150ms ease, height 150ms ease;
       ">
         ${pinGlyph}
       </div>
@@ -480,10 +490,27 @@ function createAquarellePinElement(
 export function MapRadarView() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<maplibregl.Map | null>(null);
-  const markerPoolRef = useRef<Map<string, { marker: maplibregl.Marker; rootEl: HTMLElement }>>(new Map());
-  const prevSelectedVenueIdRef = useRef<string | null>(null);
+  const markerPoolRef = useRef<
+    Map<
+      string,
+      {
+        marker: maplibregl.Marker;
+        rootEl: HTMLElement;
+        /** Cached per-pin visual wrapper so zoom frames never query the DOM. */
+        visualEl: HTMLElement | null;
+      }
+    >
+  >(new Map());
   const weeklyMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const weeklyPickIdRef = useRef<string | null>(null);
+  const weeklyMascotSuppressedRef = useRef(false);
+  const weeklyPlaceRightRef = useRef(false);
+  const weeklyBustRef = useRef<HTMLDivElement | null>(null);
+  const weeklyInnerRef = useRef<HTMLDivElement | null>(null);
+  const weeklyBadgeRef = useRef<HTMLDivElement | null>(null);
+  const weeklyImgRef = useRef<HTMLImageElement | null>(null);
   const venuePopupRef = useRef<maplibregl.Popup | null>(null);
+  const flyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMapReadyRef = useRef(false);
   const [isMapReady, setIsMapReady] = useState(false);
   // Future Map Filter slot
@@ -495,7 +522,13 @@ export function MapRadarView() {
   const [activeTheme, setActiveTheme] = useState<"streets" | "dataviz" | "aquarelle">("streets");
   const venues = useCityPulseStore((state) => state.venues);
   const foodPosts = useCityPulseStore((state) => state.foodPosts);
-  const selectedVenue = useCityPulseStore((state) => state.selectedVenue);
+  // In map mode the focused card lives in the bottom dock; keeping selectedVenue
+  // out of this component's render means opening/closing a card never
+  // re-renders the 2,000-line map wrapper. Split/feed modes still get the venue
+  // for the MapLibre popup.
+  const selectedVenue = useCityPulseStore((state) =>
+    state.viewMode === "map" ? null : state.selectedVenue
+  );
   const setSelectedVenue = useCityPulseStore((state) => state.setSelectedVenue);
   const setIsVenueDetailModalOpen = useCityPulseStore((state) => state.setIsVenueDetailModalOpen);
   const mapCategory = useCityPulseStore((state) => state.mapCategory);
@@ -519,9 +552,11 @@ export function MapRadarView() {
   const userLocation = useCityPulseStore((state) => state.userLocation);
   const currentUser = useCityPulseStore((state) => state.currentUser);
   const mobileSheetState = useCityPulseStore((state) => state.mobileSheetState);
+  const viewMode = useCityPulseStore((state) => state.viewMode);
   const userLocationMarkerRef = useRef<maplibregl.Marker | null>(null);
   const lastAvatarSigRef = useRef<string>("");
   const isProgrammaticFlightRef = useRef(false);
+  const selectionFlightUntilRef = useRef(0);
   const { requestLocation } = useGeolocation();
 
   // Unified smooth flight logic matching the venue pins on the map
@@ -806,22 +841,36 @@ export function MapRadarView() {
         return;
       }
 
-      const handleSelect = async () => {
+      const handleSelect = () => {
         // Read the freshest venue snapshot so the handler never goes stale.
+        const state = useCityPulseStore.getState();
         const current =
-          useCityPulseStore.getState().venues.find((v) => v.id === venue.id) ?? venue;
-        try {
-          const detail = await fetchVenueDetail(venue.id);
-          setSelectedVenue(detail);
-        } catch {
-          setSelectedVenue({
-            ...current,
-            recent_checkins: [],
-            recent_speed_tests: [],
-          });
-        }
+          state.venues.find((v) => v.id === venue.id) ?? venue;
 
-        flyToTarget(current.longitude, current.latitude, 15.5, "venue-pin");
+        // Optimistic, instant selection: show the card + fly immediately, then
+        // hydrate the richer detail in the background (no network wait in the
+        // tap → animation path).
+        setSelectedVenue({
+          ...current,
+          recent_checkins: [],
+          recent_speed_tests: [],
+        });
+
+        if (state.viewMode !== "map") {
+          flyToTarget(current.longitude, current.latitude, 15.5, "venue-pin");
+        }
+        // In map mode the store subscription owns the synchronized 520ms
+        // pin glide + spotlight card rise (no duplicate flight here).
+
+        void fetchVenueDetail(venue.id)
+          .then((detail) => {
+            if (useCityPulseStore.getState().selectedVenue?.id === venue.id) {
+              setSelectedVenue(detail);
+            }
+          })
+          .catch(() => {
+            /* optimistic card remains */
+          });
       };
 
       const el = createAquarellePinElement(
@@ -841,7 +890,11 @@ export function MapRadarView() {
         .setLngLat([venue.longitude, venue.latitude])
         .addTo(map);
 
-      markerPoolRef.current.set(venue.id, { marker, rootEl: el });
+      markerPoolRef.current.set(venue.id, {
+        marker,
+        rootEl: el,
+        visualEl: el.querySelector<HTMLElement>(".pin-visual"),
+      });
     });
   }, [setSelectedVenue, flyToTarget]);
 
@@ -871,7 +924,7 @@ export function MapRadarView() {
     return badge;
   }, []);
 
-  const openWeeklyVenue = useCallback(async () => {
+  const openWeeklyVenue = useCallback(() => {
     const state = useCityPulseStore.getState();
     const pick = state.weeklyPick;
     const [lng, lat] = pick.coords;
@@ -884,16 +937,21 @@ export function MapRadarView() {
     }
 
     if (existingVenue) {
-      try {
-        const detail = await fetchVenueDetail(existingVenue.id);
-        setSelectedVenue(detail);
-      } catch {
-        setSelectedVenue({
-          ...existingVenue,
-          recent_checkins: [],
-          recent_speed_tests: [],
+      // Instant optimistic card; hydrate details in the background.
+      setSelectedVenue({
+        ...existingVenue,
+        recent_checkins: [],
+        recent_speed_tests: [],
+      });
+      void fetchVenueDetail(existingVenue.id)
+        .then((detail) => {
+          if (useCityPulseStore.getState().selectedVenue?.id === existingVenue.id) {
+            setSelectedVenue(detail);
+          }
+        })
+        .catch(() => {
+          /* optimistic card remains */
         });
-      }
     } else {
       setSelectedVenue({
         id: pick.venue_id,
@@ -936,10 +994,33 @@ export function MapRadarView() {
       });
     }
 
-    flyToTarget(lng, lat, 15.6, "weekly-pick");
+    if (useCityPulseStore.getState().viewMode !== "map") {
+      flyToTarget(lng, lat, 15.6, "weekly-pick");
+    }
+    // In map mode the store subscription owns the synchronized camera glide.
   }, [setSelectedVenue, flyToTarget]);
 
-  // Anchor the official Smakr pointing mascot bust exclusively to the Weekly Pick (beside venue pin).
+  // Anchor the official Smakr pointing mascot bust exclusively to the Weekly Pick.
+  const updateWeeklyScale = useCallback((zoom: number) => {
+    const bust = weeklyBustRef.current;
+    const inner = weeklyInnerRef.current;
+    const pinScale = getZoomMarkerScale(zoom);
+    if (bust) {
+      const { height } = getMapMascotDimensions(zoom);
+      bust.style.transform = `scale(${height / WEEKLY_BASE_HEIGHT})`;
+    }
+    if (inner) {
+      // Keep the fingertip a constant gap from the (zoom-scaled) pin icon:
+      // pins shrink to 0.58x when zoomed out, so a fixed 26px gap drifted away.
+      const gap = Math.round(26 * pinScale);
+      inner.style.left = `${
+        weeklyPlaceRightRef.current
+          ? gap - Math.round(0.0613 * WEEKLY_BASE_WIDTH)
+          : -gap - Math.round(0.9387 * WEEKLY_BASE_WIDTH)
+      }px`;
+    }
+  }, []);
+
   const renderWeeklyMarker = useCallback(() => {
     const map = mapInstance.current;
     if (!map || !isMapReadyRef.current) return;
@@ -948,6 +1029,10 @@ export function MapRadarView() {
     const pick = state.weeklyPick;
     const [lng, lat] = pick.coords;
     if (typeof lng !== "number" || typeof lat !== "number") return;
+    // When the weekly venue is the selected card, the card's own mascot takes
+    // over; keep the map mascot out of the way.
+    const isPickSelected = state.selectedVenue?.id === pick.venue_id;
+    const hideMascot = isPickSelected || weeklyMascotSuppressedRef.current;
 
     // Check if any filter is active and whether the Weekly Pick venue passes the active filter
     const hasActiveFilter =
@@ -978,9 +1063,15 @@ export function MapRadarView() {
       }
     }
 
-    // Shared sizing formula with "YOU" bust so both busts match across all zoom levels
-    const currentZoom = map.getZoom();
-    const { width: bustWidth, height: bustHeight } = getMapMascotDimensions(currentZoom);
+    // Rebuild only when the pick actually changes. Zoom/move never touch the DOM.
+    if (weeklyMarkerRef.current && weeklyPickIdRef.current !== pick.venue_id) {
+      weeklyMarkerRef.current.remove();
+      weeklyMarkerRef.current = null;
+      weeklyBustRef.current = null;
+      weeklyInnerRef.current = null;
+      weeklyBadgeRef.current = null;
+      weeklyImgRef.current = null;
+    }
 
     // Screen-space collision avoidance against the user's "YOU" avatar marker
     let placeRight = false;
@@ -993,33 +1084,35 @@ export function MapRadarView() {
         }
       } catch {}
     }
+    weeklyPlaceRightRef.current = placeRight;
 
-    const updateInnerPlacement = (
-      inner: HTMLElement,
-      badge: HTMLElement,
-      imgEl?: HTMLImageElement | null
-    ) => {
+    const updateInnerPlacement = () => {
+      const inner = weeklyInnerRef.current;
+      const badge = weeklyBadgeRef.current;
+      if (!inner || !badge) return;
       // In smakr-pick-pointing.svg, index fingertip is at (0.9387 * width, 0.5145 * height).
-      // The floating food icon radius is ~22px to 26px.
-      // Setting the fingertip anchor at -26px (or +26px when flipped) ensures the finger is
-      // completely exposed and pointing directly at the outer edge of the food icon.
+      const gap = Math.round(26 * getZoomMarkerScale(map.getZoom()));
       const leftOffset = placeRight
-        ? 26 - Math.round(0.0613 * bustWidth)
-        : -26 - Math.round(0.9387 * bustWidth);
-      const topOffset = -Math.round(0.5145 * bustHeight);
+        ? gap - Math.round(0.0613 * WEEKLY_BASE_WIDTH)
+        : -gap - Math.round(0.9387 * WEEKLY_BASE_WIDTH);
+      const topOffset = -Math.round(0.5145 * WEEKLY_BASE_HEIGHT);
       inner.style.left = `${leftOffset}px`;
       inner.style.top = `${topOffset}px`;
-      inner.style.transform = "none";
-      inner.style.transformOrigin = "center center";
       badge.style.transform = "translateX(-50%)";
-      if (imgEl) {
-        imgEl.style.transform = placeRight ? "scaleX(-1)" : "none";
+      if (weeklyBustRef.current) {
+        // Pivot the zoom scale on the fingertip so the hand never drifts off
+        // the pin while the mascot shrinks/grows.
+        weeklyBustRef.current.style.transformOrigin = placeRight
+          ? "6.13% 51.45%"
+          : "93.87% 51.45%";
+      }
+      if (weeklyImgRef.current) {
+        weeklyImgRef.current.style.transform = placeRight ? "scaleX(-1)" : "none";
       }
     };
 
     if (!weeklyMarkerRef.current) {
       // Root element is owned by MapLibre for GPS projection: MUST be absolute top:0 left:0
-      // NEVER set style.transform on root!
       const root = document.createElement("div");
       root.className = "maplibregl-marker weekly-pick-marker-root";
       root.style.position = "absolute";
@@ -1030,36 +1123,43 @@ export function MapRadarView() {
       root.style.margin = "0";
       root.style.padding = "0";
       root.style.pointerEvents = "none";
-      root.style.zIndex = "65";
+      root.style.zIndex = "18";
       root.style.display = "block";
 
       const inner = document.createElement("div");
       inner.className =
-        "weekly-pick-bust-inner relative flex flex-col items-center group cursor-pointer select-none pointer-events-auto transition-transform duration-200";
+        "weekly-pick-marker-inner relative flex flex-col items-center group cursor-pointer select-none pointer-events-auto";
       inner.style.position = "absolute";
       inner.style.zIndex = "65";
 
       const badge = buildWeeklyBadge();
-      inner.appendChild(badge);
 
       const bustContainer = document.createElement("div");
-      bustContainer.style.width = `${bustWidth}px`;
-      bustContainer.style.height = `${bustHeight}px`;
+      bustContainer.className = "weekly-pick-bust-inner";
+      bustContainer.style.width = `${WEEKLY_BASE_WIDTH}px`;
+      bustContainer.style.height = `${WEEKLY_BASE_HEIGHT}px`;
       bustContainer.style.position = "relative";
+      bustContainer.style.transformOrigin = placeRight ? "6.13% 51.45%" : "93.87% 51.45%";
+      bustContainer.style.willChange = "transform";
       bustContainer.style.filter = "drop-shadow(0 6px 14px rgba(24, 22, 21, 0.22))";
-
       bustContainer.innerHTML = `
         <img
           src="/mascot/smakr-pick-pointing.svg"
           alt="Smakr Pick"
-          width="${bustWidth}"
-          height="${bustHeight}"
+          width="${WEEKLY_BASE_WIDTH}"
+          height="${WEEKLY_BASE_HEIGHT}"
           style="display:block; width:100%; height:100%; object-fit:contain; pointer-events:none;"
         />
       `;
 
+      // Badge lives inside the bust so it stays glued to the mascot's head at
+      // every zoom level (the bust is scaled around the fingertip).
+      bustContainer.appendChild(badge);
       inner.appendChild(bustContainer);
-      updateInnerPlacement(inner, badge, bustContainer.querySelector("img"));
+      weeklyInnerRef.current = inner;
+      weeklyBadgeRef.current = badge;
+      weeklyBustRef.current = bustContainer;
+      weeklyImgRef.current = bustContainer.querySelector("img");
 
       inner.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -1076,59 +1176,16 @@ export function MapRadarView() {
         .addTo(map);
 
       weeklyMarkerRef.current = marker;
+      weeklyPickIdRef.current = pick.venue_id;
+      if (hideMascot) root.style.display = "none";
     } else {
-      // Re-anchor to freshest coordinates and update inner offsets without touching root.style.transform
       weeklyMarkerRef.current.setLngLat([lng, lat]);
-      const root = weeklyMarkerRef.current.getElement();
-      root.className = "maplibregl-marker weekly-pick-marker-root";
-      root.style.position = "absolute";
-      root.style.top = "0";
-      root.style.left = "0";
-      root.style.width = "0px";
-      root.style.height = "0px";
-      root.style.margin = "0";
-      root.style.padding = "0";
-      root.style.pointerEvents = "none";
-      root.style.zIndex = "65";
-      root.style.display = "block";
-      root.innerHTML = "";
-
-      const inner = document.createElement("div");
-      inner.className =
-        "weekly-pick-bust-inner relative flex flex-col items-center group cursor-pointer select-none pointer-events-auto transition-transform duration-200";
-      inner.style.position = "absolute";
-      inner.style.zIndex = "65";
-
-      const badge = buildWeeklyBadge();
-      inner.appendChild(badge);
-
-      const bustContainer = document.createElement("div");
-      bustContainer.style.width = `${bustWidth}px`;
-      bustContainer.style.height = `${bustHeight}px`;
-      bustContainer.style.position = "relative";
-      bustContainer.style.filter = "drop-shadow(0 6px 14px rgba(24, 22, 21, 0.22))";
-
-      bustContainer.innerHTML = `
-        <img
-          src="/mascot/smakr-pick-pointing.svg"
-          alt="Smakr Pick"
-          width="${bustWidth}"
-          height="${bustHeight}"
-          style="display:block; width:100%; height:100%; object-fit:contain; pointer-events:none;"
-        />
-      `;
-
-      inner.appendChild(bustContainer);
-      updateInnerPlacement(inner, badge, bustContainer.querySelector("img"));
-
-      inner.addEventListener("click", (e) => {
-        e.stopPropagation();
-        void openWeeklyVenue();
-      });
-
-      root.appendChild(inner);
+      weeklyMarkerRef.current.getElement().style.display = hideMascot ? "none" : "block";
     }
-  }, [buildWeeklyBadge, openWeeklyVenue]);
+
+    updateInnerPlacement();
+    updateWeeklyScale(map.getZoom());
+  }, [buildWeeklyBadge, openWeeklyVenue, updateWeeklyScale]);
 
   // 1. Initialize MapLibre
   useEffect(() => {
@@ -1145,7 +1202,7 @@ export function MapRadarView() {
       style: styleUrl,
       center: currentCenter,
       zoom: currentZoom,
-      attributionControl: false,
+      attributionControl: { compact: true },
       dragRotate: false,
       pitchWithRotate: false,
       maxPitch: 60,
@@ -1218,6 +1275,17 @@ export function MapRadarView() {
       scheduleMarkerAttachment();
     });
 
+    // Pin scaling is pure CSS: crossing a zoom threshold writes one custom
+    // property on the container. No marker is touched per frame.
+    let lastPinScale = -1;
+    const syncPinScaleVar = (z: number) => {
+      const scale = getZoomMarkerScale(z);
+      if (scale === lastPinScale) return;
+      lastPinScale = scale;
+      mapContainer.current?.style.setProperty("--pin-scale", String(scale));
+    };
+    syncPinScaleVar(map.getZoom());
+
     // Auto-dismiss the floating venue card when the user zooms OUT past city
     // level. Guard on a *decreasing* zoom so the programmatic fly-IN (from a
     // zoomed-out view) doesn't immediately clear the card that was just opened.
@@ -1233,36 +1301,44 @@ export function MapRadarView() {
         }
       }
 
-      // TASK 3: Fix Zoomed-Out Map Pin Clutter
-      // Imperatively update marker visual scales across pool without rebuilding DOM
-      const markerScale = getZoomMarkerScale(z);
-      markerPoolRef.current.forEach((entry) => {
-        const isSelected = entry.rootEl.dataset.selected === "1";
-        const visual = entry.rootEl.querySelector<HTMLElement>(".pin-visual");
-        if (visual) {
-          visual.style.transform = isSelected ? "scale(1.15)" : `scale(${markerScale})`;
-        }
-      });
+      syncPinScaleVar(z);
 
-      if (weeklyMarkerRef.current) {
-        const mascotInner = weeklyMarkerRef.current.getElement().querySelector<HTMLElement>(".weekly-pick-bust-inner");
-        if (mascotInner) {
-          const mascotScale = getZoomMascotScale(z);
-          mascotInner.style.transform = `scale(${mascotScale})`;
-        }
-      }
+      updateWeeklyScale(z);
 
       if (userLocationMarkerRef.current) {
         const el = userLocationMarkerRef.current.getElement();
         if (el) applyPuckZoomScale(el, z, mapContainer.current?.clientWidth);
       }
-      renderWeeklyMarker();
     });
 
     // After a large pan / pitch, force a repaint so no canvas region is left
     // blank. IMPORTANT: never call `map.resize()` here — resize re-enters
     // `moveend`, which recurses/loops and can leave the canvas half-rendered.
     map.on("moveend", () => {
+      // If a card is open and the user has panned/zoomed the map away from the
+      // pin's landing spot, dismiss it — the fixed card would no longer line up
+      // with its icon.
+      const moveState = useCityPulseStore.getState();
+      if (
+        moveState.viewMode === "map" &&
+        moveState.selectedVenue &&
+        Date.now() >= selectionFlightUntilRef.current
+      ) {
+        const v = moveState.selectedVenue;
+        if (typeof v.longitude === "number" && typeof v.latitude === "number") {
+          const p = map.project([v.longitude, v.latitude]);
+          const w = map.getContainer().clientWidth;
+          const h = map.getContainer().clientHeight;
+          const targetX = w / 2;
+          const targetY = h - (255 + 36) + 4;
+          const drift = Math.hypot(p.x - targetX, p.y - targetY);
+          if (drift > 70) {
+            moveState.setSelectedVenue(null);
+            moveState.setBottomSheetOpen(false);
+          }
+        }
+      }
+
       map.triggerRepaint();
       renderWeeklyMarker();
       if (process.env.NODE_ENV !== "production") {
@@ -1275,7 +1351,8 @@ export function MapRadarView() {
       }
     });
 
-    // Single click on empty map: deselects venue card and minimizes feed to peek if expanded
+    // Single click on empty map: deselects the venue immediately. No extra
+    // camera ease — the dock card shrink is the closing motion.
     map.on("click", () => {
       const state = useCityPulseStore.getState();
       if (state.selectedVenue || state.bottomSheetOpen) {
@@ -1307,6 +1384,7 @@ export function MapRadarView() {
 
     return () => {
       window.removeEventListener("resize", handleResize);
+      if (flyTimerRef.current) clearTimeout(flyTimerRef.current);
       resizeObserver.disconnect();
       markerPoolRef.current.forEach(({ marker }) => marker.remove());
       markerPoolRef.current.clear();
@@ -1352,27 +1430,176 @@ export function MapRadarView() {
     renderWeeklyMarker,
   ]);
 
-  // 2.1 Decoupled O(1) selection highlight update — never loops or rebuilds markers
+  // 2.1 Selection highlight + camera padding are applied imperatively from the
+  // store, so selecting a map pin/card doesn't re-render this map wrapper.
   useEffect(() => {
-    const currentId = selectedVenue?.id ?? null;
-    const prevId = prevSelectedVenueIdRef.current;
-    if (prevId === currentId) return;
+    const flyToSelectedVenue = () => {
+      const map = mapInstance.current;
+      const state = useCityPulseStore.getState();
+      const venue = state.selectedVenue;
+      if (!map || !venue || state.viewMode !== "map") return;
+      if (typeof venue.longitude !== "number" || typeof venue.latitude !== "number") return;
 
-    const currentZoom = mapInstance.current?.getZoom();
-    if (prevId) {
-      const prevEntry = markerPoolRef.current.get(prevId);
-      if (prevEntry) {
-        applyPinState(prevEntry.rootEl, false, currentZoom);
+      const currentZoom = map.getZoom();
+      const targetZoom = Math.max(currentZoom, 15.4);
+      const zoomDelta = Math.max(0, targetZoom - currentZoom);
+      const isMobileViewport =
+        typeof window !== "undefined" && window.innerWidth < 1024;
+      const mapHeight = map.getContainer().clientHeight || 844;
+      // Card: 255px tall, 36px above the viewport bottom (bottom-4 + bottom-5).
+      const cardTop = mapHeight - (255 + 36);
+
+      // Deterministic Mercator math (no offset-sign ambiguity): solve for the
+      // camera centre that projects the venue at the pin's landing Y. The pin
+      // icon's bottom rests ~6px into the card's top edge.
+      let center: [number, number] = [venue.longitude, venue.latitude];
+      if (isMobileViewport) {
+        // The icon's visual bottom lands ~19px into the card so the pin visibly
+        // rests on the card's top edge instead of hovering above it.
+        const targetY = cardTop + 4;
+        // Derive the map's world size from the public projection so the math
+        // works regardless of MapLibre's internal tile size.
+        const p0 = map.project([venue.longitude, venue.latitude]);
+        const p1 = map.project([venue.longitude + 1, venue.latitude]);
+        const worldSizeCurrent = (p1.x - p0.x) * 360;
+        const worldSize = worldSizeCurrent * Math.pow(2, targetZoom - currentZoom);
+        const venueMerc = maplibregl.MercatorCoordinate.fromLngLat([
+          venue.longitude,
+          venue.latitude,
+        ]);
+        const centerY = venueMerc.y - (targetY - mapHeight / 2) / worldSize;
+        const centerMerc = new maplibregl.MercatorCoordinate(venueMerc.x, centerY);
+        const lngLat = centerMerc.toLngLat();
+        center = [lngLat.lng, lngLat.lat];
       }
-    }
-    if (currentId) {
-      const nextEntry = markerPoolRef.current.get(currentId);
-      if (nextEntry) {
-        applyPinState(nextEntry.rootEl, true, currentZoom);
+
+      // Time the flight by how far the icon actually has to travel on screen.
+      // Edge pins (far left/right/bottom) get a longer, arcing flight so the
+      // icon doesn't appear to slide in from the edge.
+      const container = map.getContainer();
+      const viewW = container.clientWidth || 390;
+      const viewH = container.clientHeight || mapHeight;
+      const pinNow = map.project([venue.longitude, venue.latitude]);
+      const targetScreenX = viewW / 2;
+      const targetScreenY = isMobileViewport ? cardTop + 4 : viewH / 2;
+      const panDistance = Math.hypot(
+        pinNow.x - targetScreenX,
+        pinNow.y - targetScreenY
+      );
+      const flightDuration = selectionFlightDuration(panDistance, zoomDelta);
+
+      // Mark this as a programmatic flight so the pan-away guard doesn't
+      // dismiss the card while the camera is flying to it. Use a time window
+      // because setPadding/fly can emit more than one moveend.
+      isProgrammaticFlightRef.current = true;
+      selectionFlightUntilRef.current = Date.now() + flightDuration + 600;
+      map.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
+      const camera = {
+        center,
+        zoom: targetZoom,
+        duration: flightDuration,
+        easing: (t: number) => 1 - Math.pow(1 - t, 3),
+        essential: true,
+      } as const;
+      // Short local moves get a straight glide; longer pans/zooms arc so the
+      // pin doesn't slide linearly across the screen.
+      if (panDistance > 240 || zoomDelta > 0.7) {
+        map.flyTo({ ...camera, curve: 1.2 });
+      } else {
+        map.easeTo(camera);
       }
-    }
-    prevSelectedVenueIdRef.current = currentId;
-  }, [selectedVenue]);
+      map.once("moveend", () => {
+        isProgrammaticFlightRef.current = false;
+      });
+    };
+
+    const applySelection = (prevId: string | null, nextId: string | null) => {
+      const map = mapInstance.current;
+      if (!map) return;
+      const zoom = map.getZoom();
+      if (prevId) {
+        const prevEntry = markerPoolRef.current.get(prevId);
+        if (prevEntry) applyPinState(prevEntry.rootEl, false, zoom);
+      }
+      if (nextId) {
+        const nextEntry = markerPoolRef.current.get(nextId);
+        if (nextEntry) applyPinState(nextEntry.rootEl, true, zoom);
+        flyToSelectedVenue();
+      } else if (typeof window !== "undefined" && window.innerWidth < 1024) {
+        // Restore the resting-map clearance for the bottom dock on close.
+        map.setPadding({ top: 60, bottom: 160, left: 0, right: 0 });
+      }
+
+      // Keep the map mascot hidden during the weekly card's exit animation so
+      // it doesn't briefly double up with the card's own mascot.
+      const weeklyRoot = weeklyMarkerRef.current?.getElement();
+      if (weeklyRoot) {
+        const pickId = useCityPulseStore.getState().weeklyPick.venue_id;
+        if (nextId === pickId) {
+          weeklyMascotSuppressedRef.current = true;
+          weeklyRoot.style.display = "none";
+        } else if (weeklyMascotSuppressedRef.current || prevId === pickId) {
+          weeklyMascotSuppressedRef.current = true;
+          window.setTimeout(() => {
+            weeklyMascotSuppressedRef.current = false;
+            const st = useCityPulseStore.getState();
+            if (st.selectedVenue?.id !== pickId) {
+              const root = weeklyMarkerRef.current?.getElement();
+              if (root) {
+                root.style.display = "block";
+                // Animate the mascot back in (fade + lift) instead of snapping.
+                const inner = weeklyInnerRef.current;
+                if (inner && typeof inner.animate === "function") {
+                  inner.animate(
+                    [
+                      { opacity: 0, transform: "translateY(10px) scale(0.88)" },
+                      { opacity: 1, transform: "translateY(0) scale(1)" },
+                    ],
+                    {
+                      duration: 320,
+                      easing: "cubic-bezier(0.22,1,0.36,1)",
+                      fill: "both",
+                    }
+                  );
+                }
+              }
+            }
+          }, 430);
+        } else {
+          weeklyRoot.style.display = "block";
+        }
+      }
+    };
+
+    const unsubscribe = useCityPulseStore.subscribe((state, prevState) => {
+      const nextId = state.selectedVenue?.id ?? null;
+      const prevId = prevState.selectedVenue?.id ?? null;
+      if (nextId !== prevId) {
+        applySelection(prevId, nextId);
+        return;
+      }
+      // Feed card taps set selectedVenue first (still in feed/split mode) and
+      // then switch to map mode. Fly once the map is actually visible and
+      // re-apply the map-mode selected pin scale (1.55x) so the icon matches a
+      // pin tapped directly on the map.
+      if (nextId && state.viewMode === "map" && prevState.viewMode !== "map") {
+        const m = mapInstance.current;
+        const entry = markerPoolRef.current.get(nextId);
+        if (entry && m) {
+          const visual = entry.visualEl;
+          if (visual) {
+            visual.style.transition = "transform 260ms cubic-bezier(0.22,1,0.36,1)";
+            window.setTimeout(() => {
+              visual.style.transition = "";
+            }, 280);
+          }
+          applyPinState(entry.rootEl, true, m.getZoom());
+        }
+        flyToSelectedVenue();
+      }
+    });
+    return unsubscribe;
+  }, []);
 
   // 2.5 Auto-fit map camera ONLY when the user actively changes the category filter.
   // Never fire on mount, and never fire on venue list updates or geolocation fixes.
@@ -1560,7 +1787,7 @@ export function MapRadarView() {
     return () => window.removeEventListener("smakr:brand-mascot-updated", onBrandUpdate);
   }, [weeklyPick, mascotConfig, renderWeeklyMarker]);
 
-  // 6. Synchronize active venue popup card directly under marker pin
+  // 6. Synchronize active venue popup card directly under marker pin (suppressed in Map Mode)
   useEffect(() => {
     const map = mapInstance.current;
     if (!map || !isMapReady) return;
@@ -1570,7 +1797,7 @@ export function MapRadarView() {
       venuePopupRef.current = null;
     }
 
-    if (!selectedVenue) return;
+    if (!selectedVenue || viewMode === "map") return;
 
     const popupNode = document.createElement("div");
     popupNode.className = "smakr-map-venue-card";
@@ -1945,7 +2172,7 @@ export function MapRadarView() {
     return () => {
       map.off("moveend", attach);
     };
-  }, [selectedVenue, isMapReady, setSelectedVenue, setIsVenueDetailModalOpen]);
+  }, [selectedVenue, viewMode, isMapReady, setSelectedVenue, setIsVenueDetailModalOpen]);
 
   function cycleTheme() {
     if (activeTheme === "streets") setActiveTheme("dataviz");
@@ -1955,47 +2182,6 @@ export function MapRadarView() {
 
   return (
     <div className="relative w-full h-full min-h-[500px] flex-1 overflow-hidden bg-[var(--background,#f6f3ee)]">
-      {/* Shared SVG Die-Cut Sticker Filters for Map Markers */}
-      <svg width="0" height="0" style={{ position: "absolute", pointerEvents: "none", overflow: "visible" }} aria-hidden="true">
-        <defs>
-          {/* Default Unselected Sticker Outline (#FAF7F2 Warm Cream, 1.8px stroke + subtle ground shadow) */}
-          <filter id="smakr-diecut-default" x="-35%" y="-35%" width="170%" height="170%">
-            <feMorphology in="SourceAlpha" operator="dilate" radius="0.9" result="dilated" />
-            <feFlood floodColor="#FAF7F2" result="strokeColor" />
-            <feComposite in="strokeColor" in2="dilated" operator="in" result="stroke" />
-            <feDropShadow in="stroke" dx="0" dy="2.5" stdDeviation="1.8" floodColor="#181615" floodOpacity="0.30" result="shadow" />
-            <feMerge>
-              <feMergeNode in="shadow" />
-              <feMergeNode in="stroke" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-
-          {/* Selected Active Sticker Outline: Solid Cream Inner Stroke + Thin Delicate Orange Outer Rim + Warm Glow */}
-          <filter id="smakr-diecut-selected" x="-45%" y="-45%" width="190%" height="190%">
-            {/* Thin delicate outer orange rim (~0.7px outer whisper) */}
-            <feMorphology in="SourceAlpha" operator="dilate" radius="1.5" result="dilatedOuter" />
-            <feFlood floodColor="#E84A27" floodOpacity="0.75" result="orangeColor" />
-            <feComposite in="orangeColor" in2="dilatedOuter" operator="in" result="orangeRim" />
-            {/* Soft warm orange elevation halo */}
-            <feDropShadow in="orangeRim" dx="0" dy="2.5" stdDeviation="2.4" floodColor="#E84A27" floodOpacity="0.32" result="orangeGlow" />
-
-            {/* Clean solid warm cream (#FAF7F2) inner sticker stroke (1.8px) */}
-            <feMorphology in="SourceAlpha" operator="dilate" radius="0.9" result="dilatedInner" />
-            <feFlood floodColor="#FAF7F2" result="whiteColor" />
-            <feComposite in="whiteColor" in2="dilatedInner" operator="in" result="whiteStroke" />
-
-            {/* Merge: Glow -> Thin Orange Rim -> Solid Cream Stroke -> Original Graphic */}
-            <feMerge>
-              <feMergeNode in="orangeGlow" />
-              <feMergeNode in="orangeRim" />
-              <feMergeNode in="whiteStroke" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-      </svg>
-
       {/* Map Canvas — kept mounted (opacity only) so MapLibre can measure it */}
       <div
         ref={mapContainer}
@@ -2003,10 +2189,11 @@ export function MapRadarView() {
         style={{
           width: "100%",
           height: "100%",
-          // Own GPU layer. Without this the WebGL canvas can be composited at a
-          // stale size (partially painted / "blocked" regions) on mobile GPUs.
-          transform: "translateZ(0)",
-          willChange: "transform",
+          // NOTE: no transform/will-change here on purpose. A transform on this
+          // wrapper creates a stacking context, trapping every marker below the
+          // bottom dock card. The GPU layer is applied to the canvas itself in
+          // globals.css instead, which keeps markers in the parent stack so the
+          // selected pin can render on top of the card.
         }}
       />
 

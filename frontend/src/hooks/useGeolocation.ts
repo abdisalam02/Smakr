@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
+import { openLocationPrompt } from "@/lib/locationPrompt";
 
 /**
  * Two-stage geolocation:
@@ -39,6 +40,19 @@ export function useGeolocation() {
   const [error, setError] = useState<string | null>(null);
 
   const requestLocation = useCallback((interactive = false) => {
+    // GPS is unavailable over insecure LAN HTTP; show the help card instead of
+    // a dead-end browser error.
+    if (typeof window !== "undefined") {
+      const host = window.location.hostname;
+      const local = host === "localhost" || host === "127.0.0.1";
+      if (!window.isSecureContext && !local) {
+        openLocationPrompt();
+        setLoading(false);
+        useCityPulseStore.getState().setIsLocating(false);
+        return;
+      }
+    }
+
     setLoading(true);
     setError(null);
     if (interactive) {
@@ -120,10 +134,7 @@ export function useGeolocation() {
       }
 
       if (err.code === err.PERMISSION_DENIED) {
-        showToast(
-          "📍 Location is blocked — allow it for this site in your browser settings to see spots near you.",
-          6000
-        );
+        openLocationPrompt();
       } else if (isHttpMobile) {
         showToast("📍 Mobile browsers need HTTPS for GPS over Wi-Fi.", 5000);
       } else {

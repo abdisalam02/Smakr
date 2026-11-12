@@ -20,6 +20,14 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
+  // Partner Studio is paused for now — keep the code, hide the route.
+  if (pathname === "/partner" || pathname.startsWith("/partner/")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
   // Performance bypass: Public API endpoints never need SSR session refreshes
   if (
     pathname.startsWith("/api/places") ||

@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import { motion } from "motion/react";
 import { ThumbsUp, MapPin, Bookmark, Pencil, Flame, Send, Compass, ArrowUpRight, Calendar } from "lucide-react";
-import { FoodPost, Venue } from "@/types";
+import { FoodPost, Venue, VenueDetail } from "@/types";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { setPostLike, setPostSave } from "@/lib/supabase/data";
 import { OfficialSmakrMascot } from "@/lib/officialSmakrMascot";
@@ -37,6 +37,10 @@ interface FoodPostCardProps {
   priority?: boolean;
   linkedVenue?: Venue | null;
   index?: number;
+  /** Force the compact 2-column treatment (hides the bulky 1-col footer). */
+  compact?: boolean;
+  /** Fill a fixed-height swimlane wrapper instead of using the aspect ratio. */
+  fillHeight?: boolean;
 }
 
 /**
@@ -50,6 +54,8 @@ export const FoodPostCard = React.memo(function FoodPostCard({
   priority = false,
   linkedVenue: propLinkedVenue,
   index,
+  compact = false,
+  fillHeight = false,
 }: FoodPostCardProps) {
   // Atomic selectors: each returns a stable primitive / reference, so only the
   // cards whose own state changed re-render.
@@ -92,7 +98,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
   const popupMeta = linkedVenue ? getPopupMeta(linkedVenue) : null;
   const isPopup = linkedVenue?.spot_type === "popup" || post.spot_type === "popup";
   // Pop-ups always span a full row, so they keep the large layout even in 2-up grid mode.
-  const isGridMode = rawGridMode && !isPopup;
+  const isGridMode = (compact || rawGridMode) && !isPopup;
   const isPopupInactive = Boolean(
     isPopup && (
       !popupMeta?.dates_label ||
@@ -331,8 +337,46 @@ export const FoodPostCard = React.memo(function FoodPostCard({
       handleOpenDetails();
       return;
     }
-    useCityPulseStore.getState().setViewMode("map");
+    handleFocusOnMap();
+  };
+
+  /**
+   * Feed card tap → map: resolve the real venue, select it (which raises the
+   * synchronized pin-zoom + spotlight card), and switch to map mode so the
+   * glass feed slides off to the left.
+   */
+  const handleFocusOnMap = () => {
+    const state = useCityPulseStore.getState();
+    const venue = post.spot_id
+      ? state.venues.find((v) => v.id === post.spot_id)
+      : undefined;
+
+    if (venue) {
+      state.setSelectedVenue({
+        ...venue,
+        recent_checkins: [],
+        recent_speed_tests: [],
+      } as VenueDetail);
+      state.setIsVenueDetailModalOpen(false);
+      const isDesktopViewport =
+        typeof window !== "undefined" && window.innerWidth >= 1024;
+      if (isDesktopViewport) {
+        // Desktop uses the split venue pane; keep the camera in sync.
+        state.setViewMode("split");
+        state.setMapCenter(
+          [venue.longitude ?? post.spot_coords[0], venue.latitude ?? post.spot_coords[1]],
+          15.5
+        );
+      } else {
+        // Mobile: map mode slides the glass feed off to the left.
+        state.setViewMode("map");
+      }
+      return;
+    }
+
+    // No venue row yet (fresh dish): fall back to the coordinate flight.
     flyToSpot(post.spot_coords, post.spot_id);
+    useCityPulseStore.getState().setViewMode("map");
   };
 
   const avatarSrc = React.useMemo(() => {
@@ -385,7 +429,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
     if (isPopup && !hasConfirmedLocation) {
       handleOpenDetails();
     } else {
-      flyToSpot(post.spot_coords, post.spot_id);
+      handleFocusOnMap();
     }
   };
 
@@ -412,7 +456,9 @@ export const FoodPostCard = React.memo(function FoodPostCard({
     <article
       style={{ contain: "layout paint style" }}
       onClick={handleCardClick}
-      className={`group relative w-full rounded-[26px] overflow-hidden border bg-[#181615] shadow-md hover:shadow-xl transition-shadow duration-200 cursor-pointer select-none ${
+      className={`group relative w-full rounded-[26px] overflow-hidden border bg-[#181615] shadow-md transition-[box-shadow,transform] duration-200 md:hover:-translate-y-0.5 hover:shadow-xl cursor-pointer select-none ${
+        fillHeight ? "h-full" : ""
+      } ${
         isSelected ? "ring-2 ring-[#E84A27]" : ""
       } ${
         isPopupActive
@@ -426,7 +472,11 @@ export const FoodPostCard = React.memo(function FoodPostCard({
     >
       {/* Full-Bleed Photography Hero Container */}
       <div className={`relative w-full overflow-hidden bg-[#E8E0D2] dark:bg-[#24201D] ${
-        isGridMode ? "aspect-[4/5] min-h-[220px] sm:min-h-[260px]" : "aspect-[4/3] min-h-[320px]"
+        fillHeight
+          ? "h-full min-h-0"
+          : isGridMode
+          ? "aspect-[4/5] min-h-[220px] sm:min-h-[260px]"
+          : "aspect-[4/3] min-h-[320px]"
       }`}>
         <Image
           src={
@@ -611,7 +661,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
           isGridMode ? "p-2.5 sm:p-3" : "p-3.5 sm:p-4"
         }`}>
           {/* Dish Title (Comico brand font — 2 lines allowed in grid mode) */}
-          <h3 className={`font-comico font-black tracking-wide leading-[1.15] text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] capitalize ${
+          <h3 className={`font-comico font-normal tracking-wide leading-[1.15] text-white capitalize drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] ${
             isGridMode
               ? "text-[14px] sm:text-[15px] line-clamp-2"
               : "text-[21px] sm:text-[23px] line-clamp-1"

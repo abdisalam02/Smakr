@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import {
   X,
@@ -250,16 +249,34 @@ export function AuthModal() {
     "w-full pl-9 pr-3 py-2.5 text-xs rounded-xl bg-white border border-zinc-200 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-[#e84a27] focus:ring-1 focus:ring-[#e84a27] transition-all";
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/45 backdrop-blur-xs animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/45 backdrop-blur-xs animate-in fade-in duration-150 overflow-hidden">
+      {/* Living backdrop: soft drifting brand glows */}
+      <div className="pointer-events-none absolute inset-0">
+        <motion.div
+          className="absolute -left-24 top-1/4 h-72 w-72 rounded-full bg-[#E84A27]/20 blur-3xl"
+          animate={{ x: [0, 26, 0], y: [0, -18, 0] }}
+          transition={{ duration: 16, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute -right-24 bottom-1/4 h-80 w-80 rounded-full bg-[#F2C879]/25 blur-3xl"
+          animate={{ x: [0, -20, 0], y: [0, 16, 0] }}
+          transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </div>
       <motion.div
+        layout
         initial={{ opacity: 0, scale: 0.96, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-        className="relative w-full max-w-sm bg-[#FAF7F2] rounded-3xl border border-[#181615]/10 shadow-2xl p-6 flex flex-col space-y-4 max-h-[92vh] overflow-y-auto no-scrollbar"
+        transition={{
+          duration: 0.22,
+          ease: [0.16, 1, 0.3, 1],
+          layout: { duration: 0.26, ease: [0.22, 1, 0.36, 1] },
+        }}
+        className="smakr-auth-card relative w-full max-w-sm bg-[#FAF7F2] rounded-3xl border border-[#181615]/10 shadow-2xl p-6 flex flex-col space-y-4 max-h-[92vh] overflow-y-auto no-scrollbar"
       >
         <button
           onClick={() => setIsAuthModalOpen(false)}
-          className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-700 p-1.5 rounded-full hover:bg-black/5 transition-colors"
+          className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-700 p-1.5 rounded-full hover:bg-black/5 hover:rotate-90 transition-all duration-200"
           aria-label="Close"
         >
           <X className="w-4 h-4" />
@@ -313,7 +330,7 @@ export function AuthModal() {
                     setError(null);
                     setNotice(null);
                   }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] text-white font-bold text-xs shadow-md shadow-[#e84a27]/25 transition-all active:scale-[0.98]"
+                  className="smakr-cta w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] text-white font-bold text-xs shadow-md shadow-[#e84a27]/25 transition-all active:scale-[0.98]"
                 >
                   <span>Go to Sign In</span>
                   <ArrowRight className="w-4 h-4" />
@@ -423,13 +440,13 @@ export function AuthModal() {
 
               {/* Feedback banners */}
               {error && (
-                <div className="flex items-start gap-2 rounded-xl bg-red-50 text-red-700 border border-red-200 px-3 py-2.5 animate-in fade-in duration-150">
+                <div className="flex items-start gap-2 rounded-xl bg-red-50 text-red-700 border border-red-200 px-3 py-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                   <p className="text-[11px] leading-relaxed">{error}</p>
                 </div>
               )}
               {notice && (
-                <div className="flex items-start gap-2 rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2.5 animate-in fade-in duration-150">
+                <div className="flex items-start gap-2 rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                   <p className="text-[11px] leading-relaxed text-emerald-800">{notice}</p>
                 </div>
@@ -452,7 +469,7 @@ export function AuthModal() {
                   <button
                     onClick={handleForgotPassword}
                     disabled={busy !== null}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] disabled:opacity-60 text-white font-bold text-xs shadow-md shadow-[#e84a27]/25 transition-all active:scale-[0.98]"
+                    className="smakr-cta w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] disabled:opacity-60 text-white font-bold text-xs shadow-md shadow-[#e84a27]/25 transition-all active:scale-[0.98]"
                   >
                     {busy === "reset" ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -503,7 +520,7 @@ export function AuthModal() {
                   <button
                     onClick={handleSignIn}
                     disabled={busy !== null}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] disabled:opacity-60 text-white font-bold text-xs shadow-md shadow-[#e84a27]/25 transition-all active:scale-[0.98]"
+                    className="smakr-cta w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] disabled:opacity-60 text-white font-bold text-xs shadow-md shadow-[#e84a27]/25 transition-all active:scale-[0.98]"
                   >
                     {busy === "signin" ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -575,7 +592,7 @@ export function AuthModal() {
                   <button
                     onClick={handleCreateAccount}
                     disabled={busy !== null}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] disabled:opacity-60 text-white font-bold text-xs shadow-md shadow-[#e84a27]/25 transition-all active:scale-[0.98]"
+                    className="smakr-cta w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#e84a27] hover:bg-[#d23e1d] disabled:opacity-60 text-white font-bold text-xs shadow-md shadow-[#e84a27]/25 transition-all active:scale-[0.98]"
                   >
                     {busy === "signup" ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -594,25 +611,6 @@ export function AuthModal() {
             Supabase env vars missing — social &amp; email sign-in will activate once configured.
           </p>
         )}
-
-        {/* Restaurant & Kitchen Partner Portal link */}
-        <div className="rounded-2xl border border-zinc-200/80 bg-zinc-50/80 p-3.5 space-y-2 text-center">
-          <div className="flex items-center justify-center gap-1.5 text-xs font-extrabold text-zinc-900">
-            <span>👨‍🍳</span>
-            <span>Own or cook at a restaurant in Oslo?</span>
-          </div>
-          <p className="text-[11px] text-zinc-500 leading-snug">
-            Claim your spot to upload authentic dish photos, update NOK prices, correct closing times, and broadcast live batches.
-          </p>
-          <Link
-            href="/partner"
-            onClick={() => setIsAuthModalOpen(false)}
-            className="inline-flex items-center justify-center gap-1.5 w-full py-2.5 px-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs transition-all shadow-xs cursor-pointer active:scale-[0.99]"
-          >
-            <span>Smakr Partner Studio</span>
-            <ArrowRight className="w-3.5 h-3.5 text-[#e84a27]" />
-          </Link>
-        </div>
       </motion.div>
     </div>
   );

@@ -1927,13 +1927,9 @@ export default function AdReelStagePage() {
 
           {activeCampaignTab === "partner_ad" ? (
             <div className="flex items-center gap-2">
-              <a
-                href="/partner"
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-bold transition-colors cursor-pointer border border-white/10"
-              >
-                <span>Open /partner Studio</span>
-                <ExternalLink className="w-3.5 h-3.5 text-[#e84a27]" />
-              </a>
+              <span className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/5 text-zinc-500 text-xs font-bold border border-white/10">
+                Partner Studio · coming soon
+              </span>
             </div>
           ) : (
             <>

@@ -407,6 +407,11 @@ body, input, textarea, button, select, p, span, h1, h2, h3, h4, h5, h6, a, div {
   width: 100% !important;
   height: 100% !important;
   outline: none;
+  /* Own GPU layer for the WebGL surface. Applied to the canvas (not its
+     wrapper) so markers stay in the parent stacking context and the selected
+     pin can paint above the bottom dock card. */
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 /* Strict Map Marker Positioning */
@@ -420,6 +425,45 @@ body, input, textarea, button, select, p, span, h1, h2, h3, h4, h5, h6, a, div {
   backface-visibility: hidden !important;
   pointer-events: auto !important;
   cursor: pointer !important;
+}
+
+/* Map pins scale on the GPU from one container-level custom property.
+   Zoom writes `--pin-scale`; selection writes `--pin-visual-scale` per pin. */
+.pin-visual {
+  transform: scale(var(--pin-visual-scale, var(--pin-scale, 1)));
+  transform-origin: bottom center;
+  backface-visibility: hidden;
+}
+
+/* Auth modal micro-interactions */
+.smakr-auth-card input:focus {
+  transform: scale(1.01);
+}
+.smakr-auth-card .relative > svg {
+  transition: color 160ms ease, transform 160ms ease;
+}
+.smakr-auth-card .relative:focus-within > svg {
+  color: #e84a27;
+  transform: scale(1.12);
+}
+.smakr-cta {
+  position: relative;
+  overflow: hidden;
+}
+.smakr-cta::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -70%;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: skewX(-18deg);
+  transition: left 520ms ease;
+  pointer-events: none;
+}
+.smakr-cta:hover::after {
+  left: 125%;
 }
 
 @keyframes pingAura {

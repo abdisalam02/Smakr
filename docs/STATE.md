@@ -1,10 +1,10 @@
 # STATE.md — CityPulse / Smakr (read first, keep <= 30 lines)
 
-Updated: 2026-11-10
+Updated: 2026-11-11
 
 ## Now
-- Task: Major UI/UX upgrade: in-feed split Smakr Pick banner, editorial feed rhythm & swimlanes, full-screen map mode with neighborhood dock, and map pin zoom decluttering.
-- Status: Complete on feat/editorial-feed-and-map-mode; tsc and test:security clean.
+- Task: P0/P1 audit fixes — GPU pin/card motion, weekly marker no-rebuild, desktop dock containment, de-duped zero-hole feed, weekly 3-zone banner.
+- Status: Complete on feat/editorial-feed-and-map-mode; `tsc` + production `next build` clean.
 
 ## Next (max 3)
 1. Review editorial swimlanes and full-screen map mode visual feedback with team.
@@ -21,8 +21,8 @@ Updated: 2026-11-10
 - TODO-VERIFY: confirm partner claim copy before launch.
 
 ## Recent (max 5, one line each)
+- 2026-11-11 — Implemented audit P0/P1: no SVG pin filters, zero weekly-marker DOM rebuilds, transform-only 365px card, contained desktop dock, de-duped even feed lanes; `tsc` + build clean
+- 2026-11-11 — Full-page feed, flush glass FEED pull tab, pin zoom choreography + dock spotlight card, renamed STORY; tsc clean
+- 2026-11-10 — Decluttered Map Mode: collapsible glass filters, glass > FEED pill, suppressed map popup, full-bleed parallax dock cards; tsc clean
 - 2026-11-10 — Built in-feed split Smakr Pick, editorial swimlanes, full-screen map mode & dock, zoom pin scaling; tsc clean
 - 2026-11-09 — Polished pop-up sheet background & map popup card, aligned @smak inline, removed fire reaction; tsc clean
-- 2026-11-09 — Fixed pop-up map pin die-cut rendering & cleaned pop-up card text/footer; tsc clean
-- 2026-11-09 — Polished 2-col FoodPostCard grid, dynamic pop-up status/host/IG pills, and AI Quick Shift modal; tsc clean
-- 2026-11-09 — Corrected Mint on Wheels to Mike's Corner Nov 14 drop; wrote Seeding Lab AI audit; tsc clean

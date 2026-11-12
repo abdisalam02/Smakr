@@ -5,11 +5,11 @@ import { FeedFilterBar } from "@/components/filter/FeedFilterBar";
 import { SmakrWeeklyPickSplitBanner } from "@/components/food/SmakrWeeklyPickSplitBanner";
 import { FoodPostCard } from "@/components/food/FoodPostCard";
 import { FeedEmptyState } from "@/components/food/FeedEmptyState";
-import { FoodPostCardSkeleton, FoodSpotCardSkeleton } from "@/components/food/CardSkeletons";
+import { FoodPostCardSkeleton, FoodSpotCardSkeleton, WeeklyPickSkeleton, FeedFilterBarSkeleton, PopupEventCardSkeleton } from "@/components/food/CardSkeletons";
 import { FoodSpotCard } from "@/components/food/FoodSpotCard";
 import { PopupEventCard } from "@/components/food/PopupEventCard";
+import { SmakrFoodIcon } from "@/components/food/FoodIcons";
 import { FoodViewSlider } from "@/components/food/FoodViewSlider";
-import { MapCategoryFilterStrip } from "@/components/map/MapCategoryFilterStrip";
 import { MapNeighborhoodDock } from "@/components/map/MapNeighborhoodDock";
 import dynamic from "next/dynamic";
 import { VenueBottomSheet } from "@/components/venue/VenueBottomSheet";
@@ -22,8 +22,8 @@ import { useLiveVibeSync } from "@/hooks/useLiveVibeSync";
 import { useSyncAppData } from "@/hooks/useSyncAppData";
 import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
 import { SmakrSIcon } from "@/components/ui/SmakrSIcon";
-import { UtensilsCrossed, Plus, Map as MapIcon, LayoutGrid, Rows2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { Utensils } from "lucide-react";
 import type { FoodPost, Venue, WeeklyPick } from "@/types";
 import { isVisibleInFeed, getPopupUrgencyScore, isPopupVenue } from "@/lib/popupUtils";
 import { resolveEntityTaxonomy } from "@/lib/taxonomy";
@@ -146,8 +146,6 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   const resetAllFilters = useCityPulseStore((state) => state.resetAllFilters);
   const feedMode = useCityPulseStore((state) => state.feedMode);
   const setFeedMode = useCityPulseStore((state) => state.setFeedMode);
-  const feedLayout = useCityPulseStore((state) => state.feedLayout);
-  const setFeedLayout = useCityPulseStore((state) => state.setFeedLayout);
   const selectedDietary = useCityPulseStore((state) => state.selectedDietary);
   const mapNeighborhood = useCityPulseStore((state) => state.mapNeighborhood);
   const openNow = useCityPulseStore((state) => state.filters.open_now);
@@ -163,6 +161,20 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   const setFeedCategory = useCityPulseStore((state) => state.setFeedCategory);
   const setIsCreateBiteModalOpen = useCityPulseStore((state) => state.setIsCreateBiteModalOpen);
   const isVenueDetailModalOpen = useCityPulseStore((state) => state.isVenueDetailModalOpen);
+
+  // Full-feed mode: stop MapLibre's animation loop and hide the canvas so the
+  // WebGL surface does not burn GPU while the user scrolls the feed.
+  useEffect(() => {
+    const map = (window as unknown as { __smakrMap?: { stop: () => void; resize: () => void } })
+      .__smakrMap;
+    if (!map) return;
+    if (viewMode === "feed") {
+      map.stop();
+      return;
+    }
+    const raf = requestAnimationFrame(() => map.resize());
+    return () => cancelAnimationFrame(raf);
+  }, [viewMode]);
 
   // Deep linking: ?spot= query parameter auto-selects & flies on mount
   useEffect(() => {
@@ -192,11 +204,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
     }
   }, [venues, foodPosts, selectVenueById, flyToSpot]);
 
-  // Mobile Slide-up Bottom Sheet State (peek = 142px, half = 58vh, full = 92vh)
-  const mobileSheet = useCityPulseStore((state) => state.mobileSheetState);
-  const setMobileSheet = useCityPulseStore((state) => state.setMobileSheetState);
-
-  // Memoized food posts filtering to prevent unnecessary re-renders during mobile drag
+  // Memoized food posts filtering to prevent unnecessary re-renders
   const filteredPosts = useMemo(() => {
     const filtered = foodPosts.filter((post) => {
       // Unpublished / archived filter (admins see drafts)
@@ -439,22 +447,38 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
       .sort((a, b) => getPopupUrgencyScore(a) - getPopupUrgencyScore(b));
   }, [venues]);
 
-  // Memoized collections for the 3 editorial swimlanes
+  // Memoized collections for the editorial swimlanes
+  // STRICT drink match: dish/category/tags only (never the venue name, so a
+  // "Yum Cha" dumpling spot can't sneak into the matcha lane).
   const matchaPosts = useMemo(() => {
-    return foodPosts.filter((p) => {
+    // STRICT: a drink category, or a drink word in the dish NAME (word
+    // boundaries). Taste tags are ignored entirely, so a "cheesy/juicy" main
+    // can never leak into the lane, and "cheesesteak"/"platter" cannot match
+    // "tea"/"latte" substrings.
+    const DRINK_WORD_RE = /\b(matcha|hojicha|teas?|coffee|latte|espresso|cocoa|chai)\b/;
+    const DRINK_CATEGORIES = new Set([
+      "matcha",
+      "tea",
+      "teas",
+      "coffee",
+      "espresso",
+      "latte",
+      "cocoa",
+      "chai",
+      "beverage",
+      "beverages",
+      "drink",
+      "drinks",
+      "hot_drinks",
+      "cold_drinks",
+    ]);
+    return filteredPosts.filter((p) => {
       if (p.is_archived || p.is_published === false) return false;
-      const q = `${p.dish_name} ${p.category} ${p.spot_name} ${(p.taste_tags || []).join(" ")}`.toLowerCase();
-      return (
-        q.includes("matcha") ||
-        q.includes("hojicha") ||
-        q.includes("ochaya") ||
-        q.includes("tea") ||
-        q.includes("kuro") ||
-        q.includes("fuglen") ||
-        q.includes("coffee")
-      );
-    }).slice(0, 8);
-  }, [foodPosts]);
+      const category = (p.category || "").toLowerCase();
+      const name = (p.dish_name || "").toLowerCase();
+      return DRINK_CATEGORIES.has(category) || DRINK_WORD_RE.test(name);
+    });
+  }, [filteredPosts]);
 
   const featuredKitchens = useMemo(() => {
     return venues.filter((v) => v.spot_type !== "popup" && isVisibleInFeed(v)).slice(0, 10);
@@ -494,10 +518,11 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
     searchQuery,
   ]);
 
-  const renderDishesFeedContent = (isDesktopView: boolean) => {
+  const renderDishesFeedContent = useCallback((isDesktopView: boolean) => {
     if (foodPosts.length === 0 && isHydratingData) {
       return (
-        <div className={`grid ${feedLayout === "grid" ? "grid-cols-2" : isDesktopView && viewMode === "feed" ? "grid-cols-2 xl:grid-cols-3" : "grid-cols-1"} gap-2.5`}>
+        <div className="grid grid-cols-2 gap-3 pb-28">
+          <WeeklyPickSkeleton />
           {Array.from({ length: 4 }).map((_, i) => (
             <FoodPostCardSkeleton key={`skeleton-${i}`} />
           ))}
@@ -509,13 +534,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
       return <FeedEmptyState />;
     }
 
-    const gridClass = `grid ${
-      feedLayout === "grid"
-        ? "grid-cols-2"
-        : isDesktopView && viewMode === "feed"
-        ? "grid-cols-2 xl:grid-cols-3"
-        : "grid-cols-1"
-    } gap-2.5 pb-28`;
+    const gridClass = "grid grid-cols-2 gap-3 pb-28";
 
     // Filter Override: When any filter pill is active, render filtered results directly without swimlanes
     if (!isDefaultFeedView) {
@@ -528,6 +547,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                 <FoodPostCard
                   post={post}
                   index={index}
+                  compact
                   linkedVenue={venueById.get(post.spot_id) ?? null}
                   priority={isDesktopView && index === 0}
                 />
@@ -538,20 +558,74 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
       );
     }
 
-    // Default mode: Woven editorial magazine rhythm
-    const firstTwo = filteredPosts.slice(0, 2);
-    const nextFourAfterPick = filteredPosts.slice(2, 6);
-    const nextFourAfterMatcha = filteredPosts.slice(6, 10);
-    const nextFourAfterPopups = filteredPosts.slice(10, 14);
-    const remainingDishes = filteredPosts.slice(14);
+    // Default mode: editorial magazine rhythm with locked 2-up lanes.
+    const isPopupPost = (post: FoodPost) =>
+      venueById.get(post.spot_id)?.spot_type === "popup" || post.spot_type === "popup";
 
-    const renderCard = (post: FoodPost, index: number) => {
-      const isPopupCard = venueById.get(post.spot_id)?.spot_type === "popup" || post.spot_type === "popup";
+    // Cross-lane dedupe is intentionally OFF: the same dish/venue may appear in
+    // the vertical feed AND in a curated horizontal lane.
+    const heroPost =
+      filteredPosts[0] && isPopupPost(filteredPosts[0]) ? filteredPosts[0] : null;
+
+    // Vertical lanes never repeat the same venue (that reads as a duplicate),
+    // but they are independent from the horizontal swimlanes.
+    const verticalVenues = new Set<string>();
+    const pool = filteredPosts.filter((post) => {
+      if (isPopupPost(post)) return false;
+      if (post.spot_id && verticalVenues.has(post.spot_id)) return false;
+      if (post.spot_id) verticalVenues.add(post.spot_id);
+      return true;
+    });
+
+    const takeEven = (count: number) => {
+      const out = pool.splice(0, count);
+      if (out.length % 2 === 1) {
+        const last = out.pop();
+        if (last) pool.unshift(last);
+      }
+      return out;
+    };
+
+    // Lane A: an even pair directly under the hero.
+    const rowOne = takeEven(2);
+
+    // Lane B: four after the weekly pick.
+    const rowTwo = takeEven(4);
+
+    // STRICT drink lane — never padded with dumplings/kebabs, only real drinks.
+    const matchaLaneVenues = new Set<string>();
+    const matchaLane = matchaPosts
+      .filter((post) => {
+        if (isPopupPost(post)) return false;
+        if (post.spot_id && matchaLaneVenues.has(post.spot_id)) return false;
+        if (post.spot_id) matchaLaneVenues.add(post.spot_id);
+        return true;
+      })
+      .slice(0, 8);
+
+    // Lane C: four after matcha.
+    const rowThree = takeEven(4);
+
+    // ALL pop-ups, even when they also appear in the vertical feed.
+    const popupLane = popupVenues;
+
+    // Lane D: four after pop-ups.
+    const rowFour = takeEven(4);
+
+    const kitchenLane = featuredKitchens;
+
+    // Lane E: everything left, rendered in pairs (with an end-cap on odd rows).
+    const remaining = pool.splice(0);
+
+    let cardIndex = 0;
+    const renderCard = (post: FoodPost) => {
+      const index = cardIndex++;
       return (
-        <div key={post.id} className={isPopupCard ? "col-span-full" : undefined}>
+        <div key={post.id} className="min-w-0">
           <FoodPostCard
             post={post}
             index={index}
+            compact
             linkedVenue={venueById.get(post.spot_id) ?? null}
             priority={isDesktopView && index === 0}
           />
@@ -559,153 +633,189 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
       );
     };
 
-    return (
-      <div className={gridClass}>
-        {/* Feed Intro Subheader */}
-        <div className="col-span-full pt-0.5 pb-1">
-          <p className="text-[12px] sm:text-[13px] font-semibold text-zinc-500 dark:text-zinc-400">
-            Handpicked dishes, cult micro-bakeries &amp; street food across Oslo.
+    const endCap = (
+      <div
+        key="feed-endcap"
+        className="rounded-[26px] bg-[#F2EDE4] border border-[#E6DFD3] p-4 flex flex-col justify-between aspect-[4/5]"
+      >
+        <div>
+          <p className="font-comico text-[15px] uppercase tracking-tight text-[#181615]">
+            That&apos;s a wrap
+          </p>
+          <p className="text-[11px] text-[#181615]/65 leading-snug mt-1">
+            You&apos;ve seen every dish in this lane.
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => {
+            setFeedCategory("all");
+            resetAllFilters();
+          }}
+          className="h-9 rounded-xl bg-[#181615] text-white text-[11px] font-bold"
+        >
+          See all dishes
+        </button>
+      </div>
+    );
 
-        {/* 1. First 2 dishes */}
-        {firstTwo.map((post, i) => renderCard(post, i))}
+    // Every lane is its own 2-column grid: the row can never leave a half-cell.
+    const renderRow = (posts: FoodPost[]) => {
+      if (posts.length === 0) return null;
+      return (
+        <div className="col-span-full grid grid-cols-2 gap-3">
+          {posts.map((post) => renderCard(post))}
+          {posts.length % 2 === 1 && endCap}
+        </div>
+      );
+    };
 
-        {/* 2. In-feed Single-Row Split Smakr Weekly Pick Banner */}
+    const renderSwimlane = (
+      title: React.ReactNode,
+      subtitle: string,
+      items: React.ReactNode,
+      hasItems: boolean
+    ) => {
+      if (!hasItems) return null;
+      return (
+        <section className="col-span-full bg-[#F2EDE4]/65 border-y border-[#E6DFD3] -mx-3 px-3.5 py-4 rounded-2xl my-1">
+          <div className="min-w-0 mb-2.5">
+            <h3 className="text-[19px] font-comico font-bold tracking-tight text-[#181615] dark:text-zinc-100 uppercase leading-tight flex items-center gap-1.5">
+              {title}
+            </h3>
+            <p className="text-[11px] text-[#5f5b55] dark:text-zinc-400 font-medium leading-snug mt-0.5">
+              {subtitle}
+            </p>
+            <div className="flex justify-end mt-1">
+              <span className="text-[#E84A27] font-comico text-[11px] whitespace-nowrap">
+                Swipe →
+              </span>
+            </div>
+          </div>
+          <div className="overflow-x-auto snap-x snap-mandatory flex gap-3 pb-1 no-scrollbar">
+            {items}
+          </div>
+        </section>
+      );
+    };
+
+    return (
+      <div className={gridClass}>
+        {/* Optional full-width pop-up hero, immediately followed by an even pair. */}
+        {heroPost && (
+          <div className="col-span-full">{renderCard(heroPost)}</div>
+        )}
+        {renderRow(rowOne)}
+
+        {/* In-feed Single-Row Split Smakr Weekly Pick Banner */}
         <div className="col-span-full my-1">
           <SmakrWeeklyPickSplitBanner />
         </div>
 
-        {/* 3. Next 4 dishes */}
-        {nextFourAfterPick.map((post, i) => renderCard(post, 2 + i))}
+        {renderRow(rowTwo)}
 
-        {/* 4. Horizontal Swimlane 1: 🍵 Matcha & Craft Pours */}
-        {matchaPosts.length > 0 && (
-          <div className="col-span-full my-3 space-y-2">
-            <div>
-              <h3 className="font-comico text-sm sm:text-base text-[#181615] dark:text-zinc-100 uppercase tracking-wide flex items-center gap-1.5">
-                🍵 MATCHA &amp; CRAFT POURS
-              </h3>
-              <p className="text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">
-                Ceremonial Uji whisks, hojicha &amp; signature iced pours worth crossing town for.
-              </p>
+        {renderSwimlane(
+          "🍵 Matcha & Specialty Coffee",
+          "Ceremonial Uji whisks, hojicha & signature iced pours worth crossing town for.",
+          matchaLane.map((post) => (
+            <div
+              key={`swimlane-matcha-${post.id}`}
+              className="w-[215px] h-[265px] shrink-0 snap-start overflow-hidden rounded-[24px]"
+            >
+              <FoodPostCard
+                post={post}
+                index={0}
+                compact
+                fillHeight
+                linkedVenue={venueById.get(post.spot_id) ?? null}
+              />
             </div>
-            <div className="overflow-x-auto snap-x snap-mandatory flex gap-3 pb-2 pt-1 no-scrollbar -mx-1 px-1">
-              {matchaPosts.map((post) => (
-                <div key={`swimlane-matcha-${post.id}`} className="w-[220px] shrink-0 snap-start">
-                  <FoodPostCard
-                    post={post}
-                    index={0}
-                    linkedVenue={venueById.get(post.spot_id) ?? null}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
+          )),
+          matchaLane.length > 0
         )}
 
-        {/* 5. Next 4 dishes */}
-        {nextFourAfterMatcha.map((post, i) => renderCard(post, 6 + i))}
+        {renderRow(rowThree)}
 
-        {/* 6. Horizontal Swimlane 2: 🔥 Pop-Up Radar & Limited Drops */}
-        {popupVenues.length > 0 && (
-          <div className="col-span-full my-3 space-y-2">
-            <div>
-              <h3 className="font-comico text-sm sm:text-base text-[#181615] dark:text-zinc-100 uppercase tracking-wide flex items-center gap-1.5">
-                🔥 POP-UP RADAR &amp; LIMITED DROPS
-              </h3>
-              <p className="text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">
-                Roving carts, weekend bake drops &amp; kitchen takeovers — catch them before they sell out.
-              </p>
+        {renderSwimlane(
+          <span className="inline-flex items-center gap-1.5">
+            <SmakrFoodIcon name="popup" className="w-5 h-5 shrink-0" />
+            <span>Pop-Up Drops</span>
+          </span>,
+          "Roving carts, weekend bake drops & kitchen takeovers — catch them before they sell out.",
+          popupLane.map((venue) => (
+            <div
+              key={`swimlane-popup-${venue.id}`}
+              className="w-[215px] h-[265px] shrink-0 snap-start overflow-hidden rounded-[24px]"
+            >
+              <PopupEventCard venue={venue} compact />
             </div>
-            <div className="overflow-x-auto snap-x snap-mandatory flex gap-3 pb-2 pt-1 no-scrollbar -mx-1 px-1">
-              {popupVenues.slice(0, 6).map((venue) => (
-                <div key={`swimlane-popup-${venue.id}`} className="w-[280px] shrink-0 snap-start">
-                  <PopupEventCard venue={venue} />
-                </div>
-              ))}
-            </div>
-          </div>
+          )),
+          popupLane.length > 0
         )}
 
-        {/* 7. Next 4 dishes */}
-        {nextFourAfterPopups.map((post, i) => renderCard(post, 10 + i))}
+        {renderRow(rowFour)}
 
-        {/* 8. Horizontal Swimlane 3: 🏠 The Kitchens Behind the Dishes */}
-        {featuredKitchens.length > 0 && (
-          <div className="col-span-full my-3 space-y-2">
-            <div>
-              <h3 className="font-comico text-sm sm:text-base text-[#181615] dark:text-zinc-100 uppercase tracking-wide flex items-center gap-1.5">
-                🏠 THE KITCHENS BEHIND THE DISHES
-              </h3>
-              <p className="text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium">
-                Swipe through Oslo&apos;s best independent kitchens, bakeries &amp; street canteens.
-              </p>
-            </div>
-            <div className="overflow-x-auto snap-x snap-mandatory flex gap-3 pb-2 pt-1 no-scrollbar -mx-1 px-1">
-              {featuredKitchens.map((venue, idx) => {
-                const topPost = topPostByVenueId.get(venue.id);
-                return (
-                  <div key={`swimlane-kitchen-${venue.id}`} className="w-[240px] shrink-0 snap-start">
-                    <FoodSpotCard
-                      venue={venue}
-                      index={idx}
-                      primaryDishPhoto={topPost?.photo}
-                      topDishName={topPost?.dishName}
-                      signaturePrice={topPost?.priceNok}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+        {renderSwimlane(
+          <span className="inline-flex items-center gap-1.5">
+            <Utensils className="w-5 h-5 shrink-0" />
+            <span>The Kitchens Behind the Dishes</span>
+          </span>,
+          "Swipe through Oslo's best independent kitchens, bakeries & street canteens.",
+          kitchenLane.map((venue, idx) => {
+            const topPost = topPostByVenueId.get(venue.id);
+            return (
+              <div
+                key={`swimlane-kitchen-${venue.id}`}
+                className="w-[215px] h-[265px] shrink-0 snap-start overflow-hidden rounded-2xl"
+              >
+                <FoodSpotCard
+                  venue={venue}
+                  index={idx}
+                  editorial
+                  primaryDishPhoto={topPost?.photo}
+                  topDishName={topPost?.dishName}
+                  signaturePrice={topPost?.priceNok}
+                />
+              </div>
+            );
+          }),
+          kitchenLane.length > 0
         )}
 
-        {/* 9. Remaining dishes */}
-        {remainingDishes.map((post, i) => renderCard(post, 14 + i))}
+        {renderRow(remaining)}
       </div>
     );
-  };
+  }, [
+    filteredPosts,
+    isDefaultFeedView,
+    isHydratingData,
+    foodPosts.length,
+    venueById,
+    matchaPosts,
+    popupVenues,
+    featuredKitchens,
+    topPostByVenueId,
+    resetAllFilters,
+    setFeedCategory,
+  ]);
+
+  // Memoized feed trees: selecting a map pin re-renders HomeView, but the
+  // heavy 33-card editorial feed elements are reused by identity (fast bail).
+  const desktopDishesFeed = useMemo(
+    () => renderDishesFeedContent(true),
+    [renderDishesFeedContent]
+  );
+  const mobileDishesFeed = useMemo(
+    () => renderDishesFeedContent(false),
+    [renderDishesFeedContent]
+  );
 
   const activeCategoryDef = FOOD_CATEGORIES.find((c) => c.id === currentCategory) || FOOD_CATEGORIES[0];
 
   // Render all filtered cards stably without 2-frame unmount/remount flicker on filter click
   const visiblePostsCount = filteredPosts.length;
 
-  // Screen height tracker for accurate bottom sheet snap points
-  const [sheetHeight, setSheetHeight] = useState<number>(700);
-
-  useEffect(() => {
-    const updateH = () => {
-      if (typeof window !== "undefined") {
-        setSheetHeight(Math.max(450, window.innerHeight - 58));
-      }
-    };
-    updateH();
-    window.addEventListener("resize", updateH);
-    return () => window.removeEventListener("resize", updateH);
-  }, []);
-
-  const getSnapTranslateY = (snap: "peek" | "half" | "full") => {
-    if (snap === "full") return 0;
-    if (snap === "half") return Math.round(sheetHeight * 0.20);
-    return Math.round(sheetHeight * 0.65);
-  };
-
-  // Direct GPU-accelerated Sheet Ref (Zero React re-renders during touch drag = pure 60/120fps)
-  const sheetRef = useRef<HTMLDivElement>(null);
-  const isDraggingRef = useRef<boolean>(false);
-  const hasDraggedRef = useRef<boolean>(false);
-  const dragStartYRef = useRef<number>(0);
-  const dragStartTranslateYRef = useRef<number>(0);
-  const lastTouchYRef = useRef<number>(0);
-  const lastTouchTimeRef = useRef<number>(0);
-  const currentVelocityRef = useRef<number>(0);
-  const currentYRef = useRef<number>(0);
-  const rafIdRef = useRef<number>(0);
-  const latestTouchYRef = useRef<number>(0);
-
-  // Content scroll container ref & pull-to-minimize tracker
+  // Content scroll container ref & mode scroll tracker
   const feedScrollRef = useRef<HTMLDivElement>(null);
   const desktopFeedScrollRef = useRef<HTMLDivElement>(null);
   const modeScrollRef = useRef<Record<string, number>>({ food: 0, places: 0, popups: 0 });
@@ -741,270 +851,6 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
       return () => clearTimeout(timer);
     }
   }, [feedMode]);
-
-  const contentTouchStartY = useRef<number | null>(null);
-  const contentTouchStartX = useRef<number | null>(null);
-  const isContentPulling = useRef<boolean>(false);
-  // When the sheet is in "peek", a touch anywhere on the content drags the sheet.
-  const contentDelegatedDrag = useRef<boolean>(false);
-
-  // Clean up any pending animation frame on unmount
-  useEffect(() => {
-    return () => {
-      if (rafIdRef.current) {
-        cancelAnimationFrame(rafIdRef.current);
-        rafIdRef.current = 0;
-      }
-    };
-  }, []);
-
-  // Synchronize external sheet changes (buttons, pin clicks) to the DOM ref
-  useEffect(() => {
-    if (sheetRef.current && !isDraggingRef.current) {
-      if (viewMode === "map") {
-        sheetRef.current.style.transition = "transform 0.32s cubic-bezier(0.16, 1, 0.3, 1)";
-        sheetRef.current.style.transform = `translate3d(0, calc(100dvh + 100px), 0)`;
-        return;
-      }
-      const targetY = getSnapTranslateY(mobileSheet);
-      sheetRef.current.style.transition = "transform 0.28s cubic-bezier(0.16, 1, 0.3, 1)";
-      sheetRef.current.style.transform = `translate3d(0, ${targetY}px, 0)`;
-      currentYRef.current = targetY;
-    }
-  }, [mobileSheet, sheetHeight, viewMode]);
-
-  // 1. Header Grab Bar Handlers (rAF-coalesced GPU transform with zero thread blocking)
-  const handleHeaderTouchStart = (e: React.TouchEvent) => {
-    if (rafIdRef.current) {
-      cancelAnimationFrame(rafIdRef.current);
-      rafIdRef.current = 0;
-    }
-    const startY = e.touches[0].clientY;
-    const currentTranslateY = getSnapTranslateY(mobileSheet);
-    isDraggingRef.current = true;
-    hasDraggedRef.current = false;
-    dragStartYRef.current = startY;
-    dragStartTranslateYRef.current = currentTranslateY;
-    latestTouchYRef.current = startY;
-    lastTouchYRef.current = startY;
-    lastTouchTimeRef.current = Date.now();
-    currentVelocityRef.current = 0;
-    currentYRef.current = currentTranslateY;
-
-    if (sheetRef.current) {
-      sheetRef.current.style.transition = "none";
-    }
-  };
-
-  const handleHeaderTouchMove = (e: React.TouchEvent) => {
-    if (!isDraggingRef.current) return;
-    const currentTouchY = e.touches[0].clientY;
-    latestTouchYRef.current = currentTouchY;
-
-    const delta = currentTouchY - dragStartYRef.current;
-    if (Math.abs(delta) > 4) {
-      hasDraggedRef.current = true;
-    }
-
-    const now = Date.now();
-    const timeDelta = Math.max(1, now - lastTouchTimeRef.current);
-    currentVelocityRef.current = (currentTouchY - lastTouchYRef.current) / timeDelta;
-    lastTouchYRef.current = currentTouchY;
-    lastTouchTimeRef.current = now;
-
-    if (!rafIdRef.current) {
-      rafIdRef.current = requestAnimationFrame(() => {
-        rafIdRef.current = 0;
-        if (!sheetRef.current || !isDraggingRef.current) return;
-
-        const liveDelta = latestTouchYRef.current - dragStartYRef.current;
-        let nextY = dragStartTranslateYRef.current + liveDelta;
-
-        const peekY = Math.round(sheetHeight * 0.65);
-        // Apply smooth rubber-band resistance beyond limits
-        if (nextY < 0) {
-          nextY = nextY * 0.22;
-        } else if (nextY > peekY) {
-          const overflow = nextY - peekY;
-          nextY = peekY + overflow * 0.22;
-        }
-
-        currentYRef.current = nextY;
-        sheetRef.current.style.transform = `translate3d(0, ${nextY}px, 0)`;
-      });
-    }
-  };
-
-  const handleHeaderTouchEnd = () => {
-    if (rafIdRef.current) {
-      cancelAnimationFrame(rafIdRef.current);
-      rafIdRef.current = 0;
-    }
-    if (!isDraggingRef.current) return;
-    isDraggingRef.current = false;
-
-    const finalY = currentYRef.current;
-    const velocity = currentVelocityRef.current;
-
-    const halfY = Math.round(sheetHeight * 0.20);
-    const peekY = Math.round(sheetHeight * 0.65);
-
-    let nextSnap: "peek" | "half" | "full" = "peek";
-
-    // Fast flick UP (negative velocity)
-    if (velocity < -0.28) {
-      if (mobileSheet === "peek") {
-        nextSnap = velocity < -0.65 || finalY < halfY ? "full" : "half";
-      } else {
-        nextSnap = "full";
-      }
-    }
-    // Fast flick DOWN (positive velocity)
-    else if (velocity > 0.28) {
-      if (mobileSheet === "full") {
-        nextSnap = velocity > 0.65 || finalY > halfY ? "peek" : "half";
-      } else {
-        nextSnap = "peek";
-      }
-    }
-    // Position-based snapping
-    else {
-      const midFullHalf = halfY * 0.55;
-      const midHalfPeek = halfY + (peekY - halfY) * 0.5;
-
-      if (finalY < midFullHalf) {
-        nextSnap = "full";
-      } else if (finalY < midHalfPeek) {
-        nextSnap = "half";
-      } else {
-        nextSnap = "peek";
-      }
-    }
-
-    const targetY = getSnapTranslateY(nextSnap);
-    currentYRef.current = targetY;
-    if (sheetRef.current) {
-      sheetRef.current.style.transition = "transform 0.38s cubic-bezier(0.16, 1, 0.3, 1)";
-      sheetRef.current.style.transform = `translate3d(0, ${targetY}px, 0)`;
-    }
-    setMobileSheet(nextSnap);
-  };
-
-  // 2. Scrollable Content Pull-down to minimize when at top
-  const handleContentTouchStart = (e: React.TouchEvent) => {
-    if (rafIdRef.current) {
-      cancelAnimationFrame(rafIdRef.current);
-      rafIdRef.current = 0;
-    }
-    // In "peek" the feed is barely visible — a touch anywhere should drag the
-    // sheet (up to open, down to dismiss), mirroring the header grab handle.
-    if (mobileSheet === "peek") {
-      contentDelegatedDrag.current = true;
-      handleHeaderTouchStart(e);
-      return;
-    }
-    contentDelegatedDrag.current = false;
-
-    const scrollTop = feedScrollRef.current ? feedScrollRef.current.scrollTop : 0;
-    if (scrollTop <= 1) {
-      contentTouchStartY.current = e.touches[0].clientY;
-      contentTouchStartX.current = e.touches[0].clientX;
-      dragStartTranslateYRef.current = currentYRef.current || getSnapTranslateY(mobileSheet);
-      lastTouchTimeRef.current = Date.now();
-      isContentPulling.current = false;
-    }
-  };
-
-  const handleContentTouchMove = (e: React.TouchEvent) => {
-    if (contentDelegatedDrag.current) {
-      handleHeaderTouchMove(e);
-      return;
-    }
-    if (contentTouchStartY.current === null) return;
-    const currentY = e.touches[0].clientY;
-    const currentX = e.touches[0].clientX;
-    latestTouchYRef.current = currentY;
-    const scrollTop = feedScrollRef.current ? feedScrollRef.current.scrollTop : 0;
-
-    if (scrollTop <= 1) {
-      const pullDown = currentY - contentTouchStartY.current;
-      const deltaX = contentTouchStartX.current !== null ? Math.abs(currentX - contentTouchStartX.current) : 0;
-      if (pullDown > 18 && deltaX < 12) {
-        isContentPulling.current = true;
-        isDraggingRef.current = true;
-        if (sheetRef.current) {
-          sheetRef.current.style.transition = "none";
-        }
-        if (!rafIdRef.current) {
-          rafIdRef.current = requestAnimationFrame(() => {
-            rafIdRef.current = 0;
-            if (!sheetRef.current || !isDraggingRef.current) return;
-
-            const livePullDown = latestTouchYRef.current - (contentTouchStartY.current ?? latestTouchYRef.current);
-            const peekY = Math.round(sheetHeight * 0.65);
-            const nextY = Math.min(peekY + 20, dragStartTranslateYRef.current + livePullDown * 0.85);
-            currentYRef.current = nextY;
-            sheetRef.current.style.transform = `translate3d(0, ${nextY}px, 0)`;
-          });
-        }
-      }
-    } else {
-      if (isContentPulling.current) {
-        isContentPulling.current = false;
-        isDraggingRef.current = false;
-        if (rafIdRef.current) {
-          cancelAnimationFrame(rafIdRef.current);
-          rafIdRef.current = 0;
-        }
-      }
-    }
-  };
-
-  const handleContentTouchEnd = (e: React.TouchEvent) => {
-    if (rafIdRef.current) {
-      cancelAnimationFrame(rafIdRef.current);
-      rafIdRef.current = 0;
-    }
-    if (contentDelegatedDrag.current) {
-      contentDelegatedDrag.current = false;
-      handleHeaderTouchEnd();
-      return;
-    }
-    if (isContentPulling.current && contentTouchStartY.current !== null) {
-      const endY = e.changedTouches[0].clientY;
-      const pullDown = endY - contentTouchStartY.current;
-      const deltaTime = Math.max(1, Date.now() - lastTouchTimeRef.current);
-      const velocityY = pullDown / deltaTime;
-
-      let nextSnap = mobileSheet;
-      if (pullDown > 55 || velocityY > 0.32) {
-        if (mobileSheet === "full") {
-          nextSnap = pullDown > 180 || velocityY > 0.75 ? "peek" : "half";
-        } else if (mobileSheet === "half") {
-          nextSnap = "peek";
-        }
-      }
-
-      const targetY = getSnapTranslateY(nextSnap);
-      currentYRef.current = targetY;
-      if (sheetRef.current) {
-        sheetRef.current.style.transition = "transform 0.38s cubic-bezier(0.16, 1, 0.3, 1)";
-        sheetRef.current.style.transform = `translate3d(0, ${targetY}px, 0)`;
-      }
-      setMobileSheet(nextSnap);
-    }
-
-    contentTouchStartY.current = null;
-    contentTouchStartX.current = null;
-    isContentPulling.current = false;
-    isDraggingRef.current = false;
-  };
-
-  const toggleSheetState = () => {
-    if (hasDraggedRef.current) return;
-    const next = mobileSheet === "peek" ? "half" : mobileSheet === "half" ? "full" : "half";
-    setMobileSheet(next);
-  };
 
   return (
     <div className="relative flex-1 w-full h-screen h-[100dvh] min-h-[100dvh] max-h-[100dvh] overflow-hidden bg-zinc-100 lg:flex lg:pt-[57px]">
@@ -1049,67 +895,12 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
               transition={{ duration: 0.18, ease: "easeOut" }}
               className="flex flex-col h-full w-full overflow-hidden"
             >
-              <div className="sticky top-0 z-20 bg-[#F5F0E6]/95 dark:bg-[#181615]/95 backdrop-blur-md border-b border-black/[0.06]">
-                <div className="px-4 py-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <h2 className="font-comico text-sm sm:text-base tracking-wider text-[#e84a27] uppercase">
-                      FEED
-                    </h2>
-                    <div
-                      onClick={(e) => e.stopPropagation()}
-                      className="inline-flex items-center p-0.5 rounded-full bg-white/95 dark:bg-stone-900/95 border border-[#181615]/10 dark:border-white/10 shadow-2xs ml-0.5 isolate"
-                      role="group"
-                      aria-label="Feed layout density"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => setFeedLayout("list")}
-                        aria-pressed={feedLayout === "list"}
-                        title="Single column view (1 per row)"
-                        className={`relative isolate px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer select-none ${
-                          feedLayout === "list"
-                            ? "text-white"
-                            : "text-zinc-500 hover:text-[#181615] dark:hover:text-white"
-                        }`}
-                      >
-                        {feedLayout === "list" && (
-                          <motion.div
-                            layoutId="desktopFeedDensityPill"
-                            className="absolute inset-0 bg-[#e84a27] rounded-full shadow-2xs z-0 pointer-events-none"
-                            transition={{ type: "spring", stiffness: 420, damping: 32, mass: 0.6 }}
-                          />
-                        )}
-                        <Rows2 className="w-3.5 h-3.5 relative z-10" />
-                        <span className="relative z-10">1×</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFeedLayout("grid")}
-                        aria-pressed={feedLayout === "grid"}
-                        title="Grid view (2 per row)"
-                        className={`relative isolate px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer select-none ${
-                          feedLayout === "grid"
-                            ? "text-white"
-                            : "text-zinc-500 hover:text-[#181615] dark:hover:text-white"
-                        }`}
-                      >
-                        {feedLayout === "grid" && (
-                          <motion.div
-                            layoutId="desktopFeedDensityPill"
-                            className="absolute inset-0 bg-[#e84a27] rounded-full shadow-2xs z-0 pointer-events-none"
-                            transition={{ type: "spring", stiffness: 420, damping: 32, mass: 0.6 }}
-                          />
-                        )}
-                        <LayoutGrid className="w-3.5 h-3.5 relative z-10" />
-                        <span className="relative z-10">2×</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 font-mono">
-                    {filteredPosts.length} DISHES
-                  </div>
-                </div>
-                <FeedFilterBar />
+              <div className="sticky top-0 z-20 bg-[#F5F0E6]/95 dark:bg-[#181615]/95 backdrop-blur-md">
+                {isHydratingData && foodPosts.length === 0 ? (
+                  <FeedFilterBarSkeleton />
+                ) : (
+                  <FeedFilterBar />
+                )}
               </div>
               <div
                 ref={desktopFeedScrollRef}
@@ -1120,20 +911,19 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                 {/* Pop-ups Feed Panel */}
                 <div className={feedMode === "popups" ? "block" : "hidden"}>
                   {popupVenues.length === 0 ? (
-                    <div className="py-16 text-center text-xs text-zinc-500 space-y-2 max-w-sm mx-auto">
-                      <p className="font-semibold text-sm text-[#181615] dark:text-zinc-200">No active pop-ups right now</p>
-                      <p>Check back soon for limited Oslo kitchen residencies and guest drops.</p>
-                    </div>
+                    isHydratingData ? (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="col-span-full"><PopupEventCardSkeleton /></div>
+                        <div className="col-span-full"><PopupEventCardSkeleton /></div>
+                      </div>
+                    ) : (
+                      <div className="py-16 text-center text-xs text-zinc-500 space-y-2 max-w-sm mx-auto">
+                        <p className="font-semibold text-sm text-[#181615] dark:text-zinc-200">No active pop-ups right now</p>
+                        <p>Check back soon for limited Oslo kitchen residencies and guest drops.</p>
+                      </div>
+                    )
                   ) : (
-                    <div
-                      className={`grid ${
-                        feedLayout === "grid"
-                          ? "grid-cols-2"
-                          : viewMode === "feed"
-                          ? "grid-cols-2 xl:grid-cols-3"
-                          : "grid-cols-1"
-                      } gap-2.5`}
-                    >
+                    <div className="grid grid-cols-2 gap-3">
                       {popupVenues.map((venue, index) => (
                         <div key={venue.id} className="col-span-full">
                           <PopupEventCard
@@ -1148,21 +938,13 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
 
                 {/* Dishes Feed Panel (Two-Frame Progressive Mount + 120fps Cascade) */}
                 <div className={feedMode === "food" ? "block" : "hidden"}>
-                  {renderDishesFeedContent(true)}
+                  {desktopDishesFeed}
                 </div>
 
                 {/* Spots Feed Panel */}
                 <div className={feedMode === "places" ? "block" : "hidden"}>
                   {venues.length === 0 && isHydratingData ? (
-                    <div
-                      className={`grid ${
-                        feedLayout === "grid"
-                          ? "grid-cols-2"
-                          : viewMode === "feed"
-                          ? "grid-cols-2 xl:grid-cols-3"
-                          : "grid-cols-1"
-                      } gap-2.5`}
-                    >
+                    <div className="grid grid-cols-2 gap-3">
                       {Array.from({ length: 4 }).map((_, i) => (
                         <FoodSpotCardSkeleton key={`spot-skeleton-${i}`} />
                       ))}
@@ -1172,15 +954,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                       No spots found in this category.
                     </div>
                   ) : (
-                    <div
-                      className={`grid ${
-                        feedLayout === "grid"
-                          ? "grid-cols-2"
-                          : viewMode === "feed"
-                          ? "grid-cols-2 xl:grid-cols-3"
-                          : "grid-cols-1"
-                      } gap-2.5 pb-28`}
-                    >
+                    <div className="grid grid-cols-2 gap-3 pb-28">
                       {filteredVenues.map((venue, index) => {
                         if (venue.spot_type === "popup") {
                           return (
@@ -1194,7 +968,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                         }
                         const topPost = topPostByVenueId.get(venue.id);
                         return (
-                          <div key={venue.id} className={feedLayout === "grid" ? "h-full" : undefined}>
+                          <div key={venue.id} className="h-full">
                             <FoodSpotCard
                               venue={venue}
                               index={index}
@@ -1233,7 +1007,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
       <div
         className={`
           absolute inset-0 w-full h-full z-0 isolate
-          lg:static lg:h-full lg:z-0
+          lg:relative lg:h-full lg:z-0 overflow-hidden
           ${
             selectedVenue
               ? "lg:w-[54%] lg:xl:w-[58%] lg:opacity-100"
@@ -1243,177 +1017,87 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
               ? "lg:w-full lg:opacity-100"
               : "lg:w-[54%] lg:xl:w-[58%] lg:opacity-100"
           }
-          transition-all duration-350 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[width,opacity]
           relative
         `}
       >
         <MapRadarView />
 
-        {/* Top-of-Map Category Filter Strip */}
-        <div
-          className={`absolute top-[68px] left-0 right-0 z-20 pointer-events-auto transition-all duration-300 ${
-            isDesktop && viewMode === "map" ? "pl-36" : ""
-          } ${
-            viewMode === "map" || (!isDesktop && mobileSheet === "peek")
-              ? "opacity-100 translate-y-0"
-              : "opacity-0 -translate-y-4 pointer-events-none"
-          }`}
-        >
-          <MapCategoryFilterStrip />
-        </div>
-
-        {/* Desktop Show Feed floating button */}
-        {isDesktop && viewMode === "map" && (
+        {/* Flush left-edge > FEED handle in Map Mode (hidden while a card is focused) */}
+        {viewMode === "map" && !selectedVenue && (
           <button
             type="button"
-            onClick={() => useCityPulseStore.getState().setViewMode("split")}
-            className="absolute top-[68px] left-4 z-30 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/95 dark:bg-stone-900/95 text-xs font-bold text-[#181615] dark:text-zinc-100 shadow-md border border-[#181615]/10 hover:bg-white hover:scale-105 active:scale-95 transition-all cursor-pointer pointer-events-auto"
+            onClick={() => {
+              useCityPulseStore.getState().setViewMode(isDesktop ? "split" : "feed");
+              setFeedMode("food");
+            }}
+            aria-label="Open feed"
+            title="Open feed"
+            className="fixed left-0 top-1/2 -translate-y-1/2 z-40 rounded-l-none rounded-r-2xl border border-l-0 border-white/40 bg-white/45 backdrop-blur-md px-2.5 py-4 shadow-[4px_6px_20px_rgba(24,22,21,0.12)] flex flex-col items-center gap-1.5 hover:pl-3.5 hover:bg-white/60 active:scale-95 transition-all pointer-events-auto cursor-pointer select-none"
           >
-            <span>← Show Feed</span>
+            <span aria-hidden className="text-[18px] leading-none font-black text-[#E84A27]">›</span>
+            <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#181615]/85 [writing-mode:vertical-rl]">
+              FEED
+            </span>
           </button>
         )}
 
-        {/* Bottom-of-Map Neighborhood Dock + Ultra-Compact Spot Cards */}
+        {/* Bottom-of-Map Neighborhood Dock + Spot Cards */}
         <div
-          className={`absolute left-0 right-0 z-20 pointer-events-auto transition-all duration-300 ${
-            viewMode === "map" || (!isDesktop && mobileSheet === "peek")
+          className={`absolute left-0 right-0 z-20 pointer-events-auto transition-all duration-[600ms] ${
+            viewMode === "map"
               ? "opacity-100 translate-y-0"
               : "opacity-0 translate-y-4 pointer-events-none"
-          } ${
-            isDesktop ? "bottom-4" : "bottom-24"
-          }`}
+          } bottom-4`}
         >
-          <MapNeighborhoodDock />
+          <MapNeighborhoodDock isDesktop={isDesktop} />
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* MOBILE AIRBNB-STYLE SLIDE-UP FEED SHEET (< lg screens)                   */}
+      {/* MOBILE FULL-PAGE FEED VIEW (< lg screens)                                 */}
       {/* ========================================================================= */}
       {!isDesktop && (
-      <div
-        ref={sheetRef}
-        style={{
-          height: `calc(100dvh - 57px + 140px)`,
-          transform: viewMode === "map"
-            ? "translate3d(0, calc(100dvh + 100px), 0)"
-            : `translate3d(0, ${getSnapTranslateY(mobileSheet)}px, 0)`,
-          transition: isDraggingRef.current ? "none" : "transform 0.32s cubic-bezier(0.16, 1, 0.3, 1)",
-          contain: "layout style",
-        }}
-        className={`lg:hidden absolute left-0 right-0 top-[57px] z-30 bg-[#F5F0E6] dark:bg-[#181615] rounded-t-3xl border-t border-[#181615]/10 dark:border-white/10 shadow-2xl flex flex-col will-change-transform pb-[140px] w-full max-w-[100vw] overflow-x-hidden smakr-bottom-sheet ${
-          viewMode === "map" ? "pointer-events-none opacity-0" : "pointer-events-auto opacity-100"
-        }`}
-      >
-          {/* Sticky Sheet Header: Grab Handle + Compact Header (1x/2x Density Toggle) + Category Filter Bar */}
-          <div className="sticky top-0 z-20 bg-[#F5F0E6] dark:bg-[#181615] border-b border-[#181615]/10 dark:border-white/10 rounded-t-3xl shrink-0 w-full max-w-full overflow-hidden">
-            <div
-              onTouchStart={handleHeaderTouchStart}
-              onTouchMove={handleHeaderTouchMove}
-              onTouchEnd={handleHeaderTouchEnd}
-              onClick={toggleSheetState}
-              className="w-full max-w-full min-w-0 pt-2.5 pb-1.5 px-3.5 cursor-pointer select-none rounded-t-3xl active:bg-black/[0.02] transition-colors touch-none"
-            >
-              {/* Grab pill */}
-              <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-zinc-600 mx-auto mb-2 hover:bg-zinc-400 transition-colors" />
-
-              {/* Feed Title + 1x/2x Density Toggle + Dish Count */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <h2 className="font-comico text-sm tracking-wider text-[#e84a27] uppercase">
-                    FEED
-                  </h2>
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    className="inline-flex items-center p-0.5 rounded-full bg-white/95 dark:bg-stone-900/95 border border-[#181615]/10 dark:border-white/10 shadow-2xs ml-0.5 isolate"
-                    role="group"
-                    aria-label="Feed layout density"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setFeedLayout("list")}
-                      className={`relative isolate px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer select-none ${
-                        feedLayout === "list" ? "text-white" : "text-zinc-500"
-                      }`}
-                    >
-                      {feedLayout === "list" && (
-                        <motion.div
-                          layoutId="mobileFeedDensityPill"
-                          className="absolute inset-0 bg-[#e84a27] rounded-full shadow-2xs z-0 pointer-events-none"
-                          transition={{ type: "spring", stiffness: 420, damping: 32, mass: 0.6 }}
-                        />
-                      )}
-                      <Rows2 className="w-3 h-3 relative z-10" />
-                      <span className="relative z-10">1×</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFeedLayout("grid")}
-                      className={`relative isolate px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer select-none ${
-                        feedLayout === "grid" ? "text-white" : "text-zinc-500"
-                      }`}
-                    >
-                      {feedLayout === "grid" && (
-                        <motion.div
-                          layoutId="mobileFeedDensityPill"
-                          className="absolute inset-0 bg-[#e84a27] rounded-full shadow-2xs z-0 pointer-events-none"
-                          transition={{ type: "spring", stiffness: 420, damping: 32, mass: 0.6 }}
-                        />
-                      )}
-                      <LayoutGrid className="w-3 h-3 relative z-10" />
-                      <span className="relative z-10">2×</span>
-                    </button>
-                  </div>
-                </div>
-                <div className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 font-mono">
-                  {filteredPosts.length} DISHES
-                </div>
-              </div>
-            </div>
-
-            {/* Cravings Category Filter Bar */}
-            <div
-              onTouchStart={(e) => e.stopPropagation()}
-              onTouchMove={(e) => e.stopPropagation()}
-            >
+        <div
+          className={`lg:hidden fixed inset-0 bg-[#FAF7F2]/[0.38] backdrop-blur-md dark:bg-[#181615]/60 z-30 overflow-hidden flex flex-col will-change-transform w-full max-w-[100vw] transition-[transform,opacity] duration-[700ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            viewMode === "map"
+              ? "-translate-x-full opacity-0 pointer-events-none shadow-none"
+              : "translate-x-0 opacity-100 pointer-events-auto shadow-2xl"
+          }`}
+        >
+          {/* Floating filter bar under the SMAKR header. Fully transparent so
+              content scrolls behind it; only the logo/signup area is blurred. */}
+          <div className="absolute inset-x-0 top-[64px] z-20 pointer-events-auto w-full max-w-full overflow-hidden">
+            {isHydratingData && foodPosts.length === 0 ? (
+              <FeedFilterBarSkeleton />
+            ) : (
               <FeedFilterBar compact />
-            </div>
+            )}
           </div>
 
-          {/* Scrollable Feed Dishes or Spots with tap-to-expand peek interaction */}
+          {/* Scrollable Feed Dishes or Spots — starts at the top so cards can
+              scroll behind the header/filters; pt clears the overlays. */}
           <div
             ref={feedScrollRef}
             data-feed-scroll
             onScroll={handleMobileScroll}
-            onTouchStart={handleContentTouchStart}
-            onTouchMove={handleContentTouchMove}
-            onTouchEnd={handleContentTouchEnd}
-            onClick={() => {
-              if (hasDraggedRef.current) return;
-              if (mobileSheet === "peek") {
-                setMobileSheet("half");
-              }
-            }}
-            className={`flex-1 overflow-y-auto px-3 py-2.5 space-y-2.5 no-scrollbar overscroll-contain pb-36 ${
-              mobileSheet === "peek"
-                ? "cursor-pointer active:opacity-90 transition-opacity touch-none"
-                : ""
-            }`}
+            className="flex-1 min-h-0 overflow-y-auto px-3 pt-[120px] pb-28 space-y-2.5 no-scrollbar overscroll-contain"
           >
-            {/* Mobile Feed Panels (Persistent DOM mounting: 0ms tab switch lag) */}
             {/* 1. Mobile Pop-ups Panel */}
             <div className={feedMode === "popups" ? "block" : "hidden"}>
               {popupVenues.length === 0 ? (
-                <div className="py-14 text-center text-xs text-zinc-500 space-y-2 max-w-sm mx-auto">
-                  <p className="font-semibold text-sm text-[#181615] dark:text-zinc-200">No active pop-ups right now</p>
-                  <p>Check back soon for limited Oslo kitchen residencies and guest drops.</p>
-                </div>
+                isHydratingData ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="col-span-full"><PopupEventCardSkeleton /></div>
+                    <div className="col-span-full"><PopupEventCardSkeleton /></div>
+                  </div>
+                ) : (
+                  <div className="py-14 text-center text-xs text-zinc-500 space-y-2 max-w-sm mx-auto">
+                    <p className="font-semibold text-sm text-[#181615] dark:text-zinc-200">No active pop-ups right now</p>
+                    <p>Check back soon for limited Oslo kitchen residencies and guest drops.</p>
+                  </div>
+                )
               ) : (
-                <div
-                  className={`grid ${feedLayout === "grid" ? "grid-cols-2" : "grid-cols-1"} gap-2.5 ${
-                    mobileSheet === "peek" ? "pointer-events-none" : ""
-                  }`}
-                >
+                <div className="grid grid-cols-2 gap-3">
                   {popupVenues.map((venue, index) => (
                     <div key={venue.id} className="col-span-full">
                       <PopupEventCard
@@ -1428,13 +1112,13 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
 
             {/* 2. Mobile Dishes Feed Panel (Two-Frame Progressive Mount + 120fps Cascade) */}
             <div className={feedMode === "food" ? "block" : "hidden"}>
-              {renderDishesFeedContent(false)}
+              {mobileDishesFeed}
             </div>
 
             {/* 3. Mobile Spots Feed Panel */}
             <div className={feedMode === "places" ? "block" : "hidden"}>
               {venues.length === 0 && isHydratingData ? (
-                <div className={`grid ${feedLayout === "grid" ? "grid-cols-2" : "grid-cols-1"} gap-2.5`}>
+                <div className="grid grid-cols-2 gap-3">
                   {Array.from({ length: 3 }).map((_, i) => (
                     <FoodSpotCardSkeleton key={`m-spot-skeleton-${i}`} />
                   ))}
@@ -1453,11 +1137,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                   </button>
                 </div>
               ) : (
-                <div
-                  className={`grid ${feedLayout === "grid" ? "grid-cols-2" : "grid-cols-1"} gap-2.5 ${
-                    mobileSheet === "peek" ? "pointer-events-none" : ""
-                  }`}
-                >
+                <div className="grid grid-cols-2 gap-3">
                   {filteredVenues.map((venue, index) => {
                     if (venue.spot_type === "popup") {
                       return (
@@ -1471,7 +1151,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                     }
                     const topPost = topPostByVenueId.get(venue.id);
                     return (
-                      <div key={venue.id} className={feedLayout === "grid" ? "h-full" : undefined}>
+                      <div key={venue.id} className="h-full">
                         <FoodSpotCard
                           venue={venue}
                           index={index}
@@ -1492,13 +1172,13 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
 
       {/* ========================================================================= */}
       {/* MOBILE FLOATING GLASSMORPHIC FOOD VS LOCATIONS TOGGLE                    */}
-      {/* Elevated at root level (z-[45]), 100% visible across all mobile browsers  */}
+      {/* Elevated at root level (z-[45]), hidden smoothly in Map Mode             */}
       {/* ========================================================================= */}
       {!isDesktop && (
       <div
-        className={`lg:hidden fixed left-1/2 -translate-x-1/2 z-[45] pointer-events-auto flex items-center justify-center transition-all duration-300 ease-out ${
-          isVenueDetailModalOpen
-            ? "opacity-0 pointer-events-none translate-y-8 scale-90"
+        className={`lg:hidden fixed left-1/2 -translate-x-1/2 z-[45] pointer-events-auto flex items-center justify-center transition-all duration-[600ms] ease-out ${
+          isVenueDetailModalOpen || viewMode === "map"
+            ? "opacity-0 pointer-events-none translate-y-12 scale-90"
             : "opacity-100 translate-y-0 scale-100"
         }`}
         style={{
@@ -1512,6 +1192,8 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
         />
       </div>
       )}
+
+      {/* Feed-mode bottom fade removed: it dimmed the map cards. */}
 
       {/* Modals & Floating Spot Cards (auth + log-a-dish mount globally in layout) */}
       <VenueBottomSheet />

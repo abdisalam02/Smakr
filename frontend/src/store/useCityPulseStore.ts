@@ -267,7 +267,7 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
   mapCategory: "all",
   feedCategory: "all",
   feedMode: "food",
-  feedLayout: "list",
+  feedLayout: "grid",
   selectedAvatar: "lordicon_barista",
   mapNeighborhood: "all",
   selectedDietary: [],
