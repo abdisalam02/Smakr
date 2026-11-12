@@ -675,6 +675,52 @@
     }
   },
   {
+    "id": "u-wan-sum",
+    "name": "U WAN SUM",
+    "address": "Oslo, Norway",
+    "neighborhood": "sentrum",
+    "latitude": 59.9139,
+    "longitude": 10.7522,
+    "food_category": "coffee",
+    "icon": "coffee",
+    "spot_type": "popup",
+    "cover_image_url": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/1be02016-43ec-476a-a9dc-97630b063846/1792596843770.jpg",
+    "price_level": "$$",
+    "google_rating": null,
+    "signature_dish": "Egg coffee",
+    "why_curated": "U WAN SUM is an itinerant specialty beverage pop-up known for hosting limited-edition weekend takeovers across Oslo creative spaces and coffee bars. Their concept reimagines classic Southeast Asian café culture through artisanal Vietnamese iced coffees, layered matcha infusions, and velvety foam toppings. Operating without a permanent storefront, their drops attract devoted queues of design-conscious locals tracking their announcements on Instagram.",
+    "verification_status": "seeded",
+    "notes": "Drop schedule: Weekend specialty Vietnamese coffee drops. Instagram: https://instagram.com/uwansamofficial",
+    "instagram_url": "https://instagram.com/uwansamofficial",
+    "dish_highlights": [
+      {
+        "id": "u-wan-sum-dish-1",
+        "dish_name": "Egg coffee",
+        "category": "coffee",
+        "price_nok": 75,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/1be02016-43ec-476a-a9dc-97630b063846/1792596843770.jpg",
+        "is_verified_food_photo": true,
+        "review_text": "Dark, bittersweet Vietnamese robusta drip crowned with an impossibly thick, velvety custard foam whipped from egg yolks and sweetened condensed milk.",
+        "taste_tags": [
+          "custard-like",
+          "bold",
+          "sweet"
+        ]
+      }
+    ],
+    "popup_meta": {
+      "brand_id": "brand_1792595245904",
+      "residency_status": "between_residencies",
+      "dates_label": "Dates TBA",
+      "daily_hours": "17:00 – Late",
+      "portion_cap": "80 bowls/night",
+      "host_venue_name": "Location TBA",
+      "host_address": "Oslo, Norway",
+      "instagram_url": "https://instagram.com/uwansamofficial",
+      "entry_type": "walk_in"
+    }
+  },
+  {
     "id": "sukkerbakeriet",
     "name": "Sukkerbakeriet",
     "address": "Roving Pop-Up Drops, Oslo",
