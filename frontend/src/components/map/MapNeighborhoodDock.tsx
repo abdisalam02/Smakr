@@ -1,15 +1,13 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } from "react";
-import { flushSync } from "react-dom";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { resolveVenueDisplayBadge, resolveEntityTaxonomy } from "@/lib/taxonomy";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import { formatOsloLocation, normalizeOsloNeighborhoodDisplay, getDirectionsUrl } from "@/lib/location";
 import { isVisibleInFeed } from "@/lib/popupUtils";
-import { beginInstantVenueSheet, endInstantVenueSheet, playVenueMorphOverlay } from "@/lib/venueMorph";
-import { selectionFlightDuration, selectionPanDistance } from "@/lib/mapMotion";
-import type { Venue, VenueDetail } from "@/types";
+import { endInstantVenueSheet } from "@/lib/venueMorph";
+import type { Venue, VenueDetail, FoodPost } from "@/types";
 
 type VenueWithDishes = Venue & {
   dishes?: Array<{ image_url?: string | null }>;
@@ -97,7 +95,7 @@ const DockCarouselCard = React.memo(function DockCarouselCard({
   const flagIso = badge.flag ? FLAG_ISO_MAP[badge.flag] : null;
   const ratingText = venue.google_rating ? venue.google_rating.toFixed(1) : "4.8";
   const isPopup = venue.spot_type === "popup";
-  const priceOrStatusLabel = isPopup ? "🔥 Pop-Up" : venue.price_level || "$$";
+  const priceOrStatusLabel = isPopup ? "POP-UP" : venue.price_level || "$$";
   const thumbSources = [
     venue.cover_image_url,
     (venue as VenueWithDishes).dishes?.[0]?.image_url,
@@ -173,6 +171,178 @@ const DockCarouselCard = React.memo(function DockCarouselCard({
             </span>
           </div>
         </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+const SpotlightCard = React.memo(function SpotlightCard({
+  venue,
+  foodPosts,
+  fallbackPhoto,
+  isWeeklyPick,
+  isActive,
+  isNeighbor,
+  cardOpen,
+  onDismiss,
+  onOpenDetails,
+  onSelectSide,
+  cardRef,
+}: {
+  venue: Venue;
+  foodPosts: FoodPost[];
+  fallbackPhoto?: string;
+  isWeeklyPick: boolean;
+  isActive: boolean;
+  isNeighbor: boolean;
+  cardOpen: boolean;
+  onDismiss: () => void;
+  onOpenDetails: () => void;
+  onSelectSide: () => void;
+  cardRef: (el: HTMLDivElement | null) => void;
+}) {
+  const locationInfo = formatOsloLocation(venue.address, venue.city);
+  const neighborhood = normalizeOsloNeighborhoodDisplay(
+    venue.neighborhood || locationInfo?.neighborhood
+  );
+  // "Norway, Oslo, Vulkan, NO" -> "Vulkan": drop country / city / postal tokens.
+  const address =
+    (venue.address || "")
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .filter(
+        (part) =>
+          !/^(norway|norge|no|oslo|\d{4})$/i.test(part) &&
+          !/^\d{4}\s/i.test(part)
+      )[0] || neighborhood;
+  const story =
+    venue.description ||
+    (venue.vibe_signals as any)?.editorial_story ||
+    (venue.vibe_signals as any)?.vibe_description ||
+    "Standout Oslo culinary spot preparing authentic specialties daily.";
+  const price =
+    venue.spot_type === "popup" ? "POP-UP" : venue.price_level || "$$";
+  const directionsUrl = getDirectionsUrl(venue);
+  const live = getVenueLiveOpenStatus(venue);
+  const rating = venue.google_rating != null ? venue.google_rating.toFixed(1) : "4.7";
+  const imageSources = [
+    venue.cover_image_url,
+    (venue as VenueWithDishes).dishes?.[0]?.image_url,
+    fallbackPhoto,
+  ];
+
+  return (
+    <div
+      ref={cardRef}
+      data-spotlight-card={isActive ? "true" : undefined}
+      data-state={isActive ? (cardOpen ? "open" : "closing") : "neighbor"}
+      aria-hidden={!isActive}
+      onClick={(e) => {
+        if (!isActive && isNeighbor) {
+          e.stopPropagation();
+          onSelectSide();
+        }
+      }}
+      style={{
+        contain: "layout paint",
+        transformOrigin: "50% 100%",
+        pointerEvents: isActive || isNeighbor ? "auto" : "none",
+      }}
+      className={`absolute inset-0 overflow-hidden rounded-[26px] bg-[#121110] shadow-[0_20px_50px_rgba(0,0,0,0.45)] border will-change-transform ${
+        !isActive && isNeighbor ? "cursor-pointer" : ""
+      } ${
+        isWeeklyPick
+          ? "border-[#E84A27]/60 ring-1 ring-[#E84A27]/35"
+          : "border-white/15"
+      }`}
+    >
+      {/* Full-bleed dish/venue photo */}
+      <div className="absolute inset-0 overflow-hidden">
+        <VenueThumb sources={imageSources} alt={venue.name || "Venue"} eager />
+      </div>
+      <div className="absolute inset-0 bg-gradient-to-t from-[#121110] via-[#121110]/80 to-black/15 pointer-events-none" />
+
+      {/* Top row: price + rating/open + close (slides down smoothly when compact) */}
+      <div
+        data-slot-top="true"
+        className="relative z-10 flex items-center justify-between gap-2 p-3.5 will-change-transform"
+      >
+        <span
+          className={`bg-[#E84A27] text-white font-comico text-[11px] px-2.5 py-1 rounded-full shadow-xs whitespace-nowrap transition-[margin] duration-300 ${
+            isWeeklyPick && isActive && cardOpen ? "ml-[78px]" : ""
+          }`}
+        >
+          {isWeeklyPick ? `SMAKR PICK · ${price}` : price}
+        </span>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="bg-black/50 backdrop-blur-md text-white text-[11px] font-bold px-2.5 py-1 rounded-full border border-white/15 flex items-center gap-1 whitespace-nowrap">
+            <span className="text-[#F5B301]">★</span>
+            <span>{rating}</span>
+            <span className="text-white/50">·</span>
+            <span
+              className={`inline-block w-1.5 h-1.5 rounded-full ${
+                live?.isOpen ? "bg-emerald-400" : "bg-red-400"
+              }`}
+            />
+            <span>{live?.isOpen ? "Open" : "Closed"}</span>
+          </span>
+          <button
+            type="button"
+            data-slot-close="true"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDismiss();
+            }}
+            aria-label="Close venue card"
+            className="w-7 h-7 rounded-full bg-black/55 backdrop-blur-md text-white/90 hover:bg-black border border-white/15 flex items-center justify-center text-[11px] font-bold active:scale-90 transition-colors cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+
+      {/* Bottom editorial stack on the dark scrim */}
+      <div className="absolute inset-x-0 bottom-0 z-10 p-4 pt-0 flex flex-col justify-end">
+        <div data-slot-title="true" className="will-change-transform">
+          <h4 className="font-comico font-normal text-[21px] leading-tight text-white drop-shadow-xs truncate">
+            {venue.name}
+          </h4>
+          <p className="text-white/75 text-[11.5px] truncate">
+            📍 {address} · {neighborhood}
+          </p>
+        </div>
+        <p
+          data-slot-story="true"
+          className="text-white/85 text-[11.5px] italic line-clamp-2 mt-1.5 leading-snug"
+        >
+          &ldquo;{story}&rdquo;
+        </p>
+
+        <div data-slot-actions="true" className="mt-3 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenDetails();
+            }}
+            className="flex-1 h-9 rounded-full bg-white text-[#181615] font-comico text-[11.5px] flex items-center justify-center gap-1 shadow-sm active:scale-95 cursor-pointer whitespace-nowrap"
+          >
+            <span>Details</span>
+            <span>↗</span>
+          </button>
+          <a
+            href={directionsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="h-9 px-3.5 rounded-full bg-white/15 backdrop-blur-md text-white border border-white/20 font-comico text-[11px] flex items-center justify-center gap-1 active:scale-95 whitespace-nowrap"
+          >
+            <span>Directions</span>
+            <span>↗</span>
+          </a>
         </div>
       </div>
     </div>
@@ -369,7 +539,12 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
     (state) => state.isVenueDetailModalOpen
   );
   const selectedGroup = useCityPulseStore((state) => state.selectedGroup);
+  const selectedDishCategory = useCityPulseStore((state) => state.selectedDishCategory);
   const selectedSpotKind = useCityPulseStore((state) => state.selectedSpotKind);
+  const selectedCuisine = useCityPulseStore((state) => state.selectedCuisine);
+  const selectedDietary = useCityPulseStore((state) => state.selectedDietary);
+  const savedOnly = useCityPulseStore((state) => state.filters.saved_only);
+  const savedPostIds = useCityPulseStore((state) => state.savedPostIds);
   const openNow = useCityPulseStore((state) => state.filters.open_now);
   const weeklyPick = useCityPulseStore((state) => state.weeklyPick);
 
@@ -387,40 +562,20 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
     Array<{ el: HTMLDivElement; img: HTMLElement | null; offsetLeft: number; width: number }>
   >([]);
   const carouselPadLeftRef = useRef(0);
-  const spotlightTouchStartXRef = useRef<number | null>(null);
-  const spotlightTouchStartYRef = useRef<number | null>(null);
+  const spotlightStageRef = useRef<HTMLDivElement | null>(null);
   const spotlightCardElRef = useRef<HTMLDivElement | null>(null);
-  const spotlightAnimRef = useRef<Animation | null>(null);
-  // Ghost + in-flight entrance animation for rapid consecutive swipes.
-  const swipeCleanupRef = useRef<{ ghost?: HTMLElement; anim?: Animation } | null>(
-    null
-  );
+  const stageRafRef = useRef<number | null>(null);
+  const coverStateRef = useRef<{ u: number; openProgress: number; dragY: number }>({
+    u: 0,
+    openProgress: 0,
+    dragY: 0,
+  });
+  const pendingCoverOffsetRef = useRef<number | null>(null);
+  const didDragRef = useRef(false);
+  const dragCleanupRef = useRef<(() => void) | null>(null);
   const spotlightOpenRef = useRef(false);
   const skipNextRecenterRef = useRef(false);
   const carouselAnimRef = useRef<number | null>(null);
-
-  const getSelectionDurationFor = useCallback((venue: Venue) => {
-    const map = (window as unknown as {
-      __smakrMap?: {
-        project: (lngLat: [number, number]) => { x: number; y: number };
-        getContainer: () => HTMLElement;
-        getZoom: () => number;
-      };
-    }).__smakrMap;
-    if (!map || typeof venue.longitude !== "number" || typeof venue.latitude !== "number") {
-      return 640;
-    }
-    const mobile = typeof window !== "undefined" && window.innerWidth < 1024;
-    const currentZoom = map.getZoom();
-    const targetZoom = Math.max(currentZoom, 15.4);
-    const pan = selectionPanDistance(
-      map,
-      venue.longitude,
-      venue.latitude,
-      mobile
-    );
-    return selectionFlightDuration(pan, Math.max(0, targetZoom - currentZoom));
-  }, []);
 
   const animateCarouselToVenue = useCallback(
     (venueId: string, duration: number) => {
@@ -467,28 +622,26 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
       if (carouselAnimRef.current !== null) {
         cancelAnimationFrame(carouselAnimRef.current);
       }
-      if (swipeCleanupRef.current) {
-        swipeCleanupRef.current.anim?.cancel();
-        swipeCleanupRef.current.ghost?.remove();
-        swipeCleanupRef.current = null;
+      if (stageRafRef.current !== null) {
+        cancelAnimationFrame(stageRafRef.current);
       }
+      dragCleanupRef.current?.();
     };
   }, []);
 
-  const scrollCarouselToVenue = useCallback(
-    (venueId: string, behavior: ScrollBehavior = "smooth") => {
-      const card = cardRefs.current[venueId];
-      const carousel = carouselRef.current;
-      if (!card || !carousel) return false;
-      const cr = card.getBoundingClientRect();
-      const pr = carousel.getBoundingClientRect();
-      const target =
-        carousel.scrollLeft + cr.left + cr.width / 2 - (pr.left + pr.width / 2);
-      carousel.scrollTo({ left: target, behavior });
-      return true;
-    },
-    []
-  );
+  const scrollCarouselToVenue = useCallback((venueId: string) => {
+    const card = cardRefs.current[venueId];
+    const carousel = carouselRef.current;
+    if (!card || !carousel) return false;
+    // Use untransformed offsetLeft so parallax scale() never shifts center.
+    const target =
+      card.offsetLeft + card.offsetWidth / 2 - carousel.clientWidth / 2;
+    const previousSnap = carousel.style.scrollSnapType;
+    carousel.style.scrollSnapType = "none";
+    carousel.scrollLeft = target;
+    carousel.style.scrollSnapType = previousSnap;
+    return true;
+  }, []);
 
   // The focused map card is driven entirely by selectedVenue (one source of
   // truth shared with the map pins, the bottom sheet and the empty-map click).
@@ -504,122 +657,13 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
   const weeklyBubble =
     weeklyPick?.speech_bubble || "Grab this week's pick before it's gone!";
 
-  // Matched-geometry morph: the focused card grows out of the EXACT carousel
-  // card rect (same position + size) instead of flying in as a separate card.
-  useLayoutEffect(() => {
-    const el = spotlightCardElRef.current;
-    const venueId = selectedVenue?.id ?? activeSpotlight?.id ?? null;
-    if (!el || !venueId) return;
-
-    const wasOpen = spotlightOpenRef.current;
-    const isOpening = Boolean(selectedVenue) && !wasOpen;
-    const isClosing = !selectedVenue && wasOpen;
-    const changingWhileOpen = Boolean(selectedVenue) && wasOpen;
-    spotlightOpenRef.current = Boolean(selectedVenue);
-
-    if (changingWhileOpen && selectedVenue) {
-      // Move the actual carousel under the spotlight in sync with the card.
-      if (skipNextRecenterRef.current) {
-        skipNextRecenterRef.current = false;
-      } else {
-        animateCarouselToVenue(selectedVenue.id, 520);
-      }
-      return;
-    }
-
-    if (!isOpening && !isClosing) return;
-
-    if (isOpening) {
-      // Instant recenter so the morph starts over the tapped slot.
-      scrollCarouselToVenue(venueId, "auto");
-    } else if (isClosing) {
-      // Keep the carousel on the active card when the spotlight hands back.
-      scrollCarouselToVenue(venueId, "auto");
-    }
-
-    const source = cardRefs.current[venueId];
-    const to = el.getBoundingClientRect();
-    const fromRect = source?.getBoundingClientRect();
-    if (!to.width || !to.height) return;
-
-    const sx = fromRect ? fromRect.width / to.width : 0.94;
-    const sy = fromRect ? fromRect.height / to.height : 0.94;
-    const tx = fromRect
-      ? fromRect.left + fromRect.width / 2 - (to.left + to.width / 2)
-      : 0;
-    const ty = fromRect
-      ? fromRect.top + fromRect.height / 2 - (to.top + to.height / 2)
-      : 120;
-
-    const collapsed = {
-      transform: `translate3d(${tx}px, ${ty}px, 0) scale(${sx}, ${sy})`,
-      opacity: fromRect ? 0.85 : 0,
-      borderRadius: "16px",
-    };
-    const expanded = {
-      transform: "translate3d(0, 0, 0) scale(1, 1)",
-      opacity: 1,
-      borderRadius: "26px",
-    };
-
-    spotlightAnimRef.current?.cancel();
-
-    if (isOpening) {
-      spotlightAnimRef.current = el.animate([collapsed, expanded], {
-        duration: 520,
-        easing: "cubic-bezier(0.22,1,0.36,1)",
-        fill: "both",
-      });
-      return;
-    }
-
-    // Closing: visibly size back down into the carousel slot and dissolve into
-    // the real card. The mid keyframe keeps the motion continuous (no blink),
-    // and the uniform scale keeps the text from squashing.
-    const closeScale = fromRect ? Math.min(1, fromRect.width / to.width) : 0.72;
-    const closeTx = fromRect
-      ? fromRect.left + fromRect.width / 2 - (to.left + to.width / 2)
-      : 0;
-    const closeTy = fromRect
-      ? fromRect.bottom - (to.top + to.height / 2 + (to.height * closeScale) / 2)
-      : 90;
-    const shrunken = {
-      transform: `translate3d(${closeTx}px, ${closeTy}px, 0) scale(${closeScale}, ${closeScale})`,
-      borderRadius: "16px",
-    };
-    const midScale = 1 - (1 - closeScale) * 0.55;
-
-    spotlightAnimRef.current = el.animate(
-      [
-        {
-          transform: "translate3d(0, 0, 0) scale(1, 1)",
-          opacity: 1,
-          borderRadius: "26px",
-          offset: 0,
-        },
-        {
-          transform: `translate3d(${closeTx * 0.55}px, ${closeTy * 0.55}px, 0) scale(${midScale}, ${midScale})`,
-          opacity: 0.98,
-          borderRadius: "22px",
-          offset: 0.55,
-        },
-        { ...shrunken, opacity: 0, offset: 1 },
-      ],
-      {
-        duration: 440,
-        easing: "cubic-bezier(0.4, 0, 0.2, 1)",
-        fill: "both",
-      }
-    );
-  }, [selectedVenue?.id]);
-
   useEffect(() => {
     if (selectedVenue) {
       setDisplaySpotlight(selectedVenue);
       return;
     }
-    // Hold the last venue mounted for the full morph-back animation.
-    const timer = setTimeout(() => setDisplaySpotlight(null), 470);
+    // Hold the last venue mounted for the 290ms shrink-back into the carousel.
+    const timer = setTimeout(() => setDisplaySpotlight(null), 300);
     return () => clearTimeout(timer);
   }, [selectedVenue?.id]);
 
@@ -640,18 +684,73 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
     return map;
   }, [foodPosts]);
 
-  // Filter venues by category filter AND active neighborhood
+  // Filter venues by all active feed filters AND active neighborhood, then
+  // order by nearest-neighbor proximity so swiping glides to nearby spots.
   const displayedVenues = useMemo(() => {
     const hood = OSLO_NEIGHBORHOODS.find((h) => h.id === activeHoodId);
-    return venues.filter((v) => {
+    const postsBySpotId = new Map<string, FoodPost[]>();
+    for (const post of foodPosts) {
+      if (!post.spot_id || post.is_archived) continue;
+      const arr = postsBySpotId.get(post.spot_id);
+      if (arr) arr.push(post);
+      else postsBySpotId.set(post.spot_id, [post]);
+    }
+
+    const filtered = venues.filter((v) => {
       if (!isVisibleInFeed(v)) return false;
 
-      // Category / spot kind filter check
-      if (selectedSpotKind === "popup" && v.spot_type !== "popup") return false;
-      if (selectedGroup) {
-        const tax = resolveEntityTaxonomy(v);
-        if (tax.group.id !== selectedGroup) return false;
+      const vPosts = postsBySpotId.get(v.id) ?? [];
+      const tax = resolveEntityTaxonomy(v);
+
+      if (selectedDishCategory) {
+        const venueMatches =
+          tax.dishCategory === selectedDishCategory ||
+          v.food_category === selectedDishCategory;
+        const postMatches = vPosts.some(
+          (p) =>
+            p.category === selectedDishCategory ||
+            resolveEntityTaxonomy(v, p).dishCategory === selectedDishCategory
+        );
+        if (!venueMatches && !postMatches) return false;
+      } else if (selectedGroup) {
+        const venueMatches = tax.group.id === selectedGroup;
+        const postMatches = vPosts.some(
+          (p) => resolveEntityTaxonomy(v, p).group.id === selectedGroup
+        );
+        if (!venueMatches && !postMatches) return false;
       }
+
+      if (selectedSpotKind) {
+        if (selectedSpotKind === "popup") {
+          if (v.spot_type !== "popup" && tax.spotKind !== "popup") return false;
+        } else if (tax.spotKind !== selectedSpotKind) {
+          return false;
+        }
+      }
+
+      if (selectedCuisine) {
+        const venueHas = (tax.cuisines as string[]).includes(selectedCuisine);
+        const postHas = vPosts.some((p) =>
+          (resolveEntityTaxonomy(v, p).cuisines as string[]).includes(selectedCuisine)
+        );
+        if (!venueHas && !postHas) return false;
+      }
+
+      if (selectedDietary.length > 0) {
+        const vTags = v.dietary_tags ?? [];
+        const venueDiet = selectedDietary.every((t) => vTags.includes(t));
+        const postDiet = vPosts.some((p) => {
+          const pTags = p.dietary_tags ?? vTags;
+          return selectedDietary.every((t) => pTags.includes(t));
+        });
+        if (!venueDiet && !postDiet) return false;
+      }
+
+      if (savedOnly) {
+        const postSaved = vPosts.some((p) => savedPostIds.has(p.id));
+        if (!savedPostIds.has(v.id) && !postSaved) return false;
+      }
+
       if (openNow) {
         const live = getVenueLiveOpenStatus(v);
         if (!live.isOpen) return false;
@@ -660,7 +759,86 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
       if (hood && !hood.match(v)) return false;
       return true;
     });
-  }, [venues, activeHoodId, selectedSpotKind, selectedGroup, openNow]);
+
+    if (filtered.length <= 2) return filtered;
+
+    const COS_OSLO = Math.cos((59.9139 * Math.PI) / 180);
+    const distSq = (aLng: number, aLat: number, bLng: number, bLat: number) => {
+      const dx = (aLng - bLng) * COS_OSLO;
+      const dy = aLat - bLat;
+      return dx * dx + dy * dy;
+    };
+
+    const withCoords: Venue[] = [];
+    const withoutCoords: Venue[] = [];
+    for (const v of filtered) {
+      if (typeof v.longitude === "number" && typeof v.latitude === "number") {
+        withCoords.push(v);
+      } else {
+        withoutCoords.push(v);
+      }
+    }
+    if (withCoords.length <= 2) return [...withCoords, ...withoutCoords];
+
+    const [anchorLng, anchorLat] = hood?.coords ?? [10.7522, 59.9139];
+    const remaining = [...withCoords];
+    let startIdx = 0;
+    let bestAnchorDist = Infinity;
+    for (let i = 0; i < remaining.length; i++) {
+      const d = distSq(
+        remaining[i].longitude,
+        remaining[i].latitude,
+        anchorLng,
+        anchorLat
+      );
+      if (d < bestAnchorDist) {
+        bestAnchorDist = d;
+        startIdx = i;
+      }
+    }
+
+    const ordered: Venue[] = [remaining.splice(startIdx, 1)[0]];
+    while (remaining.length > 0) {
+      const prev = ordered[ordered.length - 1];
+      let nearestIdx = 0;
+      let nearestDist = Infinity;
+      for (let i = 0; i < remaining.length; i++) {
+        const d = distSq(
+          prev.longitude,
+          prev.latitude,
+          remaining[i].longitude,
+          remaining[i].latitude
+        );
+        if (d < nearestDist) {
+          nearestDist = d;
+          nearestIdx = i;
+        }
+      }
+      ordered.push(remaining.splice(nearestIdx, 1)[0]);
+    }
+    return [...ordered, ...withoutCoords];
+  }, [
+    venues,
+    foodPosts,
+    activeHoodId,
+    selectedDishCategory,
+    selectedGroup,
+    selectedSpotKind,
+    selectedCuisine,
+    selectedDietary,
+    savedOnly,
+    savedPostIds,
+    openNow,
+  ]);
+
+  // If the user taps a map pin outside the active neighborhood pill, switch
+  // back to All Oslo so the clicked pin sits in the swipeable deck.
+  useEffect(() => {
+    if (!selectedVenue || activeHoodId === "all") return;
+    if (!displayedVenues.some((v) => v.id === selectedVenue.id)) {
+      setActiveHoodId("all");
+    }
+  }, [selectedVenue?.id, activeHoodId, displayedVenues]);
 
   // Warm the neighbourhood images so the next/previous swipe target is already
   // decoded when the gesture ends (a late decode reads as a snap mid-animation).
@@ -778,31 +956,13 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
     setSelectedVenue(null);
   }, [setSelectedVenue]);
 
-  // "Details" expands the spotlight card into the venue sheet. The card photo
-  // and the sheet hero share a view-transition-name, so the browser morphs one
-  // into the other; the sheet is opened in place (no slide) for the morph.
+  // "Details" opens the full venue bottom sheet with its spring pop-up from the bottom.
   const handleOpenFullDetails = useCallback(() => {
     if (!activeSpotlight) return;
-    const cardEl = spotlightCardElRef.current;
-    const img = cardEl?.querySelector("img");
-    const rect = cardEl?.getBoundingClientRect();
-    const imageUrl = img?.getAttribute("src") ?? null;
-    const sourceRect = rect
-      ? { left: rect.left, top: rect.top, width: rect.width, height: rect.height }
-      : null;
-
-    // Settle any residual camera motion, then open the sheet in place.
     (window as unknown as { __smakrMap?: { stop?: () => void } }).__smakrMap?.stop?.();
-    beginInstantVenueSheet(imageUrl, sourceRect);
+    endInstantVenueSheet();
     selectVenueById(activeSpotlight.id);
     setIsVenueDetailModalOpen(true);
-
-    // After the sheet mounts, fly the cached card photo into the hero.
-    if (imageUrl && sourceRect) {
-      window.setTimeout(() => playVenueMorphOverlay(sourceRect, imageUrl), 30);
-    } else {
-      window.setTimeout(() => endInstantVenueSheet(), 30);
-    }
   }, [activeSpotlight, selectVenueById, setIsVenueDetailModalOpen]);
 
   // Handle clicking a neighborhood pill: filter deck + camera animation + dismiss spotlight
@@ -838,61 +998,424 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
     cardRefs.current[id] = el;
   }, []);
 
-  const spotlightLocationInfo = activeSpotlight
-    ? formatOsloLocation(activeSpotlight.address, activeSpotlight.city)
-    : null;
-  const spotlightNeighborhood = activeSpotlight
-    ? normalizeOsloNeighborhoodDisplay(activeSpotlight.neighborhood || spotlightLocationInfo?.neighborhood)
-    : "Oslo";
-  // "Norway, Oslo, Vulkan, NO" → "Vulkan": drop country / city / postal tokens.
-  const spotlightAddress =
-    (activeSpotlight?.address || "")
-      .split(",")
-      .map((part) => part.trim())
-      .filter(Boolean)
-      .filter(
-        (part) =>
-          !/^(norway|norge|no|oslo|\d{4})$/i.test(part) &&
-          !/^\d{4}\s/i.test(part)
-      )[0] || spotlightNeighborhood;
-  const spotlightStory =
-    activeSpotlight?.description ||
-    (activeSpotlight?.vibe_signals as any)?.editorial_story ||
-    (activeSpotlight?.vibe_signals as any)?.vibe_description ||
-    "Standout Oslo culinary spot preparing authentic specialties daily.";
-  const matchingFoodPost = activeSpotlight
-    ? foodPosts.find((p) => p.spot_id === activeSpotlight.id && p.dish_name && !p.is_archived)
-    : null;
-  const spotlightPrice = matchingFoodPost?.price_nok
-    ? `${matchingFoodPost.price_nok} KR`
-    : activeSpotlight?.spot_type === "popup"
-    ? "POP-UP"
-    : activeSpotlight?.price_level || "$$";
-  const spotlightDirectionsUrl = activeSpotlight ? getDirectionsUrl(activeSpotlight) : "#";
-  const spotlightBadge = activeSpotlight ? resolveVenueDisplayBadge(activeSpotlight) : null;
-  const spotlightMainTag = (spotlightBadge?.mainTag || "FOOD")
-    .replace(/_/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toUpperCase();
-  const spotlightLive = activeSpotlight ? getVenueLiveOpenStatus(activeSpotlight) : null;
-  const spotlightRating =
-    activeSpotlight?.google_rating != null
-      ? activeSpotlight.google_rating.toFixed(1)
-      : "4.7";
-  const spotlightImageSources = activeSpotlight
-    ? [
-        activeSpotlight.cover_image_url,
-        (activeSpotlight as VenueWithDishes).dishes?.[0]?.image_url,
-        dishPhotoByVenueId.get(activeSpotlight.id),
-      ]
-    : [];
+  const slotNodesRef = useRef<
+    Record<
+      string,
+      {
+        el: HTMLDivElement;
+        topEl: HTMLElement | null;
+        closeEl: HTMLElement | null;
+        titleEl: HTMLElement | null;
+        storyEl: HTMLElement | null;
+        actionsEl: HTMLElement | null;
+        imgEl: HTMLElement | null;
+      }
+    >
+  >({});
+
+  const registerSlotNodes = useCallback(
+    (venueId: string, isActive: boolean) => (el: HTMLDivElement | null) => {
+      if (el) {
+        slotNodesRef.current[venueId] = {
+          el,
+          topEl: el.querySelector<HTMLElement>("[data-slot-top='true']"),
+          closeEl: el.querySelector<HTMLElement>("[data-slot-close='true']"),
+          titleEl: el.querySelector<HTMLElement>("[data-slot-title='true']"),
+          storyEl: el.querySelector<HTMLElement>("[data-slot-story='true']"),
+          actionsEl: el.querySelector<HTMLElement>("[data-slot-actions='true']"),
+          imgEl: el.querySelector<HTMLElement>("[data-parallax-img='true']"),
+        };
+      } else {
+        delete slotNodesRef.current[venueId];
+      }
+      if (isActive) {
+        spotlightCardElRef.current = el;
+      }
+    },
+    []
+  );
+
+  const spotlightSlots = useMemo(() => {
+    if (!activeSpotlight) {
+      return [] as Array<{ venue: Venue; slotIndex: number }>;
+    }
+    const len = displayedVenues.length;
+    const idx = displayedVenues.findIndex((v) => v.id === activeSpotlight.id);
+    if (len <= 1 || idx === -1) {
+      return [{ venue: activeSpotlight, slotIndex: 0 }];
+    }
+    if (len === 2) {
+      return [
+        { venue: activeSpotlight, slotIndex: 0 },
+        { venue: displayedVenues[(idx + 1) % 2], slotIndex: 1 },
+      ];
+    }
+    if (len === 3) {
+      return [
+        { venue: displayedVenues[(idx - 1 + 3) % 3], slotIndex: -1 },
+        { venue: activeSpotlight, slotIndex: 0 },
+        { venue: displayedVenues[(idx + 1) % 3], slotIndex: 1 },
+      ];
+    }
+    if (len === 4) {
+      return [
+        { venue: displayedVenues[(idx - 1 + 4) % 4], slotIndex: -1 },
+        { venue: activeSpotlight, slotIndex: 0 },
+        { venue: displayedVenues[(idx + 1) % 4], slotIndex: 1 },
+        { venue: displayedVenues[(idx + 2) % 4], slotIndex: 2 },
+      ];
+    }
+    return [
+      { venue: displayedVenues[(idx - 2 + len) % len], slotIndex: -2 },
+      { venue: displayedVenues[(idx - 1 + len) % len], slotIndex: -1 },
+      { venue: activeSpotlight, slotIndex: 0 },
+      { venue: displayedVenues[(idx + 1) % len], slotIndex: 1 },
+      { venue: displayedVenues[(idx + 2) % len], slotIndex: 2 },
+    ];
+  }, [activeSpotlight, displayedVenues]);
+
+  const spotlightSlotsRef = useRef(spotlightSlots);
+  spotlightSlotsRef.current = spotlightSlots;
+
+  const getStageMetrics = useCallback(() => {
+    const stageW = spotlightStageRef.current?.offsetWidth || 330;
+    const sideW = Math.min(260, Math.round(stageW * 0.8));
+    const compactScale = sideW / stageW;
+    const compactUnscaledH = 118 / compactScale;
+    const gap = 12;
+    const compactStep = sideW + gap;
+    const expandedStep = stageW / 2 + gap + sideW / 2;
+    return { stageW, sideW, compactScale, compactUnscaledH, gap, compactStep, expandedStep };
+  }, []);
+
+  const applyStageFrame = useCallback(
+    (u: number, openProgress: number, dragY = 0) => {
+      coverStateRef.current = { u, openProgress, dragY };
+      const {
+        compactScale,
+        compactUnscaledH,
+        compactStep,
+        expandedStep,
+      } = getStageMetrics();
+      const slotStep = compactStep + (expandedStep - compactStep) * openProgress;
+      const slots = spotlightSlotsRef.current;
+      const len = displayedVenues.length;
+      const maxTopClip = Math.max(0, 246 - compactUnscaledH);
+
+      for (const slot of slots) {
+        const nodes = slotNodesRef.current[slot.venue.id];
+        if (!nodes) continue;
+
+        let effectiveSlot = slot.slotIndex;
+        if (len === 2 && slot.slotIndex === 1 && u < 0) effectiveSlot = -1;
+        if (len === 4 && slot.slotIndex === 2 && u < 0) effectiveSlot = -2;
+
+        const pos = effectiveSlot - u;
+        const dist = Math.abs(pos);
+        const focus = Math.max(0, 1 - dist) * openProgress;
+        const scale = compactScale + (1 - compactScale) * focus;
+        const x =
+          dist <= 1
+            ? pos * slotStep
+            : Math.sign(pos) * (slotStep + (dist - 1) * compactStep);
+        const y = effectiveSlot === 0 && dragY > 0 ? dragY * 0.75 : 0;
+        const topClip = (1 - focus) * maxTopClip;
+        const radius = 20 + 6 * focus;
+        const dragFade =
+          effectiveSlot === 0 && dragY > 0 ? Math.max(0.4, 1 - dragY / 420) : 1;
+        const cardOpacity = (0.86 + 0.14 * focus) * dragFade;
+
+        const { el, topEl, closeEl, titleEl, storyEl, actionsEl, imgEl } = nodes;
+        el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) scale(${scale.toFixed(4)})`;
+        el.style.clipPath =
+          topClip > 0.5
+            ? `inset(${topClip.toFixed(1)}px 0px 0px 0px round ${radius.toFixed(1)}px)`
+            : "";
+        el.style.opacity = cardOpacity.toFixed(3);
+        el.style.zIndex = String(Math.round(10 + focus * 10));
+
+        if (topEl) {
+          topEl.style.transform = `translate3d(0, ${topClip.toFixed(1)}px, 0)`;
+        }
+        if (closeEl) {
+          const closeAlpha = Math.max(0, (focus - 0.55) / 0.45);
+          closeEl.style.opacity = closeAlpha.toFixed(3);
+          closeEl.style.pointerEvents = focus > 0.65 ? "auto" : "none";
+        }
+        if (titleEl) {
+          titleEl.style.transform = `translate3d(0, ${((1 - focus) * 84).toFixed(1)}px, 0)`;
+        }
+        if (storyEl) {
+          storyEl.style.opacity = Math.max(0, (focus - 0.35) / 0.65).toFixed(3);
+        }
+        if (actionsEl) {
+          const actAlpha = Math.max(0, (focus - 0.45) / 0.55);
+          actionsEl.style.opacity = actAlpha.toFixed(3);
+          actionsEl.style.pointerEvents = focus > 0.65 ? "auto" : "none";
+        }
+        if (imgEl) {
+          const parallax = Math.max(-1.4, Math.min(1.4, pos)) * -22;
+          imgEl.style.transform = `translate3d(${parallax.toFixed(1)}px, 0, 0) scale(1.14)`;
+        }
+      }
+    },
+    [displayedVenues.length, getStageMetrics]
+  );
+
+  const animateStageTo = useCallback(
+    (targetU: number, targetOpen: number, duration: number, targetDragY = 0) => {
+      if (stageRafRef.current !== null) {
+        cancelAnimationFrame(stageRafRef.current);
+        stageRafRef.current = null;
+      }
+      const { u: startU, openProgress: startOpen, dragY: startDragY } =
+        coverStateRef.current;
+      const startedAt = performance.now();
+      const ease = (t: number) => 1 - Math.pow(1 - t, 3.6);
+
+      const tick = (now: number) => {
+        const raw = Math.min(1, (now - startedAt) / duration);
+        const p = ease(raw);
+        const curU = startU + (targetU - startU) * p;
+        const curOpen = startOpen + (targetOpen - startOpen) * p;
+        const curY = startDragY + (targetDragY - startDragY) * p;
+        applyStageFrame(curU, curOpen, curY);
+        if (raw < 1) {
+          stageRafRef.current = requestAnimationFrame(tick);
+        } else {
+          stageRafRef.current = null;
+        }
+      };
+      stageRafRef.current = requestAnimationFrame(tick);
+    },
+    [applyStageFrame]
+  );
+
+  // Unified single-carousel Cover-Flow lifecycle: grow directly out of the
+  // compact slot on open, shrink back into it on close, and finish any live
+  // swipe morph seamlessly across neighbors.
+  useLayoutEffect(() => {
+    const venueId = selectedVenue?.id ?? activeSpotlight?.id ?? null;
+    if (!venueId || isDesktop) {
+      spotlightOpenRef.current = false;
+      return;
+    }
+
+    const wasOpen = spotlightOpenRef.current;
+    const isOpening = Boolean(selectedVenue) && !wasOpen;
+    const isClosing = !selectedVenue && wasOpen;
+    const changingWhileOpen = Boolean(selectedVenue) && wasOpen;
+    spotlightOpenRef.current = Boolean(selectedVenue);
+
+    if (changingWhileOpen && selectedVenue) {
+      if (skipNextRecenterRef.current) {
+        skipNextRecenterRef.current = false;
+      } else {
+        animateCarouselToVenue(selectedVenue.id, 360);
+      }
+
+      if (pendingCoverOffsetRef.current !== null) {
+        const startU = pendingCoverOffsetRef.current;
+        pendingCoverOffsetRef.current = null;
+        applyStageFrame(startU, 1, 0);
+        animateStageTo(0, 1, 360);
+      } else {
+        applyStageFrame(0, 0.78, 0);
+        animateStageTo(0, 1, 340);
+      }
+      return;
+    }
+
+    if (isOpening) {
+      scrollCarouselToVenue(venueId);
+      applyStageFrame(0, 0, 0);
+      animateStageTo(0, 1, 420);
+      return;
+    }
+
+    if (isClosing) {
+      scrollCarouselToVenue(venueId);
+      animateStageTo(0, 0, 290, 0);
+    }
+  }, [
+    selectedVenue?.id,
+    activeSpotlight?.id,
+    isDesktop,
+    animateCarouselToVenue,
+    scrollCarouselToVenue,
+    applyStageFrame,
+    animateStageTo,
+  ]);
+
+  const commitSideSwitch = useCallback(
+    (targetVenue: Venue, startU: number) => {
+      pendingCoverOffsetRef.current = startU;
+      if (animateCarouselToVenue(targetVenue.id, 320)) {
+        skipNextRecenterRef.current = true;
+      }
+      handleCardClick(targetVenue);
+    },
+    [animateCarouselToVenue, handleCardClick]
+  );
+
+  const handleSpotlightPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!activeSpotlight || !cardOpen) return;
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+
+      dragCleanupRef.current?.();
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const baseU = coverStateRef.current.u;
+      let lastX = startX;
+      let prevX = startX;
+      let lastY = startY;
+      let prevY = startY;
+      let lastT = performance.now();
+      let prevT = lastT;
+      let lock: "x" | "y" | null = null;
+      let dragRaf: number | null = null;
+      let latestDx = 0;
+      let latestDy = 0;
+
+      const getStep = () => getStageMetrics().expandedStep;
+
+      const applyDragFrame = () => {
+        dragRaf = null;
+        if (lock === "y") {
+          const dampY = Math.max(0, latestDy);
+          applyStageFrame(0, Math.max(0.55, 1 - dampY / 380), dampY);
+          return;
+        }
+        if (lock === "x") {
+          const stepPx = getStep();
+          const len = displayedVenues.length;
+          if (len < 2) {
+            applyStageFrame((-latestDx / stepPx) * 0.25, 1, 0);
+            return;
+          }
+          const nextU = Math.max(-1.15, Math.min(1.15, baseU - latestDx / stepPx));
+          applyStageFrame(nextU, 1, 0);
+        }
+      };
+
+      const onMove = (ev: PointerEvent) => {
+        const dx = ev.clientX - startX;
+        const dy = ev.clientY - startY;
+
+        if (!lock) {
+          if (Math.hypot(dx, dy) < 8) return;
+          if (Math.abs(dx) >= Math.abs(dy)) {
+            lock = "x";
+          } else if (dy > 0) {
+            lock = "y";
+          } else {
+            return;
+          }
+          didDragRef.current = true;
+          if (stageRafRef.current !== null) {
+            cancelAnimationFrame(stageRafRef.current);
+            stageRafRef.current = null;
+          }
+        }
+
+        const now = performance.now();
+        if (now - lastT > 12) {
+          prevX = lastX;
+          prevY = lastY;
+          prevT = lastT;
+        }
+        lastX = ev.clientX;
+        lastY = ev.clientY;
+        lastT = now;
+        latestDx = dx;
+        latestDy = dy;
+
+        if (dragRaf === null) {
+          dragRaf = requestAnimationFrame(applyDragFrame);
+        }
+      };
+
+      const cleanup = () => {
+        if (dragRaf !== null) {
+          cancelAnimationFrame(dragRaf);
+          dragRaf = null;
+        }
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onEnd);
+        window.removeEventListener("pointercancel", onEnd);
+        dragCleanupRef.current = null;
+      };
+
+      const onEnd = () => {
+        cleanup();
+        window.setTimeout(() => {
+          didDragRef.current = false;
+        }, 0);
+
+        if (!lock) return;
+
+        const dt = Math.max(1, lastT - prevT);
+        const vx = (lastX - prevX) / dt;
+        const vy = (lastY - prevY) / dt;
+
+        if (lock === "y") {
+          if (latestDy > 65 || (latestDy > 20 && vy > 0.42)) {
+            handleDismissSpotlight();
+          } else {
+            animateStageTo(0, 1, 220, 0);
+          }
+          return;
+        }
+
+        const len = displayedVenues.length;
+        const idx = displayedVenues.findIndex((v) => v.id === activeSpotlight.id);
+        const curU = coverStateRef.current.u;
+        const shouldCommit =
+          len >= 2 &&
+          idx !== -1 &&
+          (Math.abs(curU) > 0.24 || (Math.abs(latestDx) > 16 && Math.abs(vx) > 0.3));
+
+        if (shouldCommit) {
+          const step: -1 | 1 = curU !== 0 ? (curU > 0 ? 1 : -1) : latestDx < 0 ? 1 : -1;
+          const next = displayedVenues[(idx + step + len) % len];
+          if (next && next.id !== activeSpotlight.id) {
+            commitSideSwitch(next, curU - step);
+            return;
+          }
+        }
+
+        animateStageTo(0, 1, 240, 0);
+      };
+
+      dragCleanupRef.current = cleanup;
+      window.addEventListener("pointermove", onMove, { passive: true });
+      window.addEventListener("pointerup", onEnd, { passive: true });
+      window.addEventListener("pointercancel", onEnd, { passive: true });
+    },
+    [
+      activeSpotlight,
+      cardOpen,
+      displayedVenues,
+      getStageMetrics,
+      applyStageFrame,
+      animateStageTo,
+      commitSideSwitch,
+      handleDismissSpotlight,
+    ]
+  );
 
   return (
     <div className="relative w-full max-w-full flex flex-col gap-2 select-none pointer-events-none">
-        {/* ── ROW A: Oslo Neighborhood Quick-Jump Pills (Warm-Oat Frosted Glass) ── */}
-        <div className="w-full overflow-x-auto no-scrollbar pointer-events-auto px-3 flex items-center gap-1.5 transition-all duration-300">
-
+        {/* ── ROW A: Oslo Neighborhood Quick-Jump Pills (tucked away when card popped up) ── */}
+        <div
+          className={`w-full overflow-x-auto no-scrollbar px-3 flex items-center gap-1.5 transition-all duration-200 ${
+            !isDesktop && cardVisible
+              ? "opacity-0 translate-y-2 pointer-events-none"
+              : "opacity-100 translate-y-0 pointer-events-auto"
+          }`}
+        >
           {OSLO_NEIGHBORHOODS.map((hood) => {
             const isActive = activeHoodId === hood.id;
             return (
@@ -912,11 +1435,15 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
           })}
         </div>
 
-        {/* ── ROW B: Feed-Matched Full-Bleed Editorial Spot Cards + Parallax Physics ── */}
+        {/* ── ROW B: Resting Compact Carousel (hands off seamlessly to unified Cover-Flow stage) ── */}
         <div
           ref={carouselRef}
           onScroll={handleCarouselScroll}
-          className="relative w-full overflow-x-auto snap-x snap-mandatory no-scrollbar pointer-events-auto px-6 pt-3 pb-1.5 flex items-end gap-3"
+          className={`relative w-full overflow-x-auto snap-x snap-mandatory no-scrollbar px-6 pt-3 pb-2 flex items-end gap-3 ${
+            !isDesktop && cardVisible
+              ? "opacity-0 pointer-events-none"
+              : "opacity-100 pointer-events-auto"
+          }`}
         >
           {displayedVenues.length === 0 ? (
             <div className="w-full py-4 text-center text-xs text-[#181615]/70 bg-[#FAF7F2]/85 backdrop-blur-md rounded-2xl border border-white/60 shadow-xs">
@@ -930,280 +1457,95 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
                 fallbackPhoto={dishPhotoByVenueId.get(venue.id)}
                 onSelect={handleCardClick}
                 onRef={registerCardRef}
-                concealed={!isDesktop && cardOpen && activeSpotlight?.id === venue.id}
               />
             ))
           )}
         </div>
 
-        {/* ── FOCUSED CARD OVERLAY ──
-            Anchored at the carousel card row (bottom) and grown upward, so it
-            reads as an extension of the tapped card rather than a side panel. */}
+        {/* ── UNIFIED COVER-FLOW CAROUSEL STAGE ──
+            Shares the exact bottom baseline of ROW B so there is only ever ONE
+            carousel on screen: the center card grows up while side neighbors
+            stay compact on the left/right edges, sizing up/down as you swipe. */}
         {cardVisible && (
-          <div className="absolute inset-x-0 bottom-5 z-40 flex justify-center pointer-events-none pb-[env(safe-area-inset-bottom,0px)]">
+          <div className="absolute inset-x-0 bottom-2 z-40 flex justify-center pointer-events-none">
             <div className="relative pointer-events-none">
               {isWeeklyPickSpot && (
                 <div
-                  className={`pointer-events-none absolute left-0 -top-[138px] z-20 flex flex-col items-start transition-all duration-200 ease-out ${
+                  className={`pointer-events-none absolute left-2 -top-[82px] z-30 flex items-start transition-all ease-[cubic-bezier(0.22,1,0.36,1)] ${
                     cardOpen
-                      ? "opacity-100 translate-y-0 scale-100"
-                      : "opacity-0 -translate-y-2 scale-95"
+                      ? "opacity-100 translate-y-0 scale-100 duration-300 delay-75"
+                      : "opacity-0 translate-y-4 scale-90 duration-200 delay-0"
                   }`}
                 >
-                  <div className="relative ml-3 mb-1 max-w-[230px] rounded-2xl rounded-bl-md bg-[#FAF7F2]/95 backdrop-blur-md border border-[#E6DFD3] px-3 py-2 shadow-lg">
-                    <p className="text-[11px] font-semibold leading-snug text-[#181615] line-clamp-2">
-                      &ldquo;{weeklyBubble}&rdquo;
-                    </p>
-                    <span
-                      aria-hidden="true"
-                      className="absolute -bottom-1 left-6 h-2.5 w-2.5 rotate-45 bg-[#FAF7F2] border-r border-b border-[#E6DFD3]"
-                    />
-                  </div>
+                  {/* Mascot perched directly into the top-left corner of the card */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src="/mascot/smakr-pick-pointing.svg"
                     alt="Smakr Pick pointing at the venue"
-                    className="w-[92px] h-[112px] object-contain drop-shadow-[0_4px_8px_rgba(24,22,21,0.2)]"
+                    className="w-[96px] h-[116px] shrink-0 object-contain drop-shadow-[0_6px_12px_rgba(24,22,21,0.28)]"
                   />
+                  {/* Comic speech bubble beside the mascot's mouth */}
+                  <div
+                    className={`relative -ml-2.5 mt-3 max-w-[215px] rounded-[18px] bg-[#FAF7F2] border-[1.75px] border-[#181615] px-3 py-1.5 shadow-[0_6px_16px_rgba(24,22,21,0.18)] transition-all ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                      cardOpen
+                        ? "opacity-100 translate-x-0 scale-100 duration-300 delay-150"
+                        : "opacity-0 -translate-x-2 scale-90 duration-150 delay-0"
+                    }`}
+                  >
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 14 14"
+                      className="absolute -left-[11px] top-1/2 -translate-y-1/2 w-[12px] h-[14px] overflow-visible"
+                    >
+                      <path
+                        d="M13 1 L1 7 L13 13"
+                        fill="#FAF7F2"
+                        stroke="#181615"
+                        strokeWidth="2"
+                        strokeLinejoin="round"
+                      />
+                      <rect x="11" y="1" width="4" height="12" fill="#FAF7F2" />
+                    </svg>
+                    <p className="font-comico font-normal text-[12px] leading-snug text-[#181615] line-clamp-2">
+                      {weeklyBubble}
+                    </p>
+                  </div>
                 </div>
               )}
               <div
-                ref={spotlightCardElRef}
-                data-spotlight-card="true"
-                data-state={cardOpen ? "open" : "closing"}
+                ref={spotlightStageRef}
                 onClick={(e) => e.stopPropagation()}
-                onTouchStart={(e) => {
-                  spotlightTouchStartXRef.current = e.touches[0]?.clientX ?? null;
-                  spotlightTouchStartYRef.current = e.touches[0]?.clientY ?? null;
-                }}
-                onTouchEnd={(e) => {
-                  const startX = spotlightTouchStartXRef.current;
-                  const startY = spotlightTouchStartYRef.current;
-                  spotlightTouchStartXRef.current = null;
-                  spotlightTouchStartYRef.current = null;
-                  if (startX == null) return;
-                  const dx = (e.changedTouches[0]?.clientX ?? startX) - startX;
-                  const dy =
-                    startY != null
-                      ? (e.changedTouches[0]?.clientY ?? startY) - startY
-                      : 0;
-
-                  // Swipe down closes the card.
-                  if (Math.abs(dy) > Math.abs(dx) && dy > 60) {
-                    handleDismissSpotlight();
-                    return;
-                  }
-
-                  // Swipe left/right moves through the carousel and focuses that
-                  // venue (the camera + icon follow via handleCardClick).
-                  if (Math.abs(dx) <= 55 || !activeSpotlight) return;
-                  const list = displayedVenues;
-                  const index = list.findIndex((v) => v.id === activeSpotlight.id);
-                  if (index === -1 || list.length < 2) return;
-                  const step = dx < 0 ? 1 : -1;
-                  const next = list[(index + step + list.length) % list.length];
-                  if (!next || next.id === activeSpotlight.id) return;
-
-                  // Simultaneous choreography (t = 0): a ghost of the outgoing
-                  // card flies off while the real card swaps content and rises
-                  // out of the deck plane. The surface never fades to nothing,
-                  // so the deck/map can't show through mid-swipe.
-                  const dir = dx < 0 ? -1 : 1;
-                  const card = spotlightCardElRef.current;
-                  const parent = card?.parentElement;
-                  if (!card || !parent) {
-                    handleCardClick(next);
-                    return;
-                  }
-
-                  // Clean up any in-flight swipe so rapid gestures don't stack.
-                  if (swipeCleanupRef.current) {
-                    swipeCleanupRef.current.anim?.cancel();
-                    swipeCleanupRef.current.ghost?.remove();
-                    swipeCleanupRef.current = null;
-                  }
-                  card.style.transformOrigin = "";
-
-                  const flight = getSelectionDurationFor(next);
-                  const inMs = Math.min(
-                    620,
-                    Math.max(480, Math.round(flight * 0.78))
-                  );
-
-                  // 1. Ghost = outgoing card cloned at the exact coordinates,
-                  //    captured before the state swap replaces its content.
-                  const ghost = card.cloneNode(true) as HTMLElement;
-                  ghost.removeAttribute("id");
-                  ghost.removeAttribute("data-spotlight-card");
-                  Object.assign(ghost.style, {
-                    position: "absolute",
-                    left: `${card.offsetLeft}px`,
-                    top: `${card.offsetTop}px`,
-                    width: `${card.offsetWidth}px`,
-                    height: `${card.offsetHeight}px`,
-                    margin: "0",
-                    pointerEvents: "none",
-                    zIndex: "39",
-                    transformOrigin: "50% 50%",
-                  });
-                  parent.appendChild(ghost);
-
-                  const ghostAnim = ghost.animate(
-                    [
-                      { transform: "translate3d(0, 0, 0) scale(1)", opacity: 1 },
-                      {
-                        transform: `translate3d(${dir * 84}px, 8px, 0) scale(0.90)`,
-                        opacity: 0,
-                      },
-                    ],
-                    {
-                      duration: 240,
-                      easing: "cubic-bezier(0.32, 0, 0.67, 0)",
-                      fill: "forwards",
-                    }
-                  );
-                  ghostAnim.onfinish = () => ghost.remove();
-
-                  // 2. Deck scroll + state swap (which starts the camera flight)
-                  //    begin on the same frame as the ghost exit.
-                  if (animateCarouselToVenue(next.id, inMs)) {
-                    skipNextRecenterRef.current = true;
-                  }
-                  flushSync(() => handleCardClick(next));
-
-                  // 3. The incoming card rises and expands from the deck plane.
-                  const nextCard = spotlightCardElRef.current;
-                  if (nextCard) {
-                    nextCard.style.transformOrigin = "50% 88%";
-                    nextCard.style.zIndex = "40";
-
-                    const incoming = nextCard.animate(
-                      [
-                        {
-                          transform: `translate3d(${-dir * 52}px, 38px, 0) scale(0.76)`,
-                          opacity: 0,
-                          offset: 0,
-                        },
-                        {
-                          transform: `translate3d(${-dir * 26}px, 16px, 0) scale(0.87)`,
-                          opacity: 1,
-                          offset: 0.2,
-                        },
-                        {
-                          transform: "translate3d(0, 0, 0) scale(1)",
-                          opacity: 1,
-                          offset: 1,
-                        },
-                      ],
-                      {
-                        duration: inMs,
-                        easing: "cubic-bezier(0.22, 1, 0.36, 1)",
-                        fill: "both",
-                      }
-                    );
-
-                    swipeCleanupRef.current = { ghost, anim: incoming };
-
-                    incoming.onfinish = () => {
-                      incoming.cancel();
-                      nextCard.style.transformOrigin = "";
-                      if (swipeCleanupRef.current?.anim === incoming) {
-                        swipeCleanupRef.current = null;
-                      }
-                    };
+                onClickCapture={(e) => {
+                  if (didDragRef.current) {
+                    e.stopPropagation();
+                    e.preventDefault();
                   }
                 }}
-                style={{ contain: "layout paint" }}
-                className={`pointer-events-auto relative w-[calc(100vw-28px)] max-w-[356px] h-[255px] overflow-hidden rounded-[26px] bg-[#121110] shadow-[0_20px_50px_rgba(0,0,0,0.45)] border will-change-transform ${
-                  isWeeklyPickSpot
-                    ? "border-[#E84A27]/60 ring-1 ring-[#E84A27]/35"
-                    : "border-white/15"
-                }`}
+                onPointerDown={handleSpotlightPointerDown}
+                style={{ touchAction: "none" }}
+                className="relative w-[calc(100vw-56px)] max-w-[336px] h-[246px] pointer-events-auto select-none"
               >
-              <div
-                key={activeSpotlight?.id ?? "spotlight"}
-                className="absolute inset-0"
-              >
-              {/* Full-bleed dish/venue photo */}
-              <div className="absolute inset-0">
-                <VenueThumb
-                  sources={spotlightImageSources}
-                  alt={activeSpotlight?.name || "Venue"}
-                  eager
-                />
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-[#121110] via-[#121110]/80 to-black/15 pointer-events-none" />
-
-              {/* Top row: price/cuisine + rating/open + close */}
-              <div className="relative z-10 flex items-center justify-between gap-2 p-3.5">
-                <span className="bg-[#E84A27] text-white font-comico text-[11px] px-2.5 py-1 rounded-full shadow-xs whitespace-nowrap">
-                  {spotlightPrice}
-                </span>
-
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="bg-black/50 backdrop-blur-md text-white text-[11px] font-bold px-2.5 py-1 rounded-full border border-white/15 flex items-center gap-1 whitespace-nowrap">
-                    <span className="text-[#F5B301]">★</span>
-                    <span>{spotlightRating}</span>
-                    <span className="text-white/50">·</span>
-                    <span
-                      className={`inline-block w-1.5 h-1.5 rounded-full ${
-                        spotlightLive?.isOpen ? "bg-emerald-400" : "bg-red-400"
-                      }`}
+                {spotlightSlots.map(({ venue, slotIndex }) => {
+                  const isActive = slotIndex === 0;
+                  const isNeighbor = Math.abs(slotIndex) === 1;
+                  return (
+                    <SpotlightCard
+                      key={venue.id}
+                      venue={venue}
+                      foodPosts={foodPosts}
+                      fallbackPhoto={dishPhotoByVenueId.get(venue.id)}
+                      isWeeklyPick={weeklyPick?.venue_id === venue.id}
+                      isActive={isActive}
+                      isNeighbor={isNeighbor}
+                      cardOpen={cardOpen}
+                      onDismiss={handleDismissSpotlight}
+                      onOpenDetails={handleOpenFullDetails}
+                      onSelectSide={() => commitSideSwitch(venue, -slotIndex)}
+                      cardRef={registerSlotNodes(venue.id, isActive)}
                     />
-                    <span>{spotlightLive?.isOpen ? "Open" : "Closed"}</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDismissSpotlight();
-                    }}
-                    aria-label="Close venue card"
-                    className="w-7 h-7 rounded-full bg-black/55 backdrop-blur-md text-white/90 hover:bg-black border border-white/15 flex items-center justify-center text-[11px] font-bold active:scale-90 transition-colors cursor-pointer"
-                  >
-                    ✕
-                  </button>
-                </div>
+                  );
+                })}
               </div>
-
-              {/* Bottom editorial stack on the dark scrim */}
-              <div className="absolute inset-x-0 bottom-0 z-10 p-4 pt-0 flex flex-col justify-end">
-                <h4 className="font-comico font-normal text-[21px] leading-tight text-white drop-shadow-xs truncate">
-                  {activeSpotlight?.name}
-                </h4>
-                <p className="text-white/75 text-[11.5px] truncate">
-                  📍 {spotlightAddress} · {spotlightNeighborhood}
-                </p>
-                <p className="text-white/85 text-[11.5px] italic line-clamp-2 mt-1.5 leading-snug">
-                  &ldquo;{spotlightStory}&rdquo;
-                </p>
-
-                <div className="mt-3 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOpenFullDetails();
-                    }}
-                    className="flex-1 h-9 rounded-full bg-white text-[#181615] font-comico text-[11.5px] flex items-center justify-center gap-1 shadow-sm active:scale-95 cursor-pointer whitespace-nowrap"
-                  >
-                    <span>Details</span>
-                    <span>↗</span>
-                  </button>
-                  <a
-                    href={spotlightDirectionsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="h-9 px-3.5 rounded-full bg-white/15 backdrop-blur-md text-white border border-white/20 font-comico text-[11px] flex items-center justify-center gap-1 active:scale-95 whitespace-nowrap"
-                  >
-                    <span>Directions</span>
-                    <span>↗</span>
-                  </a>
-                </div>
-              </div>
-              </div>
-            </div>
             </div>
           </div>
         )}

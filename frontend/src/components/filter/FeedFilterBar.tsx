@@ -466,6 +466,23 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
   const hasAnyActiveFilter =
     activeExtraFiltersCount > 0 || currentCategory !== "all";
 
+  const scrollFeedToTop = useCallback(() => {
+    if (typeof document === "undefined") return;
+    const containers = document.querySelectorAll<HTMLElement>("[data-feed-scroll]");
+    containers.forEach((el) => {
+      if (el.scrollTop > 8) {
+        el.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    });
+  }, []);
+
+  const closeDrawerAndScrollTop = useCallback(() => {
+    if (isExpanded) {
+      window.setTimeout(() => setIsExpanded(false), 140);
+    }
+    scrollFeedToTop();
+  }, [isExpanded, scrollFeedToTop]);
+
   const handleSelectAll = () => {
     // Fast single-step feed filter reset (matches handleSelectGroup speed without forcing MapRadarView pin rebuild)
     useCityPulseStore.setState((state) => ({
@@ -488,6 +505,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
     if (filterScrollRef.current && filterScrollRef.current.scrollLeft > 60) {
       filterScrollRef.current.scrollLeft = 0;
     }
+    closeDrawerAndScrollTop();
   };
 
   const handleSelectSaved = () => {
@@ -506,6 +524,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
           saved_only: true,
         },
       }));
+      closeDrawerAndScrollTop();
     }
   };
 
@@ -525,6 +544,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
           saved_only: false,
         },
       }));
+      closeDrawerAndScrollTop();
     }
   };
 
@@ -539,10 +559,8 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
         selectedDishCategory: childCat,
         feedCategory: "all",
       });
-      setTimeout(() => {
-        setIsExpanded(false);
-      }, 160);
     }
+    closeDrawerAndScrollTop();
   };
 
   const handleSelectSpotKind = (kind: SpotKind) => {
@@ -560,11 +578,13 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
           spot_type: kind === "popup" ? "popup" : kind === "food_truck" ? "food_truck" : "restaurant",
         },
       }));
+      closeDrawerAndScrollTop();
     }
   };
 
   const handleSelectCuisine = (cuisineId: CuisineId) => {
     setSelectedCuisine(selectedCuisine === cuisineId ? null : cuisineId);
+    closeDrawerAndScrollTop();
   };
 
   const matchaCount = useMemo(() => {
@@ -593,6 +613,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
           saved_only: false,
         },
       }));
+      closeDrawerAndScrollTop();
     }
   };
 
@@ -660,6 +681,8 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
         {(() => {
           const isAllActive =
             !selectedGroup &&
+            !selectedDishCategory &&
+            !selectedCuisine &&
             (currentCategory === "all" || !currentCategory) &&
             !selectedSpotKind &&
             !savedOnly &&
@@ -669,13 +692,13 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
               key="filter-pill-all"
               type="button"
               onClick={handleSelectAll}
-              className="relative shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border border-zinc-200/70 dark:border-white/10 select-none active:scale-95 cursor-pointer bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 transition-colors duration-200"
+              className="relative shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border border-zinc-200/70 dark:border-white/10 select-none active:scale-95 cursor-pointer bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 transition-colors duration-150"
             >
               {isAllActive && (
                 <motion.div
                   layoutId="feed-filter-active-pill"
                   className="absolute inset-0 rounded-full bg-[#e84a27] shadow-xs"
-                  transition={{ type: "spring", stiffness: 320, damping: 28, mass: 0.8 }}
+                  transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
                 />
               )}
               <span className={`relative z-10 flex items-center gap-1.5 transition-colors duration-200 ${isAllActive ? "text-white font-bold" : "font-medium text-zinc-700 dark:text-zinc-200"}`}>
@@ -732,7 +755,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                 <motion.div
                   layoutId="feed-filter-active-pill"
                   className="absolute inset-0 rounded-full bg-[#e84a27] shadow-xs"
-                  transition={{ type: "spring", stiffness: 320, damping: 28, mass: 0.8 }}
+                  transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
                 />
               )}
               <span className={`relative z-10 flex items-center gap-1 transition-colors duration-200 ${isPopupActive ? "text-white font-bold" : "font-medium text-zinc-700 dark:text-zinc-200"}`}>
@@ -757,7 +780,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                 <motion.div
                   layoutId="feed-filter-active-pill"
                   className="absolute inset-0 rounded-full bg-[#e84a27] shadow-xs"
-                  transition={{ type: "spring", stiffness: 320, damping: 28, mass: 0.8 }}
+                  transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
                 />
               )}
               <span className={`relative z-10 flex items-center gap-1.5 transition-colors duration-200 ${isMatchaActive ? "text-white font-bold" : "font-medium text-zinc-700 dark:text-zinc-200"}`}>
@@ -787,7 +810,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                 <motion.div
                   layoutId="feed-filter-active-pill"
                   className="absolute inset-0 rounded-full bg-[#e84a27] shadow-xs"
-                  transition={{ type: "spring", stiffness: 320, damping: 28, mass: 0.8 }}
+                  transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
                 />
               )}
               <span className={`relative z-10 flex items-center gap-1.5 transition-colors duration-200 ${isSelected ? "text-white font-bold" : "font-medium text-zinc-700 dark:text-zinc-200"}`}>
@@ -808,7 +831,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
       {/* ── EXPANDED FILTER DRAWER (120fps CSS Grid Accordion + Imperative 1:1 Feed-Pull Drag-Up) ── */}
       <div
         data-filter-drawer="true"
-        className={`grid transition-[grid-template-rows,opacity] duration-240 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+        className={`grid transition-[grid-template-rows,opacity] duration-[260ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
           isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0 pointer-events-none"
         }`}
       >
@@ -850,6 +873,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                         setSelectedDishCategory(null);
                         setSelectedSpotKind(null);
                         setSelectedCuisine(null);
+                        closeDrawerAndScrollTop();
                       }}
                       className="flex items-center gap-1 text-[11px] text-[#e84a27] hover:underline font-bold transition-colors cursor-pointer"
                     >
@@ -918,7 +942,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
 
                 {/* ── SECTION 2: Single-Row Non-Empty Sub-Categories (Zero-Reflow CSS Grid Transition) ── */}
                 <div
-                  className={`grid transition-[grid-template-rows,opacity] duration-180 ease-out ${
+                  className={`grid transition-[grid-template-rows,opacity] duration-[180ms] ease-out ${
                     activeGroupDef && (activeChildren.length > 1 || (activeChildren.length > 0 && selectedDishCategory))
                       ? "grid-rows-[1fr] opacity-100"
                       : "grid-rows-[0fr] opacity-0 pointer-events-none"

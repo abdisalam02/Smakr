@@ -3,8 +3,8 @@
 Updated: 2026-11-12
 
 ## Now
-- Task: Add U WAN SUM popup candidate to Seeding Lab for AI Shift testing.
-- Status: Staged candidate configured and verified; `tsc` clean.
+- Task: Smooth filter drawer close (`duration-[260ms]`), smooth card-close alignment, and full feed-to-map filter sync.
+- Status: Complete — `tsc` clean; dev server running at `http://10.0.0.1:3001` for phone testing.
 
 ## Next (max 3)
 1. Review editorial swimlanes and full-screen map mode visual feedback with team.
@@ -21,8 +21,8 @@ Updated: 2026-11-12
 - TODO-VERIFY: confirm partner claim copy before launch.
 
 ## Recent (max 5, one line each)
+- 2026-11-12 — Added spatial nearest-neighbor dock ordering, eased map panning harmony, calmer card pop, and Details bottom-spring restore; tsc clean
+- 2026-11-12 — Built single-row Cover-Flow carousel morph (grow/shrink in-place + photo parallax, zero duplicate row); tsc clean
+- 2026-11-12 — Rebuilt map spotlight card swipe with live 1:1 pointer drag, velocity commit, and 3-slot deck; tsc clean
 - 2026-11-12 — Added U WAN SUM to staged_candidates popups for AI Shift drop testing; tsc clean
 - 2026-11-11 — Implemented audit P0/P1: no SVG pin filters, zero weekly-marker DOM rebuilds, transform-only 365px card; tsc + build clean
-- 2026-11-11 — Full-page feed, flush glass FEED pull tab, pin zoom choreography + dock spotlight card, renamed STORY; tsc clean
-- 2026-11-10 — Decluttered Map Mode: collapsible glass filters, glass > FEED pill, suppressed map popup; tsc clean
-- 2026-11-10 — Built in-feed split Smakr Pick, editorial swimlanes, full-screen map mode & dock; tsc clean

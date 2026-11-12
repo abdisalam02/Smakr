@@ -1022,8 +1022,8 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
       >
         <MapRadarView />
 
-        {/* Flush left-edge > FEED handle in Map Mode (hidden while a card is focused) */}
-        {viewMode === "map" && !selectedVenue && (
+        {/* Flush left-edge > FEED handle in Map Mode (stays visible even when a card is open) */}
+        {viewMode === "map" && (
           <button
             type="button"
             onClick={() => {

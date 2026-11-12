@@ -20,7 +20,11 @@ import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { MapControls } from "@/components/map/MapControls";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { fetchVenueDetail } from "@/lib/api";
-import { selectionFlightDuration } from "@/lib/mapMotion";
+import {
+  SELECTION_CARD_HEIGHT,
+  SELECTION_CARD_BOTTOM_INSET,
+  selectionFlightDuration,
+} from "@/lib/mapMotion";
 import { Venue } from "@/types";
 import {
   createMascotDOMElement,
@@ -1446,8 +1450,8 @@ export function MapRadarView() {
       const isMobileViewport =
         typeof window !== "undefined" && window.innerWidth < 1024;
       const mapHeight = map.getContainer().clientHeight || 844;
-      // Card: 255px tall, 36px above the viewport bottom (bottom-4 + bottom-5).
-      const cardTop = mapHeight - (255 + 36);
+      const cardTop =
+        mapHeight - (SELECTION_CARD_HEIGHT + SELECTION_CARD_BOTTOM_INSET);
 
       // Deterministic Mercator math (no offset-sign ambiguity): solve for the
       // camera centre that projects the venue at the pin's landing Y. The pin
@@ -1501,10 +1505,10 @@ export function MapRadarView() {
         easing: (t: number) => 1 - Math.pow(1 - t, 3),
         essential: true,
       } as const;
-      // Short local moves get a straight glide; longer pans/zooms arc so the
-      // pin doesn't slide linearly across the screen.
-      if (panDistance > 240 || zoomDelta > 0.7) {
-        map.flyTo({ ...camera, curve: 1.2 });
+      // Smooth linear glide for neighborhood/swipe switches; only huge cross-city
+      // jumps arc gently so the map stays calm and in harmony with card swipes.
+      if (panDistance > 950 || zoomDelta > 1.2) {
+        map.flyTo({ ...camera, curve: 0.55 });
       } else {
         map.easeTo(camera);
       }
@@ -1526,18 +1530,45 @@ export function MapRadarView() {
         if (nextEntry) applyPinState(nextEntry.rootEl, true, zoom);
         flyToSelectedVenue();
       } else if (typeof window !== "undefined" && window.innerWidth < 1024) {
-        // Restore the resting-map clearance for the bottom dock on close.
-        map.setPadding({ top: 60, bottom: 160, left: 0, right: 0 });
+        // Restore the resting-map clearance smoothly in sync with card close.
+        map.easeTo({
+          padding: { top: 60, bottom: 160, left: 0, right: 0 },
+          duration: 300,
+          easing: (t: number) => 1 - Math.pow(1 - t, 3),
+          essential: true,
+        });
       }
 
-      // Keep the map mascot hidden during the weekly card's exit animation so
-      // it doesn't briefly double up with the card's own mascot.
+      // Smoothly hand off between the map mascot and the card's perched mascot
+      // on click/unclick instead of snapping display:none abruptly.
       const weeklyRoot = weeklyMarkerRef.current?.getElement();
       if (weeklyRoot) {
         const pickId = useCityPulseStore.getState().weeklyPick.venue_id;
+        const inner = weeklyInnerRef.current;
         if (nextId === pickId) {
           weeklyMascotSuppressedRef.current = true;
-          weeklyRoot.style.display = "none";
+          if (inner && typeof inner.animate === "function") {
+            for (const anim of inner.getAnimations()) anim.cancel();
+            const exitAnim = inner.animate(
+              [
+                { opacity: 1, transform: "translateY(0) scale(1)" },
+                { opacity: 0, transform: "translateY(-8px) scale(0.84)" },
+              ],
+              {
+                duration: 180,
+                easing: "cubic-bezier(0.22,1,0.36,1)",
+                fill: "forwards",
+              }
+            );
+            exitAnim.addEventListener("finish", () => {
+              if (useCityPulseStore.getState().selectedVenue?.id === pickId) {
+                weeklyRoot.style.display = "none";
+                exitAnim.cancel();
+              }
+            });
+          } else {
+            weeklyRoot.style.display = "none";
+          }
         } else if (weeklyMascotSuppressedRef.current || prevId === pickId) {
           weeklyMascotSuppressedRef.current = true;
           window.setTimeout(() => {
@@ -1547,24 +1578,24 @@ export function MapRadarView() {
               const root = weeklyMarkerRef.current?.getElement();
               if (root) {
                 root.style.display = "block";
-                // Animate the mascot back in (fade + lift) instead of snapping.
-                const inner = weeklyInnerRef.current;
-                if (inner && typeof inner.animate === "function") {
-                  inner.animate(
+                const curInner = weeklyInnerRef.current;
+                if (curInner && typeof curInner.animate === "function") {
+                  for (const anim of curInner.getAnimations()) anim.cancel();
+                  curInner.animate(
                     [
-                      { opacity: 0, transform: "translateY(10px) scale(0.88)" },
+                      { opacity: 0, transform: "translateY(10px) scale(0.84)" },
                       { opacity: 1, transform: "translateY(0) scale(1)" },
                     ],
                     {
-                      duration: 320,
+                      duration: 300,
                       easing: "cubic-bezier(0.22,1,0.36,1)",
-                      fill: "both",
+                      fill: "none",
                     }
                   );
                 }
               }
             }
-          }, 430);
+          }, 240);
         } else {
           weeklyRoot.style.display = "block";
         }

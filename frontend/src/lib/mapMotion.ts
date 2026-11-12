@@ -1,7 +1,7 @@
 /** Shared timing for focusing a venue on the map (camera + dock animation). */
 export const SELECTION_TARGET_ZOOM = 15.4;
-export const SELECTION_CARD_HEIGHT = 255;
-export const SELECTION_CARD_BOTTOM_INSET = 36;
+export const SELECTION_CARD_HEIGHT = 246;
+export const SELECTION_CARD_BOTTOM_INSET = 24;
 
 /** Screen distance (px) from the current projection to the focused spot. */
 export function selectionPanDistance(
@@ -23,6 +23,6 @@ export function selectionPanDistance(
 /** Duration used by both MapLibre's flight and the dock card/carousel motion. */
 export function selectionFlightDuration(panDistance: number, zoomDelta: number) {
   return Math.round(
-    Math.max(560, Math.min(1200, 560 + panDistance * 0.55 + zoomDelta * 140))
+    Math.max(360, Math.min(720, 360 + panDistance * 0.3 + zoomDelta * 100))
   );
 }
