@@ -20,6 +20,9 @@ import {
   Trash2,
   Rocket,
   Sparkles,
+  CheckCircle2,
+  ChevronDown,
+  Database,
 } from "lucide-react";
 import { IconPickerModal } from "@/components/admin/IconPickerModal";
 import {
@@ -32,7 +35,7 @@ import {
   isCustomFoodIcon,
   resolveCustomIconKey,
 } from "@/components/food/FoodIcons";
-import { resolveVenueDisplayBadge, resolveEntityTaxonomy } from "@/lib/taxonomy";
+import { resolveEntityTaxonomy } from "@/lib/taxonomy";
 import type {
   StagedCandidateSpot,
   StagedDishHighlight,
@@ -66,6 +69,7 @@ export function SeedingCandidateCard({
   const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
   const [editingDish, setEditingDish] = useState<StagedDishHighlight | null>(null);
   const [isEditingRestaurantCard, setIsEditingRestaurantCard] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // AI Quick Shift Modal State
   const [isAiShiftOpen, setIsAiShiftOpen] = useState(false);
@@ -296,14 +300,6 @@ export function SeedingCandidateCard({
   };
 
   // Resolve authentic cultural flag and taxonomy
-  const venueBadge = resolveVenueDisplayBadge({
-    name: spot.name,
-    food_category: spot.food_category,
-    icon: spot.icon,
-    spot_type: spot.spot_type,
-    category: spot.food_category,
-  } as any);
-
   const taxonomy = resolveEntityTaxonomy({
     name: spot.name,
     food_category: spot.food_category as any,
@@ -412,96 +408,177 @@ export function SeedingCandidateCard({
 
   return (
     <div className="relative rounded-3xl bg-white border border-[#EAE5DC] text-[#181615] shadow-[0_8px_30px_rgb(24,22,21,0.06)] overflow-hidden flex flex-col transition-all hover:shadow-[0_12px_36px_rgb(24,22,21,0.10)]">
-      {/* ── TOP HEADER BAR ── */}
-      <div className="px-5 py-4 border-b border-[#EAE5DC] bg-[#FAF7F2] flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white border border-[#E0D9CE] text-[10px] font-extrabold tracking-wide uppercase shadow-xs">
-            {venueBadge.flag && <span>{venueBadge.flag}</span>}
-            <span className="text-[#E84A27] font-comico">{venueBadge.mainTag}</span>
-          </div>
-          <h2 className="text-lg font-black text-[#181615] tracking-tight truncate">
-            {spot.name}
-          </h2>
-          <span className="text-xs font-semibold text-zinc-400 hidden sm:inline">·</span>
-          <span className="text-xs font-semibold text-zinc-500 capitalize hidden sm:inline">
-            {spot.neighborhood}
-          </span>
-        </div>
-
-        {/* Interactive Map Pin Selector + AI Quick Shift */}
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setIsAiShiftOpen(true);
-              setAiShiftError(null);
-            }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-gradient-to-r from-[#E84A27] to-amber-600 hover:opacity-95 text-white text-xs font-black transition-all shadow-sm cursor-pointer"
-            title="Paste raw Instagram drop dates, host venue or price changes to update card & production DB"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>✨ AI Shift</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setIsIconPickerOpen(true)}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white hover:bg-zinc-50 border border-[#EAE5DC] text-xs font-bold transition-all shadow-xs text-zinc-800 hover:border-[#E84A27]/40 cursor-pointer"
-            title="Click to customize map radar pin icon"
-          >
-            <span className="w-5 h-5 flex items-center justify-center">
-              {isCustomFoodIcon(spot.icon) ? (
-                <SmakrFoodIcon name={spot.icon} className="w-5 h-5 object-contain" />
-              ) : (
-                <span className="text-sm">{spot.icon || "📍"}</span>
-              )}
-            </span>
-            <span className="text-xs font-extrabold text-[#E84A27]">Map Pin: {spot.icon}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* ── POP-UP RADAR DETAILS & SOCIAL ANCHOR ── */}
-      {isPopupSpot && (
-        <div className="px-5 py-3 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-pink-500/10 border-b border-[#EAE5DC] flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <span className="px-2.5 py-0.5 rounded-full bg-[#E84A27] text-white text-[10px] font-black uppercase tracking-wider font-comico shrink-0 shadow-xs">
-              ✦ Pop-Up Radar
-            </span>
-            {spot.notes && (
-              <p className="text-xs text-zinc-800 font-medium truncate max-w-xl">
-                <span className="font-extrabold text-[#181615]">Drop Pattern:</span>{" "}
-                {spot.notes.replace(/Instagram:\s*https:\/\/[^\s]+/i, "").trim()}
-              </p>
-            )}
-          </div>
-
-          {instagramUrl && (
-            <a
-              href={instagramUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-zinc-50 border border-pink-300 text-pink-700 hover:text-pink-900 text-xs font-black transition-all shadow-xs shrink-0 cursor-pointer"
-              title="Open Instagram page in new tab to inspect drops & photos"
-            >
-              <span className="w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
-              <span>@{instagramHandle || "instagram"}</span>
-              <span className="text-[11px] text-zinc-400">↗</span>
-            </a>
+      {/* ── SUMMARY ROW (tap to open the workspace) ── */}
+      <button
+        type="button"
+        onClick={() => setIsExpanded((v) => !v)}
+        aria-expanded={isExpanded}
+        className="flex w-full items-center gap-3 p-3.5 text-left transition-colors hover:bg-[#FBF9F5] sm:gap-4 sm:p-4"
+      >
+        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-[#EAE6DF] ring-1 ring-black/10 sm:h-16 sm:w-16">
+          {effectiveCoverUrl ? (
+            <Image
+              src={effectiveCoverUrl}
+              alt={spot.name}
+              fill
+              unoptimized
+              className="object-cover"
+            />
+          ) : (
+            <div className="grid h-full w-full place-items-center">
+              <SmakrFoodIcon
+                name={
+                  resolveCustomIconKey(spot.icon) ||
+                  resolveCustomIconKey(spot.food_category) ||
+                  taxonomy.spotKind
+                }
+                className="h-7 w-7 object-contain"
+              />
+            </div>
           )}
         </div>
-      )}
 
-      {/* ── MAIN WORKSPACE: RESTAURANT CARD (LEFT) + DISH FEED CARDS (RIGHT) ── */}
-      <div className="p-5 sm:p-6 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 bg-white items-start">
-        {/* LEFT COLUMN (5 cols): 100% Exact FoodSpotCard Restaurant Card Preview */}
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate font-comico text-[15.5px] leading-tight tracking-wide text-[#181615] sm:text-lg">
+            {spot.name}
+          </h2>
+          <p className="mt-1 flex items-center gap-1.5 text-[11px] font-semibold text-zinc-500">
+            <MapPin className="h-3 w-3 shrink-0 text-[#E84A27]" />
+            <span className="capitalize">{spot.neighborhood || "Oslo"}</span>
+            <span className="text-zinc-300">·</span>
+            <span>{displayPriceLevel}</span>
+          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[10.5px] font-medium text-zinc-400">
+            {isPopupSpot && (
+              <span className="rounded-full bg-[#E84A27]/10 px-1.5 py-0.5 text-[8.5px] font-black uppercase tracking-wider text-[#E84A27]">
+                Pop-up
+              </span>
+            )}
+            <span>
+              {spot.dish_highlights.length} {spot.dish_highlights.length === 1 ? "dish" : "dishes"}
+            </span>
+            <span className="text-zinc-300">·</span>
+            <span>{spot.dish_highlights.filter((d) => d.is_verified_food_photo).length} photo-verified</span>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          {spot.verification_status === "seeded" ? (
+            <span title="Seeded" className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-violet-200 bg-violet-50 text-violet-700 sm:h-auto sm:w-auto sm:gap-1 sm:px-2 sm:py-0.5">
+              <Database className="h-3 w-3 shrink-0" />
+              <span className="hidden text-[9.5px] font-black uppercase tracking-wide sm:inline">Seeded</span>
+            </span>
+          ) : spot.verification_status === "approved" ? (
+            <span title="Approved" className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 sm:h-auto sm:w-auto sm:gap-1 sm:px-2 sm:py-0.5">
+              <CheckCircle2 className="h-3 w-3 shrink-0" />
+              <span className="hidden text-[9.5px] font-black uppercase tracking-wide sm:inline">Approved</span>
+            </span>
+          ) : spot.verification_status === "needs_photo" ? (
+            <span title="Needs photo" className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-amber-200 bg-amber-50 text-amber-700 sm:h-auto sm:w-auto sm:gap-1 sm:px-2 sm:py-0.5">
+              <AlertTriangle className="h-3 w-3 shrink-0" />
+              <span className="hidden text-[9.5px] font-black uppercase tracking-wide sm:inline">Needs photo</span>
+            </span>
+          ) : spot.verification_status === "rejected" ? (
+            <span title="Rejected" className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-700 sm:h-auto sm:w-auto sm:gap-1 sm:px-2 sm:py-0.5">
+              <X className="h-3 w-3 shrink-0" />
+              <span className="hidden text-[9.5px] font-black uppercase tracking-wide sm:inline">Rejected</span>
+            </span>
+          ) : (
+            <span title="Pending" className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[#EAE5DC] bg-white text-zinc-500 sm:h-auto sm:w-auto sm:gap-1 sm:px-2 sm:py-0.5">
+              <Clock className="h-3 w-3 shrink-0" />
+              <span className="hidden text-[9.5px] font-black uppercase tracking-wide sm:inline">Pending</span>
+            </span>
+          )}
+          <ChevronDown
+            className={`h-4 w-4 text-zinc-400 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
+          />
+        </div>
+      </button>
+
+      {/* ── EXPANDED WORKSPACE ── */}
+      {isExpanded && (
+        <>
+          {/* Curator toolbar */}
+          <div className="flex flex-wrap items-center gap-1.5 border-t border-[#EAE5DC] bg-[#FAF7F2] px-3 py-2.5 animate-in fade-in-0 duration-150">
+            <button
+              type="button"
+              onClick={() => {
+                setIsAiShiftOpen(true);
+                setAiShiftError(null);
+              }}
+              className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#181615] px-3 text-[11px] font-bold text-white transition-colors hover:bg-[#E84A27]"
+              title="Paste drop text to update the card and production DB with AI"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              AI shift
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsEditingRestaurantCard(true)}
+              className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#DDD6C9] bg-white px-3 text-[11px] font-bold text-[#181615] transition-colors hover:border-[#E84A27]/40 hover:text-[#E84A27]"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Edit card
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsIconPickerOpen(true)}
+              className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#DDD6C9] bg-white px-3 text-[11px] font-bold text-[#181615] transition-colors hover:border-[#E84A27]/40 hover:text-[#E84A27]"
+              title="Customize the map radar pin icon"
+            >
+              <span className="grid h-4 w-4 place-items-center">
+                {isCustomFoodIcon(spot.icon) ? (
+                  <SmakrFoodIcon name={spot.icon} className="h-4 w-4 object-contain" />
+                ) : (
+                  <span className="text-[11px] leading-none">{spot.icon || "📍"}</span>
+                )}
+              </span>
+              Pin
+            </button>
+            {isPopupSpot && instagramUrl && (
+              <a
+                href={instagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-full border border-pink-200 bg-pink-50 px-3 text-[11px] font-bold text-pink-700 transition-colors hover:bg-pink-100"
+              >
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-pink-500" />
+                @{instagramHandle || "instagram"}
+              </a>
+            )}
+            <span
+              className={`hidden text-[10px] font-semibold uppercase tracking-widest text-zinc-400 sm:block ${
+                isPopupSpot && instagramUrl ? "" : "ml-auto"
+              }`}
+            >
+              Draft preview
+            </span>
+          </div>
+
+          {/* Pop-up drop pattern */}
+          {isPopupSpot && (
+            <div className="flex flex-wrap items-start gap-2 border-t border-[#EAE5DC] bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-pink-500/10 px-3.5 py-2.5">
+              <span className="rounded-full bg-[#E84A27] px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-white">
+                Drop pattern
+              </span>
+              <p className="min-w-0 flex-1 text-[11px] font-medium leading-relaxed text-zinc-700">
+                {spot.notes
+                  ? spot.notes.replace(/Instagram:\s*https:\/\/[^\s]+/i, "").trim()
+                  : "No drop notes yet — add them in the card editor."}
+              </p>
+            </div>
+          )}
+
+      {/* ── MAIN WORKSPACE: SPOT CARD (LEFT) + DISH CARDS (RIGHT) ── */}
+      <div className="p-3.5 sm:p-6 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 bg-white items-start animate-in fade-in-0 slide-in-from-top-1 duration-200">
+        {/* LEFT COLUMN (5 cols): Spot card preview */}
         <div className="lg:col-span-5 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400">
-              1. Restaurant Card (Spots Tab)
+              Spot card
             </span>
             <span className="text-[10.5px] text-zinc-400 font-semibold">
-              Exact FoodSpotCard Layout
+              Live preview
             </span>
           </div>
 
@@ -670,24 +747,29 @@ export function SeedingCandidateCard({
               </div>
             </div>
 
-            {/* Curated Note & Restaurant Edit Button */}
-            <div className="p-3 bg-[#FAF7F2] space-y-2.5">
+            {/* Curated note + cover-photo state */}
+            <div className="p-3 bg-[#FAF7F2] space-y-2">
               {spot.why_curated && (
                 <p className="text-[11.5px] text-zinc-600 italic border-l-2 border-[#E84A27] pl-2.5 line-clamp-2">
                   "{spot.why_curated}"
                 </p>
               )}
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] font-bold text-zinc-600">
-                  {spot.cover_image_url ? "🟢 Cover Photo Ready" : "🟡 Using Dish Fallback"}
+                <span className="inline-flex items-center gap-1.5 text-[10.5px] font-bold text-zinc-500">
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      spot.cover_image_url ? "bg-emerald-500" : "bg-amber-500"
+                    }`}
+                  />
+                  {spot.cover_image_url ? "Cover photo ready" : "Using dish fallback"}
                 </span>
                 <button
                   type="button"
                   onClick={() => setIsEditingRestaurantCard(true)}
-                  className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-[#E84A27] hover:text-white text-[#181615] border border-[#DDD6C9] hover:border-[#E84A27] text-xs font-black flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                  className="inline-flex items-center gap-1 text-[10.5px] font-bold text-zinc-500 transition-colors hover:text-[#E84A27]"
                 >
-                  <Pencil className="w-3.5 h-3.5" />
-                  <span>Edit Restaurant Card</span>
+                  <Pencil className="h-3 w-3" />
+                  Edit
                 </button>
               </div>
             </div>
@@ -698,10 +780,13 @@ export function SeedingCandidateCard({
         <div className="lg:col-span-7 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400">
-              2. Dish Feed Cards ({spot.dish_highlights.length})
+              Dishes
+              <span className="ml-1.5 rounded-full bg-[#181615]/5 px-1.5 py-0.5 text-[10px] text-zinc-500">
+                {spot.dish_highlights.length}
+              </span>
             </span>
             <span className="text-[10.5px] text-zinc-400 font-semibold">
-              Exact FoodPostCard 4:3 Layout
+              Live preview
             </span>
           </div>
 
@@ -854,99 +939,93 @@ export function SeedingCandidateCard({
         </div>
       </div>
 
-      {/* ── CURATOR ACTION BAR ── */}
-      <div className="p-4 sm:p-5 border-t border-[#EAE5DC] bg-[#FAF7F2] flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-black text-zinc-500 uppercase tracking-wider">Status:</span>
-          {spot.verification_status === "seeded" ? (
-            <span className="px-3.5 py-1 rounded-full text-xs font-black bg-purple-100 text-purple-700 border border-purple-200 shadow-xs">
-              🟣 Seeded to Database
-            </span>
-          ) : (
-            <div className="inline-flex rounded-2xl bg-white p-1 border border-[#DDD6C9] gap-1 shadow-xs">
-              <button
-                type="button"
-                onClick={() => handleStatusChange("approved")}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                  spot.verification_status === "approved"
-                    ? "bg-emerald-600 text-white shadow-xs"
-                    : "text-zinc-600 hover:text-black hover:bg-emerald-50"
-                }`}
-                title="Approve for database seeding"
-              >
-                🟢 Approve
-              </button>
-              <button
-                type="button"
-                onClick={() => handleStatusChange("needs_photo")}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                  spot.verification_status === "needs_photo"
-                    ? "bg-amber-400 text-black shadow-xs"
-                    : "text-zinc-600 hover:text-black hover:bg-zinc-100"
-                }`}
-              >
-                🟡 Needs Photo
-              </button>
-              <button
-                type="button"
-                onClick={() => handleStatusChange("rejected")}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                  spot.verification_status === "rejected"
-                    ? "bg-rose-600 text-white shadow-xs"
-                    : "text-zinc-600 hover:text-black hover:bg-zinc-100"
-                }`}
-              >
-                🔴 Reject
-              </button>
+          {/* ── CURATOR ACTIONS ── */}
+          <div className="space-y-3 border-t border-[#EAE5DC] bg-[#FAF7F2] p-3.5 sm:p-5 animate-in fade-in-0 duration-200">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                Review status
+              </span>
+              {allDishesVerified ? (
+                <span className="inline-flex items-center gap-1 text-[10.5px] font-bold text-emerald-700">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Ready for production
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[10.5px] font-bold text-amber-700">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  {spot.dish_highlights.filter((d) => !d.is_verified_food_photo).length} photo(s) missing
+                </span>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* Verification helper summary & Individual Spot Commit Button */}
-        <div className="flex items-center gap-3 flex-wrap">
-          {!allDishesVerified ? (
-            <span className="text-amber-700 font-bold bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 text-xs">
-              ⚠️ {spot.dish_highlights.filter((d) => !d.is_verified_food_photo).length} dish requires macro photo
-            </span>
-          ) : (
-            <span className="text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 text-xs">
-              ✓ Ready for production
-            </span>
-          )}
+            {spot.verification_status === "seeded" ? (
+              <div className="flex items-center gap-2 rounded-2xl border border-violet-200 bg-violet-50 px-3.5 py-3 text-[11.5px] font-bold text-violet-700">
+                <Database className="h-4 w-4 shrink-0" />
+                Already seeded to the production database
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-1 rounded-2xl border border-[#DDD6C9] bg-white p-1">
+                <button
+                  type="button"
+                  onClick={() => handleStatusChange("approved")}
+                  title="Approve for database seeding"
+                  className={`flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-[11px] font-black transition-all ${
+                    spot.verification_status === "approved"
+                      ? "bg-emerald-600 text-white shadow-xs"
+                      : "text-zinc-600 hover:bg-emerald-50 hover:text-emerald-800"
+                  }`}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Approve
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStatusChange("needs_photo")}
+                  title="Flag this spot for a better food photo"
+                  className={`flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-[11px] font-black transition-all ${
+                    spot.verification_status === "needs_photo"
+                      ? "bg-amber-400 text-black shadow-xs"
+                      : "text-zinc-600 hover:bg-amber-50 hover:text-amber-800"
+                  }`}
+                >
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  Photo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStatusChange("rejected")}
+                  title="Reject this candidate"
+                  className={`flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-[11px] font-black transition-all ${
+                    spot.verification_status === "rejected"
+                      ? "bg-rose-600 text-white shadow-xs"
+                      : "text-zinc-600 hover:bg-rose-50 hover:text-rose-800"
+                  }`}
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Reject
+                </button>
+              </div>
+            )}
 
-          {/* AI Shift Button (works for both staged & seeded spots) */}
-          <button
-            type="button"
-            onClick={() => {
-              setIsAiShiftOpen(true);
-              setAiShiftError(null);
-            }}
-            className="px-3.5 py-2 rounded-xl bg-white hover:bg-amber-50 text-[#181615] border border-amber-300 text-xs font-black flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
-            title="AI Quick Shift: Paste drop announcement to update dates, host venue & sync to Supabase"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-[#E84A27]" />
-            <span>✨ AI Shift</span>
-          </button>
-
-          {/* Individual Spot Commit Button */}
-          {spot.verification_status !== "seeded" && (
-            <button
-              type="button"
-              onClick={handleCommitSingleSpot}
-              disabled={isCommittingSpot || !allDishesVerified}
-              className="px-4 py-2 rounded-xl bg-[#E84A27] hover:bg-[#d03d1b] text-white text-xs font-black flex items-center gap-1.5 transition-all shadow-md shadow-[#E84A27]/25 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-              title={
-                !allDishesVerified
-                  ? "Verify all dishes or click 'Use Only This Dish' first"
-                  : `Commit ${spot.name} directly to production database`
-              }
-            >
-              <Rocket className={`w-3.5 h-3.5 ${isCommittingSpot ? "animate-bounce" : ""}`} />
-              <span>{isCommittingSpot ? "Committing..." : "Commit Spot 🚀"}</span>
-            </button>
-          )}
-        </div>
-      </div>
+            {spot.verification_status !== "seeded" && (
+              <button
+                type="button"
+                onClick={handleCommitSingleSpot}
+                disabled={isCommittingSpot || !allDishesVerified}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#E84A27] px-4 py-3 text-xs font-black text-white shadow-md shadow-[#E84A27]/25 transition-all hover:bg-[#d03d1b] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
+                title={
+                  !allDishesVerified
+                    ? "Verify all dishes or click 'Use Only This Dish' first"
+                    : `Commit ${spot.name} directly to production database`
+                }
+              >
+                <Rocket className={`h-4 w-4 ${isCommittingSpot ? "animate-bounce" : ""}`} />
+                {isCommittingSpot ? "Committing…" : "Commit this spot"}
+              </button>
+            )}
+          </div>
+        </>
+      )}
 
       {/* ── MODALS ── */}
       {isIconPickerOpen && (
