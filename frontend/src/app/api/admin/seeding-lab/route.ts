@@ -1,27 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import sharp from "sharp";
 import { ingestGooglePhotoToSupabase } from "@/lib/storage/ingestGooglePhoto";
+import { requireAdmin } from "@/app/api/admin/_auth";
 
 export const runtime = "nodejs";
 
 const OFFICIAL_AUTHOR_ID = "1be02016-43ec-476a-a9dc-97630b063846";
 const STORAGE_BUCKET = "dish-photos";
-
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const SUPABASE_KEY =
-  process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-
-function getAdminClient(): SupabaseClient | null {
-  if (!SUPABASE_URL || !SUPABASE_KEY) return null;
-  return createClient(SUPABASE_URL, SUPABASE_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
 
 function getStagedFilePath(): string {
   const p1 = path.join(process.cwd(), "curation", "staged_candidates.json");
@@ -77,6 +67,40 @@ export interface StagedCandidateSpot {
   dish_highlights: StagedDishHighlight[];
 }
 
+function isValidSeedPhotoUrl(rawUrl: string): boolean {
+  const url = (rawUrl || "").trim();
+  if (!url) return false;
+  const hasValidPrefix =
+    url.startsWith("http://") ||
+    url.startsWith("https://") ||
+    url.startsWith("/api/places/photos") ||
+    url.startsWith("/curation-remix/") ||
+    url.startsWith("/uploads/");
+  const isBad = /streetview|facade|building|\/icons\/food\//i.test(url);
+  return hasValidPrefix && !isBad;
+}
+
+function resolveLocalPublicFile(relUrl: string): string | null {
+  const cleanRel = relUrl.replace(/^\//, "");
+  const p1 = path.join(process.cwd(), "public", cleanRel);
+  if (fs.existsSync(p1)) return p1;
+  const p2 = path.join(process.cwd(), "frontend", "public", cleanRel);
+  if (fs.existsSync(p2)) return p2;
+  return null;
+}
+
+function bustLiveCaches() {
+  try {
+    revalidateTag("venues");
+    revalidateTag("food_posts");
+    revalidatePath("/");
+    revalidatePath("/admin");
+    revalidatePath("/admin/seeding-lab");
+  } catch {
+    // Ignore outside request context
+  }
+}
+
 // Ingest remote or local image into Supabase Storage dish-photos via Sharp WebP
 async function ingestPhotoToStorage(
   supabase: SupabaseClient,
@@ -103,9 +127,13 @@ async function ingestPhotoToStorage(
   try {
     let rawBuffer: Buffer;
 
-    if (trimmed.startsWith("/")) {
-      const localPath = path.join(process.cwd(), "public", trimmed.replace(/^\//, ""));
-      if (!fs.existsSync(localPath)) return trimmed;
+    if (trimmed.startsWith("data:image/")) {
+      const base64Part = trimmed.split(",")[1];
+      if (!base64Part) return trimmed;
+      rawBuffer = Buffer.from(base64Part, "base64");
+    } else if (trimmed.startsWith("/")) {
+      const localPath = resolveLocalPublicFile(trimmed);
+      if (!localPath) return trimmed;
       rawBuffer = fs.readFileSync(localPath);
     } else {
       const res = await fetch(trimmed, {
@@ -148,8 +176,252 @@ async function ingestPhotoToStorage(
   }
 }
 
+async function syncSpotToSupabase(
+  supabase: SupabaseClient,
+  spot: StagedCandidateSpot,
+  options: { previousSpotName?: string; previousDishNames?: Record<string, string>; onlyVerifiedDishes?: boolean } = {}
+): Promise<{ seededDishesCount: number; errors: string[] }> {
+  const errors: string[] = [];
+  let seededDishesCount = 0;
+
+  // 1. Ingest Dish Photos to Supabase CDN
+  const ingestedDishes: { dish: StagedDishHighlight; finalUrl: string }[] = [];
+  for (const dish of spot.dish_highlights) {
+    if (options.onlyVerifiedDishes && !isValidSeedPhotoUrl(dish.dish_image)) {
+      continue;
+    }
+    const cdnUrl = await ingestPhotoToStorage(supabase, dish.dish_image, "dish");
+    dish.dish_image = cdnUrl;
+    ingestedDishes.push({ dish, finalUrl: cdnUrl });
+  }
+
+  // 2. Ingest Cover Photo to Supabase CDN (fallback to first valid dish photo if missing)
+  let finalCoverUrl = spot.cover_image_url || ingestedDishes[0]?.finalUrl || "";
+  if (finalCoverUrl) {
+    finalCoverUrl = await ingestPhotoToStorage(supabase, finalCoverUrl, "cover");
+    spot.cover_image_url = finalCoverUrl;
+  }
+
+  const signatureDishes = spot.signature_dish
+    ? [
+        spot.signature_dish,
+        ...spot.dish_highlights
+          .map((d) => d.dish_name)
+          .filter((n) => n !== spot.signature_dish),
+      ]
+    : spot.dish_highlights.map((d) => d.dish_name);
+
+  // 3. Find existing Venue by slug or name (handles renames too)
+  let venueId: string;
+  const isPopup = spot.spot_type === "popup" || spot.spot_type === "pop_up";
+  const extractedIg =
+    spot.instagram_url ||
+    spot.notes?.match(/https:\/\/(www\.)?instagram\.com\/[^\s"')]+/i)?.[0] ||
+    null;
+  const dropScheduleMatch = spot.notes?.match(/Drop schedule:\s*([^.\n]+(?:\([^)]*\))?[^.\n]*)/i);
+  const dropScheduleText = dropScheduleMatch
+    ? dropScheduleMatch[1].trim()
+    : (spot.notes?.split(".")[0]?.trim() || "Pop-Up Drops");
+
+  const popupMeta = isPopup
+    ? {
+        brand_id: slugify(spot.id || spot.name),
+        residency_status: "active" as const,
+        dates_label: dropScheduleText.length > 55 ? dropScheduleText.slice(0, 52) + "..." : dropScheduleText,
+        daily_hours: "Drop Days · See Instagram",
+        portion_cap: "Limited Batches",
+        host_venue_name: spot.address.replace(/,\s*0\d{3}\s*Oslo/i, "").replace(/,\s*Oslo/i, "").trim() || "Oslo Residency",
+        host_address: spot.address,
+        instagram_url: extractedIg,
+        entry_type: "walk_in" as const,
+        ...(spot.popup_meta || {}),
+      }
+    : undefined;
+
+  const candidateSlugLookup = slugify(spot.id || spot.name);
+  let { data: existingVenue } = await supabase
+    .from("venues")
+    .select("id, name, vibe_signals")
+    .eq("slug", candidateSlugLookup)
+    .maybeSingle();
+
+  if (!existingVenue) {
+    const byName = await supabase
+      .from("venues")
+      .select("id, name, vibe_signals")
+      .ilike("name", spot.name)
+      .maybeSingle();
+    existingVenue = byName.data;
+  }
+
+  if (!existingVenue && options.previousSpotName && options.previousSpotName !== spot.name) {
+    const byPrev = await supabase
+      .from("venues")
+      .select("id, name, vibe_signals")
+      .ilike("name", options.previousSpotName)
+      .maybeSingle();
+    existingVenue = byPrev.data;
+  }
+
+  if (existingVenue) {
+    venueId = existingVenue.id;
+    const prevSignals =
+      existingVenue.vibe_signals && typeof existingVenue.vibe_signals === "object"
+        ? (existingVenue.vibe_signals as Record<string, unknown>)
+        : {};
+
+    const { error: updateErr } = await supabase
+      .from("venues")
+      .update({
+        name: spot.name,
+        address: spot.address,
+        neighborhood: spot.neighborhood || "sentrum",
+        category: spot.food_category || "restaurant",
+        latitude: spot.latitude,
+        longitude: spot.longitude,
+        image_url: finalCoverUrl || undefined,
+        price_level: spot.price_level || "$$",
+        google_rating: spot.google_rating ?? 4.7,
+        spot_type: spot.spot_type || "restaurant",
+        description: spot.why_curated || null,
+        signature_dishes: signatureDishes,
+        website_uri: extractedIg || undefined,
+        current_opening_hours_text: isPopup ? dropScheduleText : undefined,
+        updated_at: new Date().toISOString(),
+        vibe_signals: {
+          ...prevSignals,
+          icon: spot.icon,
+          spot_type: spot.spot_type || "restaurant",
+          ...(popupMeta ? { popup_meta: popupMeta } : {}),
+        },
+      })
+      .eq("id", venueId);
+
+    if (updateErr) {
+      throw new Error(`Failed to update venue "${spot.name}": ${updateErr.message}`);
+    }
+  } else {
+    const baseSlug = slugify(spot.id || spot.name) || `spot-${Date.now()}`;
+    let insertedId: string | null = null;
+    let lastVenueErr = "";
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const candidateSlug = attempt === 0 ? baseSlug : `${baseSlug}-${attempt + 1}`;
+      const { data: newVenue, error: venueErr } = await supabase
+        .from("venues")
+        .insert({
+          name: spot.name,
+          slug: candidateSlug,
+          address: spot.address,
+          neighborhood: spot.neighborhood || "sentrum",
+          category: spot.food_category || "restaurant",
+          latitude: spot.latitude,
+          longitude: spot.longitude,
+          image_url: finalCoverUrl || ingestedDishes[0]?.finalUrl,
+          price_level: spot.price_level || "$$",
+          open_now: true,
+          google_rating: spot.google_rating ?? 4.7,
+          google_reviews_count: 45,
+          spot_type: spot.spot_type || "restaurant",
+          description: spot.why_curated || null,
+          signature_dishes: signatureDishes,
+          website_uri: extractedIg || null,
+          current_opening_hours_text: isPopup ? dropScheduleText : null,
+          vibe_signals: {
+            icon: spot.icon,
+            spot_type: spot.spot_type || "restaurant",
+            ...(popupMeta ? { popup_meta: popupMeta } : {}),
+          },
+        })
+        .select("id")
+        .single();
+
+      if (!venueErr && newVenue) {
+        insertedId = newVenue.id;
+        break;
+      }
+      lastVenueErr = venueErr?.message || "Unknown insert error";
+    }
+
+    if (!insertedId) {
+      throw new Error(`Failed to insert venue "${spot.name}": ${lastVenueErr}`);
+    }
+    venueId = insertedId;
+  }
+
+  // 4. Upsert Dish Posts in `public.food_posts`
+  for (const { dish, finalUrl } of ingestedDishes) {
+    const prevDishName = options.previousDishNames?.[dish.id];
+    let { data: existingPost } = await supabase
+      .from("food_posts")
+      .select("id")
+      .eq("venue_id", venueId)
+      .ilike("dish_name", dish.dish_name)
+      .maybeSingle();
+
+    if (!existingPost && prevDishName && prevDishName !== dish.dish_name) {
+      const prevRes = await supabase
+        .from("food_posts")
+        .select("id")
+        .eq("venue_id", venueId)
+        .ilike("dish_name", prevDishName)
+        .maybeSingle();
+      existingPost = prevRes.data;
+    }
+
+    if (existingPost) {
+      const { error: updPostErr } = await supabase
+        .from("food_posts")
+        .update({
+          dish_name: dish.dish_name,
+          dish_image: finalUrl,
+          review_text: dish.review_text || spot.why_curated,
+          price_nok: dish.price_nok,
+          category: dish.category || spot.food_category,
+          taste_tags: dish.taste_tags || [],
+          is_published: true,
+          is_archived: false,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingPost.id);
+
+      if (updPostErr) {
+        errors.push(`Dish update failed ("${dish.dish_name}"): ${updPostErr.message}`);
+      } else {
+        seededDishesCount++;
+      }
+    } else {
+      const { error: postErr } = await supabase.from("food_posts").insert({
+        venue_id: venueId,
+        author_id: OFFICIAL_AUTHOR_ID,
+        dish_name: dish.dish_name,
+        dish_image: finalUrl,
+        review_text: dish.review_text || spot.why_curated,
+        price_nok: dish.price_nok,
+        rating: 5,
+        category: dish.category || spot.food_category,
+        taste_tags: dish.taste_tags || [],
+        is_published: true,
+        is_archived: false,
+        is_official_pick: false,
+      });
+
+      if (postErr) {
+        errors.push(`Dish insert failed ("${dish.dish_name}"): ${postErr.message}`);
+      } else {
+        seededDishesCount++;
+      }
+    }
+  }
+
+  return { seededDishesCount, errors };
+}
+
 // GET: Read staged candidates
 export async function GET() {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth.response;
+
   try {
     const filePath = getStagedFilePath();
     if (!fs.existsSync(filePath)) {
@@ -163,11 +435,14 @@ export async function GET() {
   }
 }
 
-// PATCH: Update specific candidate spot or dish
+// PATCH: Update specific candidate spot or dish (auto-syncs seeded spots to Supabase!)
 export async function PATCH(req: NextRequest) {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth.response;
+
   try {
     const body = await req.json();
-    const { spotId, updates, dishId, dishUpdates } = body;
+    const { spotId, updates, dishId, dishUpdates, action, newDish } = body;
 
     if (!spotId) {
       return NextResponse.json({ error: "Missing spotId" }, { status: 400 });
@@ -187,6 +462,23 @@ export async function PATCH(req: NextRequest) {
     }
 
     const spot = candidates[spotIndex];
+    const previousSpotName = spot.name;
+    const previousDishNames: Record<string, string> = {};
+
+    // Support adding/removing a dish highlight directly
+    if (action === "add_dish" && newDish && typeof newDish === "object") {
+      const created: StagedDishHighlight = {
+        id: newDish.id || `${spot.id}-dish-${Date.now().toString(36)}`,
+        dish_name: String(newDish.dish_name || spot.signature_dish || "House Special"),
+        category: String(newDish.category || spot.food_category || "restaurant"),
+        price_nok: typeof newDish.price_nok === "number" ? newDish.price_nok : null,
+        dish_image: String(newDish.dish_image || ""),
+        is_verified_food_photo: isValidSeedPhotoUrl(String(newDish.dish_image || "")),
+        review_text: String(newDish.review_text || spot.why_curated || ""),
+        taste_tags: Array.isArray(newDish.taste_tags) ? newDish.taste_tags : [],
+      };
+      spot.dish_highlights.push(created);
+    }
 
     // Update spot level fields
     if (updates && typeof updates === "object") {
@@ -203,10 +495,7 @@ export async function PATCH(req: NextRequest) {
       // When curator explicitly clicks Approve, mark all dishes with valid images as verified
       if (updates.verification_status === "approved") {
         for (const d of spot.dish_highlights) {
-          if (
-            d.dish_image &&
-            !/streetview|facade|building|\/icons\/food\//i.test(d.dish_image)
-          ) {
+          if (isValidSeedPhotoUrl(d.dish_image)) {
             d.is_verified_food_photo = true;
           }
         }
@@ -217,6 +506,7 @@ export async function PATCH(req: NextRequest) {
     if (dishId && dishUpdates && typeof dishUpdates === "object") {
       const dish = spot.dish_highlights.find((d) => d.id === dishId);
       if (dish) {
+        previousDishNames[dish.id] = dish.dish_name;
         if (
           typeof dishUpdates.dish_image === "string" &&
           (dishUpdates.dish_image.includes("/api/places/photos") ||
@@ -228,15 +518,9 @@ export async function PATCH(req: NextRequest) {
         Object.assign(dish, dishUpdates);
 
         if (typeof dishUpdates.dish_image === "string") {
-          const url = dish.dish_image.trim();
-          const hasValidUrl =
-            url.startsWith("http://") ||
-            url.startsWith("https://") ||
-            url.startsWith("/api/places/photos") ||
-            url.startsWith("/curation-remix/");
-          const isBad = /streetview|facade|building|\/icons\/food\//i.test(url);
+          const valid = isValidSeedPhotoUrl(dish.dish_image);
           if (dishUpdates.is_verified_food_photo === undefined) {
-            dish.is_verified_food_photo = Boolean(hasValidUrl && !isBad);
+            dish.is_verified_food_photo = valid;
           }
         }
       }
@@ -245,31 +529,50 @@ export async function PATCH(req: NextRequest) {
     const allDishesVerified =
       spot.dish_highlights.length > 0 &&
       spot.dish_highlights.every(
-        (d) =>
-          d.is_verified_food_photo &&
-          Boolean(d.dish_image) &&
-          (d.dish_image.startsWith("http://") ||
-            d.dish_image.startsWith("https://") ||
-            d.dish_image.startsWith("/api/places/photos") ||
-            d.dish_image.startsWith("/curation-remix/")) &&
-          !/streetview|facade|building|\/icons\/food\//i.test(d.dish_image)
+        (d) => d.is_verified_food_photo && isValidSeedPhotoUrl(d.dish_image)
       );
 
     if (dishId && allDishesVerified && spot.verification_status === "needs_photo") {
       spot.verification_status = "approved";
     }
 
+    // If this spot is already seeded (or curator explicitly triggered sync_seeded), sync live DB!
+    let syncedToSupabase = false;
+    let syncErrors: string[] = [];
+    if (spot.verification_status === "seeded" || action === "sync_seeded") {
+      try {
+        const res = await syncSpotToSupabase(auth.adminClient, spot, {
+          previousSpotName,
+          previousDishNames,
+          onlyVerifiedDishes: true,
+        });
+        syncedToSupabase = res.errors.length === 0;
+        syncErrors = res.errors;
+        bustLiveCaches();
+      } catch (syncErr: any) {
+        syncErrors.push(syncErr?.message || "Failed to sync seeded spot to Supabase.");
+      }
+    }
+
     candidates[spotIndex] = spot;
     fs.writeFileSync(filePath, JSON.stringify(candidates, null, 2), "utf8");
 
-    return NextResponse.json({ success: true, spot });
+    return NextResponse.json({
+      success: true,
+      spot,
+      syncedToSupabase,
+      syncErrors,
+    });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
 
-// POST: Safe Seeding Pipeline (Only processes spots with verification_status === "approved")
+// POST: Safe Seeding Pipeline (Only processes spots with verification_status === "approved" or targeted IDs)
 export async function POST(req: NextRequest) {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth.response;
+
   try {
     let targetSpotIds: string[] | null = null;
     if (req) {
@@ -283,14 +586,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const supabase = getAdminClient();
-    if (!supabase) {
-      return NextResponse.json(
-        { error: "Supabase service role client not configured on server." },
-        { status: 500 }
-      );
-    }
-
+    const supabase = auth.adminClient;
     const filePath = getStagedFilePath();
     if (!fs.existsSync(filePath)) {
       return NextResponse.json({ error: "Staged candidates file not found" }, { status: 404 });
@@ -316,18 +612,10 @@ export async function POST(req: NextRequest) {
     // Pre-flight Guardrail Check
     for (const spot of approved) {
       for (const dish of spot.dish_highlights) {
-        if (!dish.is_verified_food_photo || !dish.dish_image) {
+        if (!dish.is_verified_food_photo || !isValidSeedPhotoUrl(dish.dish_image)) {
           return NextResponse.json(
             {
               error: `Pre-flight Guardrail Failed: Spot "${spot.name}" dish "${dish.dish_name}" has unverified photo.`,
-            },
-            { status: 400 }
-          );
-        }
-        if (/streetview|facade|building|\/icons\/food\//i.test(dish.dish_image)) {
-          return NextResponse.json(
-            {
-              error: `Pre-flight Guardrail Failed: Spot "${spot.name}" dish "${dish.dish_name}" contains invalid photo keyword.`,
             },
             { status: 400 }
           );
@@ -341,218 +629,18 @@ export async function POST(req: NextRequest) {
 
     for (const spot of approved) {
       try {
-        // 1. Ingest Dish Photos to Supabase CDN
-        const ingestedDishes: { dish: StagedDishHighlight; finalUrl: string }[] = [];
-        for (const dish of spot.dish_highlights) {
-          const cdnUrl = await ingestPhotoToStorage(supabase, dish.dish_image, "dish");
-          dish.dish_image = cdnUrl;
-          ingestedDishes.push({ dish, finalUrl: cdnUrl });
-        }
-
-        // 2. Ingest Cover Photo to Supabase CDN (fallback to first dish photo if missing)
-        let finalCoverUrl = spot.cover_image_url || ingestedDishes[0]?.finalUrl || "";
-        if (finalCoverUrl) {
-          finalCoverUrl = await ingestPhotoToStorage(supabase, finalCoverUrl, "cover");
-          spot.cover_image_url = finalCoverUrl;
-        }
-
-        const signatureDishes = spot.signature_dish
-          ? [
-              spot.signature_dish,
-              ...spot.dish_highlights
-                .map((d) => d.dish_name)
-                .filter((n) => n !== spot.signature_dish),
-            ]
-          : spot.dish_highlights.map((d) => d.dish_name);
-
-        // 3. Insert or Find Venue using exact `public.venues` column schema
-        let venueId: string;
-        const isPopup = spot.spot_type === "popup" || spot.spot_type === "pop_up";
-        const extractedIg =
-          (spot as any).instagram_url ||
-          spot.notes?.match(/https:\/\/(www\.)?instagram\.com\/[^\s"')]+/i)?.[0] ||
-          null;
-        const dropScheduleMatch = spot.notes?.match(/Drop schedule:\s*([^.\n]+(?:\([^)]*\))?[^.\n]*)/i);
-        const dropScheduleText = dropScheduleMatch
-          ? dropScheduleMatch[1].trim()
-          : (spot.notes?.split(".")[0]?.trim() || "Pop-Up Drops");
-
-        const popupMeta = isPopup
-          ? {
-              brand_id: slugify(spot.id || spot.name),
-              residency_status: "active" as const,
-              dates_label: dropScheduleText.length > 55 ? dropScheduleText.slice(0, 52) + "..." : dropScheduleText,
-              daily_hours: "Drop Days · See Instagram",
-              portion_cap: "Limited Batches",
-              host_venue_name: spot.address.replace(/,\s*0\d{3}\s*Oslo/i, "").replace(/,\s*Oslo/i, "").trim() || "Oslo Residency",
-              host_address: spot.address,
-              instagram_url: extractedIg,
-              entry_type: "walk_in" as const,
-              ...(spot.popup_meta || {}),
-            }
-          : undefined;
-
-        const { data: existingVenue } = await supabase
-          .from("venues")
-          .select("id, name, vibe_signals")
-          .ilike("name", spot.name)
-          .maybeSingle();
-
-        if (existingVenue) {
-          venueId = existingVenue.id;
-          const prevSignals =
-            existingVenue.vibe_signals && typeof existingVenue.vibe_signals === "object"
-              ? (existingVenue.vibe_signals as Record<string, unknown>)
-              : {};
-
-          const { error: updateErr } = await supabase
-            .from("venues")
-            .update({
-              address: spot.address,
-              neighborhood: spot.neighborhood || "sentrum",
-              category: spot.food_category || "restaurant",
-              latitude: spot.latitude,
-              longitude: spot.longitude,
-              image_url: finalCoverUrl || undefined,
-              price_level: spot.price_level || "$$",
-              google_rating: spot.google_rating ?? 4.7,
-              spot_type: spot.spot_type || "restaurant",
-              description: spot.why_curated || null,
-              signature_dishes: signatureDishes,
-              website_uri: extractedIg || undefined,
-              current_opening_hours_text: isPopup ? dropScheduleText : undefined,
-              vibe_signals: {
-                ...prevSignals,
-                icon: spot.icon,
-                spot_type: spot.spot_type || "restaurant",
-                ...(popupMeta ? { popup_meta: popupMeta } : {}),
-              },
-            })
-            .eq("id", venueId);
-
-          if (updateErr) {
-            throw new Error(`Failed to update venue "${spot.name}": ${updateErr.message}`);
-          }
-        } else {
-          const baseSlug = slugify(spot.id || spot.name) || `spot-${Date.now()}`;
-          let insertedId: string | null = null;
-          let lastVenueErr = "";
-
-          for (let attempt = 0; attempt < 3; attempt++) {
-            const candidateSlug = attempt === 0 ? baseSlug : `${baseSlug}-${attempt + 1}`;
-            const { data: newVenue, error: venueErr } = await supabase
-              .from("venues")
-              .insert({
-                name: spot.name,
-                slug: candidateSlug,
-                address: spot.address,
-                neighborhood: spot.neighborhood || "sentrum",
-                category: spot.food_category || "restaurant",
-                latitude: spot.latitude,
-                longitude: spot.longitude,
-                image_url: finalCoverUrl || ingestedDishes[0]?.finalUrl,
-                price_level: spot.price_level || "$$",
-                open_now: true,
-                google_rating: spot.google_rating ?? 4.7,
-                google_reviews_count: 45,
-                spot_type: spot.spot_type || "restaurant",
-                description: spot.why_curated || null,
-                signature_dishes: signatureDishes,
-                website_uri: extractedIg || null,
-                current_opening_hours_text: isPopup ? dropScheduleText : null,
-                vibe_signals: {
-                  icon: spot.icon,
-                  spot_type: spot.spot_type || "restaurant",
-                  ...(popupMeta ? { popup_meta: popupMeta } : {}),
-                },
-              })
-              .select("id")
-              .single();
-
-            if (!venueErr && newVenue) {
-              insertedId = newVenue.id;
-              break;
-            }
-            lastVenueErr = venueErr?.message || "Unknown insert error";
-          }
-
-          if (!insertedId) {
-            throw new Error(`Failed to insert venue "${spot.name}": ${lastVenueErr}`);
-          }
-          venueId = insertedId;
-        }
-
+        const res = await syncSpotToSupabase(supabase, spot);
         seededVenuesCount++;
-
-        // 4. Insert or Update Dish Posts in `public.food_posts`
-        for (const { dish, finalUrl } of ingestedDishes) {
-          const { data: existingPost } = await supabase
-            .from("food_posts")
-            .select("id")
-            .eq("venue_id", venueId)
-            .ilike("dish_name", dish.dish_name)
-            .maybeSingle();
-
-          if (existingPost) {
-            const { error: updPostErr } = await supabase
-              .from("food_posts")
-              .update({
-                dish_image: finalUrl,
-                review_text: dish.review_text || spot.why_curated,
-                price_nok: dish.price_nok,
-                category: dish.category || spot.food_category,
-                taste_tags: dish.taste_tags || [],
-                is_published: true,
-                is_archived: false,
-              })
-              .eq("id", existingPost.id);
-
-            if (updPostErr) {
-              errors.push(`Dish update failed ("${dish.dish_name}"): ${updPostErr.message}`);
-            } else {
-              seededDishesCount++;
-            }
-          } else {
-            const { error: postErr } = await supabase.from("food_posts").insert({
-              venue_id: venueId,
-              author_id: OFFICIAL_AUTHOR_ID,
-              dish_name: dish.dish_name,
-              dish_image: finalUrl,
-              review_text: dish.review_text || spot.why_curated,
-              price_nok: dish.price_nok,
-              rating: 5,
-              category: dish.category || spot.food_category,
-              taste_tags: dish.taste_tags || [],
-              is_published: true,
-              is_archived: false,
-              is_official_pick: false,
-            });
-
-            if (postErr) {
-              errors.push(`Dish insert failed ("${dish.dish_name}"): ${postErr.message}`);
-            } else {
-              seededDishesCount++;
-            }
-          }
-        }
-
-        // Mark spot as seeded in staged candidates
+        seededDishesCount += res.seededDishesCount;
+        errors.push(...res.errors);
         spot.verification_status = "seeded";
       } catch (err: any) {
         errors.push(`Error seeding "${spot.name}": ${err.message}`);
       }
     }
 
-    // Save updated candidates status to disk
     fs.writeFileSync(filePath, JSON.stringify(candidates, null, 2), "utf8");
-
-    // Bust Next.js server caches so new venues & dishes show immediately on /
-    try {
-      revalidateTag("venues");
-      revalidateTag("food_posts");
-    } catch {
-      // Ignore outside request context
-    }
+    bustLiveCaches();
 
     if (seededVenuesCount === 0 && errors.length > 0) {
       return NextResponse.json(

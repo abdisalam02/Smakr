@@ -3,21 +3,11 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import sharp from "sharp";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { requireAdmin } from "@/app/api/admin/_auth";
 
 export const runtime = "nodejs";
 
 const STORAGE_BUCKET = "dish-photos";
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const SUPABASE_KEY =
-  process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-
-function getAdminClient(): SupabaseClient | null {
-  if (!SUPABASE_URL || !SUPABASE_KEY) return null;
-  return createClient(SUPABASE_URL, SUPABASE_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
 
 function slugify(val: string): string {
   return val
@@ -39,6 +29,9 @@ function getLocalUploadDir(): string {
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireAdmin();
+    if (!auth.ok) return auth.response;
+
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const spotId = (formData.get("spotId") as string) || "seed";
@@ -84,7 +77,7 @@ export async function POST(req: NextRequest) {
 
     // 1. Try uploading to Supabase Storage bucket dish-photos
     let supabaseCdnUrl: string | null = null;
-    const supabase = getAdminClient();
+    const supabase = auth.adminClient;
 
     if (supabase) {
       try {

@@ -23,6 +23,7 @@ import {
   CheckCircle2,
   ChevronDown,
   Database,
+  Plus,
 } from "lucide-react";
 import { IconPickerModal } from "@/components/admin/IconPickerModal";
 import {
@@ -36,12 +37,24 @@ import {
   resolveCustomIconKey,
 } from "@/components/food/FoodIcons";
 import { resolveEntityTaxonomy } from "@/lib/taxonomy";
+import { uploadAdminImage } from "@/lib/adminUpload";
 import type {
   StagedCandidateSpot,
   StagedDishHighlight,
   VerificationStatus,
 } from "@/app/api/admin/seeding-lab/route";
 import type { AiShiftSpotProposal } from "@/app/api/admin/ai-shift-spot/route";
+
+type ActiveSpotField =
+  | null
+  | "cover"
+  | "name"
+  | "category"
+  | "price"
+  | "rating"
+  | "location"
+  | "signature"
+  | "story";
 
 interface SeedingCandidateCardProps {
   spot: StagedCandidateSpot;
@@ -51,12 +64,16 @@ interface SeedingCandidateCardProps {
     dishId: string,
     dishUpdates: Partial<StagedDishHighlight>
   ) => Promise<void>;
+  onAddDish?: (spotId: string, newDish: Partial<StagedDishHighlight>) => Promise<void>;
+  onSyncSeeded?: (spotId: string) => Promise<void>;
 }
 
 export function SeedingCandidateCard({
   spot,
   onUpdateSpot,
   onUpdateDish,
+  onAddDish,
+  onSyncSeeded,
 }: SeedingCandidateCardProps) {
   const isPopupSpot = spot.spot_type === "popup" || spot.spot_type === "pop_up";
   const instagramUrl =
@@ -68,8 +85,12 @@ export function SeedingCandidateCard({
 
   const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
   const [editingDish, setEditingDish] = useState<StagedDishHighlight | null>(null);
-  const [isEditingRestaurantCard, setIsEditingRestaurantCard] = useState(false);
+  const [activeSpotField, setActiveSpotField] = useState<ActiveSpotField>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isSyncingSeeded, setIsSyncingSeeded] = useState(false);
+  const [isAddingDishOpen, setIsAddingDishOpen] = useState(false);
+  const [newDishTitle, setNewDishTitle] = useState("");
+  const [newDishPrice, setNewDishPrice] = useState("");
 
   // AI Quick Shift Modal State
   const [isAiShiftOpen, setIsAiShiftOpen] = useState(false);
@@ -171,23 +192,17 @@ export function SeedingCandidateCard({
     setIsUploadingCover(true);
     setCoverUploadError(null);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("spotId", spot.id || spotName);
-      formData.append("dishId", "cover");
-
-      const res = await fetch("/api/admin/upload-seed-image", {
-        method: "POST",
-        body: formData,
+      const { url, error } = await uploadAdminImage(file, {
+        spotId: spot.id || spotName,
+        dishId: "cover",
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload failed");
+      if (!url) throw new Error(error || "Upload failed");
 
-      setSpotCoverUrl(data.url);
+      setSpotCoverUrl(url);
       setSpotPhotoTab("upload");
 
-      // Persist cover image immediately to spot
-      await onUpdateSpot(spot.id, { cover_image_url: data.url });
+      // Persist cover image immediately (auto-syncs to Supabase if seeded)
+      await onUpdateSpot(spot.id, { cover_image_url: url });
     } catch (err: any) {
       setCoverUploadError(err.message || "Failed to upload cover image.");
     } finally {
@@ -195,9 +210,9 @@ export function SeedingCandidateCard({
     }
   };
 
-  // Clipboard paste listener when editing restaurant card
+  // Clipboard paste listener when cover photo tray is open
   useEffect(() => {
-    if (!isEditingRestaurantCard) return;
+    if (activeSpotField !== "cover") return;
     const handlePaste = (e: ClipboardEvent) => {
       const items = e.clipboardData?.items;
       if (!items) return;
@@ -214,7 +229,7 @@ export function SeedingCandidateCard({
     };
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
-  }, [isEditingRestaurantCard, spot.id, spotName]);
+  }, [activeSpotField, spot.id, spotName]);
 
   // Keep local state synced when parent spot updates
   useEffect(() => {
@@ -269,31 +284,19 @@ export function SeedingCandidateCard({
 
   useEffect(() => {
     if (
-      isEditingRestaurantCard &&
+      activeSpotField === "cover" &&
       spotPhotoTab === "google" &&
       getCachedPhotosForQuery(spotGoogleQuery) === null
     ) {
       void fetchSpotGooglePhotos(spotGoogleQuery, false);
     }
-  }, [isEditingRestaurantCard, spotPhotoTab]);
+  }, [activeSpotField, spotPhotoTab]);
 
-  const handleSaveRestaurantCard = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const saveSpotField = async (patch: Partial<StagedCandidateSpot>) => {
     setIsSavingSpot(true);
     try {
-      const parsedRating = Number.parseFloat(spotRating);
-      await onUpdateSpot(spot.id, {
-        name: spotName.trim(),
-        address: spotAddress.trim(),
-        neighborhood: spotNeighborhood.trim().toLowerCase(),
-        food_category: spotCategory.trim(),
-        price_level: spotPriceLevel,
-        google_rating: Number.isFinite(parsedRating) ? parsedRating : 4.7,
-        signature_dish: spotSignatureDish.trim(),
-        cover_image_url: spotCoverUrl.trim(),
-        why_curated: spotWhyCurated.trim(),
-      });
-      setIsEditingRestaurantCard(false);
+      await onUpdateSpot(spot.id, patch);
+      setActiveSpotField(null);
     } finally {
       setIsSavingSpot(false);
     }
@@ -461,9 +464,9 @@ export function SeedingCandidateCard({
 
         <div className="flex shrink-0 items-center gap-2.5">
           {spot.verification_status === "seeded" ? (
-            <span title="Seeded" className="inline-flex items-center gap-1 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1 text-[10.5px] font-bold text-violet-700">
+            <span title="Seeded" className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10.5px] font-bold text-emerald-700">
               <Database className="h-3 w-3 shrink-0" />
-              <span className="hidden sm:inline">Seeded</span>
+              <span className="hidden sm:inline">Live</span>
             </span>
           ) : spot.verification_status === "approved" ? (
             <span title="Approved" className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10.5px] font-bold text-emerald-700">
@@ -503,7 +506,7 @@ export function SeedingCandidateCard({
                 setIsAiShiftOpen(true);
                 setAiShiftError(null);
               }}
-              className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#181615] px-3 text-[11px] font-bold text-white transition-colors hover:bg-[#E84A27]"
+              className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#181615] px-3 text-[11px] font-bold text-white transition-colors hover:bg-[#E84A27] cursor-pointer"
               title="Paste drop text to update the card and production DB with AI"
             >
               <Sparkles className="h-3.5 w-3.5" />
@@ -511,16 +514,22 @@ export function SeedingCandidateCard({
             </button>
             <button
               type="button"
-              onClick={() => setIsEditingRestaurantCard(true)}
-              className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#DDD6C9] bg-white px-3 text-[11px] font-bold text-[#181615] transition-colors hover:border-[#E84A27]/40 hover:text-[#E84A27]"
+              onClick={() =>
+                setActiveSpotField((cur) => (cur === "cover" ? null : "cover"))
+              }
+              className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[11px] font-bold transition-colors cursor-pointer ${
+                activeSpotField === "cover"
+                  ? "border-[#E84A27] bg-[#E84A27] text-white"
+                  : "border-[#DDD6C9] bg-white text-[#181615] hover:border-[#E84A27]/40 hover:text-[#E84A27]"
+              }`}
             >
-              <Pencil className="h-3.5 w-3.5" />
-              Edit card
+              <Camera className="h-3.5 w-3.5" />
+              Cover Photo
             </button>
             <button
               type="button"
               onClick={() => setIsIconPickerOpen(true)}
-              className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#DDD6C9] bg-white px-3 text-[11px] font-bold text-[#181615] transition-colors hover:border-[#E84A27]/40 hover:text-[#E84A27]"
+              className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#DDD6C9] bg-white px-3 text-[11px] font-bold text-[#181615] transition-colors hover:border-[#E84A27]/40 hover:text-[#E84A27] cursor-pointer"
               title="Customize the map radar pin icon"
             >
               <span className="grid h-4 w-4 place-items-center">
@@ -548,7 +557,7 @@ export function SeedingCandidateCard({
                 isPopupSpot && instagramUrl ? "" : "ml-auto"
               }`}
             >
-              Draft preview
+              Tap card elements to edit
             </span>
           </div>
 
@@ -561,72 +570,38 @@ export function SeedingCandidateCard({
               <p className="min-w-0 flex-1 text-[11px] font-medium leading-relaxed text-zinc-700">
                 {spot.notes
                   ? spot.notes.replace(/Instagram:\s*https:\/\/[^\s]+/i, "").trim()
-                  : "No drop notes yet — add them in the card editor."}
+                  : "No drop notes yet — use AI Shift to parse schedule."}
               </p>
             </div>
           )}
 
-      {/* ── MAIN WORKSPACE: SPOT CARD (LEFT) + DISH CARDS (RIGHT) ── */}
-      <div className="p-3.5 sm:p-6 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 bg-white items-start animate-in fade-in-0 slide-in-from-top-1 duration-200">
-        {/* LEFT COLUMN (5 cols): Spot card preview */}
-        <div className="lg:col-span-5 space-y-3">
+      {/* ── MAIN WORKSPACE: CLICK-TO-EDIT SPOT CARD (LEFT) + DISH CARDS (RIGHT) ── */}
+      <div className="p-3.5 sm:p-5 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 bg-white items-start animate-in fade-in-0 duration-200">
+        {/* LEFT COLUMN (5 cols): Interactive Spot Card Preview */}
+        <div className="lg:col-span-5 space-y-2.5">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400">
-              Spot card
+            <span className="text-[10.5px] font-black uppercase tracking-widest text-zinc-400">
+              Spot card preview
             </span>
-            <span className="text-[10.5px] text-zinc-400 font-semibold">
-              Live preview
+            <span className="text-[10px] text-[#E84A27] font-bold">
+              Tap any part to edit
             </span>
           </div>
 
           <div className="rounded-3xl overflow-hidden border border-[#EAE5DC] bg-[#FAF7F2] shadow-sm">
-            {/* Exact Clone of FoodSpotCard.tsx */}
-            <div className="relative flex items-center gap-3 sm:gap-3.5 p-3.5 bg-[#EFE8DC] border-b border-[#181615]/10 select-none overflow-hidden min-h-[136px]">
-              {/* Repeating SMAKR Monogram Watermark Pattern */}
-              <svg
-                className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.03] select-none text-zinc-950 z-0"
-                aria-hidden="true"
-              >
-                <defs>
-                  <pattern
-                    id={`smakr-lab-spot-${spot.id}`}
-                    width="88"
-                    height="44"
-                    patternUnits="userSpaceOnUse"
-                    patternTransform="rotate(-14)"
-                  >
-                    <text
-                      x="0"
-                      y="16"
-                      fontFamily="var(--font-comico), sans-serif"
-                      fontWeight="900"
-                      fontSize="9"
-                      letterSpacing="0.18em"
-                      fill="currentColor"
-                    >
-                      SMAKR ·
-                    </text>
-                    <text
-                      x="44"
-                      y="38"
-                      fontFamily="var(--font-comico), sans-serif"
-                      fontWeight="900"
-                      fontSize="9"
-                      letterSpacing="0.18em"
-                      fill="currentColor"
-                    >
-                      SMAKR ·
-                    </text>
-                  </pattern>
-                </defs>
-                <rect width="100%" height="100%" fill={`url(#smakr-lab-spot-${spot.id})`} />
-              </svg>
-
-              {/* Left Column — 1:1 Square Thumbnail (128x128px) with quick-edit trigger */}
+            {/* Exact Clone of FoodSpotCard.tsx with Direct Click-to-Edit Surfaces */}
+            <div className="relative flex items-center gap-3 sm:gap-3.5 p-3.5 bg-[#EFE8DC] border-b border-[#181615]/10 select-none overflow-hidden min-h-[144px]">
+              {/* Left Column — Clickable 1:1 Cover Thumbnail */}
               <div
-                onClick={() => setIsEditingRestaurantCard(true)}
-                className="relative z-10 w-[114px] h-[114px] sm:w-[128px] sm:h-[128px] rounded-2xl overflow-hidden shrink-0 bg-[#EAE6DF] shadow-sm ring-1 ring-black/10 group/thumb cursor-pointer"
-                title="Click to change Venue Cover Image (upload, paste or search)"
+                onClick={() =>
+                  setActiveSpotField((cur) => (cur === "cover" ? null : "cover"))
+                }
+                className={`relative z-10 w-[110px] h-[110px] sm:w-[126px] sm:h-[126px] rounded-2xl overflow-hidden shrink-0 bg-[#EAE6DF] shadow-sm ring-2 transition-all group/thumb cursor-pointer ${
+                  activeSpotField === "cover"
+                    ? "ring-[#E84A27]"
+                    : "ring-black/10 hover:ring-[#E84A27]/60"
+                }`}
+                title="Click to upload or change cover photo"
               >
                 {effectiveCoverUrl ? (
                   <Image
@@ -644,33 +619,49 @@ export function SeedingCandidateCard({
                         resolveCustomIconKey(spot.food_category) ||
                         taxonomy.spotKind
                       }
-                      className="w-14 h-14 object-contain"
+                      className="w-12 h-12 object-contain"
                     />
                   </div>
                 )}
 
-                {/* Hover overlay with Camera icon */}
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10.5px] font-extrabold gap-1 z-[4] pointer-events-none">
-                  <Camera className="w-4 h-4 text-white drop-shadow-sm" />
-                  <span>Change Cover</span>
+                <div className="absolute inset-0 bg-black/45 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-extrabold gap-1 z-[4] pointer-events-none">
+                  <Camera className="w-4 h-4 text-white" />
+                  <span>Photo</span>
                 </div>
 
-                <div className="absolute inset-y-0 right-0 w-6 bg-gradient-to-r from-transparent to-black/20 pointer-events-none z-[2]" />
-
-                {/* Google Rating Badge bottom-left */}
-                <div className="absolute bottom-2 left-2 z-[3] flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/80 text-white text-[10px] font-bold shadow-xs">
+                {/* Clickable Rating Badge bottom-left */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveSpotField((cur) => (cur === "rating" ? null : "rating"));
+                  }}
+                  title="Tap to edit Google rating"
+                  className={`absolute bottom-2 left-2 z-[5] flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#181615]/90 text-white text-[10px] font-bold shadow-xs cursor-pointer transition-transform hover:scale-105 ${
+                    activeSpotField === "rating" ? "ring-2 ring-[#E84A27]" : ""
+                  }`}
+                >
                   <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
-                  <span className="font-sans font-bold tracking-tight text-white">
-                    {displayRating.toFixed(1)}
-                  </span>
-                </div>
+                  <span>{displayRating.toFixed(1)}</span>
+                </button>
               </div>
 
-              {/* Right Column — 4 Clean Lines */}
-              <div className="relative z-10 flex-1 min-w-0 flex flex-col justify-between py-0.5 h-[114px] sm:h-[128px]">
-                {/* Line 1: Category Icon/Name + Open Pill / Pop-up Badge */}
+              {/* Right Column — 4 Click-to-Edit Card Lines */}
+              <div className="relative z-10 flex-1 min-w-0 flex flex-col justify-between py-0.5 min-h-[110px] sm:min-h-[126px] gap-1">
+                {/* Line 1: Clickable Category Badge + Open/Pop-up pill */}
                 <div className="flex items-center justify-between gap-1.5 min-w-0">
-                  <span className="text-[11px] font-semibold text-[#e84a27] uppercase tracking-wider flex items-center gap-1 font-comico truncate">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setActiveSpotField((cur) => (cur === "category" ? null : "category"))
+                    }
+                    title="Tap to edit category or map icon"
+                    className={`text-[11px] font-semibold text-[#e84a27] uppercase tracking-wider flex items-center gap-1 font-comico truncate rounded-md px-1 -ml-1 py-0.5 transition-colors cursor-pointer ${
+                      activeSpotField === "category"
+                        ? "bg-[#E84A27]/15 ring-1 ring-[#E84A27]/40"
+                        : "hover:bg-[#E84A27]/10"
+                    }`}
+                  >
                     <SmakrFoodIcon
                       name={
                         resolveCustomIconKey(spot.icon) ||
@@ -680,63 +671,154 @@ export function SeedingCandidateCard({
                       className="w-3.5 h-3.5 shrink-0"
                     />
                     <span className="truncate">{taxonomy.spotLabel}</span>
-                  </span>
+                  </button>
 
                   {isPopupSpot ? (
-                    <div className="flex items-center gap-1 shrink-0">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E84A27] text-white font-comico shrink-0 tracking-wide">
-                        Pop-up
-                      </span>
-                      <span className="bg-[#E84A27]/10 text-[#E84A27] border border-[#E84A27]/25 px-2 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#E84A27] animate-pulse" />
-                        <span>Drop Radar</span>
-                      </span>
-                    </div>
+                    <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-[#E84A27] text-white font-comico shrink-0 tracking-wide">
+                      Pop-up
+                    </span>
                   ) : (
-                    <span className="bg-[#4E8752]/10 text-[#4E8752] border border-[#4E8752]/20 px-2 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1 shrink-0">
+                    <span className="bg-[#4E8752]/10 text-[#4E8752] border border-[#4E8752]/20 px-2 py-0.5 rounded-full text-[9.5px] font-bold inline-flex items-center gap-1 shrink-0">
                       <Clock className="w-2.5 h-2.5 shrink-0" />
-                      <span>Open now</span>
+                      <span>Open</span>
                     </span>
                   )}
                 </div>
 
-                {/* Line 2: Venue Title + Price Tier */}
+                {/* Line 2: Inline Editable Venue Title + Clickable Price Tier */}
                 <div className="flex items-center justify-between gap-1.5 min-w-0">
-                  <h3 className="font-comico text-base sm:text-lg text-[#181615] leading-tight truncate">
-                    {spot.name}
-                  </h3>
-                  <span className="text-[10px] font-bold text-zinc-500 bg-black/5 px-1.5 py-0.5 rounded-md shrink-0">
+                  {activeSpotField === "name" ? (
+                    <div className="flex items-center gap-1 flex-1 min-w-0">
+                      <input
+                        autoFocus
+                        type="text"
+                        value={spotName}
+                        onChange={(e) => setSpotName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && spotName.trim()) {
+                            void saveSpotField({ name: spotName.trim() });
+                          } else if (e.key === "Escape") {
+                            setSpotName(spot.name);
+                            setActiveSpotField(null);
+                          }
+                        }}
+                        className="w-full min-w-0 px-2 py-0.5 rounded-lg bg-white border border-[#E84A27] font-comico text-sm text-[#181615] focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        disabled={isSavingSpot}
+                        onClick={() => void saveSpotField({ name: spotName.trim() || spot.name })}
+                        className="p-1 rounded-lg bg-[#E84A27] text-white shrink-0 cursor-pointer"
+                        title="Save name"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setActiveSpotField("name")}
+                      title="Tap to rename spot"
+                      className="font-comico text-base sm:text-lg text-[#181615] leading-tight truncate text-left hover:text-[#E84A27] rounded-md px-1 -ml-1 transition-colors cursor-pointer flex-1 min-w-0"
+                    >
+                      {spot.name}
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next =
+                        displayPriceLevel === "$"
+                          ? "$$"
+                          : displayPriceLevel === "$$"
+                          ? "$$$"
+                          : "$";
+                      setSpotPriceLevel(next);
+                      void onUpdateSpot(spot.id, { price_level: next });
+                    }}
+                    title="Tap to cycle price tier ($ / $$ / $$$)"
+                    className="text-[10.5px] font-extrabold text-zinc-700 bg-white/85 hover:bg-[#E84A27] hover:text-white border border-black/10 px-2 py-0.5 rounded-md shrink-0 transition-colors cursor-pointer"
+                  >
                     {displayPriceLevel}
-                  </span>
+                  </button>
                 </div>
 
-                {/* Line 3: Neighborhood + Address (or Roving Pop-Up Host) */}
-                <p className="text-xs font-medium text-[#6E655F] flex items-center gap-1 truncate">
+                {/* Line 3: Clickable Neighborhood + Address */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setActiveSpotField((cur) => (cur === "location" ? null : "location"))
+                  }
+                  title="Tap to edit neighborhood & address"
+                  className={`text-xs font-medium text-[#6E655F] flex items-center gap-1 truncate text-left rounded-md px-1 -ml-1 py-0.5 transition-colors cursor-pointer ${
+                    activeSpotField === "location"
+                      ? "bg-[#E84A27]/15 ring-1 ring-[#E84A27]/40"
+                      : "hover:bg-black/5"
+                  }`}
+                >
                   <MapPin className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
-                  <span className="capitalize font-bold text-[#181615] truncate">{spot.neighborhood}</span>
+                  <span className="capitalize font-bold text-[#181615] truncate">
+                    {spot.neighborhood}
+                  </span>
                   <span className="text-zinc-400">·</span>
                   <span className="truncate text-[11px] text-zinc-600">
                     {isPopupSpot
                       ? spot.address.replace(/,\s*0\d{3}\s*Oslo/i, "").replace(/,\s*Oslo/i, "").trim() || "Roving Pop-Up"
                       : spot.address}
                   </span>
-                </p>
+                </button>
 
-                {/* Line 4: Signature Dish + Map Pill / Pop-up Drop Pill */}
+                {/* Line 4: Inline Editable Signature Dish */}
                 <div className="border-t border-[#181615]/8 pt-1.5 flex items-center justify-between gap-2 min-w-0">
-                  <span className="text-xs font-bold text-[#181615] truncate flex items-center gap-1">
-                    <span className="text-[#e84a27]">✦</span>
-                    <span className="truncate">{displaySignature}</span>
-                  </span>
+                  {activeSpotField === "signature" ? (
+                    <div className="flex items-center gap-1 flex-1 min-w-0">
+                      <span className="text-[#e84a27] text-xs shrink-0">✦</span>
+                      <input
+                        autoFocus
+                        type="text"
+                        value={spotSignatureDish}
+                        onChange={(e) => setSpotSignatureDish(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            void saveSpotField({ signature_dish: spotSignatureDish.trim() });
+                          } else if (e.key === "Escape") {
+                            setSpotSignatureDish(spot.signature_dish || "");
+                            setActiveSpotField(null);
+                          }
+                        }}
+                        className="w-full min-w-0 px-2 py-0.5 rounded-lg bg-white border border-[#E84A27] text-xs font-bold text-[#181615] focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        disabled={isSavingSpot}
+                        onClick={() =>
+                          void saveSpotField({ signature_dish: spotSignatureDish.trim() })
+                        }
+                        className="p-1 rounded-lg bg-[#E84A27] text-white shrink-0 cursor-pointer"
+                      >
+                        <Check className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setActiveSpotField("signature")}
+                      title="Tap to edit signature dish"
+                      className="text-xs font-bold text-[#181615] hover:text-[#E84A27] truncate flex items-center gap-1 text-left rounded-md px-1 -ml-1 py-0.5 transition-colors cursor-pointer flex-1 min-w-0"
+                    >
+                      <span className="text-[#e84a27]">✦</span>
+                      <span className="truncate">{displaySignature}</span>
+                    </button>
+                  )}
 
                   {isPopupSpot ? (
-                    <span className="px-2.5 py-1 rounded-xl bg-orange-50 text-[#E84A27] border border-orange-200 text-[10.5px] font-black shrink-0 flex items-center gap-1 shadow-2xs">
-                      <span>✦</span>
-                      <span>Pop-Up Drop</span>
+                    <span className="px-2 py-0.5 rounded-xl bg-orange-50 text-[#E84A27] border border-orange-200 text-[10px] font-black shrink-0">
+                      ✦ Drop
                     </span>
                   ) : (
-                    <span className="px-2.5 py-1 rounded-xl bg-[#FAF6EE] text-[#181615] border border-[#181615]/12 text-[11px] font-bold shrink-0 flex items-center gap-1 shadow-2xs">
-                      <Compass className="w-3 h-3 text-[#E84A27]" />
+                    <span className="px-2 py-0.5 rounded-xl bg-[#FAF6EE] text-[#181615] border border-[#181615]/12 text-[10px] font-bold shrink-0 inline-flex items-center gap-1">
+                      <Compass className="w-2.5 h-2.5 text-[#E84A27]" />
                       <span>Map</span>
                     </span>
                   )}
@@ -744,48 +826,382 @@ export function SeedingCandidateCard({
               </div>
             </div>
 
-            {/* Curated note + cover-photo state */}
+            {/* ── FOCUSED INLINE POPOVER TRAY (ONLY APPEARS FOR THE CLICKED ELEMENT) ── */}
+            {activeSpotField === "cover" && (
+              <div className="p-3.5 bg-white border-b border-[#EAE5DC] space-y-2.5 animate-in fade-in duration-150">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10.5px] font-black uppercase tracking-wider text-[#E84A27]">
+                    Spot Cover Photo
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSpotField(null)}
+                    className="p-1 rounded-lg text-zinc-400 hover:text-zinc-800 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-3 gap-1 bg-[#EFEAE1] p-1 rounded-xl">
+                  {(
+                    [
+                      { id: "upload", label: "Upload / Paste" },
+                      { id: "google", label: `Google (${spotGooglePhotos.length})` },
+                      { id: "url", label: "Direct URL" },
+                    ] as const
+                  ).map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setSpotPhotoTab(t.id)}
+                      className={`py-1.5 px-2 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${
+                        spotPhotoTab === t.id
+                          ? "bg-[#E84A27] text-white shadow-xs"
+                          : "text-zinc-600 hover:text-[#181615]"
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+
+                {spotPhotoTab === "upload" ? (
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setIsDraggingCover(true);
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      setIsDraggingCover(false);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDraggingCover(false);
+                      const files = e.dataTransfer.files;
+                      if (files?.[0]) void uploadCoverFile(files[0]);
+                    }}
+                    onClick={() => coverFileInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-2xl p-4 text-center cursor-pointer transition-all ${
+                      isDraggingCover
+                        ? "border-[#E84A27] bg-[#E84A27]/5"
+                        : "border-[#DDD6C9] hover:border-[#E84A27]/60 bg-[#FAF7F2]"
+                    }`}
+                  >
+                    <input
+                      ref={coverFileInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg,image/webp,image/avif"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) void uploadCoverFile(f);
+                      }}
+                    />
+                    {isUploadingCover ? (
+                      <div className="flex items-center justify-center gap-2 text-xs font-bold text-[#E84A27]">
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Uploading WebP...</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <Upload className="w-5 h-5 mx-auto text-[#E84A27]" />
+                        <p className="text-xs font-bold text-[#181615]">
+                          Tap to browse, drop photo, or Ctrl+V
+                        </p>
+                      </div>
+                    )}
+                    {coverUploadError && (
+                      <p className="mt-2 text-[11px] font-bold text-rose-600">{coverUploadError}</p>
+                    )}
+                  </div>
+                ) : spotPhotoTab === "google" ? (
+                  <div className="space-y-2">
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        value={spotGoogleQuery}
+                        onChange={(e) => setSpotGoogleQuery(e.target.value)}
+                        className="flex-1 min-w-0 px-2.5 py-1.5 text-xs rounded-xl bg-[#FAF7F2] border border-[#DDD6C9]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => fetchSpotGooglePhotos(spotGoogleQuery, true)}
+                        disabled={isLoadingSpotGoogle}
+                        className="px-3 py-1.5 rounded-xl bg-[#181615] text-white text-xs font-bold cursor-pointer shrink-0"
+                      >
+                        {isLoadingSpotGoogle ? "..." : "Search"}
+                      </button>
+                    </div>
+                    {spotGooglePhotos.length > 0 && (
+                      <div className="grid grid-cols-4 gap-1.5 max-h-32 overflow-y-auto">
+                        {spotGooglePhotos.map((pUrl, i) => (
+                          <button
+                            key={pUrl + i}
+                            type="button"
+                            onClick={() => void saveSpotField({ cover_image_url: pUrl })}
+                            className={`relative aspect-square rounded-xl overflow-hidden border-2 cursor-pointer ${
+                              spotCoverUrl === pUrl ? "border-[#E84A27]" : "border-transparent"
+                            }`}
+                          >
+                            <Image src={pUrl} alt="" fill unoptimized className="object-cover" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex gap-1.5">
+                    <input
+                      type="url"
+                      value={spotCoverUrl}
+                      onChange={(e) => setSpotCoverUrl(e.target.value)}
+                      placeholder="https://..."
+                      className="flex-1 min-w-0 px-2.5 py-1.5 text-xs rounded-xl bg-[#FAF7F2] border border-[#DDD6C9]"
+                    />
+                    <button
+                      type="button"
+                      disabled={isSavingSpot || !spotCoverUrl.trim()}
+                      onClick={() => void saveSpotField({ cover_image_url: spotCoverUrl.trim() })}
+                      className="px-3 py-1.5 rounded-xl bg-[#E84A27] text-white text-xs font-bold cursor-pointer shrink-0"
+                    >
+                      Save
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeSpotField === "category" && (
+              <div className="p-3 bg-white border-b border-[#EAE5DC] space-y-2 animate-in fade-in duration-150">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-[#E84A27]">
+                    Category & Map Pin
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveSpotField(null);
+                      setIsIconPickerOpen(true);
+                    }}
+                    className="text-[11px] font-bold text-[#181615] hover:text-[#E84A27] underline cursor-pointer"
+                  >
+                    Open Pin Studio →
+                  </button>
+                </div>
+                <div className="flex gap-1.5">
+                  <input
+                    type="text"
+                    value={spotCategory}
+                    onChange={(e) => setSpotCategory(e.target.value)}
+                    placeholder="ramen, bakery, street_food..."
+                    className="flex-1 min-w-0 px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-[#FAF7F2] border border-[#DDD6C9]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void saveSpotField({ food_category: spotCategory.trim() })}
+                    className="px-3 py-1.5 rounded-xl bg-[#E84A27] text-white text-xs font-bold cursor-pointer"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {activeSpotField === "rating" && (
+              <div className="p-3 bg-white border-b border-[#EAE5DC] flex items-center gap-2 animate-in fade-in duration-150">
+                <span className="text-[10.5px] font-black uppercase tracking-wider text-zinc-500">
+                  Rating:
+                </span>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="1"
+                  max="5"
+                  value={spotRating}
+                  onChange={(e) => setSpotRating(e.target.value)}
+                  className="w-20 px-2.5 py-1 text-xs font-bold rounded-xl bg-[#FAF7F2] border border-[#DDD6C9]"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const parsed = Number.parseFloat(spotRating);
+                    void saveSpotField({
+                      google_rating: Number.isFinite(parsed) ? parsed : 4.7,
+                    });
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-[#E84A27] text-white text-xs font-bold cursor-pointer ml-auto"
+                >
+                  Save
+                </button>
+              </div>
+            )}
+
+            {activeSpotField === "location" && (
+              <div className="p-3 bg-white border-b border-[#EAE5DC] space-y-2 animate-in fade-in duration-150">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    value={spotNeighborhood}
+                    onChange={(e) => setSpotNeighborhood(e.target.value)}
+                    placeholder="Neighborhood"
+                    className="px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-[#FAF7F2] border border-[#DDD6C9]"
+                  />
+                  <input
+                    type="text"
+                    value={spotAddress}
+                    onChange={(e) => setSpotAddress(e.target.value)}
+                    placeholder="Street address"
+                    className="px-2.5 py-1.5 text-xs font-semibold rounded-xl bg-[#FAF7F2] border border-[#DDD6C9]"
+                  />
+                </div>
+                <div className="flex justify-end gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setActiveSpotField(null)}
+                    className="px-2.5 py-1 text-xs font-semibold text-zinc-500 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void saveSpotField({
+                        neighborhood: spotNeighborhood.trim().toLowerCase(),
+                        address: spotAddress.trim(),
+                      })
+                    }
+                    className="px-3 py-1.5 rounded-xl bg-[#E84A27] text-white text-xs font-bold cursor-pointer"
+                  >
+                    Save location
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Curated note + inline click-to-edit story */}
             <div className="p-3 bg-[#FAF7F2] space-y-2">
-              {spot.why_curated && (
-                <p className="text-[11.5px] text-zinc-600 italic border-l-2 border-[#E84A27] pl-2.5 line-clamp-2">
-                  "{spot.why_curated}"
-                </p>
+              {activeSpotField === "story" ? (
+                <div className="space-y-2">
+                  <textarea
+                    autoFocus
+                    rows={2}
+                    value={spotWhyCurated}
+                    onChange={(e) => setSpotWhyCurated(e.target.value)}
+                    placeholder="Why Smakr loves this spot..."
+                    className="w-full px-2.5 py-2 text-xs rounded-xl bg-white border border-[#E84A27] resize-none focus:outline-none"
+                  />
+                  <div className="flex justify-end gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSpotWhyCurated(spot.why_curated || "");
+                        setActiveSpotField(null);
+                      }}
+                      className="px-2.5 py-1 text-xs font-semibold text-zinc-500 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void saveSpotField({ why_curated: spotWhyCurated.trim() })}
+                      className="px-3 py-1 rounded-xl bg-[#E84A27] text-white text-xs font-bold cursor-pointer"
+                    >
+                      Save story
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setActiveSpotField("story")}
+                  title="Tap to edit story quote"
+                  className="w-full text-left text-[11.5px] text-zinc-600 hover:text-[#181615] italic border-l-2 border-[#E84A27] pl-2.5 line-clamp-2 cursor-pointer transition-colors"
+                >
+                  {spot.why_curated ? `"${spot.why_curated}"` : "+ Tap to add curated note"}
+                </button>
               )}
-              <div className="flex items-center justify-between gap-2">
+
+              <div className="flex items-center justify-between gap-2 pt-0.5">
                 <span className="inline-flex items-center gap-1.5 text-[10.5px] font-bold text-zinc-500">
                   <span
                     className={`h-1.5 w-1.5 rounded-full ${
                       spot.cover_image_url ? "bg-emerald-500" : "bg-amber-500"
                     }`}
                   />
-                  {spot.cover_image_url ? "Cover photo ready" : "Using dish fallback"}
+                  {spot.cover_image_url ? "Cover photo set" : "Using dish photo fallback"}
                 </span>
                 <button
                   type="button"
-                  onClick={() => setIsEditingRestaurantCard(true)}
-                  className="inline-flex items-center gap-1 text-[10.5px] font-bold text-zinc-500 transition-colors hover:text-[#E84A27]"
+                  onClick={() =>
+                    setActiveSpotField((cur) => (cur === "cover" ? null : "cover"))
+                  }
+                  className="inline-flex items-center gap-1 text-[10.5px] font-bold text-[#E84A27] cursor-pointer"
                 >
-                  <Pencil className="h-3 w-3" />
-                  Edit
+                  <Camera className="h-3 w-3" />
+                  {spot.cover_image_url ? "Change cover" : "Add cover"}
                 </button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* RIGHT COLUMN (7 cols): Dish Feed Cards (Exact FoodPostCard Layout & Comico Typography) */}
+        {/* RIGHT COLUMN (7 cols): Dish Feed Cards (Click photo/title/price directly!) */}
         <div className="lg:col-span-7 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-black uppercase tracking-widest text-zinc-400">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10.5px] font-black uppercase tracking-widest text-zinc-400">
               Dishes
               <span className="ml-1.5 rounded-full bg-[#181615]/5 px-1.5 py-0.5 text-[10px] text-zinc-500">
                 {spot.dish_highlights.length}
               </span>
             </span>
-            <span className="text-[10.5px] text-zinc-400 font-semibold">
-              Live preview
-            </span>
+            {onAddDish && (
+              <button
+                type="button"
+                onClick={() => setIsAddingDishOpen((v) => !v)}
+                className="inline-flex items-center gap-1 rounded-full bg-[#FAF7F2] hover:bg-[#E84A27] hover:text-white border border-[#DDD6C9] px-2.5 py-1 text-[11px] font-bold text-[#181615] transition-colors cursor-pointer"
+              >
+                <Plus className="w-3 h-3" />
+                <span>Add dish</span>
+              </button>
+            )}
           </div>
+
+          {isAddingDishOpen && onAddDish && (
+            <div className="p-3 rounded-2xl bg-[#FAF7F2] border border-[#E84A27]/35 flex flex-wrap sm:flex-nowrap items-center gap-2">
+              <input
+                type="text"
+                value={newDishTitle}
+                onChange={(e) => setNewDishTitle(e.target.value)}
+                placeholder="New dish name (e.g. Matcha Basque)..."
+                className="flex-1 min-w-[160px] px-3 py-1.5 text-xs font-semibold rounded-xl bg-white border border-[#DDD6C9]"
+              />
+              <input
+                type="number"
+                value={newDishPrice}
+                onChange={(e) => setNewDishPrice(e.target.value)}
+                placeholder="NOK"
+                className="w-20 px-2.5 py-1.5 text-xs font-bold rounded-xl bg-white border border-[#DDD6C9]"
+              />
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!newDishTitle.trim()) return;
+                  await onAddDish(spot.id, {
+                    dish_name: newDishTitle.trim(),
+                    price_nok: newDishPrice ? Number(newDishPrice) : null,
+                    category: spot.food_category,
+                  });
+                  setNewDishTitle("");
+                  setNewDishPrice("");
+                  setIsAddingDishOpen(false);
+                }}
+                className="px-3.5 py-1.5 rounded-xl bg-[#E84A27] text-white text-xs font-bold cursor-pointer"
+              >
+                Add
+              </button>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {spot.dish_highlights.map((dish) => {
@@ -799,7 +1215,7 @@ export function SeedingCandidateCard({
                   key={dish.id}
                   className="group relative rounded-3xl overflow-hidden bg-[#181615] border border-black/10 shadow-md flex flex-col transition-all hover:shadow-xl"
                 >
-                  {/* Full-Bleed 4:3 Photography Container (or Clean Add Photo state) */}
+                  {/* Clickable Full-Bleed 4:3 Photography Container */}
                   {!dish.dish_image ? (
                     <button
                       type="button"
@@ -818,7 +1234,7 @@ export function SeedingCandidateCard({
                         {dish.dish_name}
                       </p>
                       <p className="mt-1 text-[11px] font-semibold text-amber-700">
-                        Click to add or search dish photo
+                        Tap to upload or paste dish photo
                       </p>
                       {dish.review_text && (
                         <p className="mt-2 text-[11px] text-zinc-500 line-clamp-2 max-w-[26ch]">
@@ -827,7 +1243,11 @@ export function SeedingCandidateCard({
                       )}
                     </button>
                   ) : (
-                    <div className="relative w-full aspect-[4/3] overflow-hidden bg-[#E8E0D2]">
+                    <div
+                      onClick={() => setEditingDish(dish)}
+                      title="Tap anywhere on dish card to edit photo, price or AI Shift"
+                      className="relative w-full aspect-[4/3] overflow-hidden bg-[#E8E0D2] cursor-pointer"
+                    >
                       <Image
                         src={dish.dish_image}
                         alt={dish.dish_name}
@@ -836,25 +1256,21 @@ export function SeedingCandidateCard({
                         className="object-cover w-full opacity-100 transition-transform duration-700 ease-out group-hover:scale-105"
                       />
 
-                      {/* Seamless Dark Gradient Overlay */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-transparent pointer-events-none" />
 
-                      {/* Warning Overlay if unverified */}
                       {isBadImage && (
                         <div className="absolute inset-x-3 top-3 z-20 px-2.5 py-1.5 rounded-xl bg-amber-400/95 text-black text-[11px] font-bold flex items-center gap-1.5 shadow-md backdrop-blur-md">
                           <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-black" />
-                          <span className="truncate">Unverified photo — click Edit to verify</span>
+                          <span className="truncate">Tap to verify photo</span>
                         </div>
                       )}
 
-                      {/* Floating Price Badge top-right */}
                       {dish.price_nok && (
                         <div className="absolute top-3 right-3 z-10 px-2.5 py-1 rounded-full bg-[#E84A27] text-white font-bold text-xs shadow-md">
                           {dish.price_nok} NOK
                         </div>
                       )}
 
-                      {/* Overlaid Editorial Content */}
                       <div className="absolute bottom-0 inset-x-0 p-4 z-10 flex flex-col justify-end pointer-events-none">
                         <h3 className="font-comico font-black text-[19px] sm:text-[21px] tracking-wide leading-[1.15] text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] line-clamp-1 capitalize">
                           {dish.dish_name}
@@ -899,7 +1315,7 @@ export function SeedingCandidateCard({
                     </div>
                   )}
 
-                  {/* Card Action Strip with Solo Dish & Delete options */}
+                  {/* Card Action Strip */}
                   <div className="p-3 bg-[#FAF7F2] border-t border-[#EAE5DC] flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5">
                       <button
@@ -916,19 +1332,18 @@ export function SeedingCandidateCard({
                             : "bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100"
                         }`}
                       >
-                        {dish.is_verified_food_photo ? "🟢 Food Verified" : "🟡 Verify Photo"}
+                        {dish.is_verified_food_photo ? "🟢 Verified" : "🟡 Verify"}
                       </button>
 
-                      {/* Solo Dish Selection button when spot has multiple dishes */}
                       {spot.dish_highlights.length > 1 && dish.is_verified_food_photo && (
                         <button
                           type="button"
                           onClick={() => handleUseOnlyThisDish(dish)}
                           className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-[10.5px] font-black flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
-                          title={`Select and use only "${dish.dish_name}" for this spot (removes other unverified dishes)`}
+                          title={`Select and use only "${dish.dish_name}" for this spot`}
                         >
                           <Sparkles className="w-3 h-3 text-amber-600" />
-                          <span>Use Only This Dish</span>
+                          <span>Solo Dish</span>
                         </button>
                       )}
                     </div>
@@ -940,7 +1355,7 @@ export function SeedingCandidateCard({
                         className="px-3 py-1.5 rounded-xl bg-white hover:bg-[#E84A27] hover:text-white text-[#181615] border border-[#DDD6C9] hover:border-[#E84A27] text-xs font-black flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
                       >
                         <Pencil className="w-3.5 h-3.5" />
-                        <span>Edit / AI Shift</span>
+                        <span>Dish Studio</span>
                       </button>
 
                       {spot.dish_highlights.length > 1 && (
@@ -948,7 +1363,7 @@ export function SeedingCandidateCard({
                           type="button"
                           onClick={() => handleRemoveDish(dish.id, dish.dish_name)}
                           className="p-1.5 rounded-xl text-zinc-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors cursor-pointer"
-                          title={`Remove "${dish.dish_name}" from candidate spot`}
+                          title={`Remove "${dish.dish_name}"`}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -982,9 +1397,29 @@ export function SeedingCandidateCard({
             </div>
 
             {spot.verification_status === "seeded" ? (
-              <div className="flex items-center gap-2 rounded-2xl border border-violet-200 bg-violet-50 px-3.5 py-3 text-[11.5px] font-bold text-violet-700">
-                <Database className="h-4 w-4 shrink-0" />
-                Already seeded to the production database
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-2xl border border-emerald-200 bg-emerald-50/75 px-3.5 py-3">
+                <div className="flex items-center gap-2 text-xs font-bold text-emerald-800">
+                  <Database className="h-4 w-4 shrink-0" />
+                  <span>Live on Radar — cover &amp; dish edits sync automatically</span>
+                </div>
+                {onSyncSeeded && (
+                  <button
+                    type="button"
+                    disabled={isSyncingSeeded}
+                    onClick={async () => {
+                      setIsSyncingSeeded(true);
+                      try {
+                        await onSyncSeeded(spot.id);
+                      } finally {
+                        setIsSyncingSeeded(false);
+                      }
+                    }}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#181615] hover:bg-[#E84A27] text-white px-3.5 py-2 text-[11px] font-black transition-colors cursor-pointer disabled:opacity-50 shrink-0"
+                  >
+                    <RefreshCw className={`h-3.5 w-3.5 ${isSyncingSeeded ? "animate-spin" : ""}`} />
+                    <span>{isSyncingSeeded ? "Syncing..." : "Re-sync Live DB"}</span>
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-3 gap-1 rounded-2xl border border-[#DDD6C9] bg-white p-1">
@@ -992,7 +1427,7 @@ export function SeedingCandidateCard({
                   type="button"
                   onClick={() => handleStatusChange("approved")}
                   title="Approve for database seeding"
-                  className={`flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-[11px] font-black transition-all ${
+                  className={`flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-[11px] font-black transition-all cursor-pointer ${
                     spot.verification_status === "approved"
                       ? "bg-emerald-600 text-white shadow-xs"
                       : "text-zinc-600 hover:bg-emerald-50 hover:text-emerald-800"
@@ -1005,7 +1440,7 @@ export function SeedingCandidateCard({
                   type="button"
                   onClick={() => handleStatusChange("needs_photo")}
                   title="Flag this spot for a better food photo"
-                  className={`flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-[11px] font-black transition-all ${
+                  className={`flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-[11px] font-black transition-all cursor-pointer ${
                     spot.verification_status === "needs_photo"
                       ? "bg-amber-400 text-black shadow-xs"
                       : "text-zinc-600 hover:bg-amber-50 hover:text-amber-800"
@@ -1018,7 +1453,7 @@ export function SeedingCandidateCard({
                   type="button"
                   onClick={() => handleStatusChange("rejected")}
                   title="Reject this candidate"
-                  className={`flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-[11px] font-black transition-all ${
+                  className={`flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-[11px] font-black transition-all cursor-pointer ${
                     spot.verification_status === "rejected"
                       ? "bg-rose-600 text-white shadow-xs"
                       : "text-zinc-600 hover:bg-rose-50 hover:text-rose-800"
@@ -1035,10 +1470,10 @@ export function SeedingCandidateCard({
                 type="button"
                 onClick={handleCommitSingleSpot}
                 disabled={isCommittingSpot || !allDishesVerified}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#E84A27] px-4 py-3 text-xs font-black text-white shadow-md shadow-[#E84A27]/25 transition-all hover:bg-[#d03d1b] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#E84A27] px-4 py-3 text-xs font-black text-white shadow-md shadow-[#E84A27]/25 transition-all hover:bg-[#d03d1b] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
                 title={
                   !allDishesVerified
-                    ? "Verify all dishes or click 'Use Only This Dish' first"
+                    ? "Verify all dishes or click 'Solo Dish' first"
                     : `Commit ${spot.name} directly to production database`
                 }
               >
@@ -1074,380 +1509,6 @@ export function SeedingCandidateCard({
           }}
           onClose={() => setEditingDish(null)}
         />
-      )}
-
-      {/* Restaurant Card (FoodSpotCard) Edit Modal */}
-      {isEditingRestaurantCard && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
-          <div
-            className="relative w-full max-w-xl overflow-hidden rounded-3xl bg-[#FAF7F2] border border-[#EAE5DC] text-[#181615] shadow-2xl flex flex-col max-h-[90vh]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-[#EAE5DC] bg-white">
-              <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-[#E84A27] bg-[#E84A27]/10 px-2 py-0.5 rounded-full">
-                  Restaurant Card Editor (FoodSpotCard)
-                </span>
-                <h3 className="font-comico font-black text-lg text-[#181615] tracking-wide mt-0.5">
-                  {spotName || spot.name}
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsEditingRestaurantCard(false)}
-                className="p-2 rounded-xl text-zinc-400 hover:text-[#181615] hover:bg-zinc-100 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form
-              onSubmit={handleSaveRestaurantCard}
-              className="p-6 space-y-4 overflow-y-auto flex-1"
-            >
-              {/* Live 1:1 Cover Photo Preview */}
-              <div className="flex items-center gap-4 p-3.5 rounded-2xl bg-[#EFE8DC] border border-[#181615]/10">
-                <div className="relative w-24 h-24 rounded-2xl overflow-hidden shrink-0 bg-[#EAE6DF] ring-1 ring-black/10">
-                  {spotCoverUrl ? (
-                    <Image
-                      src={spotCoverUrl}
-                      alt={spotName}
-                      fill
-                      unoptimized
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-zinc-400">
-                      <ImageIcon className="w-7 h-7 opacity-40" />
-                    </div>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1 space-y-1">
-                  <span className="text-[11px] font-semibold text-[#e84a27] uppercase font-comico block">
-                    {taxonomy.spotLabel}
-                  </span>
-                  <h4 className="font-comico text-base text-[#181615] truncate">{spotName}</h4>
-                  <p className="text-xs text-zinc-600 truncate">
-                    {spotNeighborhood} · {spotPriceLevel} · ★ {spotRating}
-                  </p>
-                  <p className="text-xs font-bold text-[#181615] truncate">
-                    <span className="text-[#e84a27]">✦</span> {spotSignatureDish}
-                  </p>
-                </div>
-              </div>
-
-              {/* Cover Photo Source Switcher */}
-              <div className="space-y-2.5">
-                <div className="grid grid-cols-3 gap-1 bg-[#EFEAE1] p-1 rounded-xl">
-                  <button
-                    type="button"
-                    onClick={() => setSpotPhotoTab("upload")}
-                    className={`py-1.5 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
-                      spotPhotoTab === "upload"
-                        ? "bg-[#E84A27] text-white shadow-xs"
-                        : "text-zinc-600 hover:text-black"
-                    }`}
-                  >
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>Upload / Paste</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSpotPhotoTab("google")}
-                    className={`py-1.5 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
-                      spotPhotoTab === "google"
-                        ? "bg-white text-[#181615] shadow-xs"
-                        : "text-zinc-600"
-                    }`}
-                  >
-                    <Camera className="w-3.5 h-3.5" />
-                    <span>Google ({spotGooglePhotos.length})</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSpotPhotoTab("url")}
-                    className={`py-1.5 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
-                      spotPhotoTab === "url"
-                        ? "bg-white text-[#181615] shadow-xs"
-                        : "text-zinc-600"
-                    }`}
-                  >
-                    <LinkIcon className="w-3.5 h-3.5" />
-                    <span>Direct URL</span>
-                  </button>
-                </div>
-
-                {spotPhotoTab === "upload" ? (
-                  <div className="p-4 rounded-2xl bg-white border border-[#EAE5DC] space-y-3">
-                    <div
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        setIsDraggingCover(true);
-                      }}
-                      onDragLeave={(e) => {
-                        e.preventDefault();
-                        setIsDraggingCover(false);
-                      }}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        setIsDraggingCover(false);
-                        const files = e.dataTransfer.files;
-                        if (files && files[0]) {
-                          void uploadCoverFile(files[0]);
-                        }
-                      }}
-                      onClick={() => coverFileInputRef.current?.click()}
-                      className={`relative border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${
-                        isDraggingCover
-                          ? "border-[#E84A27] bg-[#E84A27]/5 scale-[0.99]"
-                          : "border-[#DDD6C9] hover:border-[#E84A27]/60 bg-[#FAF7F2] hover:bg-white"
-                      }`}
-                    >
-                      <input
-                        ref={coverFileInputRef}
-                        type="file"
-                        accept="image/png,image/jpeg,image/jpg,image/webp,image/avif"
-                        className="hidden"
-                        onChange={(e) => {
-                          const files = e.target.files;
-                          if (files && files[0]) {
-                            void uploadCoverFile(files[0]);
-                          }
-                        }}
-                      />
-
-                      <div className="flex flex-col items-center justify-center gap-1.5">
-                        {isUploadingCover ? (
-                          <>
-                            <RefreshCw className="w-6 h-6 text-[#E84A27] animate-spin" />
-                            <p className="text-xs font-bold text-[#181615]">Processing & uploading cover...</p>
-                            <p className="text-[10.5px] text-zinc-500">Optimizing with Sharp to 1080px WebP</p>
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="w-6 h-6 text-[#E84A27]" />
-                            <p className="text-xs font-extrabold text-[#181615]">
-                              Click to browse or drop venue cover photo
-                            </p>
-                            <p className="text-[10.5px] text-zinc-500">
-                              Or press <kbd className="px-1.5 py-0.5 rounded bg-zinc-100 border border-zinc-300 font-mono text-[10px] text-zinc-800 font-black">Ctrl+V</kbd> anywhere in modal
-                            </p>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {coverUploadError && (
-                      <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-xs font-bold text-rose-700 flex items-center gap-1.5">
-                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                        <span>{coverUploadError}</span>
-                      </div>
-                    )}
-                  </div>
-                ) : spotPhotoTab === "google" ? (
-                  <div className="p-3 rounded-2xl bg-white border border-[#EAE5DC] space-y-2.5">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={spotGoogleQuery}
-                        onChange={(e) => setSpotGoogleQuery(e.target.value)}
-                        className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-[#FAF7F2] border border-[#DDD6C9]"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => fetchSpotGooglePhotos(spotGoogleQuery, false)}
-                        disabled={isLoadingSpotGoogle}
-                        className="px-3 py-1.5 rounded-lg bg-[#181615] text-white text-xs font-bold flex items-center gap-1 cursor-pointer"
-                      >
-                        <Search className="w-3 h-3" />
-                        <span>Search</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => fetchSpotGooglePhotos(spotGoogleQuery, true)}
-                        disabled={isLoadingSpotGoogle}
-                        title="Force fresh API call"
-                        className="p-1.5 rounded-lg bg-[#FAF7F2] border border-[#DDD6C9] text-zinc-600 cursor-pointer"
-                      >
-                        <RefreshCw
-                          className={`w-3.5 h-3.5 ${isLoadingSpotGoogle ? "animate-spin" : ""}`}
-                        />
-                      </button>
-                    </div>
-
-                    {isLoadingSpotGoogle ? (
-                      <div className="py-4 text-center text-xs text-zinc-500">
-                        Loading Google photos...
-                      </div>
-                    ) : spotGooglePhotos.length === 0 ? (
-                      <div className="py-3 text-center text-xs text-zinc-500">
-                        No Google photos loaded yet. Click Search or paste a Direct URL.
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto p-1">
-                        {spotGooglePhotos.map((pUrl, i) => (
-                          <button
-                            key={pUrl + i}
-                            type="button"
-                            onClick={() => setSpotCoverUrl(pUrl)}
-                            className={`relative aspect-square rounded-xl overflow-hidden border-2 cursor-pointer ${
-                              spotCoverUrl === pUrl ? "border-[#E84A27]" : "border-transparent"
-                            }`}
-                          >
-                            <Image
-                              src={pUrl}
-                              alt="Venue photo"
-                              fill
-                              unoptimized
-                              className="object-cover"
-                            />
-                            {spotCoverUrl === pUrl && (
-                              <div className="absolute inset-0 bg-[#E84A27]/30 flex items-center justify-center">
-                                <Check className="w-4 h-4 text-white" />
-                              </div>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="p-3 rounded-2xl bg-white border border-[#EAE5DC] space-y-1.5">
-                    <label className="block text-xs font-bold">Restaurant Cover Image URL</label>
-                    <input
-                      type="url"
-                      value={spotCoverUrl}
-                      onChange={(e) => setSpotCoverUrl(e.target.value)}
-                      placeholder="https://..."
-                      className="w-full px-3 py-2 text-xs rounded-xl bg-[#FAF7F2] border border-[#DDD6C9]"
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Restaurant Metadata Inputs */}
-              <div className="p-4 rounded-2xl bg-white border border-[#EAE5DC] space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 mb-1">
-                      Restaurant Name
-                    </label>
-                    <input
-                      type="text"
-                      value={spotName}
-                      onChange={(e) => setSpotName(e.target.value)}
-                      required
-                      className="w-full px-3 py-2 text-xs font-semibold rounded-xl bg-[#FAF7F2] border border-[#DDD6C9]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 mb-1">
-                      Signature Dish (Line 4)
-                    </label>
-                    <input
-                      type="text"
-                      value={spotSignatureDish}
-                      onChange={(e) => setSpotSignatureDish(e.target.value)}
-                      className="w-full px-3 py-2 text-xs font-semibold rounded-xl bg-[#FAF7F2] border border-[#DDD6C9]"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 mb-1">Address</label>
-                    <input
-                      type="text"
-                      value={spotAddress}
-                      onChange={(e) => setSpotAddress(e.target.value)}
-                      className="w-full px-3 py-2 text-xs font-semibold rounded-xl bg-[#FAF7F2] border border-[#DDD6C9]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 mb-1">
-                      Neighborhood
-                    </label>
-                    <input
-                      type="text"
-                      value={spotNeighborhood}
-                      onChange={(e) => setSpotNeighborhood(e.target.value)}
-                      className="w-full px-3 py-2 text-xs font-semibold rounded-xl bg-[#FAF7F2] border border-[#DDD6C9]"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 mb-1">Category</label>
-                    <input
-                      type="text"
-                      value={spotCategory}
-                      onChange={(e) => setSpotCategory(e.target.value)}
-                      className="w-full px-3 py-2 text-xs font-semibold rounded-xl bg-[#FAF7F2] border border-[#DDD6C9]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 mb-1">
-                      Price Tier
-                    </label>
-                    <select
-                      value={spotPriceLevel}
-                      onChange={(e) => setSpotPriceLevel(e.target.value as "$" | "$$" | "$$$")}
-                      className="w-full px-3 py-2 text-xs font-bold rounded-xl bg-[#FAF7F2] border border-[#DDD6C9]"
-                    >
-                      <option value="$">$ (Budget)</option>
-                      <option value="$$">$$ (Moderate)</option>
-                      <option value="$$$">$$$ (Elevated)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-zinc-700 mb-1">
-                      Google Rating
-                    </label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="1"
-                      max="5"
-                      value={spotRating}
-                      onChange={(e) => setSpotRating(e.target.value)}
-                      className="w-full px-3 py-2 text-xs font-bold rounded-xl bg-[#FAF7F2] border border-[#DDD6C9]"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-zinc-700 mb-1">
-                    Why Curated / Venue Description
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={spotWhyCurated}
-                    onChange={(e) => setSpotWhyCurated(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl bg-[#FAF7F2] border border-[#DDD6C9] resize-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#EAE5DC]">
-                <button
-                  type="button"
-                  onClick={() => setIsEditingRestaurantCard(false)}
-                  className="px-4 py-2 text-xs font-bold rounded-xl text-zinc-500 hover:text-[#181615] cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSavingSpot}
-                  className="px-6 py-2.5 text-xs font-black rounded-xl bg-[#E84A27] hover:bg-[#d03d1b] text-white shadow-md shadow-[#E84A27]/25 cursor-pointer"
-                >
-                  {isSavingSpot ? "Saving..." : "Save Restaurant Card"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
       )}
 
       {/* ── AI QUICK SHIFT MODAL (NLP DROP UPDATER + LIVE DIFF PREVIEW) ── */}

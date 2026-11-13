@@ -2,22 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
 import fs from "fs";
 import path from "path";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { PLACES_API_BASE } from "@/lib/places/google";
 import type { StagedCandidateSpot } from "@/app/api/admin/seeding-lab/route";
+import { requireAdmin } from "@/app/api/admin/_auth";
 
 export const runtime = "nodejs";
-
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const SUPABASE_KEY =
-  process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-
-function getAdminClient(): SupabaseClient | null {
-  if (!SUPABASE_URL || !SUPABASE_KEY) return null;
-  return createClient(SUPABASE_URL, SUPABASE_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
 
 function getStagedFilePath(): string {
   const p1 = path.join(process.cwd(), "curation", "staged_candidates.json");
@@ -409,6 +398,9 @@ function deterministicShiftParser(
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireAdmin();
+    if (!auth.ok) return auth.response;
+
     const body = await req.json();
     const { mode = "preview", spotId, rawText = "", proposal: incomingProposal } = body as {
       mode?: "preview" | "apply";
@@ -575,7 +567,7 @@ export async function POST(req: NextRequest) {
     fs.writeFileSync(filePath, JSON.stringify(candidates, null, 2), "utf8");
 
     // 2. Sync to Supabase (`venues` + `food_posts`) if Supabase admin client is available
-    const supabase = getAdminClient();
+    const supabase = auth.adminClient;
     let syncedVenueId: string | null = null;
     let syncedPostsCount = 0;
 

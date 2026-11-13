@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { Camera, RefreshCw, Check, Link as LinkIcon, Loader2, Sparkles, Image as ImageIcon } from "lucide-react";
-import { uploadDishPhoto } from "@/lib/supabase/data";
+import { uploadAdminImage } from "@/lib/adminUpload";
 
 export interface VisualPhotoSwitcherProps {
   currentImageUrl: string;
@@ -191,28 +191,26 @@ export function VisualPhotoSwitcher({
     onSelectPhoto(photoUrl);
   };
 
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsUploading(true);
+    setUploadError(null);
     try {
-      // Try Supabase dish-photos bucket
-      const res = await uploadDishPhoto(file);
+      const res = await uploadAdminImage(file, {
+        spotId: venueName || "venue",
+        dishId: category || "cover",
+      });
       if (res.url) {
         onSelectPhoto(res.url);
-        return;
+      } else {
+        setUploadError(res.error || "Failed to upload photo.");
       }
-      // Fallback to local Data URI if guest / no auth
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === "string") {
-          onSelectPhoto(reader.result);
-        }
-      };
-      reader.readAsDataURL(file);
-    } catch {
-      // Fallback
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Failed to upload photo.");
     } finally {
       setIsUploading(false);
     }
@@ -318,6 +316,9 @@ export function VisualPhotoSwitcher({
               {showUrlInput ? "Hide image link" : "Or paste image link"}
             </button>
           </div>
+          {uploadError && (
+            <p className="text-[11px] font-semibold text-rose-600">{uploadError}</p>
+          )}
         </div>
       </div>
 

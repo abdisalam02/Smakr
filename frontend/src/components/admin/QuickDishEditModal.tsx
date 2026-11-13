@@ -14,7 +14,10 @@ import {
   Camera,
   Wand2,
   Upload,
+  Pencil,
+  Tag,
 } from "lucide-react";
+import { uploadAdminImage } from "@/lib/adminUpload";
 import type { StagedDishHighlight } from "@/app/api/admin/seeding-lab/route";
 import {
   ANGLE_PRESETS,
@@ -127,6 +130,7 @@ export function QuickDishEditModal({
   const [activeTab, setActiveTab] = useState<"upload" | "restyle" | "google" | "url" | "presets">(
     isPopup ? "upload" : "restyle"
   );
+  const [activeField, setActiveField] = useState<"photo" | "name" | "price" | "meta">("photo");
 
   // Direct File Upload & Clipboard Paste state
   const [isUploading, setIsUploading] = useState(false);
@@ -138,19 +142,13 @@ export function QuickDishEditModal({
     setIsUploading(true);
     setUploadError(null);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("spotId", spotId || spotName);
-      formData.append("dishId", dish.id || dishName);
-
-      const res = await fetch("/api/admin/upload-seed-image", {
-        method: "POST",
-        body: formData,
+      const { url, error } = await uploadAdminImage(file, {
+        spotId: spotId || spotName,
+        dishId: dish.id || dishName,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload failed");
+      if (!url) throw new Error(error || "Upload failed");
 
-      const newUrl = data.url;
+      const newUrl = url;
       setDishImage(newUrl);
       setOriginalBeforeRemixImage(newUrl);
       setTransformedImageUrl(null);
@@ -351,34 +349,38 @@ export function QuickDishEditModal({
   const presetsForCategory = CURATED_FOOD_PRESETS[category] || CURATED_FOOD_PRESETS.bakery;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
+    <div
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150"
+      onClick={onClose}
+    >
       <div
-        className="relative w-full max-w-2xl overflow-hidden rounded-3xl bg-[#FAF7F2] border border-[#EAE5DC] text-[#181615] shadow-2xl flex flex-col max-h-[92vh]"
+        className="relative w-full max-w-2xl overflow-hidden rounded-t-3xl sm:rounded-3xl bg-[#FAF7F2] border border-[#EAE5DC] text-[#181615] shadow-2xl flex flex-col max-h-[92dvh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#EAE5DC] bg-white">
-          <div>
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-[#EAE5DC] bg-white shrink-0">
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-black uppercase tracking-wider text-[#E84A27] bg-[#E84A27]/10 px-2 py-0.5 rounded-full">
-                Dish & AI Camera Studio
+                Dish Studio
               </span>
-              <span className="text-xs font-bold text-zinc-500">{spotName}</span>
+              <span className="text-xs font-bold text-zinc-500 truncate">{spotName}</span>
             </div>
-            <h3 className="font-comico font-black text-lg text-[#181615] tracking-wide mt-0.5 truncate max-w-[440px]">
-              {dishName || "Unnamed Dish"}
-            </h3>
+            <p className="text-[11px] text-zinc-500 mt-0.5">
+              Tap dish photo, name, price, or tags directly on the preview card to edit.
+            </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-zinc-400 hover:text-[#181615] hover:bg-zinc-100 transition-colors cursor-pointer"
+            aria-label="Close"
+            className="p-2 rounded-xl text-zinc-400 hover:text-[#181615] hover:bg-zinc-100 transition-colors cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSave} className="p-6 space-y-5 overflow-y-auto flex-1">
+        <form onSubmit={handleSave} className="p-4 sm:p-6 space-y-4 overflow-y-auto no-scrollbar flex-1">
           {/* ── LIVE PHOTO HERO OR SIDE-BY-SIDE COMPARISON ── */}
           {transformedImageUrl ? (
             <div className="space-y-3 p-4 rounded-2xl bg-white border-2 border-[#E84A27]/40 shadow-sm">
@@ -471,61 +473,220 @@ export function QuickDishEditModal({
               </div>
             </div>
           ) : (
-            <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-[#EAE5DC] border border-[#DDD6C9] shadow-inner">
-              {dishImage && !imgError ? (
-                <Image
-                  src={dishImage}
-                  alt={dishName}
-                  fill
-                  unoptimized
-                  className="object-cover"
-                  onError={() => {
-                    setImgError(true);
-                    setIsVerified(false);
-                  }}
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center w-full h-full text-zinc-400 gap-2">
-                  <ImageIcon className="w-10 h-10 opacity-40" />
-                  <span className="text-xs font-semibold">
-                    {imgError ? "⚠️ Image failed to load" : "No image selected"}
-                  </span>
-                </div>
-              )}
-
-              {/* Dark gradient overlay at bottom */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-transparent pointer-events-none" />
-
-              {/* Overlaid Status Badge top-left */}
-              <div className="absolute top-3 left-3 z-10">
-                {isVerified && !imgError ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500 text-white shadow-md">
-                    <Check className="w-3.5 h-3.5" /> Verified Food Macro
-                  </span>
+            <div className="space-y-3">
+              {/* Interactive 4:3 Dish Preview — click elements directly to edit */}
+              <div
+                onClick={() => {
+                  if (activeField !== "name" && activeField !== "price") {
+                    setActiveField("photo");
+                  }
+                }}
+                className="group relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-[#EAE5DC] border border-[#DDD6C9] shadow-inner cursor-pointer"
+              >
+                {dishImage && !imgError ? (
+                  <Image
+                    src={dishImage}
+                    alt={dishName}
+                    fill
+                    unoptimized
+                    className="object-cover transition-transform duration-300 group-hover:scale-[1.015]"
+                    onError={() => {
+                      setImgError(true);
+                      setIsVerified(false);
+                    }}
+                  />
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500 text-black shadow-md">
-                    <AlertTriangle className="w-3.5 h-3.5" /> Unverified / Missing
-                  </span>
+                  <div className="flex flex-col items-center justify-center w-full h-full text-zinc-400 gap-2">
+                    <ImageIcon className="w-10 h-10 opacity-40" />
+                    <span className="text-xs font-semibold">
+                      {imgError ? "Image failed to load — tap to replace" : "Tap to add dish photo"}
+                    </span>
+                  </div>
                 )}
+
+                {/* Dark gradient overlay at bottom */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent pointer-events-none" />
+
+                {/* Top-Left Verified Toggle */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsVerified((v) => !v);
+                  }}
+                  title="Toggle verified food macro status"
+                  className={`absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold shadow-md transition-transform active:scale-95 cursor-pointer ${
+                    isVerified && !imgError
+                      ? "bg-emerald-500 text-white"
+                      : "bg-amber-400 text-[#181615]"
+                  }`}
+                >
+                  {isVerified && !imgError ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Verified Photo</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      <span>Unverified</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Top-Right Photo Trigger Pill */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveField("photo");
+                  }}
+                  className="absolute top-3 right-3 z-10 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/65 hover:bg-black/85 text-white text-[11px] font-bold backdrop-blur-xs border border-white/15 cursor-pointer transition-colors"
+                >
+                  <Camera className="w-3 h-3 text-[#E84A27]" />
+                  <span>Change Photo</span>
+                </button>
+
+                {/* Bottom-Right Price Pill (Inline Click-to-Edit) */}
+                <div
+                  className="absolute bottom-3 right-3 z-20"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {activeField === "price" ? (
+                    <div className="flex items-center gap-1 bg-white rounded-full px-2.5 py-1 shadow-lg border border-[#E84A27]">
+                      <input
+                        type="number"
+                        autoFocus
+                        value={priceNok}
+                        onChange={(e) => setPriceNok(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            setActiveField("photo");
+                          }
+                        }}
+                        placeholder="185"
+                        className="w-16 text-xs font-black text-[#181615] bg-transparent focus:outline-none"
+                      />
+                      <span className="text-[10px] font-bold text-zinc-400">NOK</span>
+                      <button
+                        type="button"
+                        onClick={() => setActiveField("photo")}
+                        className="p-0.5 rounded-full bg-[#E84A27] text-white cursor-pointer"
+                      >
+                        <Check className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setActiveField("price")}
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#E84A27] hover:bg-[#d03d1b] text-white font-black text-xs shadow-md cursor-pointer transition-transform active:scale-95"
+                    >
+                      <span>{priceNok ? `${priceNok} NOK` : "+ Price"}</span>
+                      <Pencil className="w-2.5 h-2.5 opacity-80" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Bottom-Left Comico Dish Name (Inline Click-to-Edit) */}
+                <div
+                  className="absolute bottom-3 left-3 right-28 z-20"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {activeField === "name" ? (
+                    <div className="flex items-center gap-1.5 bg-white/95 rounded-xl px-2.5 py-1.5 shadow-lg border border-[#E84A27]">
+                      <input
+                        type="text"
+                        autoFocus
+                        value={dishName}
+                        onChange={(e) => setDishName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            setActiveField("photo");
+                          }
+                        }}
+                        placeholder="Dish name..."
+                        className="w-full text-sm font-bold text-[#181615] bg-transparent focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setActiveField("photo")}
+                        className="px-2 py-0.5 rounded-lg bg-[#E84A27] text-white text-[11px] font-bold shrink-0 cursor-pointer"
+                      >
+                        OK
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setActiveField("name")}
+                      className="group/title inline-flex items-center gap-1.5 max-w-full text-left cursor-pointer"
+                    >
+                      <h4 className="font-comico font-black text-lg sm:text-xl text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] truncate group-hover/title:underline decoration-[#E84A27] decoration-2 underline-offset-4">
+                        {dishName || "Tap to name dish"}
+                      </h4>
+                      <Pencil className="w-3.5 h-3.5 text-white/80 shrink-0" />
+                    </button>
+                  )}
+                </div>
               </div>
 
-              {/* Price Pill bottom-right */}
-              {priceNok && (
-                <div className="absolute bottom-3 right-3 px-3 py-1 rounded-full bg-[#E84A27] text-white font-black text-xs shadow-md">
-                  {priceNok} NOK
+              {/* Interactive Review & Tags Pill Strip directly below Preview */}
+              <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 rounded-2xl bg-white border border-[#EAE5DC]">
+                <button
+                  type="button"
+                  onClick={() => setActiveField("meta")}
+                  className="flex-1 min-w-0 text-left flex items-center gap-2 cursor-pointer group"
+                >
+                  <Tag className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[11px] font-black text-[#181615] capitalize">
+                        {category.replace("_", " ")}
+                      </span>
+                      {tasteTagsStr.trim() && (
+                        <span className="text-[11px] text-zinc-500 truncate">
+                          · {tasteTagsStr}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-zinc-500 truncate">
+                      {reviewText.trim() || "Tap to add insider tasting note..."}
+                    </p>
+                  </div>
+                </button>
+                <div className="flex items-center gap-1 shrink-0 bg-[#EFEAE1] p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setActiveField("photo")}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${
+                      activeField === "photo"
+                        ? "bg-[#181615] text-white"
+                        : "text-zinc-600 hover:text-[#181615]"
+                    }`}
+                  >
+                    Photo Studio
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveField("meta")}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${
+                      activeField === "meta"
+                        ? "bg-[#E84A27] text-white"
+                        : "text-zinc-600 hover:text-[#181615]"
+                    }`}
+                  >
+                    Note &amp; Tags
+                  </button>
                 </div>
-              )}
-
-              {/* Comico Title Overlay on Photo */}
-              <div className="absolute bottom-3 left-3 right-20 z-10 pointer-events-none">
-                <h4 className="font-comico font-black text-xl text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] truncate">
-                  {dishName}
-                </h4>
               </div>
             </div>
           )}
 
-          {/* ── PHOTO & AI REMIX TABS ── */}
+          {/* ── PHOTO & AI REMIX TABS (shown when Photo Studio active) ── */}
+          {activeField !== "meta" && (
           <div className="space-y-3">
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-1 bg-[#EFEAE1] p-1 rounded-xl">
               <button
@@ -926,81 +1087,75 @@ export function QuickDishEditModal({
               </div>
             )}
           </div>
+          )}
 
-          {/* ── METADATA INPUTS ── */}
-          <div className="space-y-3.5 bg-white p-4 rounded-2xl border border-[#EAE5DC]">
-            <div className="grid grid-cols-3 gap-3">
-              <div className="col-span-2">
-                <label className="block text-xs font-bold text-zinc-700 mb-1">Dish Name</label>
-                <input
-                  type="text"
-                  value={dishName}
-                  onChange={(e) => setDishName(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 text-xs font-semibold rounded-xl bg-[#FAF7F2] border border-[#DDD6C9] text-[#181615] focus:outline-none focus:border-[#E84A27]"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-zinc-700 mb-1">Price (NOK)</label>
-                <input
-                  type="number"
-                  value={priceNok}
-                  onChange={(e) => setPriceNok(e.target.value)}
-                  placeholder="185"
-                  className="w-full px-3 py-2 text-xs font-bold rounded-xl bg-[#FAF7F2] border border-[#DDD6C9] text-[#181615] focus:outline-none focus:border-[#E84A27]"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-bold text-zinc-700 mb-1">Category</label>
-                <input
-                  type="text"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3 py-2 text-xs font-semibold rounded-xl bg-[#FAF7F2] border border-[#DDD6C9] text-[#181615] focus:outline-none focus:border-[#E84A27]"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-zinc-700 mb-1">Taste Tags</label>
-                <input
-                  type="text"
-                  value={tasteTagsStr}
-                  onChange={(e) => setTasteTagsStr(e.target.value)}
-                  placeholder="crispy, spicy, grilled"
-                  className="w-full px-3 py-2 text-xs font-semibold rounded-xl bg-[#FAF7F2] border border-[#DDD6C9] text-[#181615] focus:outline-none focus:border-[#E84A27]"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-zinc-700 mb-1">
-                Culinary Review & Soundbite
-              </label>
-              <textarea
-                rows={2}
-                value={reviewText}
-                onChange={(e) => setReviewText(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl bg-[#FAF7F2] border border-[#DDD6C9] text-[#181615] focus:outline-none focus:border-[#E84A27] resize-none"
-              />
-            </div>
-
-            <label className="flex items-center gap-3 p-3 rounded-xl bg-[#FAF7F2] border border-[#DDD6C9] cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isVerified && !imgError}
-                onChange={(e) => setIsVerified(e.target.checked)}
-                className="w-4 h-4 rounded text-[#E84A27] focus:ring-[#E84A27]"
-              />
-              <div className="text-xs">
-                <span className="font-bold text-[#181615] block">Verified Plated Food Photo</span>
-                <span className="text-zinc-500 text-[11px]">
-                  Confirm this photo is a macro shot of the food itself (no storefronts or clip-art).
+          {/* ── NOTE, CATEGORY & TAGS EDITOR (only shown when activeField === "meta") ── */}
+          {activeField === "meta" && (
+            <div className="space-y-3.5 bg-white p-4 rounded-2xl border border-[#EAE5DC]">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black text-[#181615] uppercase tracking-wider">
+                  Dish Category, Tags &amp; Tasting Note
                 </span>
+                <button
+                  type="button"
+                  onClick={() => setActiveField("photo")}
+                  className="text-[11px] font-bold text-[#E84A27] hover:underline cursor-pointer"
+                >
+                  Back to Photo Studio
+                </button>
               </div>
-            </label>
-          </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-zinc-700 mb-1">Category</label>
+                  <input
+                    type="text"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-semibold rounded-xl bg-[#FAF7F2] border border-[#DDD6C9] text-[#181615] focus:outline-none focus:border-[#E84A27]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-zinc-700 mb-1">Taste Tags</label>
+                  <input
+                    type="text"
+                    value={tasteTagsStr}
+                    onChange={(e) => setTasteTagsStr(e.target.value)}
+                    placeholder="crispy, spicy, grilled"
+                    className="w-full px-3 py-2 text-xs font-semibold rounded-xl bg-[#FAF7F2] border border-[#DDD6C9] text-[#181615] focus:outline-none focus:border-[#E84A27]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-zinc-700 mb-1">
+                  Culinary Review &amp; Soundbite
+                </label>
+                <textarea
+                  rows={3}
+                  value={reviewText}
+                  onChange={(e) => setReviewText(e.target.value)}
+                  placeholder="Insider taste verdict..."
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-[#FAF7F2] border border-[#DDD6C9] text-[#181615] focus:outline-none focus:border-[#E84A27] resize-none"
+                />
+              </div>
+
+              <label className="flex items-center gap-3 p-3 rounded-xl bg-[#FAF7F2] border border-[#DDD6C9] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isVerified && !imgError}
+                  onChange={(e) => setIsVerified(e.target.checked)}
+                  className="w-4 h-4 rounded text-[#E84A27] focus:ring-[#E84A27]"
+                />
+                <div className="text-xs">
+                  <span className="font-bold text-[#181615] block">Verified Plated Food Photo</span>
+                  <span className="text-zinc-500 text-[11px]">
+                    Confirm this photo shows the actual dish (no storefronts or clip-art).
+                  </span>
+                </div>
+              </label>
+            </div>
+          )}
 
           {/* Footer Actions */}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#EAE5DC]">

@@ -23,9 +23,9 @@ import { PopupEventCard } from "@/components/food/PopupEventCard";
 import {
   insertVenue,
   updateVenue as updateVenueDb,
-  uploadDishPhoto,
   insertFoodPost,
 } from "@/lib/supabase/data";
+import { uploadAdminImage, triggerAdminRevalidate } from "@/lib/adminUpload";
 
 export interface AdminPopupWizardModalProps {
   isOpen: boolean;
@@ -74,35 +74,29 @@ export function AdminPopupWizardModal({
   const [showOptionalDetails, setShowOptionalDetails] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // File upload handler
+  // File upload handler (WebP pipeline via /api/admin/upload-seed-image + Supabase fallback)
   const handleFileSelected = async (file: File) => {
+    const previousUrl = selectedImageUrl;
     const objectUrl = URL.createObjectURL(file);
     setSelectedImageUrl(objectUrl);
     setIsUploadingPhoto(true);
 
     try {
-      const { url } = await uploadDishPhoto(file);
+      const { url, error } = await uploadAdminImage(file, {
+        spotId: editingPopupVenue?.id || popupName || "popup",
+      });
       if (url) {
         setSelectedImageUrl(url);
-        showToast("Photo uploaded successfully", "success");
+        showToast("Photo uploaded", "success");
       } else {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          if (typeof reader.result === "string") {
-            setSelectedImageUrl(reader.result);
-          }
-        };
-        reader.readAsDataURL(file);
+        setSelectedImageUrl(previousUrl);
+        showToast(error || "Upload failed — check admin session", "error");
       }
-    } catch {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === "string") {
-          setSelectedImageUrl(reader.result);
-        }
-      };
-      reader.readAsDataURL(file);
+    } catch (err: unknown) {
+      setSelectedImageUrl(previousUrl);
+      showToast(err instanceof Error ? err.message : "Upload failed", "error");
     } finally {
+      URL.revokeObjectURL(objectUrl);
       setIsUploadingPhoto(false);
     }
   };
@@ -334,6 +328,7 @@ export function AdminPopupWizardModal({
         showToast("Pop-up published to live Oslo Radar!", "success");
       }
 
+      await triggerAdminRevalidate();
       onClose();
     } catch (err: any) {
       showToast(err.message || "Failed to publish pop-up", "error");
@@ -344,13 +339,15 @@ export function AdminPopupWizardModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-5 overflow-y-auto"
+      onClick={onClose}
+    >
       {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        onClick={onClose}
         className="fixed inset-0 bg-[#181615]/70 backdrop-blur-sm"
       />
 
@@ -359,20 +356,21 @@ export function AdminPopupWizardModal({
         initial={{ opacity: 0, scale: 0.96, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 12 }}
-        className="relative z-10 w-full max-w-4xl bg-[#FAF7F2] dark:bg-[#1C1917] rounded-3xl border border-[#181615]/10 shadow-2xl overflow-hidden flex flex-col max-h-[92dvh]"
+        onClick={(e) => e.stopPropagation()}
+        className="relative z-10 w-full max-w-4xl bg-[#FAF7F2] dark:bg-[#1C1917] rounded-t-3xl sm:rounded-3xl border border-[#181615]/10 shadow-2xl overflow-hidden flex flex-col max-h-[92dvh]"
       >
         {/* Header */}
-        <div className="px-5 py-4 border-b border-[#181615]/10 flex items-center justify-between bg-[#F5EFE4] dark:bg-[#181615]/50">
-          <div className="flex items-center gap-2.5">
+        <div className="px-4 sm:px-5 py-3.5 border-b border-[#181615]/10 flex items-center justify-between bg-[#F5EFE4] dark:bg-[#181615]/50 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
             <span className="w-8 h-8 rounded-xl bg-[#E84A27] text-white flex items-center justify-center text-sm font-bold font-comico shrink-0 shadow-2xs">
               🎟️
             </span>
-            <div>
-              <h3 className="font-comico text-base sm:text-lg font-black text-[#181615] dark:text-white uppercase tracking-tight">
+            <div className="min-w-0">
+              <h3 className="font-comico text-base sm:text-lg font-black text-[#181615] dark:text-white uppercase tracking-tight truncate">
                 {editingPopupVenue ? "Edit Pop-up Residency" : "Create Pop-Up Drop"}
               </h3>
-              <p className="text-[11px] text-zinc-500 font-medium">
-                Photo, brand concept, social handle, and drop timing for Oslo radar
+              <p className="text-[11px] text-zinc-500 font-medium truncate">
+                Live preview updates as you tap fields below
               </p>
             </div>
           </div>
@@ -380,16 +378,17 @@ export function AdminPopupWizardModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:hover:text-white cursor-pointer transition-colors"
+            aria-label="Close"
+            className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:hover:text-white cursor-pointer transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Content Body: 2-Column Responsive Layout */}
-        <div className="p-5 sm:p-6 overflow-y-auto flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* LEFT COLUMN: Input Fields (7 cols on lg) */}
-          <div className="lg:col-span-7 space-y-4">
+        {/* Content Body: Preview-First on Mobile, 2-Column on Desktop */}
+        <div className="p-4 sm:p-6 overflow-y-auto no-scrollbar flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
+          {/* FORM COLUMN (7 cols on lg, 2nd on mobile so live card stays up top) */}
+          <div className="order-2 lg:order-1 lg:col-span-7 space-y-4">
             {/* 1. HERO PHOTO DROPZONE */}
             <div className="p-4 rounded-2xl bg-[#F5EFE4] dark:bg-[#23201D] border border-[#181615]/10 space-y-3">
               <div className="flex items-center justify-between">
@@ -726,17 +725,19 @@ export function AdminPopupWizardModal({
             </div>
           </div>
 
-          {/* RIGHT COLUMN: Live Card Preview (5 cols on lg) */}
-          <div className="lg:col-span-5 flex flex-col items-center justify-start space-y-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 self-start">
-              Live Feed Preview
-            </span>
-            <div className="w-full max-w-[340px]">
+          {/* PREVIEW COLUMN: Interactive Top Card on Mobile, Sticky Right on Desktop */}
+          <div className="order-1 lg:order-2 lg:col-span-5 flex flex-col items-center justify-start space-y-2.5">
+            <div className="w-full flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                Live Feed Preview
+              </span>
+              <span className="text-[10px] font-semibold text-[#E84A27] bg-[#E84A27]/10 px-2 py-0.5 rounded-full">
+                Updates live
+              </span>
+            </div>
+            <div className="w-full max-w-[330px]">
               <PopupEventCard venue={previewVenue} post={previewPost} />
             </div>
-            <p className="text-[11px] text-zinc-400 text-center max-w-[280px]">
-              This is exactly how diners will see the pop-up card in the Oslo food feed.
-            </p>
           </div>
         </div>
 

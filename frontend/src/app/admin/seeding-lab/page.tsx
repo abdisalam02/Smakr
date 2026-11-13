@@ -91,7 +91,7 @@ export default function SeedingLabPage() {
 
   const currentModeCandidates = activeMode === "regular" ? regularCandidates : popupCandidates;
 
-  // Update spot metadata
+  // Update spot metadata (auto-syncs seeded spots to Supabase on the server)
   const handleUpdateSpot = async (spotId: string, updates: Partial<StagedCandidateSpot>) => {
     try {
       const res = await fetch("/api/admin/seeding-lab", {
@@ -105,12 +105,24 @@ export default function SeedingLabPage() {
       setCandidates((prev) =>
         prev.map((s) => (s.id === spotId ? (data.spot as StagedCandidateSpot) : s))
       );
+
+      if (Array.isArray(data.syncErrors) && data.syncErrors.length > 0) {
+        setNotification({
+          type: "error",
+          message: `Saved to staging, but live sync warned: ${data.syncErrors.join("; ")}`,
+        });
+      } else if (data.syncedToSupabase) {
+        setNotification({
+          type: "success",
+          message: `Synced "${data.spot?.name || "spot"}" live to Radar & Feed.`,
+        });
+      }
     } catch (err: any) {
       setNotification({ type: "error", message: err.message || "Could not save changes." });
     }
   };
 
-  // Update specific dish
+  // Update specific dish (auto-syncs seeded spots to Supabase on the server)
   const handleUpdateDish = async (
     spotId: string,
     dishId: string,
@@ -128,8 +140,71 @@ export default function SeedingLabPage() {
       setCandidates((prev) =>
         prev.map((s) => (s.id === spotId ? (data.spot as StagedCandidateSpot) : s))
       );
+
+      if (Array.isArray(data.syncErrors) && data.syncErrors.length > 0) {
+        setNotification({
+          type: "error",
+          message: `Dish saved, live sync warned: ${data.syncErrors.join("; ")}`,
+        });
+      } else if (data.syncedToSupabase) {
+        setNotification({
+          type: "success",
+          message: `Dish & photo synced live to Supabase for "${data.spot?.name || "spot"}".`,
+        });
+      }
     } catch (err: any) {
       setNotification({ type: "error", message: err.message || "Could not save dish changes." });
+    }
+  };
+
+  const handleAddDish = async (spotId: string, newDish: Partial<StagedDishHighlight>) => {
+    try {
+      const res = await fetch("/api/admin/seeding-lab", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ spotId, action: "add_dish", newDish }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to add dish");
+      setCandidates((prev) =>
+        prev.map((s) => (s.id === spotId ? (data.spot as StagedCandidateSpot) : s))
+      );
+      setNotification({
+        type: "success",
+        message: data.syncedToSupabase
+          ? `Added dish & synced live for "${data.spot?.name}".`
+          : `Added dish to "${data.spot?.name}".`,
+      });
+    } catch (err: any) {
+      setNotification({ type: "error", message: err.message || "Could not add dish." });
+    }
+  };
+
+  const handleSyncSeeded = async (spotId: string) => {
+    try {
+      const res = await fetch("/api/admin/seeding-lab", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ spotId, action: "sync_seeded" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Sync failed");
+      setCandidates((prev) =>
+        prev.map((s) => (s.id === spotId ? (data.spot as StagedCandidateSpot) : s))
+      );
+      if (Array.isArray(data.syncErrors) && data.syncErrors.length > 0) {
+        setNotification({
+          type: "error",
+          message: `Live sync errors: ${data.syncErrors.join("; ")}`,
+        });
+      } else {
+        setNotification({
+          type: "success",
+          message: `Synced "${data.spot?.name}" cover, dishes & photos to live DB.`,
+        });
+      }
+    } catch (err: any) {
+      setNotification({ type: "error", message: err.message || "Could not sync to Supabase." });
     }
   };
 
@@ -217,7 +292,7 @@ export default function SeedingLabPage() {
   const approvedInMode = stats.approved;
 
   return (
-    <div className="h-full w-full overflow-y-auto no-scrollbar bg-[#F7F2E8] text-[#181615] font-sans antialiased">
+    <div className="h-dvh w-full overflow-y-auto no-scrollbar bg-[#F7F2E8] text-[#181615] font-sans antialiased">
       {/* Soft mask behind the floating global header so cards never scroll into it. */}
       <div className="pointer-events-none fixed inset-x-0 top-0 z-30 h-[92px] bg-[#F7F2E8] [mask-image:linear-gradient(to_bottom,black_62%,transparent_100%)]" />
 
@@ -477,6 +552,8 @@ export default function SeedingLabPage() {
                   spot={spot}
                   onUpdateSpot={handleUpdateSpot}
                   onUpdateDish={handleUpdateDish}
+                  onAddDish={handleAddDish}
+                  onSyncSeeded={handleSyncSeeded}
                 />
               ))}
             </div>

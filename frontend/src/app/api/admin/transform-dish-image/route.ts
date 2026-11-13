@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import fs from "fs";
 import path from "path";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import sharp from "sharp";
 import {
   buildDishSynthesisPrompt,
@@ -11,21 +10,21 @@ import {
   type EnvironmentPresetId,
 } from "@/lib/dishImageRemixConfig";
 import { ingestGooglePhotoToSupabase } from "@/lib/storage/ingestGooglePhoto";
+import { requireAdmin } from "@/app/api/admin/_auth";
 
 export const runtime = "nodejs";
 
 const STORAGE_BUCKET = "dish-photos";
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const SUPABASE_KEY =
-  process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const GEMINI_API_KEY =
   process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || "";
 
-function getAdminClient(): SupabaseClient | null {
-  if (!SUPABASE_URL || !SUPABASE_KEY) return null;
-  return createClient(SUPABASE_URL, SUPABASE_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+function resolveLocalPublicFile(relUrl: string): string | null {
+  const cleanRel = relUrl.replace(/^\//, "");
+  const p1 = path.join(process.cwd(), "public", cleanRel);
+  if (fs.existsSync(p1)) return p1;
+  const p2 = path.join(process.cwd(), "frontend", "public", cleanRel);
+  if (fs.existsSync(p2)) return p2;
+  return null;
 }
 
 async function fetchSourceImageBuffer(rawUrl: string, origin: string): Promise<Buffer> {
@@ -39,8 +38,8 @@ async function fetchSourceImageBuffer(rawUrl: string, origin: string): Promise<B
       targetUrl = `${origin}${targetUrl}`;
     }
   } else if (targetUrl.startsWith("/")) {
-    const localPublicPath = path.join(process.cwd(), "public", targetUrl.replace(/^\//, ""));
-    if (fs.existsSync(localPublicPath)) {
+    const localPublicPath = resolveLocalPublicFile(targetUrl);
+    if (localPublicPath) {
       return fs.readFileSync(localPublicPath);
     }
     targetUrl = `${origin}${targetUrl}`;
@@ -144,6 +143,9 @@ async function runMultimodalCameraShift(
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireAdmin();
+    if (!auth.ok) return auth.response;
+
     if (!GEMINI_API_KEY) {
       return NextResponse.json(
         { error: "GEMINI_API_KEY is not configured in frontend/.env.local" },
@@ -216,7 +218,7 @@ export async function POST(req: NextRequest) {
 
     // 5. Upload to Supabase Storage `dish-photos/` (with local public/ fallback)
     let finalPublicUrl = "";
-    const supabase = getAdminClient();
+    const supabase = auth.adminClient;
     if (supabase) {
       const { error: uploadErr } = await supabase.storage
         .from(STORAGE_BUCKET)
@@ -236,7 +238,10 @@ export async function POST(req: NextRequest) {
     }
 
     if (!finalPublicUrl) {
-      const localDir = path.join(process.cwd(), "public", "curation-remix");
+      const hasRootPublic = fs.existsSync(path.join(process.cwd(), "public"));
+      const localDir = hasRootPublic
+        ? path.join(process.cwd(), "public", "curation-remix")
+        : path.join(process.cwd(), "frontend", "public", "curation-remix");
       if (!fs.existsSync(localDir)) {
         fs.mkdirSync(localDir, { recursive: true });
       }

@@ -4,7 +4,8 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { X, Check, Sparkles, Upload } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
-import { broadcastWeeklyPick, uploadDishPhoto } from "@/lib/supabase/data";
+import { broadcastWeeklyPick } from "@/lib/supabase/data";
+import { uploadAdminImage, triggerAdminRevalidate } from "@/lib/adminUpload";
 import { WeeklyPick } from "@/types";
 
 interface EditWeeklyDropModalProps {
@@ -55,7 +56,10 @@ export function EditWeeklyDropModal({ isOpen, onClose }: EditWeeklyDropModalProp
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const { url, error } = await uploadDishPhoto(file);
+    const { url, error } = await uploadAdminImage(file, {
+      spotId: venueId || "weekly-drop",
+      dishId: "dish",
+    });
     if (error || !url) {
       showToast(error ?? "Upload failed.");
       return;
@@ -67,7 +71,10 @@ export function EditWeeklyDropModal({ isOpen, onClose }: EditWeeklyDropModalProp
   const handleMascotUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const { url, error } = await uploadDishPhoto(file);
+    const { url, error } = await uploadAdminImage(file, {
+      spotId: venueId || "weekly-drop",
+      dishId: "mascot",
+    });
     if (error || !url) {
       showToast(error ?? "Mascot upload failed.");
       return;
@@ -117,6 +124,7 @@ export function EditWeeklyDropModal({ isOpen, onClose }: EditWeeklyDropModalProp
       if (error) {
         showToast("Drop updated locally. Supabase broadcast sync failed.");
       } else {
+        await triggerAdminRevalidate();
         showToast("✦ Weekly Drop updated live across Oslo!");
       }
       onClose();
