@@ -1767,56 +1767,52 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
                 key={opt.id}
                 type="button"
                 onClick={() => handleSelectMapFilter(opt)}
-                className="relative w-[110px] h-[108px] shrink-0 snap-center flex items-center justify-center transition-transform duration-200 active:scale-90 cursor-pointer group drop-shadow-[0_6px_14px_rgba(24,22,21,0.18)]"
+                className="relative w-[110px] h-[108px] shrink-0 snap-center flex items-center justify-center transition-transform duration-200 active:scale-90 cursor-pointer group"
               >
-                {/* Unified 2-bubble + bridge frosted glass silhouette */}
+                {/* Unified 2-bubble + bridge translucent glass silhouette with soft fading edges */}
                 <div
                   aria-hidden="true"
-                  className={`absolute inset-0 backdrop-blur-md transition-colors duration-200 ${
+                  className={`absolute inset-0 backdrop-blur-xl backdrop-saturate-150 transition-all duration-200 ${
                     opt.active
-                      ? "bg-[#E84A27]/90"
-                      : "bg-[#FAF7F2]/72 group-hover:bg-[#FAF7F2]/88"
+                      ? "bg-gradient-to-b from-[#E84A27]/82 via-[#E84A27]/68 to-[#E84A27]/52"
+                      : "bg-gradient-to-b from-white/45 via-white/30 to-white/18 group-hover:from-white/58 group-hover:via-white/42 group-hover:to-white/28"
                   }`}
-                  style={{ clipPath: `path('${FILTER_BUBBLE_PATH}')` }}
+                  style={{
+                    clipPath: `path('${FILTER_BUBBLE_PATH}')`,
+                    maskImage:
+                      "radial-gradient(ellipse 92% 94% at 50% 50%, black 64%, transparent 100%)",
+                    WebkitMaskImage:
+                      "radial-gradient(ellipse 92% 94% at 50% 50%, black 64%, transparent 100%)",
+                  }}
                 />
-                <svg
-                  aria-hidden="true"
-                  viewBox="0 0 110 108"
-                  className="absolute inset-0 w-full h-full pointer-events-none"
-                >
-                  <path
-                    d={FILTER_BUBBLE_PATH}
-                    fill="none"
-                    stroke={opt.active ? "rgba(255,255,255,0.65)" : "rgba(255,255,255,0.88)"}
-                    strokeWidth="1.5"
-                  />
-                </svg>
 
                 {/* Top circular bubble: food icon */}
                 <div
-                  className={`absolute top-[5px] left-0 right-0 h-[58px] flex items-center justify-center transition-transform duration-200 ${
+                  className={`relative z-10 -mt-[34px] h-[58px] flex items-center justify-center transition-transform duration-200 ${
                     opt.active ? "scale-105" : "group-hover:scale-105"
                   }`}
                 >
                   {opt.kind === "open" ? (
                     <Clock
-                      className={`w-9 h-9 ${
+                      className={`w-9 h-9 drop-shadow-[0_2px_6px_rgba(24,22,21,0.18)] ${
                         opt.active ? "text-white" : "text-[#3D5A45]"
                       }`}
                     />
                   ) : opt.iconName ? (
                     <SmakrFoodIcon
                       name={opt.iconName}
-                      className="w-11 h-11 drop-shadow-[0_3px_6px_rgba(24,22,21,0.18)]"
+                      className="w-11 h-11 drop-shadow-[0_4px_8px_rgba(24,22,21,0.22)]"
                     />
                   ) : null}
                 </div>
 
                 {/* Bottom connected pill: filter name */}
-                <div className="absolute top-[72px] left-0 right-0 h-[31px] px-3 flex items-center justify-center">
+                <div className="absolute top-[72px] left-0 right-0 z-10 h-[31px] px-3 flex items-center justify-center">
                   <span
                     className={`font-comico font-normal text-[11px] leading-none uppercase truncate ${
-                      opt.active ? "text-white" : "text-[#181615]"
+                      opt.active
+                        ? "text-white drop-shadow-[0_1px_2px_rgba(24,22,21,0.25)]"
+                        : "text-[#181615] drop-shadow-[0_1px_2px_rgba(255,255,255,0.85)]"
                     }`}
                   >
                     {opt.label}
