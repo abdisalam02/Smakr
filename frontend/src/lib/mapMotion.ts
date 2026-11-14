@@ -1,7 +1,8 @@
 /** Shared timing for focusing a venue on the map (camera + dock animation). */
 export const SELECTION_TARGET_ZOOM = 15.4;
 export const SELECTION_CARD_HEIGHT = 246;
-export const SELECTION_CARD_BOTTOM_INSET = 24;
+// Matches HomeView dock offset (76px above bottom nav) + stage bottom-2 (8px).
+export const SELECTION_CARD_BOTTOM_INSET = 84;
 
 /** Screen distance (px) from the current projection to the focused spot. */
 export function selectionPanDistance(

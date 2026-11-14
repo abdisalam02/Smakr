@@ -44,66 +44,46 @@ export function FoodieCalloutCard() {
   const currentUser = useCityPulseStore((s) => s.currentUser);
   const setIsFoodieInviteOpen = useCityPulseStore((s) => s.setIsFoodieInviteOpen);
   const openCreateDish = useCityPulseStore((s) => s.openCreateDish);
-  const sprites = useCleanPeepSprites([37]);
-  const spriteUri = sprites[37];
 
   return (
     <section className="col-span-full py-2 px-1">
-      {/* Centered section label matching Smakr Weekly Pick style */}
-      <div className="flex items-center justify-center gap-1.5 mb-1.5">
-        <SmakrFoodIcon name="street_food" className="w-4 h-4 shrink-0" />
-        <span className="text-[12px] font-comico tracking-[0.12em] uppercase text-[#E84A27]">
-          OSLO FOODIES
-        </span>
-      </div>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="inline-flex items-center gap-1.5 mb-0.5">
+            <SmakrFoodIcon name="street_food" className="w-3.5 h-3.5 shrink-0" />
+            <span className="text-[11px] font-comico tracking-[0.12em] uppercase text-[#E84A27]">
+              OSLO FOODIES
+            </span>
+          </div>
 
-      <div className="flex items-center gap-3">
-        {/* Clean sprite on left mirroring Weekly Pick mascot placement */}
-        <div className="w-[64px] h-[78px] shrink-0 flex items-end justify-center">
-          {spriteUri ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={spriteUri}
-              alt=""
-              className="w-full h-full object-contain pointer-events-none"
-            />
-          ) : (
-            <SmakrFoodIcon name="ramen" className="w-10 h-10 opacity-70" />
-          )}
+          <h3 className="font-comico font-normal text-[17px] leading-tight uppercase text-[#181615]">
+            {currentUser ? "GOT AN OSLO BITE TO DROP?" : "GOT ELITE TASTE IN OSLO?"}
+          </h3>
+          <p className="text-[11.5px] leading-snug text-[#181615]/70 mt-0.5 line-clamp-2">
+            Spot a hidden Oslo gem or favourite dish — approved picks go live in Locals&apos; Picks.
+          </p>
         </div>
 
-        <div className="flex-1 min-w-0">
-          <div className="relative rounded-2xl rounded-bl-md bg-white/80 border border-[#E6DFD3] px-3 py-2 shadow-2xs inline-block max-w-full">
-            <h3 className="font-comico font-normal text-[17px] leading-tight uppercase text-[#181615]">
-              {currentUser ? "GOT AN OSLO BITE TO DROP?" : "GOT ELITE TASTE IN OSLO?"}
-            </h3>
-            <span
-              aria-hidden="true"
-              className="absolute -left-[5px] bottom-1.5 h-2.5 w-2.5 rotate-45 bg-white/80 border-l border-b border-[#E6DFD3]"
-            />
-          </div>
-
-          <div className="mt-2">
-            {currentUser ? (
-              <button
-                type="button"
-                onClick={openCreateDish}
-                className="inline-flex items-center gap-1.5 rounded-full bg-[#E84A27] hover:bg-[#d63e1c] active:scale-95 text-[#FAF7F2] font-bold text-[12px] px-4 py-2 shadow-xs transition-all cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Drop a Local Pick</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setIsFoodieInviteOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-full bg-[#E84A27] hover:bg-[#d63e1c] active:scale-95 text-[#FAF7F2] font-bold text-[12px] px-4 py-2 shadow-xs transition-all cursor-pointer"
-              >
-                <span>Become a Smakr Foodie</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
+        <div className="shrink-0">
+          {currentUser ? (
+            <button
+              type="button"
+              onClick={openCreateDish}
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#E84A27] hover:bg-[#d63e1c] active:scale-95 text-[#FAF7F2] font-bold text-[11.5px] px-3.5 py-2.5 shadow-xs transition-all cursor-pointer whitespace-nowrap"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Drop a Local Pick</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsFoodieInviteOpen(true)}
+              className="inline-flex items-center gap-1 rounded-full bg-[#E84A27] hover:bg-[#d63e1c] active:scale-95 text-[#FAF7F2] font-bold text-[11.5px] px-3.5 py-2.5 shadow-xs transition-all cursor-pointer whitespace-nowrap"
+            >
+              <span>Become a Foodie</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
     </section>

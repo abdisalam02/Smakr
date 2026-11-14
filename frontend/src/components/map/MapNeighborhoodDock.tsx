@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } from "react";
-import { MapPin } from "lucide-react";
+import { Calendar, MapPin } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { resolveVenueDisplayBadge, resolveEntityTaxonomy, resolveDishIconKey } from "@/lib/taxonomy";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
@@ -94,6 +94,10 @@ const DockCarouselCard = React.memo(function DockCarouselCard({
   const flagIso = badge.flag ? FLAG_ISO_MAP[badge.flag] : null;
   const ratingText = venue.google_rating != null ? venue.google_rating.toFixed(1) : "4.8";
   const isPopup = venue.spot_type === "popup";
+  const popupMeta = isPopup ? getPopupMeta(venue) : null;
+  const bottomAccentText = isPopup
+    ? popupMeta?.dates_label || venue.current_opening_hours_text || "Next Drop TBA"
+    : `✦ ${signature}`;
   const thumbSources = [
     venue.cover_image_url,
     (venue as VenueWithDishes).dishes?.[0]?.image_url,
@@ -106,7 +110,7 @@ const DockCarouselCard = React.memo(function DockCarouselCard({
       onClick={() => onSelect(venue)}
       className={`relative w-[260px] h-[118px] shrink-0 snap-center rounded-2xl overflow-hidden cursor-pointer select-none bg-[#181615] shadow-lg will-change-transform ${
         isPopup
-          ? "border-2 border-[#E84A27] hover:border-[#ff6a47]"
+          ? "border-2 border-white/85 hover:border-white"
           : "border border-white/15 hover:border-white/35"
       }`}
     >
@@ -128,9 +132,8 @@ const DockCarouselCard = React.memo(function DockCarouselCard({
         <div className="flex items-center justify-between gap-1.5">
           <div className="flex items-center gap-1.5 min-w-0">
             {isPopup ? (
-              <span className="bg-[#E84A27] text-white text-[10px] font-comico font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs whitespace-nowrap">
-                <SmakrFoodIcon name="popup" className="w-3 h-3 shrink-0" />
-                <span>POP-UP</span>
+              <span className="bg-white text-[#181615] text-[10px] font-comico font-normal px-2.5 py-0.5 rounded-full shadow-xs whitespace-nowrap">
+                POP-UP
               </span>
             ) : (
               <div className="bg-[#FAF7F2]/95 text-[#181615] text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 truncate border border-[#EAE5DC] shadow-xs max-w-[140px]">
@@ -179,7 +182,7 @@ const DockCarouselCard = React.memo(function DockCarouselCard({
             <span className="truncate">{locationLine}</span>
             <span className="text-white/40 shrink-0">·</span>
             <span className="text-[#FDEA6B] font-semibold truncate">
-              ✦ {signature}
+              {bottomAccentText}
             </span>
           </div>
         </div>
@@ -278,7 +281,7 @@ const SpotlightCard = React.memo(function SpotlightCard({
         !isActive && isNeighbor ? "cursor-pointer" : ""
       } ${
         isPopup
-          ? "border-2 border-[#E84A27] after:pointer-events-none after:absolute after:inset-[4px] after:rounded-[21px] after:border after:border-dashed after:border-[#E84A27]/35"
+          ? "border-2 border-white/90"
           : isWeeklyPick
           ? "border border-[#E84A27]/60 ring-1 ring-[#E84A27]/35"
           : "border border-white/15"
@@ -290,7 +293,7 @@ const SpotlightCard = React.memo(function SpotlightCard({
       </div>
       <div className="absolute inset-0 bg-gradient-to-t from-[#121110] via-[#121110]/80 to-black/15 pointer-events-none" />
 
-      {/* Top row: floating dish icon + badge on left; rating/status + close ml-auto on right */}
+      {/* Top row: badge on left; rating/status + close ml-auto on right */}
       <div
         data-slot-top="true"
         className="relative z-10 flex items-center gap-2 p-3.5 will-change-transform"
@@ -300,11 +303,13 @@ const SpotlightCard = React.memo(function SpotlightCard({
             isWeeklyPick && isActive && cardOpen ? "ml-[76px]" : ""
           }`}
         >
-          <span className="w-8 h-8 rounded-full bg-[#FAF7F2]/95 border border-[#181615]/10 shadow-md flex items-center justify-center shrink-0">
-            <SmakrFoodIcon name={dishIconKey} className="w-5 h-5" />
-          </span>
-          <span className="bg-[#E84A27] text-white font-comico text-[11px] px-2.5 py-1 rounded-full shadow-xs whitespace-nowrap flex items-center gap-1">
-            {isPopup && <SmakrFoodIcon name="popup" className="w-3 h-3 shrink-0" />}
+          <span
+            className={`font-comico font-normal text-[11px] px-2.5 py-1 rounded-full shadow-xs whitespace-nowrap flex items-center gap-1 ${
+              isPopup
+                ? "bg-white text-[#181615]"
+                : "bg-[#E84A27] text-white"
+            }`}
+          >
             <span>{isWeeklyPick ? `SMAKR PICK · ${badgeLabel}` : badgeLabel}</span>
           </span>
         </div>
@@ -313,14 +318,9 @@ const SpotlightCard = React.memo(function SpotlightCard({
           <span className="bg-black/55 backdrop-blur-md text-white text-[11px] font-bold px-2.5 py-1 rounded-full border border-white/15 flex items-center gap-1 whitespace-nowrap">
             <span className="text-[#F5B301]">★</span>
             <span>{rating}</span>
-            <span className="text-white/50">·</span>
-            {isPopupInactive ? (
+            {!isPopup && (
               <>
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400" />
-                <span>Next Drop TBA</span>
-              </>
-            ) : (
-              <>
+                <span className="text-white/50">·</span>
                 <span
                   className={`inline-block w-1.5 h-1.5 rounded-full ${
                     live?.isOpen ? "bg-emerald-400" : "bg-red-400"
@@ -357,20 +357,32 @@ const SpotlightCard = React.memo(function SpotlightCard({
           </p>
         </div>
 
-        {/* Signature Dish Pill (replaces 2-line bio quote) */}
-        <div
-          data-slot-story="true"
-          className="mt-2 inline-flex items-center gap-2 self-start max-w-full bg-[#FAF7F2]/15 backdrop-blur-md border border-white/20 rounded-xl px-3 py-1.5 text-xs font-bold text-[#FAF7F2]"
-        >
-          <SmakrFoodIcon name={dishIconKey} className="w-4 h-4 shrink-0" />
-          <span className="truncate">{heroDishName}</span>
-          {heroDishPrice && (
-            <>
-              <span className="text-white/45 shrink-0">·</span>
-              <span className="text-[#FDEA6B] shrink-0">{heroDishPrice}</span>
-            </>
-          )}
-        </div>
+        {/* Pop-ups show Next Drop / Residency Date here; normal spots show Signature Dish Pill */}
+        {isPopup ? (
+          <div
+            data-slot-story="true"
+            className="mt-2 inline-flex items-center gap-2 self-start max-w-full bg-[#FAF7F2]/15 backdrop-blur-md border border-white/20 rounded-xl px-3 py-1.5 text-xs font-bold text-[#FAF7F2]"
+          >
+            <Calendar className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
+            <span className="truncate">
+              {popupMeta?.dates_label || venue.current_opening_hours_text || "Next Drop TBA"}
+            </span>
+          </div>
+        ) : (
+          <div
+            data-slot-story="true"
+            className="mt-2 inline-flex items-center gap-2 self-start max-w-full bg-[#FAF7F2]/15 backdrop-blur-md border border-white/20 rounded-xl px-3 py-1.5 text-xs font-bold text-[#FAF7F2]"
+          >
+            <SmakrFoodIcon name={dishIconKey} className="w-4 h-4 shrink-0" />
+            <span className="truncate">{heroDishName}</span>
+            {heroDishPrice && (
+              <>
+                <span className="text-white/45 shrink-0">·</span>
+                <span className="text-[#FDEA6B] shrink-0">{heroDishPrice}</span>
+              </>
+            )}
+          </div>
+        )}
 
         <div data-slot-actions="true" className="mt-3 flex items-center gap-2">
           <button
