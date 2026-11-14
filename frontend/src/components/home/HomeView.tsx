@@ -22,6 +22,7 @@ import { useLiveVibeSync } from "@/hooks/useLiveVibeSync";
 import { useSyncAppData } from "@/hooks/useSyncAppData";
 import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
 import { SmakrSIcon } from "@/components/ui/SmakrSIcon";
+import { PeepsBootScreen } from "@/components/ui/PeepsBootScreen";
 import { motion, AnimatePresence } from "motion/react";
 import { Utensils } from "lucide-react";
 import type { FoodPost, Venue, WeeklyPick } from "@/types";
@@ -65,7 +66,10 @@ export interface HomeInitialData {
   weeklyPick: WeeklyPick;
 }
 
+let hasPlayedBootThisLoad = false;
+
 export function HomeView({ initialData }: { initialData: HomeInitialData }) {
+  const [showBoot, setShowBoot] = useState(() => !hasPlayedBootThisLoad);
   // Seed the store from the server-prefetched payload in a layout effect: it
   // runs once, before the browser paints the hydrated tree, so the dish feed /
   // map pins appear on the first painted frame with NO client fetch and no
@@ -854,8 +858,18 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
 
   return (
     <div className="relative flex-1 w-full h-screen h-[100dvh] min-h-[100dvh] max-h-[100dvh] overflow-hidden bg-zinc-100 lg:flex lg:pt-[57px]">
-      {/* Ask for location when we don't have a fix yet (map-wide). */}
-      <LocationPrompt />
+      {showBoot && (
+        <PeepsBootScreen
+          colorMode="colorized"
+          crowdCount={90}
+          onComplete={() => {
+            hasPlayedBootThisLoad = true;
+            setShowBoot(false);
+          }}
+        />
+      )}
+      {/* Ask for location when we don't have a fix yet (map-wide) after boot completes. */}
+      {!showBoot && <LocationPrompt />}
       {/* ========================================================================= */}
       {/* DESKTOP FEED STREAM (Visible on lg screens)                              */}
       {/* ========================================================================= */}

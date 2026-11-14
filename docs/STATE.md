@@ -1,10 +1,10 @@
 # STATE.md — CityPulse / Smakr (read first, keep <= 30 lines)
 
-Updated: 2026-11-13
+Updated: 2026-11-14
 
 ## Now
-- Task: Preview-first `/admin` & `/admin/seeding-lab` UI overhaul, mobile bottom-sheet ergonomics, and seeded-spot upload/Supabase sync fixes.
-- Status: Complete — `npx tsc --noEmit`, `npm run test:security` (19/19), storage upload probe, and route guard checks passed.
+- Task: Skiper 39 Open Peeps boot animation mounted on `/` (`HomeView.tsx`) with instant progressive atlas streaming, spring SMAKR logo + radar ping (no loading bar), and mobile Boot Lab pill.
+- Status: Complete — `npx tsc --noEmit` clean.
 
 ## Next (max 3)
 1. Review editorial swimlanes and full-screen map mode visual feedback with team.
@@ -21,8 +21,8 @@ Updated: 2026-11-13
 - TODO-VERIFY: confirm partner claim copy before launch.
 
 ## Recent (max 5, one line each)
+- 2026-11-14 — Mounted Skiper 39 crowd boot on `/` (`HomeView.tsx`) with instant 21-cell starter streaming, spring logo + radar ping, and collapsible mobile Boot Lab controls; `npx tsc --noEmit` clean
+- 2026-11-14 — Refined `SPRITE_OVERRIDES` across all 41 flagged Open Peeps sprites (pockets, glasses, cheeks, lapels, arms/fingers) in `bustCrowdPeep.ts`; `npx tsc --noEmit` clean
 - 2026-11-13 — Rebuilt `/admin` & `/admin/seeding-lab` with preview-first click-to-edit cards, mobile sheets, admin API guards, WebP uploads, and live seeded DB sync; tsc + 19/19 security tests pass
 - 2026-11-12 — Added spatial nearest-neighbor dock ordering, eased map panning harmony, calmer card pop, and Details bottom-spring restore; tsc clean
 - 2026-11-12 — Built single-row Cover-Flow carousel morph (grow/shrink in-place + photo parallax, zero duplicate row); tsc clean
-- 2026-11-12 — Rebuilt map spotlight card swipe with live 1:1 pointer drag, velocity commit, and 3-slot deck; tsc clean
-- 2026-11-12 — Added U WAN SUM to staged_candidates popups for AI Shift drop testing; tsc clean
