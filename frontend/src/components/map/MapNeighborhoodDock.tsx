@@ -1522,6 +1522,20 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
       openNow
   );
 
+  const FILTER_BUBBLE_PATH =
+    "M 41.4 59.6 A 29 29 0 1 1 68.6 59.6 C 65.5 64 66 71.5 76 72 L 90.5 72 A 15.5 15.5 0 0 1 90.5 103 L 19.5 103 A 15.5 15.5 0 0 1 19.5 72 L 34 72 C 44 71.5 44.5 64 41.4 59.6 Z";
+
+  const postsBySpotIdMap = useMemo(() => {
+    const map = new Map<string, FoodPost[]>();
+    for (const post of foodPosts) {
+      if (!post.spot_id || post.is_archived) continue;
+      const arr = map.get(post.spot_id);
+      if (arr) arr.push(post);
+      else map.set(post.spot_id, [post]);
+    }
+    return map;
+  }, [foodPosts]);
+
   const mapFilterOptions = useMemo(() => {
     const visibleVenues = venues.filter((v) => isVisibleInFeed(v));
     const popupCount = visibleVenues.filter(
@@ -1563,7 +1577,11 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
     ];
 
     for (const grp of FOOD_GROUPS) {
-      const count = visibleVenues.filter((v) => resolveEntityTaxonomy(v).group.id === grp.id).length;
+      const count = visibleVenues.filter((v) => {
+        if (resolveEntityTaxonomy(v).group.id === grp.id) return true;
+        const vPosts = postsBySpotIdMap.get(v.id) ?? [];
+        return vPosts.some((p) => resolveEntityTaxonomy(v, p).group.id === grp.id);
+      }).length;
       if (count > 0) {
         options.push({
           id: grp.id,
@@ -1576,7 +1594,7 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
       }
     }
     return options;
-  }, [venues, hasActiveFilter, openNow, selectedSpotKind, selectedGroup]);
+  }, [venues, postsBySpotIdMap, hasActiveFilter, openNow, selectedSpotKind, selectedGroup]);
 
   const handleSelectMapFilter = useCallback(
     (opt: { id: string; kind: "all" | "open" | "popup" | "group" }) => {
@@ -1593,8 +1611,81 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
         resetAllFilters();
         setSelectedGroup(opt.id);
       }
+
+      // Pan / zoom the map to fit all places matching the selected filter
+      const map = (typeof window !== "undefined" && (window as any).__smakrMap) || null;
+      if (map) {
+        if (opt.kind === "all") {
+          map.flyTo({
+            center: [10.7522, 59.9139],
+            zoom: 13.2,
+            duration: 750,
+            essential: true,
+          });
+        } else {
+          const visible = venues.filter((v) => isVisibleInFeed(v));
+          let matching = visible;
+          if (opt.kind === "open") {
+            matching = visible.filter((v) => getVenueLiveOpenStatus(v).isOpen);
+          } else if (opt.kind === "popup") {
+            matching = visible.filter(
+              (v) => v.spot_type === "popup" || resolveEntityTaxonomy(v).spotKind === "popup"
+            );
+          } else if (opt.kind === "group") {
+            matching = visible.filter((v) => {
+              if (resolveEntityTaxonomy(v).group.id === opt.id) return true;
+              const vPosts = postsBySpotIdMap.get(v.id) ?? [];
+              return vPosts.some((p) => resolveEntityTaxonomy(v, p).group.id === opt.id);
+            });
+          }
+
+          const coords = matching.filter(
+            (v) => typeof v.longitude === "number" && typeof v.latitude === "number"
+          );
+          if (coords.length === 1) {
+            map.flyTo({
+              center: [coords[0].longitude, coords[0].latitude],
+              zoom: 14.5,
+              duration: 750,
+              essential: true,
+            });
+          } else if (coords.length >= 2) {
+            let minLng = Infinity;
+            let maxLng = -Infinity;
+            let minLat = Infinity;
+            let maxLat = -Infinity;
+            for (const v of coords) {
+              if (v.longitude < minLng) minLng = v.longitude;
+              if (v.longitude > maxLng) maxLng = v.longitude;
+              if (v.latitude < minLat) minLat = v.latitude;
+              if (v.latitude > maxLat) maxLat = v.latitude;
+            }
+            map.fitBounds(
+              [
+                [minLng, minLat],
+                [maxLng, maxLat],
+              ],
+              {
+                padding: { top: 96, bottom: 235, left: 44, right: 44 },
+                maxZoom: 14.2,
+                duration: 800,
+                essential: true,
+              }
+            );
+          }
+        }
+      }
     },
-    [selectedVenue, setSelectedVenue, resetAllFilters, setFilters, setSelectedSpotKind, setSelectedGroup]
+    [
+      venues,
+      postsBySpotIdMap,
+      selectedVenue,
+      setSelectedVenue,
+      resetAllFilters,
+      setFilters,
+      setSelectedSpotKind,
+      setSelectedGroup,
+    ]
   );
 
   const allOsloHood = OSLO_NEIGHBORHOODS[0];
@@ -1668,47 +1759,71 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
           </div>
         </div>
 
-        {/* ── ROW B: Floating Filter Icons OR Resting Compact Carousel ── */}
+        {/* ── ROW B: Connected 2-Bubble Floating Glass Filters OR Resting Compact Carousel ── */}
         {isFilterDeckOpen && !cardOpen ? (
-          <div className="px-3 pt-2 pb-2 pointer-events-auto">
-            <div className="relative w-full h-[126px] rounded-2xl bg-[#FAF7F2]/65 backdrop-blur-md border border-white/60 shadow-lg overflow-x-auto snap-x snap-mandatory no-scrollbar px-5 flex items-center gap-6">
+          <div className="relative w-full h-[138px] overflow-x-auto snap-x snap-mandatory no-scrollbar px-5 pt-3 pb-2 flex items-center gap-3 pointer-events-auto">
             {mapFilterOptions.map((opt) => (
               <button
                 key={opt.id}
                 type="button"
                 onClick={() => handleSelectMapFilter(opt)}
-                className="shrink-0 snap-center flex flex-col items-center justify-center gap-1.5 min-w-[74px] py-1 transition-transform duration-200 active:scale-90 cursor-pointer group"
+                className="relative w-[110px] h-[108px] shrink-0 snap-center flex items-center justify-center transition-transform duration-200 active:scale-90 cursor-pointer group drop-shadow-[0_6px_14px_rgba(24,22,21,0.18)]"
               >
+                {/* Unified 2-bubble + bridge frosted glass silhouette */}
                 <div
-                  className={`flex items-center justify-center transition-transform duration-200 ${
-                    opt.active ? "scale-115" : "group-hover:scale-105"
+                  aria-hidden="true"
+                  className={`absolute inset-0 backdrop-blur-md transition-colors duration-200 ${
+                    opt.active
+                      ? "bg-[#E84A27]/90"
+                      : "bg-[#FAF7F2]/72 group-hover:bg-[#FAF7F2]/88"
+                  }`}
+                  style={{ clipPath: `path('${FILTER_BUBBLE_PATH}')` }}
+                />
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 110 108"
+                  className="absolute inset-0 w-full h-full pointer-events-none"
+                >
+                  <path
+                    d={FILTER_BUBBLE_PATH}
+                    fill="none"
+                    stroke={opt.active ? "rgba(255,255,255,0.65)" : "rgba(255,255,255,0.88)"}
+                    strokeWidth="1.5"
+                  />
+                </svg>
+
+                {/* Top circular bubble: food icon */}
+                <div
+                  className={`absolute top-[5px] left-0 right-0 h-[58px] flex items-center justify-center transition-transform duration-200 ${
+                    opt.active ? "scale-105" : "group-hover:scale-105"
                   }`}
                 >
                   {opt.kind === "open" ? (
                     <Clock
-                      className={`w-11 h-11 drop-shadow-[0_4px_10px_rgba(24,22,21,0.28)] ${
-                        opt.active ? "text-[#E84A27]" : "text-[#3D5A45]"
+                      className={`w-9 h-9 ${
+                        opt.active ? "text-white" : "text-[#3D5A45]"
                       }`}
                     />
                   ) : opt.iconName ? (
                     <SmakrFoodIcon
                       name={opt.iconName}
-                      className="w-14 h-14 drop-shadow-[0_6px_12px_rgba(24,22,21,0.26)]"
+                      className="w-11 h-11 drop-shadow-[0_3px_6px_rgba(24,22,21,0.18)]"
                     />
                   ) : null}
                 </div>
-                <span
-                  className={`font-comico font-normal text-[13px] leading-tight uppercase whitespace-nowrap ${
-                    opt.active
-                      ? "text-[#E84A27] drop-shadow-[0_1px_2px_rgba(255,255,255,0.95)]"
-                      : "text-[#181615] drop-shadow-[0_1px_3px_rgba(255,255,255,0.95)]"
-                  }`}
-                >
-                  {opt.label}
-                </span>
+
+                {/* Bottom connected pill: filter name */}
+                <div className="absolute top-[72px] left-0 right-0 h-[31px] px-3 flex items-center justify-center">
+                  <span
+                    className={`font-comico font-normal text-[11px] leading-none uppercase truncate ${
+                      opt.active ? "text-white" : "text-[#181615]"
+                    }`}
+                  >
+                    {opt.label}
+                  </span>
+                </div>
               </button>
             ))}
-            </div>
           </div>
         ) : (
           <div
