@@ -44,10 +44,11 @@ export function FoodieCalloutCard() {
   const currentUser = useCityPulseStore((s) => s.currentUser);
   const setIsFoodieInviteOpen = useCityPulseStore((s) => s.setIsFoodieInviteOpen);
   const openCreateDish = useCityPulseStore((s) => s.openCreateDish);
+  const sprites = useCleanPeepSprites(CLEAN_LOCAL_SPRITES.slice(0, 4));
 
   return (
     <section className="col-span-full py-2 px-1">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="inline-flex items-center gap-1.5 mb-0.5">
             <SmakrFoodIcon name="street_food" className="w-3.5 h-3.5 shrink-0" />
@@ -60,16 +61,16 @@ export function FoodieCalloutCard() {
             {currentUser ? "GOT AN OSLO BITE TO DROP?" : "GOT ELITE TASTE IN OSLO?"}
           </h3>
           <p className="text-[11.5px] leading-snug text-[#181615]/70 mt-0.5 line-clamp-2">
-            Spot a hidden Oslo gem or favourite dish — approved picks go live in Locals&apos; Picks.
+            Spot a hidden Oslo gem or favourite dish. Approved picks go live in Locals&apos; Picks.
           </p>
         </div>
 
-        <div className="shrink-0">
+        <div className="shrink-0 flex flex-col items-end gap-2">
           {currentUser ? (
             <button
               type="button"
               onClick={openCreateDish}
-              className="inline-flex items-center gap-1.5 rounded-full bg-[#E84A27] hover:bg-[#d63e1c] active:scale-95 text-[#FAF7F2] font-bold text-[11.5px] px-3.5 py-2.5 shadow-xs transition-all cursor-pointer whitespace-nowrap"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#E84A27] hover:bg-[#d63e1c] active:scale-95 text-[#FAF7F2] font-bold text-[11.5px] px-3.5 py-2 shadow-xs transition-all cursor-pointer whitespace-nowrap"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Drop a Local Pick</span>
@@ -78,12 +79,39 @@ export function FoodieCalloutCard() {
             <button
               type="button"
               onClick={() => setIsFoodieInviteOpen(true)}
-              className="inline-flex items-center gap-1 rounded-full bg-[#E84A27] hover:bg-[#d63e1c] active:scale-95 text-[#FAF7F2] font-bold text-[11.5px] px-3.5 py-2.5 shadow-xs transition-all cursor-pointer whitespace-nowrap"
+              className="inline-flex items-center gap-1 rounded-full bg-[#E84A27] hover:bg-[#d63e1c] active:scale-95 text-[#FAF7F2] font-bold text-[11.5px] px-3.5 py-2 shadow-xs transition-all cursor-pointer whitespace-nowrap"
             >
               <span>Become a Foodie</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           )}
+
+          <button
+            type="button"
+            onClick={() => setIsFoodieInviteOpen(true)}
+            className="flex flex-col items-end gap-1 group cursor-pointer"
+          >
+            <div className="flex items-center -space-x-2">
+              {CLEAN_LOCAL_SPRITES.slice(0, 4).map((idx) => (
+                <div
+                  key={idx}
+                  className="w-7 h-7 rounded-full border-2 border-[#FAF7F2] bg-[#F2EDE4] overflow-hidden shadow-2xs shrink-0"
+                >
+                  {sprites[idx] ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={sprites[idx]}
+                      alt=""
+                      className="w-full h-full object-contain object-bottom"
+                    />
+                  ) : null}
+                </div>
+              ))}
+            </div>
+            <span className="text-[10px] font-semibold text-[#181615]/75 group-hover:text-[#E84A27] transition-colors leading-tight">
+              Make your own foodie avatar
+            </span>
+          </button>
         </div>
       </div>
     </section>
@@ -122,17 +150,12 @@ export function LocalsPicksSwimlane({ posts, venueById }: LocalsPicksSwimlanePro
   if (localPickCards.length === 0) return null;
 
   return (
-    <section className="col-span-full bg-[#F2EDE4]/65 border-y border-[#E6DFD3] -mx-3 px-3.5 py-4 rounded-2xl my-2">
-      <div className="flex items-end justify-between gap-2 mb-2.5">
-        <div className="min-w-0">
-          <h3 className="text-[19px] font-comico font-normal tracking-tight text-[#181615] uppercase leading-tight flex items-center gap-1.5">
-            <span className="text-[#E84A27]">✦</span>
-            <span>LOCALS&apos; PICKS</span>
-          </h3>
-          <p className="text-[11px] text-[#5f5b55] font-medium leading-snug mt-0.5">
-            Curated Oslo bites picked by Smakr Foodies.
-          </p>
-        </div>
+    <section className="col-span-full -mx-3 px-3 py-2 my-1">
+      <div className="flex items-center justify-between gap-2 mb-2.5">
+        <h3 className="text-[19px] font-comico font-normal tracking-tight text-[#181615] uppercase leading-tight flex items-center gap-1.5 min-w-0">
+          <span className="text-[#E84A27]">✦</span>
+          <span>LOCALS&apos; PICKS</span>
+        </h3>
         <span className="text-[#E84A27] font-comico text-[11px] whitespace-nowrap shrink-0">
           Swipe →
         </span>

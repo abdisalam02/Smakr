@@ -687,25 +687,20 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
 
     const renderSwimlane = (
       title: React.ReactNode,
-      subtitle: string,
+      _subtitle: string,
       items: React.ReactNode,
       hasItems: boolean
     ) => {
       if (!hasItems) return null;
       return (
-        <section className="col-span-full bg-[#F2EDE4]/65 border-y border-[#E6DFD3] -mx-3 px-3.5 py-4 rounded-2xl my-2">
-          <div className="min-w-0 mb-2.5">
-            <h3 className="text-[19px] font-comico font-normal tracking-tight text-[#181615] dark:text-zinc-100 uppercase leading-tight flex items-center gap-1.5">
+        <section className="col-span-full -mx-3 px-3 py-2 my-1">
+          <div className="flex items-center justify-between gap-2 mb-2.5">
+            <h3 className="text-[19px] font-comico font-normal tracking-tight text-[#181615] dark:text-zinc-100 uppercase leading-tight flex items-center gap-1.5 min-w-0">
               {title}
             </h3>
-            <p className="text-[11px] text-[#5f5b55] dark:text-zinc-400 font-medium leading-snug mt-0.5">
-              {subtitle}
-            </p>
-            <div className="flex justify-end mt-1">
-              <span className="text-[#E84A27] font-comico text-[11px] whitespace-nowrap">
-                Swipe →
-              </span>
-            </div>
+            <span className="text-[#E84A27] font-comico text-[11px] whitespace-nowrap shrink-0">
+              Swipe →
+            </span>
           </div>
           <div className="overflow-x-auto snap-x snap-mandatory flex gap-3 pb-1 no-scrollbar">
             {items}
@@ -758,11 +753,11 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
         {renderRow(rowBeforePopups)}
 
         {renderSwimlane(
-          <span className="inline-flex items-center gap-1.5">
+          <span className="inline-flex items-center gap-1.5 font-comico font-normal">
             <SmakrFoodIcon name="popup" className="w-5 h-5 shrink-0" />
-            <span>Pop-Up Drops</span>
+            <span className="font-comico font-normal">Popups</span>
           </span>,
-          "Roving carts, weekend bake drops & kitchen takeovers — catch them before they sell out.",
+          "",
           popupLane.map((venue) => (
             <div
               key={`swimlane-popup-${venue.id}`}
@@ -774,17 +769,17 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
           popupLane.length > 0
         )}
 
-        {/* Dish cards separating Pop-Up Drops and Kitchens */}
+        {/* Dish cards separating Popups and Kitchens */}
         {renderRow(rowBeforeKitchens)}
 
         <MakrStudioTicketCard />
 
         {renderSwimlane(
-          <span className="inline-flex items-center gap-1.5">
+          <span className="inline-flex items-center gap-1.5 font-comico font-normal">
             <Utensils className="w-5 h-5 shrink-0" />
-            <span>The Kitchens Behind the Dishes</span>
+            <span className="font-comico font-normal">The Kitchens Behind the Dishes</span>
           </span>,
-          "Swipe through Oslo's best independent kitchens, bakeries & street canteens.",
+          "",
           kitchenLane.map((venue, idx) => {
             const topPost = topPostByVenueId.get(venue.id);
             return (

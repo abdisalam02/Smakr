@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } from "react";
-import { Calendar, MapPin } from "lucide-react";
+import { Calendar, MapPin, SlidersHorizontal, Clock } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
-import { resolveVenueDisplayBadge, resolveEntityTaxonomy, resolveDishIconKey } from "@/lib/taxonomy";
+import { resolveVenueDisplayBadge, resolveEntityTaxonomy, resolveDishIconKey, FOOD_GROUPS } from "@/lib/taxonomy";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import { formatOsloLocation, formatVenueLocationLine, normalizeOsloNeighborhoodDisplay, getDirectionsUrl } from "@/lib/location";
 import { isVisibleInFeed, getPopupStatus, getPopupMeta } from "@/lib/popupUtils";
@@ -300,7 +300,7 @@ const SpotlightCard = React.memo(function SpotlightCard({
       >
         <div
           className={`flex items-center gap-1.5 min-w-0 transition-[margin] duration-300 ${
-            isWeeklyPick && isActive && cardOpen ? "ml-[76px]" : ""
+            isWeeklyPick && isActive ? "ml-[76px]" : ""
           }`}
         >
           <span
@@ -310,7 +310,7 @@ const SpotlightCard = React.memo(function SpotlightCard({
                 : "bg-[#E84A27] text-white"
             }`}
           >
-            <span>{isWeeklyPick ? `SMAKR PICK · ${badgeLabel}` : badgeLabel}</span>
+            <span>{badgeLabel}</span>
           </span>
         </div>
 
@@ -615,16 +615,21 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
     (state) => state.isVenueDetailModalOpen
   );
   const selectedGroup = useCityPulseStore((state) => state.selectedGroup);
+  const setSelectedGroup = useCityPulseStore((state) => state.setSelectedGroup);
   const selectedDishCategory = useCityPulseStore((state) => state.selectedDishCategory);
   const selectedSpotKind = useCityPulseStore((state) => state.selectedSpotKind);
+  const setSelectedSpotKind = useCityPulseStore((state) => state.setSelectedSpotKind);
   const selectedCuisine = useCityPulseStore((state) => state.selectedCuisine);
   const selectedDietary = useCityPulseStore((state) => state.selectedDietary);
   const savedOnly = useCityPulseStore((state) => state.filters.saved_only);
   const savedPostIds = useCityPulseStore((state) => state.savedPostIds);
   const openNow = useCityPulseStore((state) => state.filters.open_now);
+  const setFilters = useCityPulseStore((state) => state.setFilters);
+  const resetAllFilters = useCityPulseStore((state) => state.resetAllFilters);
   const weeklyPick = useCityPulseStore((state) => state.weeklyPick);
 
   const [activeHoodId, setActiveHoodId] = useState<string>("all");
+  const [isFilterDeckOpen, setIsFilterDeckOpen] = useState(false);
   // The focused/details card is a bottom-anchored overlay so it grows upward
   // out of the carousel instead of sliding in from the side. displaySpotlight
   // holds the last venue only for the 240ms exit animation.
@@ -735,11 +740,12 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
 
   useEffect(() => {
     if (selectedVenue) {
+      setIsFilterDeckOpen(false);
       setDisplaySpotlight(selectedVenue);
       return;
     }
-    // Hold the last venue mounted for the 290ms shrink-back into the carousel.
-    const timer = setTimeout(() => setDisplaySpotlight(null), 300);
+    // Hold the last venue mounted for the 320ms shrink-back & crossfade into the carousel.
+    const timer = setTimeout(() => setDisplaySpotlight(null), 330);
     return () => clearTimeout(timer);
   }, [selectedVenue?.id]);
 
@@ -1178,6 +1184,13 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
       const len = displayedVenues.length;
       const maxTopClip = Math.max(0, 246 - compactUnscaledH);
 
+      if (spotlightStageRef.current) {
+        // Crossfade the stage out smoothly at the end of close so the handoff
+        // to the resting carousel cards never snaps in a single frame.
+        const stageFade = openProgress < 0.35 ? Math.max(0, openProgress / 0.35) : 1;
+        spotlightStageRef.current.style.opacity = stageFade.toFixed(3);
+      }
+
       for (const slot of slots) {
         const nodes = slotNodesRef.current[slot.venue.id];
         if (!nodes) continue;
@@ -1311,7 +1324,7 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
 
     if (isClosing) {
       scrollCarouselToVenue(venueId);
-      animateStageTo(0, 0, 290, 0);
+      animateStageTo(0, 0, 320, 0);
     }
   }, [
     selectedVenue?.id,
@@ -1482,45 +1495,225 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
     ]
   );
 
+  const hasActiveFilter = Boolean(
+    selectedGroup ||
+      selectedDishCategory ||
+      selectedSpotKind ||
+      selectedCuisine ||
+      selectedDietary.length > 0 ||
+      savedOnly ||
+      openNow
+  );
+
+  const mapFilterOptions = useMemo(() => {
+    const visibleVenues = venues.filter((v) => isVisibleInFeed(v));
+    const popupCount = visibleVenues.filter(
+      (v) => v.spot_type === "popup" || resolveEntityTaxonomy(v).spotKind === "popup"
+    ).length;
+    const openCount = visibleVenues.filter((v) => getVenueLiveOpenStatus(v).isOpen).length;
+
+    const options: Array<{
+      id: string;
+      label: string;
+      count: number;
+      iconName?: string;
+      kind: "all" | "open" | "popup" | "group";
+      active: boolean;
+    }> = [
+      {
+        id: "all",
+        label: "All Spots",
+        count: visibleVenues.length,
+        iconName: "street_food",
+        kind: "all",
+        active: !hasActiveFilter,
+      },
+      {
+        id: "open",
+        label: "Open Now",
+        count: openCount,
+        kind: "open",
+        active: Boolean(openNow),
+      },
+      {
+        id: "popup",
+        label: "Pop-Ups",
+        count: popupCount,
+        iconName: "popup",
+        kind: "popup",
+        active: selectedSpotKind === "popup",
+      },
+    ];
+
+    for (const grp of FOOD_GROUPS) {
+      const count = visibleVenues.filter((v) => resolveEntityTaxonomy(v).group.id === grp.id).length;
+      if (count > 0) {
+        options.push({
+          id: grp.id,
+          label: grp.shortLabel,
+          count,
+          iconName: grp.heroIcon,
+          kind: "group",
+          active: selectedGroup === grp.id,
+        });
+      }
+    }
+    return options;
+  }, [venues, hasActiveFilter, openNow, selectedSpotKind, selectedGroup]);
+
+  const handleSelectMapFilter = useCallback(
+    (opt: { id: string; kind: "all" | "open" | "popup" | "group" }) => {
+      if (selectedVenue) setSelectedVenue(null);
+      if (opt.kind === "all") {
+        resetAllFilters();
+      } else if (opt.kind === "open") {
+        resetAllFilters();
+        setFilters({ open_now: true });
+      } else if (opt.kind === "popup") {
+        resetAllFilters();
+        setSelectedSpotKind("popup");
+      } else {
+        resetAllFilters();
+        setSelectedGroup(opt.id);
+      }
+      setIsFilterDeckOpen(false);
+    },
+    [selectedVenue, setSelectedVenue, resetAllFilters, setFilters, setSelectedSpotKind, setSelectedGroup]
+  );
+
+  const allOsloHood = OSLO_NEIGHBORHOODS[0];
+  const scrollingHoods = OSLO_NEIGHBORHOODS.slice(1);
+
   return (
     <div className="relative w-full max-w-full flex flex-col gap-2 select-none pointer-events-none">
-        {/* ── ROW A: Oslo Neighborhood Quick-Jump Pills (tucked away when card popped up) ── */}
+        {/* ── ROW A: Static All Oslo + Filter Toggle on left; scrollable Oslo neighborhoods on right ── */}
         <div
-          className={`w-full overflow-x-auto no-scrollbar px-3 flex items-center gap-1.5 transition-all duration-200 ${
-            !isDesktop && cardVisible
+          className={`w-full px-3 flex items-center gap-1.5 transition-all duration-300 ease-out ${
+            !isDesktop && cardOpen
               ? "opacity-0 translate-y-2 pointer-events-none"
               : "opacity-100 translate-y-0 pointer-events-auto"
           }`}
         >
-          {OSLO_NEIGHBORHOODS.map((hood) => {
-            const isActive = activeHoodId === hood.id;
-            return (
-              <button
-                key={hood.id}
-                type="button"
-                onClick={() => handleSelectHood(hood)}
-                className={`h-8 px-3.5 rounded-full font-comico text-[11px] whitespace-nowrap transition-all select-none shrink-0 cursor-pointer border ${
-                  isActive
-                    ? "bg-[#E84A27] text-white border-[#E84A27] shadow-md scale-105 px-4"
-                    : "bg-white/45 backdrop-blur-md text-zinc-800 border-white/40 shadow-sm hover:bg-white/60"
-                }`}
-              >
-                <span>{hood.label}</span>
-              </button>
-            );
-          })}
+          <div className="shrink-0 flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                setIsFilterDeckOpen(false);
+                handleSelectHood(allOsloHood);
+              }}
+              className={`h-8 px-3.5 rounded-full font-comico text-[11px] whitespace-nowrap transition-all select-none shrink-0 cursor-pointer border ${
+                activeHoodId === allOsloHood.id
+                  ? "bg-[#E84A27] text-white border-[#E84A27] shadow-md"
+                  : "bg-white/65 backdrop-blur-md text-zinc-800 border-white/40 shadow-sm hover:bg-white/80"
+              }`}
+            >
+              <span>{allOsloHood.label}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsFilterDeckOpen((prev) => !prev)}
+              aria-label="Filter map spots"
+              aria-expanded={isFilterDeckOpen}
+              className={`h-8 px-2.5 rounded-full font-comico text-[11px] flex items-center justify-center gap-1 transition-all select-none shrink-0 cursor-pointer border ${
+                isFilterDeckOpen || hasActiveFilter
+                  ? "bg-[#181615] text-white border-[#181615] shadow-md"
+                  : "bg-white/65 backdrop-blur-md text-zinc-800 border-white/40 shadow-sm hover:bg-white/80"
+              }`}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              {hasActiveFilter && !isFilterDeckOpen && (
+                <span className="w-1.5 h-1.5 rounded-full bg-[#E84A27]" />
+              )}
+            </button>
+          </div>
+
+          <div className="flex-1 min-w-0 overflow-x-auto no-scrollbar flex items-center gap-1.5 py-0.5">
+            {scrollingHoods.map((hood) => {
+              const isActive = activeHoodId === hood.id;
+              return (
+                <button
+                  key={hood.id}
+                  type="button"
+                  onClick={() => {
+                    setIsFilterDeckOpen(false);
+                    handleSelectHood(hood);
+                  }}
+                  className={`h-8 px-3.5 rounded-full font-comico text-[11px] whitespace-nowrap transition-all select-none shrink-0 cursor-pointer border ${
+                    isActive
+                      ? "bg-[#E84A27] text-white border-[#E84A27] shadow-md"
+                      : "bg-white/45 backdrop-blur-md text-zinc-800 border-white/40 shadow-sm hover:bg-white/60"
+                  }`}
+                >
+                  <span>{hood.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* ── ROW B: Resting Compact Carousel (hands off seamlessly to unified Cover-Flow stage) ── */}
-        <div
-          ref={carouselRef}
-          onScroll={handleCarouselScroll}
-          className={`relative w-full overflow-x-auto snap-x snap-mandatory no-scrollbar px-6 pt-3 pb-2 flex items-end gap-3 ${
-            !isDesktop && cardVisible
-              ? "opacity-0 pointer-events-none"
-              : "opacity-100 pointer-events-auto"
-          }`}
-        >
+        {/* ── ROW B: Card-sized Filter Deck OR Resting Compact Carousel ── */}
+        {isFilterDeckOpen && !cardOpen ? (
+          <div className="relative w-full overflow-x-auto snap-x snap-mandatory no-scrollbar px-6 pt-3 pb-2 flex items-end gap-3 pointer-events-auto">
+            {mapFilterOptions.map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => handleSelectMapFilter(opt)}
+                className={`relative w-[138px] h-[118px] shrink-0 snap-center rounded-2xl p-3 flex flex-col justify-between text-left transition-all active:scale-95 cursor-pointer shadow-lg border ${
+                  opt.active
+                    ? "bg-[#E84A27] text-white border-[#E84A27]"
+                    : "bg-[#FAF7F2]/95 backdrop-blur-md text-[#181615] border-white/75 hover:bg-white"
+                }`}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <div
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                      opt.active ? "bg-white/20" : "bg-[#F2EDE4]"
+                    }`}
+                  >
+                    {opt.kind === "open" ? (
+                      <Clock className={`w-4 h-4 ${opt.active ? "text-white" : "text-[#3D5A45]"}`} />
+                    ) : opt.iconName ? (
+                      <SmakrFoodIcon name={opt.iconName} className="w-6 h-6" />
+                    ) : null}
+                  </div>
+                  <span
+                    className={`text-[10px] font-comico font-normal px-2 py-0.5 rounded-full ${
+                      opt.active
+                        ? "bg-black/20 text-white"
+                        : "bg-[#181615]/8 text-[#181615]/70"
+                    }`}
+                  >
+                    {opt.count}
+                  </span>
+                </div>
+
+                <div>
+                  <div className="font-comico font-normal text-[14px] leading-tight uppercase truncate">
+                    {opt.label}
+                  </div>
+                  <div
+                    className={`text-[10px] font-semibold mt-0.5 ${
+                      opt.active ? "text-white/85" : "text-[#181615]/55"
+                    }`}
+                  >
+                    {opt.active ? "Selected" : "Tap to filter"}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div
+            ref={carouselRef}
+            onScroll={handleCarouselScroll}
+            className={`relative w-full overflow-x-auto snap-x snap-mandatory no-scrollbar px-6 pt-3 pb-2 flex items-end gap-3 transition-opacity duration-300 ease-out ${
+              !isDesktop && cardOpen
+                ? "opacity-0 pointer-events-none"
+                : "opacity-100 pointer-events-auto"
+            }`}
+          >
           {displayedVenues.length === 0 ? (
             <div className="w-full py-4 text-center text-xs text-[#181615]/70 bg-[#FAF7F2]/85 backdrop-blur-md rounded-2xl border border-white/60 shadow-xs">
               No spots match this neighborhood and filter.
@@ -1536,7 +1729,8 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
               />
             ))
           )}
-        </div>
+          </div>
+        )}
 
         {/* ── UNIFIED COVER-FLOW CAROUSEL STAGE ──
             Shares the exact bottom baseline of ROW B so there is only ever ONE

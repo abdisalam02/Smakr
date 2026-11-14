@@ -65,7 +65,7 @@ export function FoodViewSlider({
         onClick={handleSelectFeed}
         aria-label="View Food Feed"
         aria-pressed={isFeedActive}
-        className={`relative z-10 flex items-center justify-center rounded-full text-[12px] font-comico font-bold cursor-pointer outline-none border-0 select-none transition-all duration-200 active:scale-95 h-8 ${
+        className={`relative z-10 flex items-center justify-center rounded-full text-[12px] font-comico font-normal cursor-pointer outline-none border-0 select-none transition-all duration-200 active:scale-95 h-8 ${
           isFeedActive
             ? "text-white px-2.5"
             : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white px-2"
@@ -83,10 +83,10 @@ export function FoodViewSlider({
           <span
             className={`flex items-center gap-1.5 whitespace-nowrap overflow-hidden max-w-[120px] opacity-100`}
           >
-            <span className="tracking-tight">Feed</span>
+            <span className="tracking-tight font-comico">Feed</span>
             {dishesCount > 0 && (
               <span
-                className={`text-[10px] tabular-nums font-semibold px-1.5 py-0.2 rounded-full ${
+                className={`text-[10px] font-comico font-normal tabular-nums px-1.5 py-0.2 rounded-full ${
                   isFeedActive ? "bg-black/15 text-white" : "bg-black/10 text-zinc-600 dark:bg-white/10 dark:text-zinc-300"
                 }`}
               >
@@ -118,7 +118,7 @@ export function FoodViewSlider({
         onClick={handleSelectMap}
         aria-label="View Map Radar"
         aria-pressed={isMapActive}
-        className={`relative z-10 flex items-center justify-center rounded-full text-[12px] font-comico font-bold cursor-pointer outline-none border-0 select-none transition-all duration-200 active:scale-95 h-8 ${
+        className={`relative z-10 flex items-center justify-center rounded-full text-[12px] font-comico font-normal cursor-pointer outline-none border-0 select-none transition-all duration-200 active:scale-95 h-8 ${
           isMapActive
             ? "text-white px-2.5"
             : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white px-2"
@@ -136,10 +136,10 @@ export function FoodViewSlider({
           <span
             className={`flex items-center gap-1.5 whitespace-nowrap overflow-hidden max-w-[120px] opacity-100`}
           >
-            <span className="tracking-tight">Map</span>
+            <span className="tracking-tight font-comico">Map</span>
             {spotsCount > 0 && (
               <span
-                className={`text-[10px] tabular-nums font-semibold px-1.5 py-0.2 rounded-full ${
+                className={`text-[10px] font-comico font-normal tabular-nums px-1.5 py-0.2 rounded-full ${
                   isMapActive ? "bg-black/15 text-white" : "bg-black/10 text-zinc-600 dark:bg-white/10 dark:text-zinc-300"
                 }`}
               >
