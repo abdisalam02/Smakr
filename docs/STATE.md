@@ -3,7 +3,7 @@
 Updated: 2026-11-14
 
 ## Now
-- Task: Skiper 39 Open Peeps boot animation mounted on `/` (`HomeView.tsx`) with instant progressive atlas streaming, spring SMAKR logo + radar ping (no loading bar), and mobile Boot Lab pill.
+- Task: Skiper 39 Open Peeps boot animation on `/` (`viewMode: "map"` default, cartoonish `SMAKR` pop-in, crowd-drop exit, translucent backdrop over static map placeholder).
 - Status: Complete — `npx tsc --noEmit` clean.
 
 ## Next (max 3)

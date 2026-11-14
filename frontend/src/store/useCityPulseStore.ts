@@ -241,7 +241,7 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
   userLocation: null,
   mapCenter: [10.7516, 59.9171], // Oslo Sentrum (Torggata / Youngstorget)
   mapZoom: 13.8,
-  viewMode: "split",
+  viewMode: "map",
   // The feed is DB-driven — start empty and hydrate via fetchFoodPosts().
   foodPosts: [],
   likedPostIds: new Set<string>(),

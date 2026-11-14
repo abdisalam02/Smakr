@@ -330,7 +330,7 @@ export function PeepsBootScreen({
       if (!persistentRef.current && elapsed >= 2.0 && !dismissingRef.current) {
         dismissingRef.current = true;
         setDismissing(true);
-        setTimeout(() => onCompleteRef.current?.(), 360);
+        setTimeout(() => onCompleteRef.current?.(), 420);
       }
 
       const atlas = atlasCanvasRef.current;
@@ -416,47 +416,58 @@ export function PeepsBootScreen({
         mobilePreview
           ? "absolute left-1/2 top-1/2 h-[760px] max-h-[92dvh] w-[390px] max-w-[94vw] -translate-x-1/2 -translate-y-1/2 rounded-[2.5rem] border-[10px] border-[#181615] shadow-2xl"
           : "fixed inset-0"
-      } z-[100] flex flex-col items-center justify-between bg-[#FAF7F2]/75 backdrop-blur-[4px] select-none overflow-hidden transition-all duration-[360ms] ease-out will-change-[opacity,transform] ${
-        dismissing ? "opacity-0 scale-[1.04] pointer-events-none" : "opacity-100 scale-100"
+      } z-[100] flex flex-col items-center justify-between bg-[#FAF7F2]/75 backdrop-blur-[4px] select-none overflow-hidden transition-opacity duration-[420ms] ease-out ${
+        dismissing ? "opacity-0 pointer-events-none" : "opacity-100"
       }`}
     >
-      {/* Upper-Center Stage: Springy Smakr Brand Lockup + Radar Ping */}
+      <style>{`
+        @keyframes smakr-toon-pop {
+          0% {
+            opacity: 0;
+            transform: translateY(34px) scale(0.32) rotate(-7deg);
+          }
+          55% {
+            opacity: 1;
+            transform: translateY(-8px) scale(1.15) rotate(2.5deg);
+          }
+          78% {
+            opacity: 1;
+            transform: translateY(3px) scale(0.95) rotate(-1.2deg);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1) rotate(0deg);
+          }
+        }
+      `}</style>
+
+      {/* Upper-Center Stage: Cartoonish Pop-In Smakr Brand Lockup */}
       <div
         className={`absolute inset-x-4 ${
           mobilePreview ? "top-[21%]" : "top-[24%] sm:top-[22%]"
-        } z-20 flex flex-col items-center text-center pointer-events-none`}
+        } z-20 flex flex-col items-center text-center pointer-events-none transition-all duration-[360ms] ease-out will-change-[opacity,transform] ${
+          dismissing ? "opacity-0 -translate-y-7 scale-[1.12]" : "opacity-100 translate-y-0 scale-100"
+        }`}
       >
-        {/* Crisp single radar ping ring as the logo lands */}
-        <div
-          aria-hidden
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-36 h-36 sm:w-44 sm:h-44 rounded-full border-[1.5px] border-[#e84a27]/45 transition-all duration-[950ms] ease-out will-change-transform"
-          style={{
-            opacity: showLogo ? 0 : 0.42,
-            transform: showLogo
-              ? "translate(-50%, -50%) scale(1.85)"
-              : "translate(-50%, -50%) scale(0.5)",
-          }}
-        />
-
         {/* Wordmark: font-comico all-caps Burnt Paprika + OSLO badge */}
         <div
-          className="relative flex items-baseline gap-2.5 sm:gap-3 transition-all duration-[540ms] will-change-transform"
-          style={{
-            transitionTimingFunction: "cubic-bezier(0.22, 1.38, 0.36, 1)",
-            opacity: showLogo ? 1 : 0,
-            transform: showLogo
-              ? "translateY(0) scale(1)"
-              : "translateY(24px) scale(0.74)",
-          }}
+          className="relative flex items-baseline gap-2.5 sm:gap-3 will-change-transform"
+          style={
+            showLogo
+              ? {
+                  animation: "smakr-toon-pop 560ms cubic-bezier(0.22, 1, 0.36, 1) forwards",
+                }
+              : { opacity: 0 }
+          }
         >
           <span
             className={`font-comico ${
               mobilePreview ? "text-5xl" : "text-5xl sm:text-6xl md:text-7xl"
-            } tracking-wide text-[#e84a27]`}
+            } tracking-wide text-[#e84a27] drop-shadow-[0_4px_0_rgba(43,24,16,0.14)]`}
           >
             SMAKR
           </span>
-          <span className="text-[10px] sm:text-xs font-sans font-bold tracking-[0.22em] uppercase text-[#181615]/50">
+          <span className="text-[10px] sm:text-xs font-sans font-bold tracking-[0.22em] uppercase text-[#181615]/55">
             OSLO
           </span>
         </div>
@@ -465,7 +476,7 @@ export function PeepsBootScreen({
         <p
           className={`mt-2.5 ${
             mobilePreview ? "text-xs" : "text-xs sm:text-sm"
-          } font-semibold text-[#181615]/70 transition-all duration-500 ease-out`}
+          } font-semibold text-[#181615]/75 transition-all duration-400 ease-out`}
           style={{
             opacity: showSubline ? 1 : 0,
             transform: showSubline ? "translateY(0)" : "translateY(10px)",
@@ -478,7 +489,9 @@ export function PeepsBootScreen({
       {/* Main Marching Crowd Canvas (Skiper 39) */}
       <canvas
         ref={canvasRef}
-        className="w-full h-full block touch-none pointer-events-none"
+        className={`w-full h-full block touch-none pointer-events-none transition-all duration-[400ms] ease-in will-change-[opacity,transform] ${
+          dismissing ? "opacity-0 translate-y-20" : "opacity-100 translate-y-0"
+        }`}
       />
 
       {/* Open Peeps Crowd Atlas Inspector + per-peep sprite picker */}

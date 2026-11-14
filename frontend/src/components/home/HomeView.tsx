@@ -42,11 +42,22 @@ const MapRadarView = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="w-full h-full flex items-center justify-center bg-[var(--surface-raised,#F5EFE3)]">
-        <div className="flex flex-col items-center gap-2">
-          <div className="w-8 h-8 rounded-full border-2 border-[#e84a27] border-t-transparent animate-spin" />
-          <span className="text-[11px] font-semibold text-zinc-500">Loading Oslo radar…</span>
-        </div>
+      <div
+        aria-hidden
+        className="w-full h-full relative overflow-hidden bg-[#EFECE4]"
+        style={{
+          backgroundImage:
+            "linear-gradient(to right, rgba(43,24,16,0.035) 1px, transparent 1px), linear-gradient(to bottom, rgba(43,24,16,0.035) 1px, transparent 1px)",
+          backgroundSize: "48px 48px",
+        }}
+      >
+        <div
+          className="absolute inset-0 opacity-45"
+          style={{
+            background:
+              "radial-gradient(circle at 62% 58%, rgba(169,207,226,0.38) 0%, rgba(169,207,226,0) 42%)",
+          }}
+        />
       </div>
     ),
   }
