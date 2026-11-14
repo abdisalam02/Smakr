@@ -112,7 +112,7 @@ export default function CollectionsPage() {
   }
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto px-4 lg:px-6 py-6 space-y-6 overflow-y-auto bg-[#f6f3ee]">
+    <div className="flex-1 w-full max-w-7xl mx-auto px-4 lg:px-6 pt-20 pb-8 space-y-6 overflow-y-auto bg-[#f6f3ee]">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#e5dec9] pb-4">
         <div>

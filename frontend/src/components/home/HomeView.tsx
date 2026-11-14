@@ -15,8 +15,12 @@ import dynamic from "next/dynamic";
 import { VenueBottomSheet } from "@/components/venue/VenueBottomSheet";
 import { LocationPrompt } from "@/components/location/LocationPrompt";
 import { VenueDetailPane } from "@/components/venue/VenueDetailPane";
-import { QuickCheckInModal } from "@/components/checkin/QuickCheckInModal";
-import { SpeedTestWidget } from "@/components/checkin/SpeedTestWidget";
+import { SmakrFoodieInviteModal } from "@/components/auth/SmakrFoodieInviteModal";
+import {
+  FoodieCalloutCard,
+  LocalsPicksSwimlane,
+  MakrStudioTicketCard,
+} from "@/components/food/FoodieCommunityBlocks";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { useLiveVibeSync } from "@/hooks/useLiveVibeSync";
 import { useSyncAppData } from "@/hooks/useSyncAppData";
@@ -601,11 +605,13 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
       return out;
     };
 
-    // Lane A: an even pair directly under the hero.
-    const rowOne = takeEven(2);
+    // Block 1: First 4 editorial dish cards directly beneath Weekly Pick & optional Hero Pop-Up.
+    const rowAfterHero = takeEven(4);
 
-    // Lane B: four after the weekly pick.
-    const rowTwo = takeEven(4);
+    // Space every horizontal swimlane apart with 4 editorial dishes in between.
+    const rowBeforeMatcha = takeEven(4);
+    const rowBeforePopups = takeEven(4);
+    const rowBeforeKitchens = takeEven(4);
 
     // STRICT drink lane — never padded with dumplings/kebabs, only real drinks.
     const matchaLaneVenues = new Set<string>();
@@ -618,18 +624,12 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
       })
       .slice(0, 8);
 
-    // Lane C: four after matcha.
-    const rowThree = takeEven(4);
-
     // ALL pop-ups, even when they also appear in the vertical feed.
     const popupLane = popupVenues;
 
-    // Lane D: four after pop-ups.
-    const rowFour = takeEven(4);
-
     const kitchenLane = featuredKitchens;
 
-    // Lane E: everything left, rendered in pairs (with an end-cap on odd rows).
+    // Remaining editorial cards, rendered in pairs (with an end-cap on odd rows).
     const remaining = pool.splice(0);
 
     let cardIndex = 0;
@@ -654,7 +654,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
         className="rounded-[26px] bg-[#F2EDE4] border border-[#E6DFD3] p-4 flex flex-col justify-between aspect-[4/5]"
       >
         <div>
-          <p className="font-comico text-[15px] uppercase tracking-tight text-[#181615]">
+          <p className="font-comico font-normal text-[15px] uppercase tracking-tight text-[#181615]">
             That&apos;s a wrap
           </p>
           <p className="text-[11px] text-[#181615]/65 leading-snug mt-1">
@@ -693,9 +693,9 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
     ) => {
       if (!hasItems) return null;
       return (
-        <section className="col-span-full bg-[#F2EDE4]/65 border-y border-[#E6DFD3] -mx-3 px-3.5 py-4 rounded-2xl my-1">
+        <section className="col-span-full bg-[#F2EDE4]/65 border-y border-[#E6DFD3] -mx-3 px-3.5 py-4 rounded-2xl my-2">
           <div className="min-w-0 mb-2.5">
-            <h3 className="text-[19px] font-comico font-bold tracking-tight text-[#181615] dark:text-zinc-100 uppercase leading-tight flex items-center gap-1.5">
+            <h3 className="text-[19px] font-comico font-normal tracking-tight text-[#181615] dark:text-zinc-100 uppercase leading-tight flex items-center gap-1.5">
               {title}
             </h3>
             <p className="text-[11px] text-[#5f5b55] dark:text-zinc-400 font-medium leading-snug mt-0.5">
@@ -716,18 +716,23 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
 
     return (
       <div className={gridClass}>
-        {/* Optional full-width pop-up hero, immediately followed by an even pair. */}
+        {/* BLOCK 1: Smakr Weekly Pick Split Banner + Featured Pop-Up + first 4 editorial cards */}
+        <div className="col-span-full my-0.5">
+          <SmakrWeeklyPickSplitBanner />
+        </div>
         {heroPost && (
           <div className="col-span-full">{renderCard(heroPost)}</div>
         )}
-        {renderRow(rowOne)}
+        {renderRow(rowAfterHero)}
 
-        {/* In-feed Single-Row Split Smakr Weekly Pick Banner */}
-        <div className="col-span-full my-1">
-          <SmakrWeeklyPickSplitBanner />
-        </div>
+        {/* BLOCK 2: Compact Bare-Background Oslo Foodies Callout */}
+        <FoodieCalloutCard />
 
-        {renderRow(rowTwo)}
+        {/* BLOCK 3: ✦ LOCALS' PICKS Horizontal Swimlane */}
+        <LocalsPicksSwimlane posts={filteredPosts} venueById={venueById} />
+
+        {/* Dish cards separating LOCALS' PICKS and Matcha */}
+        {renderRow(rowBeforeMatcha)}
 
         {renderSwimlane(
           "🍵 Matcha & Specialty Coffee",
@@ -749,7 +754,8 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
           matchaLane.length > 0
         )}
 
-        {renderRow(rowThree)}
+        {/* Dish cards separating Matcha and Pop-Up Drops */}
+        {renderRow(rowBeforePopups)}
 
         {renderSwimlane(
           <span className="inline-flex items-center gap-1.5">
@@ -768,7 +774,10 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
           popupLane.length > 0
         )}
 
-        {renderRow(rowFour)}
+        {/* Dish cards separating Pop-Up Drops and Kitchens */}
+        {renderRow(rowBeforeKitchens)}
+
+        <MakrStudioTicketCard />
 
         {renderSwimlane(
           <span className="inline-flex items-center gap-1.5">
@@ -1047,32 +1056,13 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
       >
         <MapRadarView />
 
-        {/* Flush left-edge > FEED handle in Map Mode (stays visible even when a card is open) */}
-        {viewMode === "map" && (
-          <button
-            type="button"
-            onClick={() => {
-              useCityPulseStore.getState().setViewMode(isDesktop ? "split" : "feed");
-              setFeedMode("food");
-            }}
-            aria-label="Open feed"
-            title="Open feed"
-            className="fixed left-0 top-1/2 -translate-y-1/2 z-40 rounded-l-none rounded-r-2xl border border-l-0 border-white/40 bg-white/45 backdrop-blur-md px-2.5 py-4 shadow-[4px_6px_20px_rgba(24,22,21,0.12)] flex flex-col items-center gap-1.5 hover:pl-3.5 hover:bg-white/60 active:scale-95 transition-all pointer-events-auto cursor-pointer select-none"
-          >
-            <span aria-hidden className="text-[18px] leading-none font-black text-[#E84A27]">›</span>
-            <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#181615]/85 [writing-mode:vertical-rl]">
-              FEED
-            </span>
-          </button>
-        )}
-
         {/* Bottom-of-Map Neighborhood Dock + Spot Cards */}
         <div
           className={`absolute left-0 right-0 z-20 pointer-events-auto transition-all duration-[600ms] ${
             viewMode === "map"
               ? "opacity-100 translate-y-0"
               : "opacity-0 translate-y-4 pointer-events-none"
-          } bottom-4`}
+          } bottom-[76px] lg:bottom-4`}
         >
           <MapNeighborhoodDock isDesktop={isDesktop} />
         </div>
@@ -1089,9 +1079,12 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
               : "translate-x-0 opacity-100 pointer-events-auto shadow-2xl"
           }`}
         >
-          {/* Floating filter bar under the SMAKR header. Fully transparent so
-              content scrolls behind it; only the logo/signup area is blurred. */}
-          <div className="absolute inset-x-0 top-[64px] z-20 pointer-events-auto w-full max-w-full overflow-hidden">
+          {/* Floating filter bar + Dishes/Spots toggle under the SMAKR header. */}
+          <div
+            className={`absolute inset-x-0 top-[64px] z-20 pointer-events-auto w-full max-w-full overflow-hidden transition-opacity duration-150 ${
+              isVenueDetailModalOpen ? "opacity-0 pointer-events-none" : "opacity-100"
+            }`}
+          >
             {isHydratingData && foodPosts.length === 0 ? (
               <FeedFilterBarSkeleton />
             ) : (
@@ -1105,7 +1098,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
             ref={feedScrollRef}
             data-feed-scroll
             onScroll={handleMobileScroll}
-            className="flex-1 min-h-0 overflow-y-auto px-3 pt-[120px] pb-28 space-y-2.5 no-scrollbar overscroll-contain"
+            className="flex-1 min-h-0 overflow-y-auto px-3 pt-[122px] pb-32 space-y-2.5 no-scrollbar overscroll-contain"
           >
             {/* 1. Mobile Pop-ups Panel */}
             <div className={feedMode === "popups" ? "block" : "hidden"}>
@@ -1196,18 +1189,17 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
       )}
 
       {/* ========================================================================= */}
-      {/* MOBILE FLOATING GLASSMORPHIC FOOD VS LOCATIONS TOGGLE                    */}
-      {/* Elevated at root level (z-[45]), hidden smoothly in Map Mode             */}
+      {/* FLOATING BOTTOM DOCK (Feed | + | Map) — visible in Map & Mobile Feed     */}
       {/* ========================================================================= */}
-      {!isDesktop && (
+      {(!isDesktop || viewMode === "map") && (
       <div
-        className={`lg:hidden fixed left-1/2 -translate-x-1/2 z-[45] pointer-events-auto flex items-center justify-center transition-all duration-[600ms] ease-out ${
-          isVenueDetailModalOpen || viewMode === "map"
+        className={`fixed left-1/2 -translate-x-1/2 z-[45] pointer-events-auto flex items-center justify-center transition-all duration-[500ms] ease-out ${
+          isVenueDetailModalOpen || showBoot
             ? "opacity-0 pointer-events-none translate-y-12 scale-90"
             : "opacity-100 translate-y-0 scale-100"
         }`}
         style={{
-          bottom: "max(calc(env(safe-area-inset-bottom, 0px) + 20px), 24px)",
+          bottom: "max(calc(env(safe-area-inset-bottom, 0px) + 18px), 20px)",
         }}
       >
         <FoodViewSlider
@@ -1218,12 +1210,9 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
       </div>
       )}
 
-      {/* Feed-mode bottom fade removed: it dimmed the map cards. */}
-
       {/* Modals & Floating Spot Cards (auth + log-a-dish mount globally in layout) */}
       <VenueBottomSheet />
-      <QuickCheckInModal />
-      <SpeedTestWidget />
+      <SmakrFoodieInviteModal />
     </div>
   );
 }

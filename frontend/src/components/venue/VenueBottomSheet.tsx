@@ -28,7 +28,7 @@ import { FoodPost, ReviewItem } from "@/types";
 import { DishDetailPopup } from "@/components/food/DishDetailPopup";
 import { getPopupStatus, getPopupMeta, isPopupVenue } from "@/lib/popupUtils";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
-import { formatOsloLocation } from "@/lib/location";
+import { formatOsloLocation, formatVenueLocationLine } from "@/lib/location";
 import { ExpandableReviewText } from "./ExpandableReviewText";
 import { incrementBringBack } from "@/lib/supabase/data";
 import { FEED_BLUR_DARK } from "@/lib/feedImages";
@@ -411,7 +411,7 @@ export function VenueBottomSheet() {
         onExitComplete={() => sheetY.set(0)}
       >
         {isVenueDetailModalOpen && selectedVenue && (
-          <div className="fixed inset-0 z-50 flex flex-col justify-end pointer-events-auto">
+          <div className="fixed inset-0 z-[60] flex flex-col justify-end pointer-events-auto">
             {/* Dimmed backdrop overlay that fades in and dismisses the drawer when tapped */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -419,7 +419,7 @@ export function VenueBottomSheet() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
               onClick={handleClose}
-              className="fixed inset-0 bg-black/15 cursor-pointer"
+              className="fixed inset-0 bg-black/45 backdrop-blur-[2px] cursor-pointer"
             />
 
             {/* Pop out from bottom spring container */}
@@ -543,19 +543,25 @@ export function VenueBottomSheet() {
                             {selectedVenue.food_category ? selectedVenue.food_category.replace(/_/g, " ") : "Oslo Spot"}
                           </span>
                         )}
-                        <span
-                          className={`px-2 py-0.5 rounded-md backdrop-blur-md text-[10px] font-bold flex items-center gap-1 border shadow-xs ${
-                            openStatus.isOpen
-                              ? "bg-emerald-950/70 text-emerald-300 border-emerald-500/35"
-                              : "bg-red-950/70 text-red-300 border-red-500/35"
-                          }`}
-                        >
-                          <span className={`w-1.5 h-1.5 rounded-full ${openStatus.isOpen ? "bg-emerald-400" : "bg-red-400"}`} />
-                          <span>{openStatus.isOpen ? "Open" : "Closed"}</span>
-                          {openStatus.detailText && (
-                            <span className="opacity-80 font-normal">· {openStatus.detailText}</span>
-                          )}
-                        </span>
+                        {isPopup && isDormant ? (
+                          <span className="px-2 py-0.5 rounded-md backdrop-blur-md text-[10px] font-bold flex items-center gap-1 border shadow-xs bg-amber-950/75 text-amber-200 border-amber-500/40">
+                            <span>⏳ Between Drops · Next Date TBA</span>
+                          </span>
+                        ) : (
+                          <span
+                            className={`px-2 py-0.5 rounded-md backdrop-blur-md text-[10px] font-bold flex items-center gap-1 border shadow-xs ${
+                              openStatus.isOpen
+                                ? "bg-emerald-950/70 text-emerald-300 border-emerald-500/35"
+                                : "bg-red-950/70 text-red-300 border-red-500/35"
+                            }`}
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full ${openStatus.isOpen ? "bg-emerald-400" : "bg-red-400"}`} />
+                            <span>{openStatus.isOpen ? "Open" : "Closed"}</span>
+                            {openStatus.detailText && (
+                              <span className="opacity-80 font-normal">· {openStatus.detailText}</span>
+                            )}
+                          </span>
+                        )}
                       </div>
 
                       <h3 className="font-comico text-2xl sm:text-3xl text-white tracking-tight leading-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)] truncate max-w-full">
@@ -564,7 +570,7 @@ export function VenueBottomSheet() {
                       <p className="text-xs sm:text-[13px] text-white/95 flex items-center gap-1 drop-shadow-[0_1px_6px_rgba(0,0,0,0.9)] truncate max-w-full">
                         <MapPin className="w-3.5 h-3.5 text-[#e84a27] shrink-0" />
                         <span className="truncate">
-                          {formatOsloLocation(selectedVenue.address, selectedVenue.city || selectedVenue.neighborhood).fullClean}
+                          {formatVenueLocationLine(selectedVenue)}
                         </span>
                       </p>
                     </motion.div>
@@ -624,68 +630,67 @@ export function VenueBottomSheet() {
 
                   {/* Content Card: Glides smoothly up under the hero photo with solid background */}
                   <div className="relative z-10 bg-[#FAF7F2] dark:bg-[#181615] rounded-t-3xl px-4 pt-4 pb-14 space-y-4 shadow-xl border-t border-black/5 dark:border-white/5">
-                    {/* Primary Residency Status & Schedule Card */}
-                    <div className="p-4 sm:p-5 rounded-3xl bg-[#F5EFE4] dark:bg-[#1E1C1A] border border-[#181615]/10 space-y-3.5 shadow-xs">
-                      {isDormant ? (
-                        <>
-                          <div className="flex items-center justify-between">
-                            <span className="px-3 py-1 rounded-full bg-stone-300 dark:bg-stone-700 text-stone-800 dark:text-stone-200 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                              <span>⏳ Dates &amp; Location TBA</span>
-                            </span>
-                          </div>
-                          <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed font-medium">
-                            This pop-up residency is preparing its next Oslo drop. Dates and location are being confirmed. Follow their official Instagram to get drop alerts.
-                          </p>
-
-                          {/* Prominent Instagram CTA Button */}
-                          {popupMeta?.instagram_url && (
-                            <a
-                              href={popupMeta.instagram_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-pink-600 via-rose-600 to-amber-600 hover:opacity-95 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.98]"
-                            >
-                              <Instagram className="w-4 h-4" />
-                              <span>Follow {instagramHandle ? `@${instagramHandle}` : "on Instagram"} for Drop Alerts</span>
-                              <ExternalLink className="w-3.5 h-3.5 ml-0.5 opacity-80" />
-                            </a>
-                          )}
-
-                          {/* Optional Contact or Website */}
+                    {/* Compact Residency Status & Schedule Ticket Banner */}
+                    {isDormant ? (
+                      <div className="p-3.5 rounded-2xl bg-[#F3EDE2] dark:bg-[#1E1C1A] border border-dashed border-[#381820]/25 space-y-2.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-[#181615] dark:text-[#FAF7F2] flex items-center gap-1.5">
+                            <span>⏳</span>
+                            <span>Between Drops · Next Date TBA</span>
+                          </span>
                           {popupContact && (
                             <a
                               href={popupContact.startsWith("http") ? popupContact : `mailto:${popupContact}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="w-full py-2.5 px-4 rounded-2xl bg-white dark:bg-[#2A2622] hover:bg-zinc-50 border border-[#181615]/10 text-zinc-800 dark:text-zinc-200 font-bold text-xs flex items-center justify-center gap-2 shadow-2xs transition-colors"
+                              className="text-[10.5px] font-bold text-[#E84A27] hover:underline shrink-0"
                             >
-                              <Globe className="w-3.5 h-3.5 text-zinc-500" />
-                              <span>{popupContact.startsWith("http") ? "Official Website / Inquiries" : `Inquiries: ${popupContact}`}</span>
+                              Inquiries ↗
                             </a>
                           )}
-                        </>
-                      ) : (
-                        <>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-                            {popupMeta?.dates_label && (
-                              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/70 dark:bg-black/20 border border-[#181615]/10">
-                                <Calendar className="w-4 h-4 text-[#E84A27] shrink-0" />
-                                <div>
-                                  <div className="text-[10px] text-zinc-400 uppercase font-mono">Dates</div>
-                                  <div>{popupMeta.dates_label}</div>
-                                </div>
+                        </div>
+                        <p className="text-[11.5px] text-zinc-700 dark:text-zinc-300 leading-snug">
+                          Next Oslo location &amp; drop window announced on Instagram.
+                        </p>
+                        {popupMeta?.instagram_url && (
+                          <a
+                            href={popupMeta.instagram_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full bg-[#181615] hover:bg-[#2a2624] text-[#FAF7F2] border border-[#E84A27]/40 rounded-full py-2.5 px-4 text-xs font-extrabold flex items-center justify-between transition-all active:scale-[0.98]"
+                          >
+                            <span className="flex items-center gap-2">
+                              <span className="w-5 h-5 rounded-full bg-[#E84A27] text-white flex items-center justify-center shrink-0">
+                                <Instagram className="w-3 h-3" />
+                              </span>
+                              <span>Follow {instagramHandle ? `@${instagramHandle}` : "Instagram"} for Drop Alerts</span>
+                            </span>
+                            <ExternalLink className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
+                          </a>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-2xl bg-[#F3EDE2] dark:bg-[#1E1C1A] border border-dashed border-[#381820]/25 space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                          {popupMeta?.dates_label && (
+                            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/70 dark:bg-black/20 border border-[#181615]/10">
+                              <Calendar className="w-4 h-4 text-[#E84A27] shrink-0" />
+                              <div>
+                                <div className="text-[10px] text-zinc-400 uppercase font-mono">Dates</div>
+                                <div>{popupMeta.dates_label}</div>
                               </div>
-                            )}
-                            {(popupMeta?.daily_hours || selectedVenue.current_opening_hours_text) && (
-                              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/70 dark:bg-black/20 border border-[#181615]/10">
-                                <Clock className="w-4 h-4 text-[#E84A27] shrink-0" />
-                                <div>
-                                  <div className="text-[10px] text-zinc-400 uppercase font-mono">Service Hours</div>
-                                  <div>{popupMeta?.daily_hours || selectedVenue.current_opening_hours_text}</div>
-                                </div>
+                            </div>
+                          )}
+                          {(popupMeta?.daily_hours || selectedVenue.current_opening_hours_text) && (
+                            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/70 dark:bg-black/20 border border-[#181615]/10">
+                              <Clock className="w-4 h-4 text-[#E84A27] shrink-0" />
+                              <div>
+                                <div className="text-[10px] text-zinc-400 uppercase font-mono">Service Hours</div>
+                                <div>{popupMeta?.daily_hours || selectedVenue.current_opening_hours_text}</div>
                               </div>
-                            )}
-                          </div>
+                            </div>
+                          )}
+                        </div>
 
                         {popupHostVenue && (
                           <div className="p-2.5 rounded-xl bg-white/70 dark:bg-black/20 border border-[#181615]/10 flex items-center justify-between gap-2">
@@ -708,14 +713,13 @@ export function VenueBottomSheet() {
                           </div>
                         )}
 
-                        {/* Action Buttons: Tickets & Instagram */}
-                        <div className="flex items-center gap-2 flex-wrap pt-1">
+                        <div className="flex items-center gap-2 flex-wrap pt-0.5">
                           {popupMeta?.ticket_url && (
                             <a
                               href={popupMeta.ticket_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex-1 py-3 px-4 rounded-2xl bg-[#E84A27] hover:bg-[#D43D1C] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs"
+                              className="flex-1 py-2.5 px-4 rounded-full bg-[#E84A27] hover:bg-[#D43D1C] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs"
                             >
                               <span>RSVP / Drop Tickets</span>
                               <ExternalLink className="w-3.5 h-3.5" />
@@ -726,111 +730,114 @@ export function VenueBottomSheet() {
                               href={popupMeta.instagram_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex-1 py-3 px-4 rounded-2xl bg-white dark:bg-[#2A2622] hover:bg-zinc-50 border border-[#181615]/10 text-zinc-800 dark:text-zinc-200 font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs"
+                              className="flex-1 bg-[#181615] hover:bg-[#2a2624] text-[#FAF7F2] border border-[#E84A27]/40 rounded-full py-2.5 px-4 text-xs font-extrabold flex items-center justify-between"
                             >
-                              <Instagram className="w-3.5 h-3.5 text-pink-600" />
-                              <span>{instagramHandle ? `@${instagramHandle}` : "Instagram"}</span>
-                              <ExternalLink className="w-3 h-3 text-zinc-400" />
+                              <span className="flex items-center gap-2">
+                                <span className="w-4 h-4 rounded-full bg-[#E84A27] text-white flex items-center justify-center shrink-0">
+                                  <Instagram className="w-2.5 h-2.5" />
+                                </span>
+                                <span>{instagramHandle ? `@${instagramHandle}` : "Instagram"}</span>
+                              </span>
+                              <ExternalLink className="w-3 h-3 text-[#E84A27]" />
                             </a>
                           )}
                         </div>
-                      </>
+                      </div>
                     )}
-                  </div>
 
-                  {/* Story & Culinary Concept Section */}
-                  {selectedVenue.description && (
-                    <div className="px-1 py-1 space-y-1.5">
-                      <div className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-                        <span>✦ STORY</span>
-                      </div>
-                      <p className="text-[14px] sm:text-[15.5px] text-[#181615]/90 dark:text-zinc-100 leading-relaxed whitespace-pre-line font-medium">
-                        {selectedVenue.description}
-                      </p>
-                      {popupMeta?.guest_chef && (
-                        <div className="pt-1.5 text-xs text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
-                          <span className="font-bold text-zinc-900 dark:text-white">Resident Chef:</span>
-                          <span>{popupMeta.guest_chef}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Community Bring-Back / Going Reaction Card */}
-                  <div className="p-4 rounded-3xl bg-white dark:bg-[#1E1C1A] border border-[#181615]/10 flex items-center justify-between gap-3">
-                    <div>
-                      <div className="text-xs font-bold text-zinc-900 dark:text-white">
-                        {isDormant ? "Want this pop-up back in Oslo?" : "Heading to this drop?"}
-                      </div>
-                      <p className="text-[11px] text-zinc-500">
-                        {isDormant
-                          ? "Signal your vote to petition this culinary residency."
-                          : "Let other Oslo foodies know you are dropping by."}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handlePopupReaction}
-                      className={`px-4 py-2.5 rounded-2xl font-bold text-xs flex items-center gap-1.5 shrink-0 transition-all cursor-pointer border ${
-                        hasReactedPopup
-                          ? "bg-[#E84A27] text-white border-[#E84A27] shadow-xs"
-                          : "bg-[#F5EFE4] dark:bg-[#23201D] text-[#181615] dark:text-white border-[#181615]/10 hover:border-[#E84A27]"
-                      }`}
-                    >
-                      <Flame className={`w-3.5 h-3.5 ${hasReactedPopup ? "fill-white" : "text-[#E84A27]"}`} />
-                      <span>{isDormant ? "Bring Back" : "Going"} · {popupReactionCount}</span>
-                    </button>
-                  </div>
-
-                  {/* Real Dishes (ONLY if they actually exist!) */}
-                  {recommendedMeals.length > 0 && (
-                    <div className="space-y-3 pt-2">
-                      <h4 className="font-bold text-zinc-900 dark:text-white text-sm flex items-center gap-1.5">
-                        <Sparkles className="w-4 h-4 text-[#e84a27]" />
-                        <span>Pop-Up Drop Dishes ({recommendedMeals.length})</span>
-                      </h4>
-                      <div className="grid grid-cols-2 gap-3">
-                        {recommendedMeals.map((dish) => {
-                          return (
-                            <div
-                              key={dish.id}
-                              onClick={() => setSelectedDish(dish)}
-                              className="group relative p-2.5 rounded-2xl bg-white dark:bg-[#1E1C1A] border border-[#181615]/10 dark:border-white/10 shadow-xs flex flex-col justify-between cursor-pointer hover:border-[#e84a27]/30 hover:shadow-md transition-all active:scale-[0.98]"
-                            >
-                              <div>
-                                <div className="relative aspect-[4/3] w-full rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 shadow-2xs">
-                                  <Image
-                                    src={dish.image_url}
-                                    alt={dish.dish_name}
-                                    fill
-                                    className="object-cover group-hover:scale-105 transition-transform duration-300"
-                                    sizes="(max-width: 640px) 50vw, 240px"
-                                    placeholder="blur"
-                                    blurDataURL={FEED_BLUR_DARK}
-                                  />
-                                  {dish.price_nok && (
-                                    <span className="absolute top-1.5 right-1.5 px-2 py-0.5 rounded-lg bg-[#181615]/85 backdrop-blur-xs text-white font-comico text-[11px] shadow-xs border border-white/10">
-                                      {dish.price_nok} kr
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="mt-2">
-                                  <h5 className="font-comico text-xs sm:text-sm text-[#181615] dark:text-white line-clamp-1 leading-tight group-hover:text-[#e84a27] transition-colors">
-                                    {dish.dish_name}
-                                  </h5>
-                                  {dish.review_text && (
-                                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2 italic leading-tight">
-                                      "{dish.review_text}"
-                                    </p>
-                                  )}
+                    {/* Signature Dishes immediately visible above the fold */}
+                    {recommendedMeals.length > 0 && (
+                      <div className="space-y-2.5">
+                        <h4 className="font-bold text-zinc-900 dark:text-white text-sm flex items-center gap-1.5">
+                          <Sparkles className="w-4 h-4 text-[#e84a27]" />
+                          <span>Dishes You Can&apos;t Miss ({recommendedMeals.length})</span>
+                        </h4>
+                        <div className="grid grid-cols-2 gap-3">
+                          {recommendedMeals.map((dish) => {
+                            return (
+                              <div
+                                key={dish.id}
+                                onClick={() => setSelectedDish(dish)}
+                                className="group relative p-2.5 rounded-2xl bg-white dark:bg-[#1E1C1A] border border-[#181615]/10 dark:border-white/10 shadow-xs flex flex-col justify-between cursor-pointer hover:border-[#e84a27]/30 hover:shadow-md transition-all active:scale-[0.98]"
+                              >
+                                <div>
+                                  <div className="relative aspect-[4/3] w-full rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 shadow-2xs">
+                                    <Image
+                                      src={dish.image_url}
+                                      alt={dish.dish_name}
+                                      fill
+                                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                      sizes="(max-width: 640px) 50vw, 240px"
+                                      placeholder="blur"
+                                      blurDataURL={FEED_BLUR_DARK}
+                                    />
+                                    {dish.price_nok && (
+                                      <span className="absolute top-1.5 right-1.5 px-2 py-0.5 rounded-lg bg-[#181615]/85 backdrop-blur-xs text-white font-comico text-[11px] shadow-xs border border-white/10">
+                                        {dish.price_nok} kr
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="mt-2">
+                                    <h5 className="font-comico text-xs sm:text-sm text-[#181615] dark:text-white line-clamp-1 leading-tight group-hover:text-[#e84a27] transition-colors">
+                                      {dish.dish_name}
+                                    </h5>
+                                    {dish.review_text && (
+                                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2 italic leading-tight">
+                                        &ldquo;{dish.review_text}&rdquo;
+                                      </p>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
+                    )}
+
+                    {/* Story & Culinary Concept Section */}
+                    {selectedVenue.description && (
+                      <div className="px-1 py-1 space-y-1.5">
+                        <div className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                          <span>✦ STORY</span>
+                        </div>
+                        <p className="text-[14px] sm:text-[15.5px] text-[#181615]/90 dark:text-zinc-100 leading-relaxed whitespace-pre-line font-medium">
+                          {selectedVenue.description}
+                        </p>
+                        {popupMeta?.guest_chef && (
+                          <div className="pt-1.5 text-xs text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
+                            <span className="font-bold text-zinc-900 dark:text-white">Resident Chef:</span>
+                            <span>{popupMeta.guest_chef}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Community Bring-Back / Going Reaction Card */}
+                    <div className="p-4 rounded-3xl bg-white dark:bg-[#1E1C1A] border border-[#181615]/10 flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-xs font-bold text-zinc-900 dark:text-white">
+                          {isDormant ? "Want this pop-up back in Oslo?" : "Heading to this drop?"}
+                        </div>
+                        <p className="text-[11px] text-zinc-500">
+                          {isDormant
+                            ? "Signal your vote to petition this culinary residency."
+                            : "Let other Oslo foodies know you are dropping by."}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handlePopupReaction}
+                        className={`px-4 py-2.5 rounded-2xl font-bold text-xs flex items-center gap-1.5 shrink-0 transition-all cursor-pointer border ${
+                          hasReactedPopup
+                            ? "bg-[#E84A27] text-white border-[#E84A27] shadow-xs"
+                            : "bg-[#F5EFE4] dark:bg-[#23201D] text-[#181615] dark:text-white border-[#181615]/10 hover:border-[#E84A27]"
+                        }`}
+                      >
+                        <Flame className={`w-3.5 h-3.5 ${hasReactedPopup ? "fill-white" : "text-[#E84A27]"}`} />
+                        <span>{isDormant ? "Bring Back" : "Going"} · {popupReactionCount}</span>
+                      </button>
                     </div>
-                  )}
 
                   {/* Add Pop-Up Dish Action */}
                   <button
@@ -957,7 +964,7 @@ export function VenueBottomSheet() {
                         <span className="font-comico text-sm text-zinc-950 dark:text-white font-bold">
                           {selectedVenue.google_rating != null
                             ? selectedVenue.google_rating.toFixed(1)
-                            : "4.7"}
+                            : "4.8"}
                         </span>
                       </div>
                     </div>

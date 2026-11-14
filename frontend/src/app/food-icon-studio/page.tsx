@@ -202,7 +202,7 @@ export default function FoodIconStudioPage() {
   return (
     <main className="fixed inset-0 top-16 overflow-hidden touch-none" style={{ background: bg }} onPointerMove={onMove} onPointerUp={() => (drag.current = null)}>
       {/* Interactive Drag Canvas */}
-      <div className="absolute inset-0 flex items-center justify-center">
+      <div className="absolute inset-0 overflow-hidden flex items-center justify-center">
         {order.map((id, i) => {
           const p = pieces.find(x => x.id === id);
           if (!p) return null;
@@ -227,7 +227,7 @@ export default function FoodIconStudioPage() {
       </div>
 
       {/* Control Panel */}
-      <aside className="absolute left-4 top-4 w-72 rounded-2xl bg-[#181615] p-3.5 text-[#FAF7F2] shadow-2xl space-y-3 text-xs border border-white/10 backdrop-blur-md">
+      <aside className="absolute left-4 top-4 w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl bg-[#181615] p-3.5 text-[#FAF7F2] shadow-2xl space-y-3 text-xs border border-white/10 backdrop-blur-md">
         {/* Preset Category Switcher */}
         <div>
           <span className="text-[10px] font-bold uppercase tracking-wider text-[#A8A29E] block mb-1.5">

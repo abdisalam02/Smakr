@@ -27,6 +27,11 @@ import {
 } from "@/types";
 import { getDistanceInMeters } from "@/lib/math";
 import { persistMascotConfig } from "@/lib/supabase/data";
+import {
+  type PendingSubmission,
+  loadPendingSubmissions,
+  savePendingSubmissions,
+} from "@/lib/pendingQueue";
 
 /* Debounced, best-effort sync of the mascot config to the signed-in profile. */
 let mascotPersistTimer: ReturnType<typeof setTimeout> | null = null;
@@ -89,6 +94,8 @@ interface PulseStoreState {
   savedPostIds: Set<string>;
   currentUser: UserProfile | null;
   isAuthModalOpen: boolean;
+  isFoodieInviteOpen: boolean;
+  pendingSubmissions: PendingSubmission[];
   mobileSheetState: "peek" | "half" | "full";
   isCheckInModalOpen: boolean;
   isSpeedTestModalOpen: boolean;
@@ -229,6 +236,16 @@ interface PulseStoreState {
   setPriceTierFilter: (tier: string | null) => void;
   toggleStaffPicksOnly: () => void;
   toggleSavedOnly: () => void;
+
+  // Foodie Invite & Pending Moderation Queue (Foodies + Makr Studio)
+  setIsFoodieInviteOpen: (open: boolean) => void;
+  setPendingSubmissions: (items: PendingSubmission[]) => void;
+  addPendingSubmission: (item: PendingSubmission) => void;
+  resolvePendingSubmission: (
+    id: string,
+    action: "approve" | "reject",
+    iconKeyOverride?: string
+  ) => void;
 }
 
 export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
@@ -248,8 +265,10 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
   savedPostIds: getInitialSavedSpots(),
   currentUser: null,
   isAuthModalOpen: false,
+  isFoodieInviteOpen: false,
+  pendingSubmissions: loadPendingSubmissions(),
   quickEditPost: null,
-  mobileSheetState: "half",
+  mobileSheetState: "peek",
   isCheckInModalOpen: false,
   isSpeedTestModalOpen: false,
   isCreateBiteModalOpen: false,
@@ -799,15 +818,222 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
 
   closeSpeedTestModal: () => set({ isSpeedTestModalOpen: false }),
 
+  setIsFoodieInviteOpen: (open) => set({ isFoodieInviteOpen: open }),
+
+  setPendingSubmissions: (items) => {
+    savePendingSubmissions(items);
+    set({ pendingSubmissions: items });
+  },
+
+  addPendingSubmission: (item) =>
+    set((state) => {
+      const next = [item, ...state.pendingSubmissions.filter((x) => x.id !== item.id)];
+      savePendingSubmissions(next);
+      return { pendingSubmissions: next };
+    }),
+
+  resolvePendingSubmission: (id, action, iconKeyOverride) =>
+    set((state) => {
+      const target = state.pendingSubmissions.find((x) => x.id === id);
+      const nextQueue = state.pendingSubmissions.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              status: action === "approve" ? ("approved" as const) : ("rejected" as const),
+              icon_key: iconKeyOverride || item.icon_key,
+            }
+          : item
+      );
+      savePendingSubmissions(nextQueue);
+
+      if (action !== "approve" || !target) {
+        return { pendingSubmissions: nextQueue };
+      }
+
+      let nextFoodPosts = state.foodPosts;
+      let nextVenues = state.venues;
+
+      if (target.kind === "foodie_dish") {
+        const matchedVenue = state.venues.find((v) => v.id === target.venue_id);
+        const approvedPost: FoodPost = {
+          id: `approved-${target.id}`,
+          spot_id: target.venue_id || matchedVenue?.id || `spot-${target.id}`,
+          spot_name: target.venue_name,
+          spot_address: target.address || matchedVenue?.address || "Oslo",
+          spot_neighborhood: String(target.neighborhood || matchedVenue?.neighborhood || "Oslo"),
+          spot_coords: [
+            target.longitude ?? matchedVenue?.longitude ?? 10.7522,
+            target.latitude ?? matchedVenue?.latitude ?? 59.9139,
+          ],
+          dish_name: target.dish_name || "Local Foodie Pick",
+          category: target.category || "street_food",
+          image_url: target.photo_url || matchedVenue?.cover_image_url || "",
+          price_nok: target.price_nok ?? null,
+          rating: 4.8,
+          taste_tags: target.vibe_note ? [target.vibe_note] : ["Locals' Pick"],
+          review_text: target.review_text || "Approved from Oslo Locals' Picks.",
+          author: {
+            name: target.author_name || "Oslo Foodie",
+            handle: target.author_handle || "oslo_foodie",
+            avatar_url: target.author_avatar_url || "",
+            badge: "Local Guide",
+          },
+          likes_count: 1,
+          saves_count: 0,
+          created_at_relative: "Just now",
+          is_official_pick: false,
+          is_local_pick: true,
+          moderation_status: "approved",
+          dietary_tags: target.dietary_tags || [],
+          spot_type: matchedVenue?.spot_type || "restaurant",
+        };
+        nextFoodPosts = [approvedPost, ...state.foodPosts];
+      } else if (target.kind === "makr_popup") {
+        const newVenueId = `popup-${target.id}`;
+        const igUrl = target.instagram_handle
+          ? `https://instagram.com/${target.instagram_handle.replace(/^@/, "")}`
+          : undefined;
+        const popupVenue: Venue = {
+          id: newVenueId,
+          name: target.venue_name,
+          address: target.is_location_tba ? "Oslo" : target.address || String(target.neighborhood || "Oslo"),
+          city: "Oslo",
+          neighborhood: (target.neighborhood as Venue["neighborhood"]) || "sentrum",
+          place_type: "cafe",
+          food_category: target.category || "street_food",
+          icon: target.icon_key || target.category || "popup",
+          latitude: target.latitude ?? 59.9139,
+          longitude: target.longitude ?? 10.7522,
+          has_wifi: false,
+          has_outlets: false,
+          silent_zone: false,
+          outdoor_seating: false,
+          dog_friendly: false,
+          open_late: false,
+          baseline_seats: 20,
+          baseline_noise: 50,
+          baseline_outlets: false,
+          vibe: {
+            seat_score: 75,
+            seat_label: "Seats available",
+            noise_score: 60,
+            noise_label: "Lively",
+            outlets_percentage: 0,
+            outlets_label: "No outlets",
+            overall_status: "moderate",
+            overall_score: 80,
+            active_checkins_count: 1,
+            last_checkin_at: new Date().toISOString(),
+            is_live: true,
+            decay_factor: 1,
+            avg_download_mbps: null,
+            avg_ping_ms: null,
+          },
+          open_now: !target.is_location_tba,
+          cover_image_url: target.photo_url,
+          google_rating: 4.8,
+          spot_type: "popup",
+          current_opening_hours_text: target.drop_dates || target.drop_hours || "Next Drop TBA",
+          popup_meta: {
+            residency_status: target.is_location_tba ? "between_residencies" : "active",
+            dates_label: target.drop_dates || "Next Drop TBA",
+            daily_hours: target.drop_hours,
+            instagram_url: igUrl,
+          },
+          signature_dishes: target.dish_name ? [target.dish_name] : [],
+          dietary_tags: target.dietary_tags || [],
+        };
+        nextVenues = [popupVenue, ...state.venues];
+
+        if (target.dish_name && target.photo_url) {
+          nextFoodPosts = [
+            {
+              id: `popup-dish-${target.id}`,
+              spot_id: newVenueId,
+              spot_name: target.venue_name,
+              spot_address: popupVenue.address,
+              spot_neighborhood: String(popupVenue.neighborhood || "Oslo"),
+              spot_coords: [popupVenue.longitude, popupVenue.latitude],
+              dish_name: target.dish_name,
+              category: target.category || "street_food",
+              image_url: target.photo_url,
+              price_nok: target.price_nok ?? null,
+              rating: 4.9,
+              taste_tags: ["Pop-Up Drop"],
+              review_text: target.review_text || `Pop-up drop at ${target.venue_name}.`,
+              author: {
+                name: target.venue_name,
+                handle: target.instagram_handle?.replace(/^@/, "") || "smakr_makr",
+                avatar_url: "",
+                badge: "Chef",
+              },
+              likes_count: 1,
+              saves_count: 0,
+              created_at_relative: "Just now",
+              is_drop: true,
+              drop_badge: "Pop-Up Drop",
+              spot_type: "popup",
+              dietary_tags: target.dietary_tags || [],
+            },
+            ...state.foodPosts,
+          ];
+        }
+      } else if (target.kind === "makr_photos" && target.photo_url) {
+        if (target.venue_id) {
+          nextVenues = state.venues.map((v) =>
+            v.id === target.venue_id ? { ...v, cover_image_url: target.photo_url } : v
+          );
+        }
+        if (target.dish_name) {
+          const matchedVenue = state.venues.find((v) => v.id === target.venue_id);
+          nextFoodPosts = [
+            {
+              id: `makr-photo-${target.id}`,
+              spot_id: target.venue_id || matchedVenue?.id || `spot-${target.id}`,
+              spot_name: target.venue_name,
+              spot_address: matchedVenue?.address || "Oslo",
+              spot_neighborhood: matchedVenue?.neighborhood || String(target.neighborhood || "Oslo"),
+              spot_coords: [matchedVenue?.longitude ?? 10.7522, matchedVenue?.latitude ?? 59.9139],
+              dish_name: target.dish_name,
+              category: target.category || matchedVenue?.food_category || "street_food",
+              image_url: target.photo_url,
+              price_nok: target.price_nok ?? null,
+              rating: 4.8,
+              taste_tags: ["Studio Drop"],
+              review_text: target.review_text || `Fresh photo drop from ${target.venue_name}.`,
+              author: {
+                name: target.venue_name,
+                handle: target.instagram_handle?.replace(/^@/, "") || "smakr_makr",
+                avatar_url: "",
+                badge: "Chef",
+              },
+              likes_count: 1,
+              saves_count: 0,
+              created_at_relative: "Just now",
+              is_official_pick: true,
+              dietary_tags: target.dietary_tags || [],
+              spot_type: matchedVenue?.spot_type || "restaurant",
+            },
+            ...state.foodPosts,
+          ];
+        }
+      }
+
+      return {
+        pendingSubmissions: nextQueue,
+        foodPosts: nextFoodPosts,
+        venues: nextVenues,
+      };
+    }),
+
   setIsCreateBiteModalOpen: (open) => set({ isCreateBiteModalOpen: open }),
 
   openCreateDish: () => {
     const { currentUser } = get();
 
-    // 1) Guests must sign in first.
+    // 1) Guests see the warm "Become a Smakr Foodie" invite modal first.
     if (!currentUser) {
-      set({ isAuthModalOpen: true });
-      get().showToast("Sign in or create an account to log dishes on Smakr.");
+      set({ isFoodieInviteOpen: true });
       return;
     }
 

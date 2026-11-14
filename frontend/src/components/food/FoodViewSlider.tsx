@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Utensils, Map as MapIcon, Plus } from "lucide-react";
+import { Utensils, Compass, Plus } from "lucide-react";
 import { motion } from "motion/react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 
@@ -41,6 +41,7 @@ export function FoodViewSlider({
     e.stopPropagation();
     e.preventDefault();
     setViewMode("map");
+    setMobileSheet("peek");
   };
 
   return (
@@ -131,7 +132,7 @@ export function FoodViewSlider({
           />
         )}
         <span className="flex items-center gap-1.5 shrink-0 pointer-events-none">
-          <MapIcon className="w-4 h-4 shrink-0" />
+          <Compass className="w-4 h-4 shrink-0" />
           <span
             className={`flex items-center gap-1.5 whitespace-nowrap overflow-hidden max-w-[120px] opacity-100`}
           >

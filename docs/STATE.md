@@ -3,8 +3,8 @@
 Updated: 2026-11-14
 
 ## Now
-- Task: Skiper 39 Open Peeps boot animation on `/` (`viewMode: "map"` default, cartoonish `SMAKR` pop-in, crowd-drop exit, translucent backdrop over static map placeholder).
-- Status: Complete — `npx tsc --noEmit` clean.
+- Task: Architectural & UI 6-part upgrade — lab route/API guards, map-first dock & GPS pill, spotlight/sheet polish, Foodie invite + curated queue, `/makr` no-login studio & `/admin` Pending Approvals tab.
+- Status: Complete — `npx tsc --noEmit` (0 errors) & `390x844` mobile browser check clean.
 
 ## Next (max 3)
 1. Review editorial swimlanes and full-screen map mode visual feedback with team.
@@ -21,8 +21,7 @@ Updated: 2026-11-14
 - TODO-VERIFY: confirm partner claim copy before launch.
 
 ## Recent (max 5, one line each)
+- 2026-11-14 — Shipped Tasks 1–6: lab guards, map-first dock & GPS pill, deduped location/pop-up sheets, `SmakrFoodieInviteModal` + moderated submission queue, 4-block feed rhythm, `/makr` studio, & `/admin` Pending Approvals tab; `npx tsc --noEmit` + `390x844` clean
 - 2026-11-14 — Mounted Skiper 39 crowd boot on `/` (`HomeView.tsx`) with instant 21-cell starter streaming, spring logo + radar ping, and collapsible mobile Boot Lab controls; `npx tsc --noEmit` clean
 - 2026-11-14 — Refined `SPRITE_OVERRIDES` across all 41 flagged Open Peeps sprites (pockets, glasses, cheeks, lapels, arms/fingers) in `bustCrowdPeep.ts`; `npx tsc --noEmit` clean
 - 2026-11-13 — Rebuilt `/admin` & `/admin/seeding-lab` with preview-first click-to-edit cards, mobile sheets, admin API guards, WebP uploads, and live seeded DB sync; tsc + 19/19 security tests pass
-- 2026-11-12 — Added spatial nearest-neighbor dock ordering, eased map panning harmony, calmer card pop, and Details bottom-spring restore; tsc clean
-- 2026-11-12 — Built single-row Cover-Flow carousel morph (grow/shrink in-place + photo parallax, zero duplicate row); tsc clean

@@ -1,11 +1,13 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } from "react";
+import { MapPin } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
-import { resolveVenueDisplayBadge, resolveEntityTaxonomy } from "@/lib/taxonomy";
+import { resolveVenueDisplayBadge, resolveEntityTaxonomy, resolveDishIconKey } from "@/lib/taxonomy";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
-import { formatOsloLocation, normalizeOsloNeighborhoodDisplay, getDirectionsUrl } from "@/lib/location";
-import { isVisibleInFeed } from "@/lib/popupUtils";
+import { formatOsloLocation, formatVenueLocationLine, normalizeOsloNeighborhoodDisplay, getDirectionsUrl } from "@/lib/location";
+import { isVisibleInFeed, getPopupStatus, getPopupMeta } from "@/lib/popupUtils";
+import { SmakrFoodIcon } from "@/components/food/FoodIcons";
 import { endInstantVenueSheet } from "@/lib/venueMorph";
 import type { Venue, VenueDetail, FoodPost } from "@/types";
 
@@ -87,15 +89,11 @@ const DockCarouselCard = React.memo(function DockCarouselCard({
     .replace(/\s+/g, " ")
     .trim()
     .toUpperCase();
-  const locationInfo = formatOsloLocation(venue.address, venue.city);
-  const neighborhood = normalizeOsloNeighborhoodDisplay(
-    venue.neighborhood || locationInfo.neighborhood
-  );
+  const locationLine = formatVenueLocationLine(venue);
   const signature = venue.signature_dishes?.[0] || mainTag;
   const flagIso = badge.flag ? FLAG_ISO_MAP[badge.flag] : null;
-  const ratingText = venue.google_rating ? venue.google_rating.toFixed(1) : "4.8";
+  const ratingText = venue.google_rating != null ? venue.google_rating.toFixed(1) : "4.8";
   const isPopup = venue.spot_type === "popup";
-  const priceOrStatusLabel = isPopup ? "POP-UP" : venue.price_level || "$$";
   const thumbSources = [
     venue.cover_image_url,
     (venue as VenueWithDishes).dishes?.[0]?.image_url,
@@ -106,7 +104,11 @@ const DockCarouselCard = React.memo(function DockCarouselCard({
     <div
       ref={(el) => onRef(venue.id, el)}
       onClick={() => onSelect(venue)}
-      className="relative w-[260px] h-[118px] shrink-0 snap-center rounded-2xl overflow-hidden cursor-pointer select-none bg-[#181615] shadow-lg border border-white/15 hover:border-white/35 will-change-transform"
+      className={`relative w-[260px] h-[118px] shrink-0 snap-center rounded-2xl overflow-hidden cursor-pointer select-none bg-[#181615] shadow-lg will-change-transform ${
+        isPopup
+          ? "border-2 border-[#E84A27] hover:border-[#ff6a47]"
+          : "border border-white/15 hover:border-white/35"
+      }`}
     >
       {/* Concealed state lives on this inner layer: the parallax engine writes
           the root's transform every scroll frame, so a scale class there would
@@ -125,33 +127,42 @@ const DockCarouselCard = React.memo(function DockCarouselCard({
         <div className="relative z-10 w-full h-full p-2.5 flex flex-col justify-between">
         <div className="flex items-center justify-between gap-1.5">
           <div className="flex items-center gap-1.5 min-w-0">
-            <div className="bg-[#FAF7F2]/95 text-[#181615] text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 truncate border border-[#EAE5DC] shadow-xs max-w-[140px]">
-              {flagIso ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={`https://flagcdn.com/16x12/${flagIso}.png`}
-                  width={14}
-                  height={10}
-                  alt={mainTag}
-                  className="inline-block rounded-[2px] object-cover shrink-0"
-                  loading="lazy"
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                  }}
-                />
-              ) : (
-                <span className="text-[10px] leading-none shrink-0">
-                  {badge.flag || "✦"}
-                </span>
-              )}
-              <span className="uppercase tracking-wider truncate">{mainTag}</span>
-            </div>
+            {isPopup ? (
+              <span className="bg-[#E84A27] text-white text-[10px] font-comico font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs whitespace-nowrap">
+                <SmakrFoodIcon name="popup" className="w-3 h-3 shrink-0" />
+                <span>POP-UP</span>
+              </span>
+            ) : (
+              <div className="bg-[#FAF7F2]/95 text-[#181615] text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 truncate border border-[#EAE5DC] shadow-xs max-w-[140px]">
+                {flagIso ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={`https://flagcdn.com/16x12/${flagIso}.png`}
+                    width={14}
+                    height={10}
+                    alt={mainTag}
+                    className="inline-block rounded-[2px] object-cover shrink-0"
+                    loading="lazy"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <span className="text-[10px] leading-none shrink-0">
+                    {badge.flag || "✦"}
+                  </span>
+                )}
+                <span className="uppercase tracking-wider truncate">{mainTag}</span>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
-            <span className="bg-[#E84A27] text-white text-[10px] font-comico font-bold px-2 py-0.5 rounded-full shadow-xs whitespace-nowrap">
-              {priceOrStatusLabel}
-            </span>
+            {!isPopup && (
+              <span className="bg-[#E84A27] text-white text-[10px] font-comico font-bold px-2 py-0.5 rounded-full shadow-xs whitespace-nowrap">
+                {venue.price_level || "$$"}
+              </span>
+            )}
             <span className="bg-[#FAF7F2]/95 text-[#181615] text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5 border border-[#EAE5DC] shadow-xs">
               <span className="text-[#E84A27]">★</span>
               <span>{ratingText}</span>
@@ -164,7 +175,8 @@ const DockCarouselCard = React.memo(function DockCarouselCard({
             {venue.name}
           </h4>
           <div className="flex items-center gap-1 text-[#FAF7F2]/90 text-[11px] truncate mt-0.5">
-            <span className="truncate">📍 {neighborhood}</span>
+            <MapPin className="w-3 h-3 text-[#E84A27] shrink-0" />
+            <span className="truncate">{locationLine}</span>
             <span className="text-white/40 shrink-0">·</span>
             <span className="text-[#FDEA6B] font-semibold truncate">
               ✦ {signature}
@@ -202,31 +214,43 @@ const SpotlightCard = React.memo(function SpotlightCard({
   onSelectSide: () => void;
   cardRef: (el: HTMLDivElement | null) => void;
 }) {
-  const locationInfo = formatOsloLocation(venue.address, venue.city);
-  const neighborhood = normalizeOsloNeighborhoodDisplay(
-    venue.neighborhood || locationInfo?.neighborhood
+  const isPopup = venue.spot_type === "popup";
+  const popupStatus = getPopupStatus(venue);
+  const popupMeta = getPopupMeta(venue);
+  const isPopupInactive =
+    isPopup &&
+    (popupMeta?.residency_status === "between_residencies" ||
+      Boolean(popupMeta?.dates_label?.toLowerCase().includes("tba")) ||
+      popupStatus.status !== "active");
+
+  const locationLine = formatVenueLocationLine(venue);
+  const matchingPost = foodPosts.find(
+    (p) => (p.spot_id === venue.id || p.spot_name === venue.name) && p.dish_name && !p.is_archived
   );
-  // "Norway, Oslo, Vulkan, NO" -> "Vulkan": drop country / city / postal tokens.
-  const address =
-    (venue.address || "")
-      .split(",")
-      .map((part) => part.trim())
-      .filter(Boolean)
-      .filter(
-        (part) =>
-          !/^(norway|norge|no|oslo|\d{4})$/i.test(part) &&
-          !/^\d{4}\s/i.test(part)
-      )[0] || neighborhood;
-  const story =
-    venue.description ||
-    (venue.vibe_signals as any)?.editorial_story ||
-    (venue.vibe_signals as any)?.vibe_description ||
-    "Standout Oslo culinary spot preparing authentic specialties daily.";
-  const price =
-    venue.spot_type === "popup" ? "POP-UP" : venue.price_level || "$$";
+  const heroDishName =
+    venue.signature_dishes?.[0] ||
+    matchingPost?.dish_name ||
+    (venue.vibe_signals as Record<string, any> | null)?.signature_dish ||
+    resolveEntityTaxonomy(venue).dishCategory ||
+    venue.name;
+  const heroDishPrice =
+    matchingPost?.price_nok && matchingPost.price_nok > 0
+      ? `${matchingPost.price_nok} kr`
+      : null;
+  const dishIconKey = resolveDishIconKey(heroDishName, venue.food_category);
+
+  const badgeLabel = isPopup ? "POP-UP" : venue.price_level || "$$";
   const directionsUrl = getDirectionsUrl(venue);
+  const instagramUrl = popupMeta?.instagram_url || null;
+  const instagramHandle = instagramUrl
+    ? instagramUrl
+        .replace(/^https?:\/\/(www\.)?instagram\.com\//i, "")
+        .replace(/\/.*$/, "")
+        .replace(/^@/, "")
+    : null;
   const live = getVenueLiveOpenStatus(venue);
-  const rating = venue.google_rating != null ? venue.google_rating.toFixed(1) : "4.7";
+  // Keep rating consistent with DockCarouselCard fallback ("4.8")
+  const rating = venue.google_rating != null ? venue.google_rating.toFixed(1) : "4.8";
   const imageSources = [
     venue.cover_image_url,
     (venue as VenueWithDishes).dishes?.[0]?.image_url,
@@ -250,12 +274,14 @@ const SpotlightCard = React.memo(function SpotlightCard({
         transformOrigin: "50% 100%",
         pointerEvents: isActive || isNeighbor ? "auto" : "none",
       }}
-      className={`absolute inset-0 overflow-hidden rounded-[26px] bg-[#121110] shadow-[0_20px_50px_rgba(0,0,0,0.45)] border will-change-transform ${
+      className={`absolute inset-0 overflow-hidden rounded-[26px] bg-[#121110] shadow-[0_20px_50px_rgba(0,0,0,0.45)] will-change-transform ${
         !isActive && isNeighbor ? "cursor-pointer" : ""
       } ${
-        isWeeklyPick
-          ? "border-[#E84A27]/60 ring-1 ring-[#E84A27]/35"
-          : "border-white/15"
+        isPopup
+          ? "border-2 border-[#E84A27] after:pointer-events-none after:absolute after:inset-[4px] after:rounded-[21px] after:border after:border-dashed after:border-[#E84A27]/35"
+          : isWeeklyPick
+          ? "border border-[#E84A27]/60 ring-1 ring-[#E84A27]/35"
+          : "border border-white/15"
       }`}
     >
       {/* Full-bleed dish/venue photo */}
@@ -264,30 +290,45 @@ const SpotlightCard = React.memo(function SpotlightCard({
       </div>
       <div className="absolute inset-0 bg-gradient-to-t from-[#121110] via-[#121110]/80 to-black/15 pointer-events-none" />
 
-      {/* Top row: price + rating/open + close (slides down smoothly when compact) */}
+      {/* Top row: floating dish icon + badge on left; rating/status + close ml-auto on right */}
       <div
         data-slot-top="true"
-        className="relative z-10 flex items-center justify-between gap-2 p-3.5 will-change-transform"
+        className="relative z-10 flex items-center gap-2 p-3.5 will-change-transform"
       >
-        <span
-          className={`bg-[#E84A27] text-white font-comico text-[11px] px-2.5 py-1 rounded-full shadow-xs whitespace-nowrap transition-[margin] duration-300 ${
-            isWeeklyPick && isActive && cardOpen ? "ml-[78px]" : ""
+        <div
+          className={`flex items-center gap-1.5 min-w-0 transition-[margin] duration-300 ${
+            isWeeklyPick && isActive && cardOpen ? "ml-[76px]" : ""
           }`}
         >
-          {isWeeklyPick ? `SMAKR PICK · ${price}` : price}
-        </span>
+          <span className="w-8 h-8 rounded-full bg-[#FAF7F2]/95 border border-[#181615]/10 shadow-md flex items-center justify-center shrink-0">
+            <SmakrFoodIcon name={dishIconKey} className="w-5 h-5" />
+          </span>
+          <span className="bg-[#E84A27] text-white font-comico text-[11px] px-2.5 py-1 rounded-full shadow-xs whitespace-nowrap flex items-center gap-1">
+            {isPopup && <SmakrFoodIcon name="popup" className="w-3 h-3 shrink-0" />}
+            <span>{isWeeklyPick ? `SMAKR PICK · ${badgeLabel}` : badgeLabel}</span>
+          </span>
+        </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
-          <span className="bg-black/50 backdrop-blur-md text-white text-[11px] font-bold px-2.5 py-1 rounded-full border border-white/15 flex items-center gap-1 whitespace-nowrap">
+        <div className="ml-auto flex items-center gap-1.5 shrink-0">
+          <span className="bg-black/55 backdrop-blur-md text-white text-[11px] font-bold px-2.5 py-1 rounded-full border border-white/15 flex items-center gap-1 whitespace-nowrap">
             <span className="text-[#F5B301]">★</span>
             <span>{rating}</span>
             <span className="text-white/50">·</span>
-            <span
-              className={`inline-block w-1.5 h-1.5 rounded-full ${
-                live?.isOpen ? "bg-emerald-400" : "bg-red-400"
-              }`}
-            />
-            <span>{live?.isOpen ? "Open" : "Closed"}</span>
+            {isPopupInactive ? (
+              <>
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400" />
+                <span>Next Drop TBA</span>
+              </>
+            ) : (
+              <>
+                <span
+                  className={`inline-block w-1.5 h-1.5 rounded-full ${
+                    live?.isOpen ? "bg-emerald-400" : "bg-red-400"
+                  }`}
+                />
+                <span>{live?.isOpen ? "Open" : "Closed"}</span>
+              </>
+            )}
           </span>
           <button
             type="button"
@@ -310,16 +351,26 @@ const SpotlightCard = React.memo(function SpotlightCard({
           <h4 className="font-comico font-normal text-[21px] leading-tight text-white drop-shadow-xs truncate">
             {venue.name}
           </h4>
-          <p className="text-white/75 text-[11.5px] truncate">
-            📍 {address} · {neighborhood}
+          <p className="text-white/80 text-[11.5px] flex items-center gap-1 truncate mt-0.5">
+            <MapPin className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
+            <span className="truncate">{locationLine}</span>
           </p>
         </div>
-        <p
+
+        {/* Signature Dish Pill (replaces 2-line bio quote) */}
+        <div
           data-slot-story="true"
-          className="text-white/85 text-[11.5px] italic line-clamp-2 mt-1.5 leading-snug"
+          className="mt-2 inline-flex items-center gap-2 self-start max-w-full bg-[#FAF7F2]/15 backdrop-blur-md border border-white/20 rounded-xl px-3 py-1.5 text-xs font-bold text-[#FAF7F2]"
         >
-          &ldquo;{story}&rdquo;
-        </p>
+          <SmakrFoodIcon name={dishIconKey} className="w-4 h-4 shrink-0" />
+          <span className="truncate">{heroDishName}</span>
+          {heroDishPrice && (
+            <>
+              <span className="text-white/45 shrink-0">·</span>
+              <span className="text-[#FDEA6B] shrink-0">{heroDishPrice}</span>
+            </>
+          )}
+        </div>
 
         <div data-slot-actions="true" className="mt-3 flex items-center gap-2">
           <button
@@ -333,16 +384,29 @@ const SpotlightCard = React.memo(function SpotlightCard({
             <span>Details</span>
             <span>↗</span>
           </button>
-          <a
-            href={directionsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="h-9 px-3.5 rounded-full bg-white/15 backdrop-blur-md text-white border border-white/20 font-comico text-[11px] flex items-center justify-center gap-1 active:scale-95 whitespace-nowrap"
-          >
-            <span>Directions</span>
-            <span>↗</span>
-          </a>
+          {isPopupInactive && instagramUrl ? (
+            <a
+              href={instagramUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="h-9 px-3.5 rounded-full bg-white/15 backdrop-blur-md text-white border border-white/20 font-comico text-[11px] flex items-center justify-center gap-1 active:scale-95 whitespace-nowrap"
+            >
+              <span>{instagramHandle ? `@${instagramHandle}` : "@Instagram"}</span>
+              <span>↗</span>
+            </a>
+          ) : (
+            <a
+              href={directionsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="h-9 px-3.5 rounded-full bg-white/15 backdrop-blur-md text-white border border-white/20 font-comico text-[11px] flex items-center justify-center gap-1 active:scale-95 whitespace-nowrap"
+            >
+              <span>Directions</span>
+              <span>↗</span>
+            </a>
+          )}
         </div>
       </div>
     </div>

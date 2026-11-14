@@ -1248,3 +1248,51 @@ export function spriteSourceRect(spriteIdx: number, cellW: number, cellH: number
     sh: cellH - SPRITE_INSET * 2,
   };
 }
+
+const SINGLE_SPRITE_CACHE = new Map<string, string>();
+const SINGLE_SPRITE_INFLIGHT = new Map<string, Promise<string>>();
+
+/** Slice and colorize a single Open Peeps cell on demand as a transparent PNG data URI. */
+export async function getPeepSpriteDataUri(
+  spriteIdx: number,
+  mode: PeepColorMode = "colorized"
+): Promise<string> {
+  const safeIdx = ((spriteIdx % SHEET_COUNT) + SHEET_COUNT) % SHEET_COUNT;
+  const key = `${mode}:${safeIdx}`;
+  const cached = SINGLE_SPRITE_CACHE.get(key);
+  if (cached) return cached;
+
+  const inflight = SINGLE_SPRITE_INFLIGHT.get(key);
+  if (inflight) return inflight;
+
+  const work = (async () => {
+    const img = await loadPeepsSheet();
+    const cellW = img.naturalWidth / SHEET_COLS;
+    const cellH = img.naturalHeight / SHEET_ROWS;
+    const col = safeIdx % SHEET_COLS;
+    const row = Math.floor(safeIdx / SHEET_COLS);
+    const sx = Math.round(col * cellW) + SPRITE_INSET;
+    const sy = Math.round(row * cellH) + SPRITE_INSET;
+    const sw = Math.max(1, Math.round((col + 1) * cellW) - Math.round(col * cellW) - SPRITE_INSET * 2);
+    const sh = Math.max(1, Math.round((row + 1) * cellH) - Math.round(row * cellH) - SPRITE_INSET * 2);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = sw;
+    canvas.height = sh;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return "";
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+
+    const imageData = ctx.getImageData(0, 0, sw, sh);
+    colorizeCell(imageData.data, sw, sh, safeIdx, mode);
+    ctx.putImageData(imageData, 0, 0);
+
+    const url = canvas.toDataURL("image/png");
+    SINGLE_SPRITE_CACHE.set(key, url);
+    SINGLE_SPRITE_INFLIGHT.delete(key);
+    return url;
+  })();
+
+  SINGLE_SPRITE_INFLIGHT.set(key, work);
+  return work;
+}

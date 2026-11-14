@@ -18,7 +18,6 @@ import {
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
-  insertFoodPost,
   insertVenue,
   updateVenue as updateVenueDb,
   uploadDishPhoto,
@@ -27,9 +26,10 @@ import {
 } from "@/lib/supabase/data";
 import { StorefrontIcon, FoodTruckIcon, TikTokVideoIcon } from "@/components/food/FoodIcons";
 import { getCulinaryImageForDish } from "@/lib/culinaryImages";
-import type { FoodCategory, FoodPost, Venue, SpotType } from "@/types";
+import type { FoodCategory, Venue, SpotType } from "@/types";
 import type { PlaceResult } from "@/lib/places/google";
 import { resolveFoodCategoryAndIcon } from "@/lib/categoryResolver";
+import type { PendingSubmission } from "@/lib/pendingQueue";
 
 /* ------------------------------------------------------------------ */
 /* Constants & helpers                                                  */
@@ -237,10 +237,9 @@ function detectCategoryKey(name: string): string {
 export function CreateFoodPostModal() {
   const isOpen = useCityPulseStore((state) => state.isCreateBiteModalOpen);
   const setIsOpen = useCityPulseStore((state) => state.setIsCreateBiteModalOpen);
-  const addFoodPost = useCityPulseStore((state) => state.addFoodPost);
   const addVenue = useCityPulseStore((state) => state.addVenue);
   const updateVenueLocal = useCityPulseStore((state) => state.updateVenue);
-  const setMapCenter = useCityPulseStore((state) => state.setMapCenter);
+  const addPendingSubmission = useCityPulseStore((state) => state.addPendingSubmission);
   const showToast = useCityPulseStore((state) => state.showToast);
   const currentUser = useCityPulseStore((state) => state.currentUser);
   const selectedVenue = useCityPulseStore((state) => state.selectedVenue);
@@ -287,6 +286,7 @@ export function CreateFoodPostModal() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
+  const [submittedForCuration, setSubmittedForCuration] = useState(false);
   const wasOpenRef = useRef(false);
 
   /* ---- derived ---- */
@@ -336,6 +336,7 @@ export function CreateFoodPostModal() {
       setExtraPhotos([]);
       setShowAllPhotos(false);
       setSubmitting(false);
+      setSubmittedForCuration(false);
       uploadPromiseRef.current = null;
     }
     wasOpenRef.current = isOpen;
@@ -659,71 +660,53 @@ export function CreateFoodPostModal() {
           getCulinaryImageForDish(dishName, activeCategory.category);
       }
 
-      // 3) Persist the dish.
+      // 3) Submit for Smakr editorial curation (never publishes unmoderated to main feed).
       const parsedPrice = priceNok.trim() ? Number(priceNok) : null;
       const numericPrice =
         typeof parsedPrice === "number" && !Number.isNaN(parsedPrice) && parsedPrice > 0
           ? parsedPrice
           : null;
-      const relevantQuotes = (finalVenue.curated_reviews && finalVenue.curated_reviews.length > 0)
-        ? finalVenue.curated_reviews
-        : (google?.reviews ?? []);
 
-      const insert = await insertFoodPost({
-        venueId: finalVenue.id,
-        authorId: userId,
-        dishName: dishName.trim(),
-        category: activeCategory.category,
-        dishImage: finalImage,
-        reviewText: reviewText.trim(),
-        priceNok: numericPrice,
-        rating: 0,
-        dietaryTags: [`cat_${activeCategory.category}`],
-        isOfficialPick: false,
-        vibe: vibe ?? undefined,
-        dinerQuotes: relevantQuotes,
-      });
-      if (!insert.success) {
-        showToast(insert.error ?? "Couldn't save your dish — please try again.");
-        return;
-      }
-
-      // 4) Optimistic feed + map update.
-      const optimistic: FoodPost = {
-        id: insert.dish?.id ?? `post-${Date.now()}`,
-        spot_id: finalVenue.id,
-        spot_name: finalVenue.name,
-        spot_address: finalVenue.address,
-        spot_neighborhood: capitalize(finalVenue.neighborhood) || "Oslo",
-        spot_coords: [finalVenue.longitude, finalVenue.latitude],
+      const submission: PendingSubmission = {
+        id: `foodie-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        kind: "foodie_dish",
+        status: "pending",
+        created_at: new Date().toISOString(),
+        author_id: userId,
+        author_name: currentUser.name || currentUser.handle || "Oslo Foodie",
+        author_handle: currentUser.handle || "oslo_foodie",
+        author_avatar_url: currentUser.avatar_url || "",
+        venue_id: finalVenue.id,
+        venue_name: finalVenue.name,
+        neighborhood: capitalize(finalVenue.neighborhood) || "Oslo",
+        address: finalVenue.address,
+        latitude: finalVenue.latitude,
+        longitude: finalVenue.longitude,
         dish_name: dishName.trim(),
-        category: activeCategory.category,
-        image_url: finalImage,
         price_nok: numericPrice,
-        rating: 0,
-        taste_tags: vibe ? [VIBE_LABEL[vibe]] : [],
+        category: activeCategory.category,
+        icon_key: activeCategory.key,
+        dietary_tags: [`cat_${activeCategory.category}` as unknown as import("@/types").DietaryTag],
+        photo_url: finalImage,
         review_text: reviewText.trim(),
-        diner_quotes: relevantQuotes,
-        author: {
-          name: currentUser.name || currentUser.handle,
-          handle: currentUser.handle,
-          avatar_url: currentUser.avatar_url || "",
-          badge: currentUser.badge,
-        },
-        likes_count: 0,
-        saves_count: 0,
-        created_at_relative: "Just now",
-        is_official_pick: true,
-        dietary_tags: [],
-        spot_type: (finalVenue.spot_type || formatType) as "restaurant" | "food_truck" | "popup",
+        vibe_note: vibe ? VIBE_LABEL[vibe] : undefined,
+        is_local_pick: true,
       };
 
-      addFoodPost(optimistic);
-      // Pan the radar to the new pin while keeping the feed (and the fresh dish
-      // at its top) visible.
-      setMapCenter([finalVenue.longitude, finalVenue.latitude], 15);
-      setIsOpen(false);
-      showToast("Dish logged. Oslo foodies thank you.");
+      addPendingSubmission(submission);
+
+      try {
+        await fetch("/api/makr/submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ submission }),
+        });
+      } catch {
+        // Local queue already stored the submission cleanly
+      }
+
+      setSubmittedForCuration(true);
+      showToast("Submitted for Curation ✨");
     } catch (err) {
       console.error("[CreateFoodPostModal] submit failed:", err);
       showToast("Something went wrong saving your dish. Please try again.");
@@ -799,6 +782,55 @@ export function CreateFoodPostModal() {
             <div className="sm:hidden pt-2.5 pb-0.5 flex justify-center bg-white/70">
               <span className="w-10 h-1 rounded-full bg-stone-300" />
             </div>
+
+            {submittedForCuration && (
+              <div className="absolute inset-0 z-20 bg-[#FAF7F2] flex flex-col items-center justify-center p-6 sm:p-8 text-center">
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  aria-label="Close confirmation"
+                  className="absolute top-4 right-4 w-9 h-9 rounded-full bg-[#181615]/8 hover:bg-[#181615]/15 flex items-center justify-center text-[#181615] cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+
+                <div className="w-16 h-16 rounded-full bg-[#4E8752]/15 border-2 border-[#4E8752] flex items-center justify-center text-[#4E8752] mb-4">
+                  <Check className="w-8 h-8" />
+                </div>
+
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E84A27]/12 text-[#E84A27] text-[10px] font-black uppercase tracking-[0.14em] mb-2">
+                  <Sparkles className="w-3 h-3" />
+                  Locals&apos; Picks Queue
+                </span>
+
+                <h3 className="font-comico font-normal text-[26px] leading-tight uppercase text-[#181615]">
+                  Submitted for Curation!
+                </h3>
+
+                <p className="mt-2.5 max-w-sm text-[13.5px] leading-relaxed text-[#181615]/80">
+                  Once approved by Smakr, your pick and avatar will appear in{" "}
+                  <span className="font-bold text-[#E84A27]">Locals&apos; Picks</span>.
+                </p>
+
+                <div className="mt-5 w-full max-w-xs rounded-2xl bg-white border border-[#e8e0d4] p-3.5 text-left shadow-xs">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-[#E84A27]">
+                    {selectedName || "Oslo Spot"}
+                  </p>
+                  <p className="font-bold text-[14px] text-[#181615] truncate mt-0.5">
+                    {dishName.trim()}
+                    {priceNok ? ` · ${priceNok} kr` : ""}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  className="mt-6 w-full max-w-xs py-3.5 rounded-2xl bg-[#181615] hover:bg-[#2c2826] text-[#FAF7F2] font-bold text-sm transition-all cursor-pointer"
+                >
+                  Back to Oslo Radar
+                </button>
+              </div>
+            )}
 
             {/* ── Header ── */}
             <div className="px-5 pt-3 sm:pt-4 pb-3 border-b border-[#efe7da] bg-white/70 backdrop-blur-sm">

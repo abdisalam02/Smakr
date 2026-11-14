@@ -178,3 +178,63 @@ export function getDirectionsUrl(venue?: {
 
   return `https://www.google.com/maps/dir/?api=1&destination=${encodedDest}`;
 }
+
+/**
+ * Deduplicates venue street + neighborhood for map cards and bottom sheets so
+ * "Sentrum · Sentrum" or "Oslo · Oslo" never appear.
+ */
+export function formatVenueLocationLine(venue?: {
+  address?: string | null;
+  city?: string | null;
+  neighborhood?: string | null;
+  spot_type?: string | null;
+  popup_start_date?: string | null;
+  popup_end_date?: string | null;
+  popup_meta?: {
+    residency_status?: string;
+    dates_label?: string;
+    host_address?: string;
+  } | null;
+} | null): string {
+  if (!venue) return "Oslo";
+
+  const isPopup = venue.spot_type === "popup" || venue.spot_type === "pop_up";
+  const datesLabel = (venue.popup_meta?.dates_label || "").toLowerCase();
+  const isBetweenDrops =
+    isPopup &&
+    (venue.popup_meta?.residency_status === "between_residencies" ||
+      datesLabel.includes("tba") ||
+      (!venue.popup_start_date && !venue.popup_end_date && !venue.popup_meta?.dates_label));
+
+  const rawAddr = (venue.popup_meta?.host_address || venue.address || "").trim();
+  const cleanFirstPart = rawAddr
+    .split(",")[0]
+    ?.replace(/\b\d{4}\s+[A-Za-zæøåÆØÅ]+\b/gi, "")
+    .replace(/\b\d{4}\b/g, "")
+    .trim();
+
+  const parsed = formatOsloLocation(rawAddr, venue.neighborhood);
+  const nh = normalizeOsloNeighborhoodDisplay(
+    venue.neighborhood && String(venue.neighborhood) !== "all"
+      ? String(venue.neighborhood)
+      : parsed.neighborhood
+  );
+
+  const genericSet = new Set(["", "oslo", "norway", "norge", "tba", "roaming", "location tba"]);
+  const addrLower = (cleanFirstPart || "").toLowerCase();
+  const nhLower = nh.toLowerCase();
+
+  if (isBetweenDrops && (genericSet.has(addrLower) || addrLower === nhLower)) {
+    return "Roaming Pop-Up · Oslo";
+  }
+
+  if (!cleanFirstPart || genericSet.has(addrLower) || addrLower === nhLower) {
+    return nh || "Oslo";
+  }
+
+  if (isBetweenDrops) {
+    return "Roaming Pop-Up · Oslo";
+  }
+
+  return `${cleanFirstPart} · ${nh}`;
+}

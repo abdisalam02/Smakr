@@ -3,8 +3,6 @@ import "./globals.css";
 import { Plus_Jakarta_Sans, DM_Sans, Space_Grotesk, Geist } from "next/font/google";
 import { comico } from "@/lib/fonts";
 import { Header } from "@/components/ui/Header";
-import { QuickCheckInModal } from "@/components/checkin/QuickCheckInModal";
-import { SpeedTestWidget } from "@/components/checkin/SpeedTestWidget";
 import { ThemeStudioModal } from "@/components/ui/ThemeStudioModal";
 import { MascotConfigHydrator } from "@/components/avatar/MascotConfigHydrator";
 import { AppStateHydrator } from "@/components/state/AppStateHydrator";
@@ -116,8 +114,6 @@ export default async function RootLayout({
           <main className="flex-1 flex flex-col relative overflow-x-hidden w-full max-w-[100vw]">
             {children}
           </main>
-          <QuickCheckInModal />
-          <SpeedTestWidget />
           <ThemeStudioModal />
           <MascotConfigHydrator />
           <AppStateHydrator />

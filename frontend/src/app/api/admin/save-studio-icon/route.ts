@@ -2,9 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
+import { requireAdmin } from "@/app/api/admin/_auth";
 
 export async function POST(req: NextRequest) {
   try {
+    if (process.env.NODE_ENV !== "development") {
+      const auth = await requireAdmin();
+      if (!auth.ok) {
+        return NextResponse.json(
+          { error: "Forbidden. Admin access required." },
+          { status: 403 }
+        );
+      }
+    }
+
     const body = await req.json();
     const { name, svg } = body;
 

@@ -162,6 +162,9 @@ export interface FoodPost {
   dietary_tags?: DietaryTag[];
   /** Curated by the Smakr admin via the Control Center moderation queue. */
   is_official_pick?: boolean;
+  /** True when submitted by a Smakr Foodie and approved into Locals' Picks. */
+  is_local_pick?: boolean;
+  moderation_status?: "pending" | "approved" | "rejected";
   /** Customer soundbites curated onto this dish (JSONB `diner_quotes`). */
   diner_quotes?: ReviewItem[];
   spot_type?: SpotType;

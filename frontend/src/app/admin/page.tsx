@@ -57,6 +57,7 @@ import {
 import { triggerAdminRevalidate } from "@/lib/adminUpload";
 import { BodyFontPicker } from "@/components/ui/FontSwitcher";
 import { PartnerClaimsQueue } from "@/components/admin/PartnerClaimsQueue";
+import { PendingApprovalsQueue } from "@/components/admin/PendingApprovalsQueue";
 import { AdminPopupWizardModal } from "@/components/admin/AdminPopupWizardModal";
 import { VisualPhotoSwitcher } from "@/components/ui/VisualPhotoSwitcher";
 import { isPopupVenue } from "@/lib/popupUtils";
@@ -111,7 +112,7 @@ function Card({ children, className = "" }: { children: React.ReactNode; classNa
   );
 }
 
-type TabId = "dispatch" | "popups" | "venues" | "claims" | "moderation" | "settings";
+type TabId = "approvals" | "dispatch" | "popups" | "venues" | "claims" | "moderation" | "settings";
 
 /* ------------------------------------------------------------------ */
 /* Page                                                               */
@@ -123,6 +124,7 @@ export default function AdminControlCenterPage() {
   const setWeeklyPick = useCityPulseStore((state) => state.setWeeklyPick);
   const venues = useCityPulseStore((state) => state.venues);
   const foodPosts = useCityPulseStore((state) => state.foodPosts);
+  const pendingSubmissions = useCityPulseStore((state) => state.pendingSubmissions);
   const setVenues = useCityPulseStore((state) => state.setVenues);
   const setFoodPosts = useCityPulseStore((state) => state.setFoodPosts);
   const addVenue = useCityPulseStore((state) => state.addVenue);
@@ -133,6 +135,7 @@ export default function AdminControlCenterPage() {
   const toggleOfficialPick = useCityPulseStore((state) => state.toggleOfficialPick);
   const showToast = useCityPulseStore((state) => state.showToast);
 
+  const pendingApprovalCount = pendingSubmissions.filter((x) => x.status === "pending").length;
   const [tab, setTab] = useState<TabId>("dispatch");
   const [selectedDishId, setSelectedDishId] = useState("");
   const [editingPost, setEditingPost] = useState<FoodPost | null>(null);
@@ -582,6 +585,14 @@ export default function AdminControlCenterPage() {
         <div className="mb-6 p-1.5 rounded-2xl bg-[#EFEAE1] border border-[#181615]/10 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           {(
             [
+              {
+                id: "approvals",
+                label:
+                  pendingApprovalCount > 0
+                    ? `Pending Approvals (${pendingApprovalCount})`
+                    : "Pending Approvals (Foodies & Makr)",
+                emoji: "✨",
+              },
               { id: "dispatch", label: "Dispatch", emoji: "📣" },
               { id: "popups", label: `Pop-ups (${popupVenues.length})`, emoji: "🎟️" },
               { id: "venues", label: `Venues (${venues.length})`, emoji: "🏪" },
@@ -2123,6 +2134,8 @@ export default function AdminControlCenterPage() {
             <DataCleanupCard />
           </div>
         )}
+
+        {tab === "approvals" && <PendingApprovalsQueue />}
 
         {/* ================================================================= */}
         {/* TAB 4 — Partner Claims Moderation Queue                           */}

@@ -133,6 +133,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
   const [imgReady, setImgReady] = useState(() =>
     Boolean(post.image_url && LOADED_FEED_IMAGES.has(post.image_url))
   );
+  const [imgError, setImgError] = useState(false);
 
   const locationInfo = formatOsloLocation(
     post.spot_address || linkedVenue?.address,
@@ -459,12 +460,10 @@ export const FoodPostCard = React.memo(function FoodPostCard({
       className={`group relative w-full rounded-[26px] overflow-hidden border bg-[#181615] shadow-md transition-[box-shadow,transform] duration-200 md:hover:-translate-y-0.5 hover:shadow-xl cursor-pointer select-none ${
         fillHeight ? "h-full" : ""
       } ${
-        isSelected ? "ring-2 ring-[#E84A27]" : ""
-      } ${
-        isPopupActive
-          ? "border-[#E84A27]/40 dark:border-[#E84A27]/50 shadow-[0_4px_20px_rgba(232,74,39,0.14)]"
-          : isPopupInactive
-          ? "border-black/[0.08] dark:border-white/10 opacity-95"
+        isPopup
+          ? "border-2 border-white shadow-[0_8px_24px_rgba(24,22,21,0.16)]"
+          : isSelected
+          ? "ring-2 ring-white border-white/80"
           : "border-black/[0.08] dark:border-white/10"
       } ${
         popupStatus.isDimmedCard ? "opacity-50 grayscale-[20%]" : ""
@@ -478,25 +477,35 @@ export const FoodPostCard = React.memo(function FoodPostCard({
           ? "aspect-[4/5] min-h-[220px] sm:min-h-[260px]"
           : "aspect-[4/3] min-h-[320px]"
       }`}>
-        <Image
-          src={
-            post.image_url?.startsWith("/api/places/photos") && !post.image_url.includes("w=")
-              ? `${post.image_url}&w=640`
-              : post.image_url
-          }
-          alt={post.dish_name}
-          fill
-          unoptimized={post.image_url?.startsWith("/") || post.image_url?.startsWith("data:")}
-          priority={priority || (typeof index === "number" && index < 4)}
-          loading={priority || (typeof index === "number" && index < 6) ? "eager" : "lazy"}
-          decoding="async"
-          onLoad={() => {
-            if (post.image_url) LOADED_FEED_IMAGES.add(post.image_url);
-            setImgReady(true);
-          }}
-          className="object-cover w-full opacity-100 transition-transform duration-700 ease-out group-hover:scale-105"
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 600px"
-        />
+        {imgError || !post.image_url ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#F3EDE2] dark:bg-[#24201D]">
+            <SmakrFoodIcon name={isPopup ? "popup" : (post.category || "burger")} className="w-12 h-12 opacity-60" />
+          </div>
+        ) : (
+          <Image
+            src={
+              post.image_url?.startsWith("/api/places/photos") && !post.image_url.includes("w=")
+                ? `${post.image_url}&w=640`
+                : post.image_url
+            }
+            alt=""
+            fill
+            unoptimized={post.image_url?.startsWith("/") || post.image_url?.startsWith("data:")}
+            priority={priority || (typeof index === "number" && index < 4)}
+            loading={priority || (typeof index === "number" && index < 6) ? "eager" : "lazy"}
+            decoding="async"
+            onLoad={() => {
+              if (post.image_url) LOADED_FEED_IMAGES.add(post.image_url);
+              setImgReady(true);
+            }}
+            onError={() => {
+              setImgError(true);
+              setImgReady(true);
+            }}
+            className="object-cover w-full opacity-100 text-transparent transition-transform duration-700 ease-out group-hover:scale-105"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 600px"
+          />
+        )}
 
         <div
           aria-hidden="true"
@@ -512,15 +521,15 @@ export const FoodPostCard = React.memo(function FoodPostCard({
         <div className="absolute top-3 inset-x-3 flex items-start justify-between gap-2 z-10 pointer-events-auto">
           {/* Top-Left: Pop-up / Price / Kitchen Badge */}
           <div className="flex flex-wrap items-center gap-1.5 max-w-[75%]">
-            {/* Pop-up Badge in Top-Left (Clean neutral paper badge, icon + "Pop-Up", no orange background) */}
+            {/* Pop-up Badge in Top-Left */}
             {isPopup && (
               <span
-                className={`font-comico font-bold tracking-tight rounded-full shadow-md flex items-center gap-1.5 whitespace-nowrap bg-[#FAF7F2]/95 backdrop-blur-xs text-[#181615] border border-black/12 ${
+                className={`font-comico font-normal tracking-wide rounded-full shadow-md flex items-center gap-1.5 whitespace-nowrap bg-[#181615]/80 backdrop-blur-md text-white border border-white/90 ${
                   isGridMode ? "px-2.5 py-0.5 text-[11px]" : "px-3 py-1 text-xs"
                 }`}
               >
                 <SmakrFoodIcon name="popup" className={`${isGridMode ? "w-3.5 h-3.5" : "w-4 h-4"} shrink-0`} />
-                <span>Pop-Up</span>
+                <span>POP-UP DROP</span>
               </span>
             )}
 

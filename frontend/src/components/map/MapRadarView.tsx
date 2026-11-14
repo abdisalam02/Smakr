@@ -47,7 +47,7 @@ import {
 import { resolveEntityTaxonomy, resolveVenueDisplayBadge, resolveDishIconKey } from "@/lib/taxonomy";
 import { getIconDisplay } from "@/lib/iconRegistry";
 import { formatDistance } from "@/lib/math";
-import { getDirectionsUrl } from "@/lib/location";
+import { getDirectionsUrl, formatVenueLocationLine } from "@/lib/location";
 import { getPopupStatus, getPopupUrgencyLabel, getPopupMeta, isPopupVenue } from "@/lib/popupUtils";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import {
@@ -1845,14 +1845,19 @@ export function MapRadarView() {
       ? formatDistance(selectedVenue.distance_meters)
       : "";
 
-    const rawAddress = selectedVenue.address
-      ? selectedVenue.address
-      : selectedVenue.neighborhood
-      ? `${selectedVenue.neighborhood}, Oslo`
-      : "Oslo";
-    const addressText = isPopup
-      ? rawAddress.replace(/,\s*0\d{3}\s*Oslo/i, "").replace(/,\s*Oslo/i, "").trim() || "Roving Pop-Up"
-      : rawAddress;
+    const addressText = formatVenueLocationLine(selectedVenue);
+    const popupDormant =
+      isPopup &&
+      (popupMeta?.residency_status === "between_residencies" ||
+        Boolean(popupMeta?.dates_label?.toLowerCase().includes("tba")) ||
+        getPopupStatus(selectedVenue).status !== "active");
+    const popupIgUrl = popupMeta?.instagram_url || null;
+    const popupIgHandle = popupIgUrl
+      ? popupIgUrl
+          .replace(/^https?:\/\/(www\.)?instagram\.com\//i, "")
+          .replace(/\/.*$/, "")
+          .replace(/^@/, "")
+      : null;
 
     const curatedDishPhoto = useCityPulseStore
       .getState()
@@ -2092,17 +2097,24 @@ export function MapRadarView() {
               color: #57534E;
               margin-top: 5px;
               line-height: 1.3;
+              display: flex;
+              align-items: center;
+              gap: 4px;
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
             ">
-              ${isWeeklyPickVenue && weeklyPick.dish_name ? `✦ ${weeklyPick.dish_name} · ${addressText}` : `📍 ${addressText}`}
+              ${
+                isWeeklyPickVenue && weeklyPick.dish_name
+                  ? `<span style="overflow:hidden;text-overflow:ellipsis;">✦ ${weeklyPick.dish_name} · ${addressText}</span>`
+                  : `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#E84A27" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg><span style="overflow:hidden;text-overflow:ellipsis;">${addressText}</span>`
+              }
             </div>
         </div>
 
         <!-- Floating Action Buttons (Outside card, matching exact card width) -->
         <div style="display: flex; gap: 7px; width: 100%; box-sizing: border-box;">
-          <a href="${googleMapsUrl}" target="_blank" rel="noopener noreferrer" style="
+          <a href="${popupDormant && popupIgUrl ? popupIgUrl : googleMapsUrl}" target="_blank" rel="noopener noreferrer" style="
             flex: 1;
             height: 36px;
             padding: 0 10px;
@@ -2124,7 +2136,7 @@ export function MapRadarView() {
             box-sizing: border-box;
             cursor: pointer;
           ">
-            <span>Map</span> ↗
+            <span>${popupDormant && popupIgUrl ? (popupIgHandle ? `@${popupIgHandle}` : "@Instagram") : "Directions"}</span> ↗
           </a>
 
           <button id="smakr-popup-menu-btn" style="
