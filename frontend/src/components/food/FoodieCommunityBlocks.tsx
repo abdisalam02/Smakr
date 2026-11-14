@@ -89,20 +89,20 @@ export function FoodieCalloutCard() {
           <button
             type="button"
             onClick={() => setIsFoodieInviteOpen(true)}
-            className="flex flex-col items-end gap-1 group cursor-pointer"
+            className="flex flex-col items-end gap-0.5 group cursor-pointer"
           >
-            <div className="flex items-center -space-x-2">
+            <div className="flex items-end -space-x-3">
               {CLEAN_LOCAL_SPRITES.slice(0, 4).map((idx) => (
                 <div
                   key={idx}
-                  className="w-7 h-7 rounded-full border-2 border-[#FAF7F2] bg-[#F2EDE4] overflow-hidden shadow-2xs shrink-0"
+                  className="w-11 h-12 shrink-0 overflow-visible"
                 >
                   {sprites[idx] ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
                       src={sprites[idx]}
                       alt=""
-                      className="w-full h-full object-contain object-bottom"
+                      className="w-full h-full object-contain object-bottom drop-shadow-[0_2px_4px_rgba(24,22,21,0.18)]"
                     />
                   ) : null}
                 </div>

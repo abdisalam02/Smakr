@@ -838,11 +838,15 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
         if (!live.isOpen) return false;
       }
 
-      if (hood && !hood.match(v)) return false;
       return true;
     });
 
-    if (filtered.length <= 2) return filtered;
+    if (filtered.length <= 2) {
+      if (hood && hood.id !== "all") {
+        return [...filtered].sort((a, b) => Number(hood.match(b)) - Number(hood.match(a)));
+      }
+      return filtered;
+    }
 
     const COS_OSLO = Math.cos((59.9139 * Math.PI) / 180);
     const distSq = (aLng: number, aLat: number, bLng: number, bLat: number) => {
@@ -898,7 +902,17 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
       }
       ordered.push(remaining.splice(nearestIdx, 1)[0]);
     }
-    return [...ordered, ...withoutCoords];
+    const allOrdered = [...ordered, ...withoutCoords];
+    if (hood && hood.id !== "all") {
+      const inHood: Venue[] = [];
+      const outsideHood: Venue[] = [];
+      for (const v of allOrdered) {
+        if (hood.match(v)) inHood.push(v);
+        else outsideHood.push(v);
+      }
+      return [...inHood, ...outsideHood];
+    }
+    return allOrdered;
   }, [
     venues,
     foodPosts,
@@ -1047,11 +1061,14 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
     setIsVenueDetailModalOpen(true);
   }, [activeSpotlight, selectVenueById, setIsVenueDetailModalOpen]);
 
-  // Handle clicking a neighborhood pill: filter deck + camera animation + dismiss spotlight
+  // Handle clicking a neighborhood pill: prioritize neighborhood cards first + camera animation + dismiss spotlight
   const handleSelectHood = (hood: NeighborhoodOption) => {
     setActiveHoodId(hood.id);
     if (selectedVenue) {
       setSelectedVenue(null);
+    }
+    if (carouselRef.current) {
+      carouselRef.current.scrollTo({ left: 0, behavior: "smooth" });
     }
     const map = (typeof window !== "undefined" && (window as any).__smakrMap) || null;
     if (map) {
@@ -1576,7 +1593,6 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
         resetAllFilters();
         setSelectedGroup(opt.id);
       }
-      setIsFilterDeckOpen(false);
     },
     [selectedVenue, setSelectedVenue, resetAllFilters, setFilters, setSelectedSpotKind, setSelectedGroup]
   );
@@ -1652,57 +1668,47 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
           </div>
         </div>
 
-        {/* ── ROW B: Card-sized Filter Deck OR Resting Compact Carousel ── */}
+        {/* ── ROW B: Floating Filter Icons OR Resting Compact Carousel ── */}
         {isFilterDeckOpen && !cardOpen ? (
-          <div className="relative w-full overflow-x-auto snap-x snap-mandatory no-scrollbar px-6 pt-3 pb-2 flex items-end gap-3 pointer-events-auto">
+          <div className="px-3 pt-2 pb-2 pointer-events-auto">
+            <div className="relative w-full h-[126px] rounded-2xl bg-[#FAF7F2]/65 backdrop-blur-md border border-white/60 shadow-lg overflow-x-auto snap-x snap-mandatory no-scrollbar px-5 flex items-center gap-6">
             {mapFilterOptions.map((opt) => (
               <button
                 key={opt.id}
                 type="button"
                 onClick={() => handleSelectMapFilter(opt)}
-                className={`relative w-[138px] h-[118px] shrink-0 snap-center rounded-2xl p-3 flex flex-col justify-between text-left transition-all active:scale-95 cursor-pointer shadow-lg border ${
-                  opt.active
-                    ? "bg-[#E84A27] text-white border-[#E84A27]"
-                    : "bg-[#FAF7F2]/95 backdrop-blur-md text-[#181615] border-white/75 hover:bg-white"
-                }`}
+                className="shrink-0 snap-center flex flex-col items-center justify-center gap-1.5 min-w-[74px] py-1 transition-transform duration-200 active:scale-90 cursor-pointer group"
               >
-                <div className="flex items-center justify-between w-full">
-                  <div
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                      opt.active ? "bg-white/20" : "bg-[#F2EDE4]"
-                    }`}
-                  >
-                    {opt.kind === "open" ? (
-                      <Clock className={`w-4 h-4 ${opt.active ? "text-white" : "text-[#3D5A45]"}`} />
-                    ) : opt.iconName ? (
-                      <SmakrFoodIcon name={opt.iconName} className="w-6 h-6" />
-                    ) : null}
-                  </div>
-                  <span
-                    className={`text-[10px] font-comico font-normal px-2 py-0.5 rounded-full ${
-                      opt.active
-                        ? "bg-black/20 text-white"
-                        : "bg-[#181615]/8 text-[#181615]/70"
-                    }`}
-                  >
-                    {opt.count}
-                  </span>
+                <div
+                  className={`flex items-center justify-center transition-transform duration-200 ${
+                    opt.active ? "scale-115" : "group-hover:scale-105"
+                  }`}
+                >
+                  {opt.kind === "open" ? (
+                    <Clock
+                      className={`w-11 h-11 drop-shadow-[0_4px_10px_rgba(24,22,21,0.28)] ${
+                        opt.active ? "text-[#E84A27]" : "text-[#3D5A45]"
+                      }`}
+                    />
+                  ) : opt.iconName ? (
+                    <SmakrFoodIcon
+                      name={opt.iconName}
+                      className="w-14 h-14 drop-shadow-[0_6px_12px_rgba(24,22,21,0.26)]"
+                    />
+                  ) : null}
                 </div>
-
-                <div>
-                  <div className="font-comico font-normal text-[14px] leading-tight uppercase truncate">
-                    {opt.label}
-                  </div>
-                  <div
-                    className={`text-[10px] font-semibold mt-0.5 ${
-                      opt.active ? "text-white/85" : "text-[#181615]/55"
-                    }`}
-                  >
-                    {opt.active ? "Selected" : "Tap to filter"}
-                  </div>
-                </div>
+                <span
+                  className={`font-comico font-normal text-[13px] leading-tight uppercase whitespace-nowrap ${
+                    opt.active
+                      ? "text-[#E84A27] drop-shadow-[0_1px_2px_rgba(255,255,255,0.95)]"
+                      : "text-[#181615] drop-shadow-[0_1px_3px_rgba(255,255,255,0.95)]"
+                  }`}
+                >
+                  {opt.label}
+                </span>
               </button>
             ))}
+            </div>
           </div>
         ) : (
           <div
