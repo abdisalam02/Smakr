@@ -37,8 +37,10 @@ import {
   Volume2,
   VolumeX,
   X,
+  Layers,
 } from "lucide-react";
 import { SmakrMascotRig } from "@/components/studio/SmakrMascotRig";
+import { CarouselStoryDeck } from "@/components/studio/CarouselStoryDeck";
 import { FOOD_PIN_SVG_MAP } from "@/components/food/FoodIcons";
 import SmakrLogo from "@/components/ui/SmakrLogo";
 import { OfficialSmakrMascot, OFFICIAL_SMAKR_MASCOT_CONFIG } from "@/lib/officialSmakrMascot";
@@ -650,8 +652,8 @@ export default function AdReelStagePage() {
   const weeklyPick = useCityPulseStore((s) => s.weeklyPick);
   const venues = useCityPulseStore((s) => s.venues);
 
-  // Campaign switcher: Partner Announcement Ad (Static) vs Motion Reel (Video)
-  const [activeCampaignTab, setActiveCampaignTab] = useState<"partner_ad" | "motion_reel">("partner_ad");
+  // Campaign switcher: 5-Slide Story Deck vs Partner Ad (Static) vs Motion Reel (Video)
+  const [activeCampaignTab, setActiveCampaignTab] = useState<"story_deck" | "partner_ad" | "motion_reel">("story_deck");
   const [partnerAdAspect, setPartnerAdAspect] = useState<"4:5" | "9:16">("4:5");
   const [partnerAdHook, setPartnerAdHook] = useState<"front_door" | "delivery_markup" | "food_radar">("front_door");
   const [selectedPartnerVenueId, setSelectedPartnerVenueId] = useState<string>("");
@@ -1897,6 +1899,22 @@ export default function AdReelStagePage() {
               <button
                 type="button"
                 onClick={() => {
+                  setActiveCampaignTab("story_deck");
+                  setIsPlaying(false);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+                  activeCampaignTab === "story_deck"
+                    ? "bg-[#e84a27] text-white shadow-xs"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Story Deck</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
                   setActiveCampaignTab("partner_ad");
                   setIsPlaying(false);
                 }}
@@ -1925,7 +1943,11 @@ export default function AdReelStagePage() {
             </div>
           </div>
 
-          {activeCampaignTab === "partner_ad" ? (
+          {activeCampaignTab === "story_deck" ? (
+            <div className="text-[11px] font-bold text-zinc-400 px-2">
+              5-Slide How Smakr Works · 2-Slide Early Snow · @3x PNG
+            </div>
+          ) : activeCampaignTab === "partner_ad" ? (
             <div className="flex items-center gap-2">
               <span className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/5 text-zinc-500 text-xs font-bold border border-white/10">
                 Partner Studio · coming soon
@@ -2276,7 +2298,11 @@ export default function AdReelStagePage() {
       {/* ===================================================================== */}
       {/* THE STAGE: STATIC PARTNER AD STUDIO VS MOTION REEL VIDEO               */}
       {/* ===================================================================== */}
-      {activeCampaignTab === "partner_ad" ? (
+      {activeCampaignTab === "story_deck" ? (
+        <div className="flex-1 w-full overflow-y-auto">
+          <CarouselStoryDeck />
+        </div>
+      ) : activeCampaignTab === "partner_ad" ? (
         <div className="flex-1 w-full overflow-y-auto px-4 py-6 flex flex-col items-center">
           <div className="w-full max-w-3xl space-y-5">
             {/* Top Toolbar for Partner Ad */}
@@ -2846,6 +2872,8 @@ export default function AdReelStagePage() {
                                     skinColor={OFFICIAL_SMAKR_MASCOT_CONFIG.skinColor}
                                     clothingColor={OFFICIAL_SMAKR_MASCOT_CONFIG.topColor}
                                     innerClothingColor={OFFICIAL_SMAKR_MASCOT_CONFIG.bottomColor}
+                                    sherpaColor="#C8B79E"
+                                    jacketStyle="navy-sherpa"
                                     hatColor={OFFICIAL_SMAKR_MASCOT_CONFIG.hatColor}
                                     headContrastColor={OFFICIAL_SMAKR_MASCOT_CONFIG.hairColor}
                                     size={58}
@@ -3617,6 +3645,8 @@ export default function AdReelStagePage() {
                     skinColor={OFFICIAL_SMAKR_MASCOT_CONFIG.skinColor}
                     clothingColor={OFFICIAL_SMAKR_MASCOT_CONFIG.topColor}
                     innerClothingColor={OFFICIAL_SMAKR_MASCOT_CONFIG.bottomColor}
+                    sherpaColor="#C8B79E"
+                    jacketStyle="navy-sherpa"
                     hatColor={OFFICIAL_SMAKR_MASCOT_CONFIG.hatColor}
                     headContrastColor={OFFICIAL_SMAKR_MASCOT_CONFIG.hairColor}
                     size={aspectMode === "9:16" ? 510 : 360}

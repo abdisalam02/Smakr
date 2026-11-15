@@ -32,6 +32,15 @@ export {
   type BlushBody,
 };
 
+export type MascotJacketStyle = 'navy-sherpa' | 'paprika-dots';
+
+export interface MascotLayerTransform {
+  offsetX: number;
+  offsetY: number;
+  scale: number;
+  rotate: number;
+}
+
 export interface SmakrMascotRigProps {
   head?: string;
   face?: string;
@@ -41,6 +50,12 @@ export interface SmakrMascotRigProps {
   skinColor?: string;
   clothingColor?: string;
   innerClothingColor?: string;
+  sherpaColor?: string;
+  glassesColor?: string;
+  jacketStyle?: MascotJacketStyle;
+  sherpaTransform?: MascotLayerTransform;
+  detailsTransform?: MascotLayerTransform;
+  svgRef?: React.Ref<SVGSVGElement>;
   shoeColor?: string;
   hatColor?: string;
   propColor?: string;
@@ -105,14 +120,29 @@ export function normalizeBlushFaceId(face: string | undefined): string {
   return 'smile-big';
 }
 
+function buildLayerTransformAttr(
+  t: MascotLayerTransform | undefined,
+  cx: number,
+  cy: number
+): string {
+  if (!t || (t.offsetX === 0 && t.offsetY === 0 && t.scale === 1 && t.rotate === 0)) {
+    return '';
+  }
+  return ` transform="translate(${t.offsetX}, ${t.offsetY}) translate(${cx}, ${cy}) rotate(${t.rotate}) scale(${t.scale}) translate(${-cx}, ${-cy})"`;
+}
+
 /** Colorize Blush Body SVG markup strictly by semantic positive ID whitelist */
 function colorizeBodyMarkup(
   markup: string,
   skinColor: string,
   clothingColor: string,
-  innerClothingColor: string = '#27272A',
+  innerClothingColor: string = '#FAF7F2',
   shoeColor: string = '#FFFFFF',
-  hatColor: string = '#e84a27'
+  hatColor: string = '#e84a27',
+  sherpaColor: string = '#C8B79E',
+  jacketStyle: MascotJacketStyle = 'navy-sherpa',
+  sherpaTransform?: MascotLayerTransform,
+  detailsTransform?: MascotLayerTransform
 ): string {
   const safeClothing =
     clothingColor.toLowerCase() === '#181615' || clothingColor.toLowerCase() === '#000000'
@@ -126,7 +156,24 @@ function colorizeBodyMarkup(
 
   const hasTwoLayers = markup.includes('id="Jacket"') && markup.includes('id="Top"');
 
-  return markup.replace(/<(path|rect|polygon)\s+([^>]+)>/g, (match, tag, attrs) => {
+  let processed = markup;
+  if (jacketStyle === 'paprika-dots') {
+    processed = processed
+      .replace('<g id="ClassicSeams" style="display:none">', '<g id="ClassicSeams">')
+      .replace('<g id="WorkJacketDetails">', '<g id="WorkJacketDetails" style="display:none">')
+      .replace('<g id="SherpaCollar">', '<g id="SherpaCollar" style="display:none">');
+  } else {
+    const sherpaT = buildLayerTransformAttr(sherpaTransform, 440, 108);
+    const detailsT = buildLayerTransformAttr(detailsTransform, 440, 420);
+    if (sherpaT) {
+      processed = processed.replace('<g id="SherpaCollar">', `<g id="SherpaCollar"${sherpaT}>`);
+    }
+    if (detailsT) {
+      processed = processed.replace('<g id="WorkJacketDetails">', `<g id="WorkJacketDetails"${detailsT}>`);
+    }
+  }
+
+  return processed.replace(/<(path|rect|polygon)\s+([^>]+)>/g, (match, tag, attrs) => {
     // 1. Absolute Guard for Stroke-Only / Outline / Ink Paths
     if (attrs.includes('fill="none"') || attrs.includes('id="OutlineStroke"')) {
       return match;
@@ -144,6 +191,9 @@ function colorizeBodyMarkup(
     }
     if (id === 'Seams') {
       return `<${tag} ${attrs.replace(/fill="[^"]*"/, 'fill="#FAF7F2"')}>`;
+    }
+    if (id === 'SherpaBase') {
+      return `<${tag} ${attrs.replace(/fill="[^"]*"/, `fill="${sherpaColor}"`)}>`;
     }
     if (id === 'Cup' || id === 'Mug') {
       return `<${tag} ${attrs.replace(/fill="[^"]*"/, 'fill="#FFFFFF"')}>`;
@@ -209,8 +259,14 @@ export function SmakrMascotRig({
   facialHair = DEFAULT_MASCOT_CONFIG.facialHair,
   mask = DEFAULT_MASCOT_CONFIG.mask || 'none',
   skinColor = DEFAULT_MASCOT_CONFIG.skinColor,
-  clothingColor = DEFAULT_MASCOT_CONFIG.clothingColor,
-  innerClothingColor = DEFAULT_MASCOT_CONFIG.innerClothingColor || '27272a',
+  clothingColor = DEFAULT_MASCOT_CONFIG.clothingColor || '#1E2738',
+  innerClothingColor = DEFAULT_MASCOT_CONFIG.innerClothingColor || '#FAF7F2',
+  sherpaColor = '#C8B79E',
+  glassesColor = '#181615',
+  jacketStyle = 'navy-sherpa',
+  sherpaTransform,
+  detailsTransform,
+  svgRef,
   shoeColor = DEFAULT_MASCOT_CONFIG.shoeColor || 'ffffff',
   hatColor = DEFAULT_MASCOT_CONFIG.hatColor || 'e84a27',
   headContrastColor = DEFAULT_MASCOT_CONFIG.headContrastColor,
@@ -239,9 +295,12 @@ export function SmakrMascotRig({
   const resolvedShirt = (clothingColor || shirtColor || DEFAULT_MASCOT_CONFIG.clothingColor).startsWith('#')
     ? clothingColor || shirtColor || DEFAULT_MASCOT_CONFIG.clothingColor
     : `#${clothingColor || shirtColor || DEFAULT_MASCOT_CONFIG.clothingColor}`;
-  const resolvedInnerShirt = (innerClothingColor || DEFAULT_MASCOT_CONFIG.innerClothingColor || '#27272A').startsWith('#')
-    ? innerClothingColor || DEFAULT_MASCOT_CONFIG.innerClothingColor || '#27272A'
-    : `#${innerClothingColor || DEFAULT_MASCOT_CONFIG.innerClothingColor || '27272a'}`;
+  const resolvedInnerShirt = (innerClothingColor || DEFAULT_MASCOT_CONFIG.innerClothingColor || '#FAF7F2').startsWith('#')
+    ? innerClothingColor || DEFAULT_MASCOT_CONFIG.innerClothingColor || '#FAF7F2'
+    : `#${innerClothingColor || DEFAULT_MASCOT_CONFIG.innerClothingColor || 'FAF7F2'}`;
+  const resolvedSherpa = (sherpaColor || '#C8B79E').startsWith('#')
+    ? sherpaColor || '#C8B79E'
+    : `#${sherpaColor || 'C8B79E'}`;
   const resolvedShoe = (shoeColor || DEFAULT_MASCOT_CONFIG.shoeColor || '#FFFFFF').startsWith('#')
     ? shoeColor || DEFAULT_MASCOT_CONFIG.shoeColor || '#FFFFFF'
     : `#${shoeColor || DEFAULT_MASCOT_CONFIG.shoeColor || 'FFFFFF'}`;
@@ -279,8 +338,30 @@ export function SmakrMascotRig({
 
   // Memoize colored SVG markup
   const coloredBody = useMemo(() => {
-    return colorizeBodyMarkup(bodyComp.markup, resolvedSkin, resolvedShirt, resolvedInnerShirt, resolvedShoe, resolvedHat);
-  }, [bodyComp, resolvedSkin, resolvedShirt, resolvedInnerShirt, resolvedShoe, resolvedHat]);
+    return colorizeBodyMarkup(
+      bodyComp.markup,
+      resolvedSkin,
+      resolvedShirt,
+      resolvedInnerShirt,
+      resolvedShoe,
+      resolvedHat,
+      resolvedSherpa,
+      jacketStyle,
+      sherpaTransform,
+      detailsTransform
+    );
+  }, [
+    bodyComp,
+    resolvedSkin,
+    resolvedShirt,
+    resolvedInnerShirt,
+    resolvedShoe,
+    resolvedHat,
+    resolvedSherpa,
+    jacketStyle,
+    sherpaTransform,
+    detailsTransform,
+  ]);
 
   const coloredHead = useMemo(() => {
     return colorizeHeadMarkup(headComp.markup, resolvedSkin, resolvedHeadContrast, resolvedHat);
@@ -297,8 +378,14 @@ export function SmakrMascotRig({
 
   const coloredAcc = useMemo(() => {
     if (!accComp) return null;
-    return accComp.markup;
-  }, [accComp]);
+    const resolvedGlasses = (glassesColor || '#181615').startsWith('#')
+      ? glassesColor || '#181615'
+      : `#${glassesColor || '181615'}`;
+    if (resolvedGlasses.toLowerCase() === '#181615') {
+      return accComp.markup;
+    }
+    return accComp.markup.replace(/fill="[^"]*"/g, `fill="${resolvedGlasses}"`);
+  }, [accComp, glassesColor]);
 
   const coloredBeard = useMemo(() => {
     if (!beardComp) return null;
@@ -408,6 +495,7 @@ export function SmakrMascotRig({
 
     return (
       <svg
+        ref={svgRef}
         viewBox={bodyComp.viewBox || '130 130 1050 1250'}
         xmlns="http://www.w3.org/2000/svg"
         overflow="visible"
