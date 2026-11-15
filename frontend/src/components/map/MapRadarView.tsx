@@ -23,6 +23,7 @@ import { fetchVenueDetail } from "@/lib/api";
 import {
   SELECTION_CARD_HEIGHT,
   SELECTION_CARD_BOTTOM_INSET,
+  SELECTION_PIN_GAP,
   selectionFlightDuration,
 } from "@/lib/mapMotion";
 import { Venue } from "@/types";
@@ -576,38 +577,47 @@ export function MapRadarView() {
       const containerH =
         map.getContainer()?.clientHeight ||
         (typeof window !== "undefined" ? window.innerHeight : 650);
-      // Venue pins and weekly-pick need bottom clearance for the popup card above the bottom sheet.
+      // Venue pins and weekly-pick leave room below the pin for the spotlight card + pointer gap.
       const isVenuePin =
         reason === "venue-pin" ||
         reason === "weekly-pick" ||
         (reason === "mapCenter-effect" && Boolean(useCityPulseStore.getState().selectedVenue));
       const bottomPad = isMobile
         ? isVenuePin
-          ? Math.min(380, Math.max(260, Math.round(containerH * 0.45)))
+          ? Math.min(
+              containerH - 120,
+              Math.max(360, SELECTION_CARD_HEIGHT + SELECTION_CARD_BOTTOM_INSET + SELECTION_PIN_GAP)
+            )
           : Math.min(160, Math.max(80, Math.round(containerH * 0.20)))
         : 0;
 
       const from = map.getCenter();
+      const pxNow = map.project([lng, lat]);
+      const viewW = map.getContainer()?.clientWidth || 390;
+      const pxDist = Math.hypot(
+        pxNow.x - viewW / 2,
+        pxNow.y - (isMobile && isVenuePin ? containerH - bottomPad : containerH / 2)
+      );
+      const currentZoom = map.getZoom();
+      const zoomDelta = Math.abs(targetZoom - currentZoom);
+      const isNearbySameZoom = pxDist < 420 && zoomDelta < 0.75;
+      const duration = selectionFlightDuration(pxDist, zoomDelta);
+
       console.info("[locate] flyTo", {
         reason,
         target: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
         from: `${from.lat.toFixed(6)}, ${from.lng.toFixed(6)}`,
         zoom: targetZoom,
         bottomPad,
+        duration,
       });
 
       isProgrammaticFlightRef.current = true;
-      map.flyTo({
-        center: [lng, lat],
+      const cameraBase = {
+        center: [lng, lat] as [number, number],
         zoom: targetZoom,
         essential: true,
-        // Explicit duration instead of speed + maxDuration: MapLibre derives the
-        // duration from distance and clamps it to 0 once it exceeds maxDuration,
-        // which made longer flights snap instantly while short ones glided. A
-        // fixed duration makes every camera move (venue pins, feed "Map" pills and
-        // the locate-me button) animate identically and smoothly.
-        duration: 850,
-        curve: 1.35,
+        duration,
         pitch: 0,
         padding: {
           top: isMobile ? 60 : 0,
@@ -615,7 +625,16 @@ export function MapRadarView() {
           left: 0,
           right: 0,
         },
-      });
+        easing: (t: number) => 1 - Math.pow(1 - t, 3.2),
+      };
+      if (isNearbySameZoom) {
+        map.easeTo(cameraBase);
+      } else {
+        map.flyTo({
+          ...cameraBase,
+          curve: Math.min(1.22, 0.75 + zoomDelta * 0.14),
+        });
+      }
 
       map.once("moveend", () => {
         isProgrammaticFlightRef.current = false;
@@ -1213,6 +1232,9 @@ export function MapRadarView() {
       minZoom: 9,
       maxZoom: 19,
       doubleClickZoom: true,
+      fadeDuration: 110,
+      maxTileCacheSize: 220,
+      refreshExpiredTiles: false,
     });
 
     mapInstance.current = map;
@@ -1334,9 +1356,10 @@ export function MapRadarView() {
           const w = map.getContainer().clientWidth;
           const h = map.getContainer().clientHeight;
           const targetX = w / 2;
-          const targetY = h - (255 + 36) + 4;
+          const cardTop = h - (SELECTION_CARD_HEIGHT + SELECTION_CARD_BOTTOM_INSET);
+          const targetY = cardTop - SELECTION_PIN_GAP;
           const drift = Math.hypot(p.x - targetX, p.y - targetY);
-          if (drift > 70) {
+          if (drift > 90) {
             moveState.setSelectedVenue(null);
             moveState.setBottomSheetOpen(false);
           }
@@ -1453,14 +1476,11 @@ export function MapRadarView() {
       const cardTop =
         mapHeight - (SELECTION_CARD_HEIGHT + SELECTION_CARD_BOTTOM_INSET);
 
-      // Deterministic Mercator math (no offset-sign ambiguity): solve for the
-      // camera centre that projects the venue at the pin's landing Y. The pin
-      // icon's bottom rests ~6px into the card's top edge.
+      // Deterministic Mercator math: solve for the camera centre that projects
+      // the selected venue cleanly ABOVE the spotlight card + pointer arrow.
       let center: [number, number] = [venue.longitude, venue.latitude];
       if (isMobileViewport) {
-        // The icon's visual bottom lands ~19px into the card so the pin visibly
-        // rests on the card's top edge instead of hovering above it.
-        const targetY = cardTop + 4;
+        const targetY = cardTop - SELECTION_PIN_GAP;
         // Derive the map's world size from the public projection so the math
         // works regardless of MapLibre's internal tile size.
         const p0 = map.project([venue.longitude, venue.latitude]);
@@ -1477,15 +1497,15 @@ export function MapRadarView() {
         center = [lngLat.lng, lngLat.lat];
       }
 
-      // Time the flight by how far the icon actually has to travel on screen.
-      // Edge pins (far left/right/bottom) get a longer, arcing flight so the
-      // icon doesn't appear to slide in from the edge.
+      // Time the flight by both screen distance and zoom change: nearby zoomed-in
+      // switches glide fast; zoomed-out or cross-city jumps take longer so tiles
+      // stream smoothly without popping.
       const container = map.getContainer();
       const viewW = container.clientWidth || 390;
       const viewH = container.clientHeight || mapHeight;
       const pinNow = map.project([venue.longitude, venue.latitude]);
       const targetScreenX = viewW / 2;
-      const targetScreenY = isMobileViewport ? cardTop + 4 : viewH / 2;
+      const targetScreenY = isMobileViewport ? cardTop - SELECTION_PIN_GAP : viewH / 2;
       const panDistance = Math.hypot(
         pinNow.x - targetScreenX,
         pinNow.y - targetScreenY
@@ -1502,13 +1522,13 @@ export function MapRadarView() {
         center,
         zoom: targetZoom,
         duration: flightDuration,
-        easing: (t: number) => 1 - Math.pow(1 - t, 3),
+        easing: (t: number) => 1 - Math.pow(1 - t, 3.2),
         essential: true,
       } as const;
-      // Smooth linear glide for neighborhood/swipe switches; only huge cross-city
-      // jumps arc gently so the map stays calm and in harmony with card swipes.
-      if (panDistance > 950 || zoomDelta > 1.2) {
-        map.flyTo({ ...camera, curve: 0.55 });
+      // Zoomed-out or cross-city clicks arc proportionally to zoomDelta; already
+      // zoomed-in neighborhood pans & card swipes use a calm linear easeTo.
+      if (panDistance > 750 || zoomDelta > 1.35) {
+        map.flyTo({ ...camera, curve: Math.min(1.18, 0.72 + zoomDelta * 0.16) });
       } else {
         map.easeTo(camera);
       }

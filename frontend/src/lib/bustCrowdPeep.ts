@@ -1168,15 +1168,16 @@ export async function buildPeepsAtlas(
   const readyList: number[] = [];
   const atlas: PeepsAtlas = { canvas, mode, cellW, cellH, readyCells, readyList };
 
-  // Starter batch: 21 diverse sprites spread every 5th cell across the sheet.
-  for (let i = 0; i < SHEET_COUNT; i += 5) {
+  // Starter batch: 12 diverse sprites spread every 9th cell across the sheet
+  // so main-thread boot work stays below ~1 frame while the map initializes.
+  for (let i = 0; i < SHEET_COUNT; i += 9) {
     colorizeSingleCell(ctx, cellW, cellH, i, mode);
     readyCells.add(i);
     readyList.push(i);
   }
   onInitialReady?.(atlas);
 
-  // Stream the remaining 84 cells in small batches between animation frames.
+  // Stream the remaining cells in tiny 4-sprite idle chunks between animation frames.
   const yieldFrame = () =>
     new Promise<void>((resolve) =>
       typeof requestAnimationFrame === "function"
@@ -1192,7 +1193,7 @@ export async function buildPeepsAtlas(
     readyCells.add(i);
     readyList.push(i);
     processedInBatch++;
-    if (processedInBatch >= 12) {
+    if (processedInBatch >= 4) {
       processedInBatch = 0;
       await yieldFrame();
     }

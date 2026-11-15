@@ -9,11 +9,11 @@ import {
   SHEET_COLS,
   SHEET_COUNT,
   SHEET_ROWS,
+  SPRITE_INSET,
   buildPeepsAtlas,
   buildSpriteDeck,
   loadPeepsSheet,
   spriteBackgroundStyle,
-  spriteSourceRect,
   type PeepColorMode,
   type PeepsAtlas,
 } from "@/lib/bustCrowdPeep";
@@ -285,13 +285,15 @@ export function PeepsBootScreen({
     let last = performance.now();
     const startTime = performance.now();
 
+    let stageDpr = 1;
     const applyStageSize = () => {
-      const dpr = window.devicePixelRatio || 1;
+      // Cap DPR at 1.5 so 3x Retina devices don't burn 4x fill-rate during startup.
+      stageDpr = Math.min(window.devicePixelRatio || 1, 1.5);
       const w = Math.max(1, Math.round(canvas.clientWidth || window.innerWidth));
       const h = Math.max(1, Math.round(canvas.clientHeight || window.innerHeight));
-      canvas.width = Math.round(w * dpr);
-      canvas.height = Math.round(h * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      canvas.width = Math.round(w * stageDpr);
+      canvas.height = Math.round(h * stageDpr);
+      ctx.setTransform(stageDpr, 0, 0, stageDpr, 0, 0);
       const prev = stageRef.current;
       const prevW = prev.w || w;
       stageRef.current = { w, h };
@@ -324,7 +326,8 @@ export function PeepsBootScreen({
       const elapsed = (now - startTime) / 1000;
 
       const { w, h } = stageRef.current;
-      ctx.clearRect(0, 0, w, h);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       // Auto-dismiss (non-persistent production boot): 2.0s after crowd starts
       if (!persistentRef.current && elapsed >= 2.0 && !dismissingRef.current) {
@@ -338,6 +341,8 @@ export function PeepsBootScreen({
       if (atlas && atlasMeta && atlasMeta.readyList.length > 0) {
         const cellW = atlas.width / SHEET_COLS;
         const cellH = atlas.height / SHEET_ROWS;
+        const sw = cellW - SPRITE_INSET * 2;
+        const sh = cellH - SPRITE_INSET * 2;
         const speedMult = speedRef.current;
         const members = crowdRef.current;
         const readyCells = atlasMeta.readyCells;
@@ -368,26 +373,33 @@ export function PeepsBootScreen({
             ? peep.spriteIndex
             : readyList[peep.id % readyList.length]!;
 
-          // 2px source inset so a neighbouring cell can never bleed a line
-          const { sx, sy, sw, sh } = spriteSourceRect(activeSprite, cellW, cellH);
+          const col = activeSprite % SHEET_COLS;
+          const row = (activeSprite / SHEET_COLS) | 0;
+          const sx = col * cellW + SPRITE_INSET;
+          const sy = row * cellH + SPRITE_INSET;
 
-          ctx.save();
-          // Pivot from waist bottom-center so the upper body rocks naturally while marching
-          ctx.translate(x + peep.peepWidth / 2, y + peep.peepHeight);
-          ctx.rotate(swayAngle);
-          ctx.scale(peep.scaleX, 1);
+          // Direct affine transform (skips save/restore stack & per-frame rect objects)
+          const cos = Math.cos(swayAngle);
+          const sin = Math.sin(swayAngle);
+          ctx.setTransform(
+            stageDpr * cos * peep.scaleX,
+            stageDpr * sin * peep.scaleX,
+            -stageDpr * sin,
+            stageDpr * cos,
+            stageDpr * (x + peep.peepWidth * 0.5),
+            stageDpr * (y + peep.peepHeight)
+          );
           ctx.drawImage(
             atlas,
             sx,
             sy,
             sw,
             sh,
-            -peep.peepWidth / 2,
+            -peep.peepWidth * 0.5,
             -peep.peepHeight,
             peep.peepWidth,
             peep.peepHeight
           );
-          ctx.restore();
         }
 
         // Re-sort depth whenever a bust finishes crossing and resets
@@ -416,7 +428,7 @@ export function PeepsBootScreen({
         mobilePreview
           ? "absolute left-1/2 top-1/2 h-[760px] max-h-[92dvh] w-[390px] max-w-[94vw] -translate-x-1/2 -translate-y-1/2 rounded-[2.5rem] border-[10px] border-[#181615] shadow-2xl"
           : "fixed inset-0"
-      } z-[100] flex flex-col items-center justify-between bg-[#FAF7F2]/75 backdrop-blur-[4px] select-none overflow-hidden transition-opacity duration-[420ms] ease-out ${
+      } z-[100] flex flex-col items-center justify-between bg-[#FAF7F2]/[0.94] select-none overflow-hidden transition-opacity duration-[380ms] ease-out will-change-opacity ${
         dismissing ? "opacity-0 pointer-events-none" : "opacity-100"
       }`}
     >

@@ -250,6 +250,8 @@ export interface Venue {
   curated_reviews?: ReviewItem[];
   opening_hours_json?: Record<string, string> | null;
   cover_image_url?: string | null;
+  /** Pre-ingested Google Places photos stored permanently in Supabase Storage CDN. */
+  place_photos?: string[];
   description?: string | null;
   has_wifi: boolean;
   has_outlets: boolean;

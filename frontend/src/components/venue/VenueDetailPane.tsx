@@ -37,6 +37,8 @@ import { formatOsloLocation } from "@/lib/location";
 import { SmakrFoodIcon, isCustomFoodIcon, resolveCustomIconKey } from "@/components/food/FoodIcons";
 import { resolveEntityTaxonomy, resolveVenueDisplayBadge } from "@/lib/taxonomy";
 import { ExpandableReviewText } from "./ExpandableReviewText";
+import { VenuePhotoStrip, useVenueHeroGallery } from "./VenuePhotoStrip";
+import { VenueDishesGrid } from "./VenueDishesGrid";
 import { FEED_BLUR_DARK } from "@/lib/feedImages";
 
 const NEIGHBORHOOD_LABELS: Record<Neighborhood, string> = {
@@ -141,7 +143,11 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
     googleMapsUrl,
   } = useVenueDetail(venue);
 
+  const gallery = useVenueHeroGallery(venue);
+
   if (!venue) return null;
+
+  const heroDisplayUrl = gallery.activePhotoUrl || venue.cover_image_url || null;
 
   const categoryDef = FOOD_CATEGORIES.find((c) => c.id === venue.food_category);
   const googleRating =
@@ -276,28 +282,39 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
         {/* Hero image */}
         <div
           onClick={() =>
-            venue.cover_image_url &&
-            setZoomImage({ src: venue.cover_image_url, alt: venue.name })
+            heroDisplayUrl &&
+            setZoomImage({ src: heroDisplayUrl, alt: venue.name })
           }
           className={`group/hero relative w-full h-52 rounded-3xl overflow-hidden border border-[var(--surface-border)] bg-[#181615] ${
-            venue.cover_image_url ? "cursor-zoom-in" : ""
+            heroDisplayUrl ? "cursor-zoom-in" : ""
           }`}
         >
-          {venue.cover_image_url ? (
+          {heroDisplayUrl ? (
             <>
-              <Image
-                src={venue.cover_image_url}
-                alt={venue.name}
-                fill
-                onLoad={() => setHeroImgReady(true)}
-                placeholder="blur"
-                blurDataURL={FEED_BLUR_DARK}
-                className={`object-cover transition-all duration-500 group-hover/hero:scale-[1.03] ${
-                  heroImgReady ? "opacity-100" : "opacity-0"
-                }`}
-                sizes="600px"
-                priority
-              />
+              <AnimatePresence initial={false} mode="sync">
+                <motion.div
+                  key={heroDisplayUrl}
+                  initial={{ opacity: 0, scale: 1.06, x: 14 }}
+                  animate={{ opacity: 1, scale: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.98, x: -14 }}
+                  transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
+                  className="absolute inset-0"
+                >
+                  <Image
+                    src={heroDisplayUrl}
+                    alt={venue.name}
+                    fill
+                    onLoad={() => setHeroImgReady(true)}
+                    placeholder="blur"
+                    blurDataURL={FEED_BLUR_DARK}
+                    className={`object-cover transition-all duration-500 group-hover/hero:scale-[1.03] ${
+                      heroImgReady ? "opacity-100" : "opacity-0"
+                    }`}
+                    sizes="600px"
+                    priority
+                  />
+                </motion.div>
+              </AnimatePresence>
               <div
                 aria-hidden="true"
                 className={`smakr-shimmer absolute inset-0 pointer-events-none transition-opacity duration-500 ${
@@ -331,6 +348,16 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
             </span>
           </div>
         </div>
+
+        {/* Google-style Horizontal Bento Gallery synced to Hero */}
+        <VenuePhotoStrip
+          photos={gallery.photos}
+          activeIndex={gallery.activeIndex}
+          onSelect={gallery.selectPhoto}
+          onImageError={gallery.reportBroken}
+          venueName={venue.name}
+          variant="bento"
+        />
 
         {/* Title + meta */}
         <div className="space-y-2">
@@ -638,14 +665,6 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
         {/* ================= DISHES SECTION ================= */}
         {(!isPopup || recommendedMeals.length > 0) && (
           <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-[var(--foreground)]">
-                {isPopup
-                  ? `Pop-Up Drop Dishes (${recommendedMeals.length})`
-                  : `Dishes You Can't Miss (${recommendedMeals.length})`}
-              </h2>
-            </div>
-
             {!isPopup ? (
               <button
                 onClick={handleLogDish}
@@ -669,109 +688,16 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
                 No dishes logged here yet — be the first foodie to add one.
               </p>
             ) : (
-            <div className="grid grid-cols-2 gap-3">
-              {recommendedMeals.map((dish) => {
-                const isSaved = savedPostIds.has(dish.id);
-                const isLiked = likedPostIds.has(dish.id);
-                const noteText =
-                  dish.review_text ||
-                  dish.diner_quotes?.[0]?.text ||
-                  "";
-
-                return (
-                  <div
-                    key={dish.id}
-                    onClick={() => setSelectedDish(dish)}
-                    className="group p-2.5 rounded-2xl bg-[var(--surface)] border border-[var(--surface-border)] shadow-xs flex flex-col cursor-pointer hover:border-[#e84a27]/40 transition-all hover:shadow-sm"
-                  >
-                    <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden bg-zinc-900 shrink-0 border border-[var(--surface-border)]">
-                      <Image
-                        src={
-                          dish.image_url?.startsWith("/api/places/photos") &&
-                          !dish.image_url.includes("w=")
-                            ? `${dish.image_url}&w=360`
-                            : dish.image_url
-                        }
-                        alt={dish.dish_name}
-                        fill
-                        loading="lazy"
-                        decoding="async"
-                        onLoad={() =>
-                          setLoadedDishIds((prev) => ({ ...prev, [dish.id]: true }))
-                        }
-                        placeholder="blur"
-                        blurDataURL={FEED_BLUR_DARK}
-                        className={`object-cover group-hover:scale-105 transition-all duration-300 ${
-                          loadedDishIds[dish.id] ? "opacity-100" : "opacity-0"
-                        }`}
-                        sizes="(max-width: 640px) 45vw, 220px"
-                        unoptimized
-                      />
-                      <div
-                        aria-hidden="true"
-                        className={`smakr-shimmer absolute inset-0 pointer-events-none transition-opacity duration-500 ${
-                          loadedDishIds[dish.id] ? "opacity-0" : "opacity-100"
-                        }`}
-                      />
-                      {typeof dish.price_nok === "number" && dish.price_nok > 0 && (
-                        <span className="absolute bottom-1.5 right-1.5 px-2 py-0.5 rounded-full bg-[#E84A27] text-white text-[10px] font-sans font-extrabold shadow-xs">
-                          {dish.price_nok} kr
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex-1 min-w-0 flex flex-col pt-2">
-                      <h3 className="font-comico text-xs sm:text-sm text-[#e84a27] font-bold truncate leading-snug">
-                        {dish.dish_name}
-                      </h3>
-
-                      {noteText && (
-                        <p className="text-xs text-zinc-500 mt-0.5 line-clamp-1 italic">
-                          <span className="text-[#E84A27] font-bold not-italic mr-1">✦</span>
-                          &ldquo;{noteText}&rdquo;
-                        </p>
-                      )}
-
-                      <div className="mt-auto pt-2 flex items-center justify-between gap-1.5">
-                        <div className="flex flex-wrap items-center gap-1 min-w-0">
-                          {dish.taste_tags && dish.taste_tags.length > 0 &&
-                            dish.taste_tags.slice(0, 2).map((tag) => (
-                              <span
-                                key={tag}
-                                className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 text-[9px] font-medium"
-                              >
-                                {tag}
-                              </span>
-                            ))}
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleSavePost(dish.id);
-                          }}
-                          className={`p-1.5 rounded-lg border transition-all cursor-pointer shrink-0 ${
-                            isSaved
-                              ? "bg-[#e84a27] text-white border-[#e84a27] shadow-xs"
-                              : "bg-[var(--surface-raised)] text-zinc-500 hover:text-[#e84a27] border-[var(--surface-border)] hover:bg-zinc-100"
-                          }`}
-                          title={isSaved ? "Saved to your list" : "Save dish"}
-                          aria-label={isSaved ? "Saved to your list" : "Save dish"}
-                        >
-                          <Bookmark
-                            className={`w-3.5 h-3.5 ${isSaved ? "fill-current" : ""}`}
-                          />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
-      )}
+              <VenueDishesGrid
+                dishes={recommendedMeals}
+                title={isPopup ? "Pop-Up Drop Dishes" : "Dishes You Can't Miss"}
+                savedPostIds={savedPostIds}
+                onToggleSave={toggleSavePost}
+                onSelectDish={setSelectedDish}
+              />
+            )}
+          </section>
+        )}
 
       {/* Directions (Only when location is confirmed) */}
       {!isDormant && (

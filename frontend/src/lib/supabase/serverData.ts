@@ -64,7 +64,7 @@ const getCachedVenues = unstable_cache(
       const { data, error } = await supabase
         .from("venues")
         .select(
-          "id, name, address, latitude, longitude, category, image_url, google_place_id, google_rating, google_reviews_count, price_level, neighborhood, spot_type, vibe_signals, is_official_pick, signature_dishes, description, current_opening_hours_text, website_uri, popup_start_date, popup_end_date, location_schedule, created_at, updated_at"
+          "id, name, address, latitude, longitude, category, image_url, google_place_id, google_rating, google_reviews_count, price_level, neighborhood, spot_type, vibe_signals, is_official_pick, signature_dishes, description, opening_hours, current_opening_hours_text, website_uri, popup_start_date, popup_end_date, location_schedule, created_at, updated_at"
         )
         .order("name", { ascending: true });
       if (error || !data || data.length === 0) return INITIAL_FOOD_SPOTS;
@@ -93,7 +93,7 @@ const getCachedFoodPosts = unstable_cache(
       const { data, error } = await supabase
         .from("food_posts")
         .select(
-          "id, venue_id, author_id, dish_name, dish_image, review_text, price_nok, rating, dietary_tags, taste_tags, is_official_pick, likes_count, saves_count, diner_quotes, created_at, category, drop_badge, item_availability, price_tier, is_published, is_archived, venue:venues!food_posts_venue_id_fkey(id, name, address, neighborhood, latitude, longitude, category, image_url, price_level, google_rating, google_reviews_count, spot_type, vibe_signals, website_uri, current_opening_hours_text, popup_start_date, popup_end_date, location_schedule), author:profiles!food_posts_author_id_fkey(handle, name, avatar_url, is_official)"
+          "id, venue_id, author_id, dish_name, dish_image, review_text, price_nok, rating, dietary_tags, taste_tags, is_official_pick, likes_count, saves_count, diner_quotes, created_at, category, drop_badge, item_availability, price_tier, is_published, is_archived, venue:venues!food_posts_venue_id_fkey(id, name, address, neighborhood, latitude, longitude, category, image_url, price_level, google_rating, google_reviews_count, spot_type, vibe_signals, opening_hours, website_uri, current_opening_hours_text, popup_start_date, popup_end_date, location_schedule), author:profiles!food_posts_author_id_fkey(handle, name, avatar_url, is_official)"
         )
         .order("created_at", { ascending: false });
       if (error || !data || data.length === 0) return INITIAL_FOOD_POSTS;

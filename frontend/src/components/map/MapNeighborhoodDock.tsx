@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useLayoutEffect, useMemo, useCallback } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { Calendar, MapPin, SlidersHorizontal, Clock } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { resolveVenueDisplayBadge, resolveEntityTaxonomy, resolveDishIconKey, FOOD_GROUPS } from "@/lib/taxonomy";
@@ -8,6 +9,7 @@ import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import { formatOsloLocation, formatVenueLocationLine, normalizeOsloNeighborhoodDisplay, getDirectionsUrl } from "@/lib/location";
 import { isVisibleInFeed, getPopupStatus, getPopupMeta } from "@/lib/popupUtils";
 import { SmakrFoodIcon } from "@/components/food/FoodIcons";
+import { VenuePhotoStrip, useVenueHeroGallery } from "@/components/venue/VenuePhotoStrip";
 import { endInstantVenueSheet } from "@/lib/venueMorph";
 import type { Venue, VenueDetail, FoodPost } from "@/types";
 
@@ -192,6 +194,8 @@ const DockCarouselCard = React.memo(function DockCarouselCard({
   );
 });
 
+const MAP_CARD_DESIGN = "design2" as "design1" | "design2";
+
 const SpotlightCard = React.memo(function SpotlightCard({
   venue,
   foodPosts,
@@ -259,7 +263,179 @@ const SpotlightCard = React.memo(function SpotlightCard({
     (venue as VenueWithDishes).dishes?.[0]?.image_url,
     fallbackPhoto,
   ];
+  const gallery = useVenueHeroGallery(venue, venue.cover_image_url, isActive);
+  const activeHeroImage =
+    isActive && gallery.activePhotoUrl ? gallery.activePhotoUrl : null;
 
+  if (MAP_CARD_DESIGN === "design1") {
+    return (
+      <div
+        ref={cardRef}
+        data-spotlight-card={isActive ? "true" : undefined}
+        data-state={isActive ? (cardOpen ? "open" : "closing") : "neighbor"}
+        aria-hidden={!isActive}
+        onClick={(e) => {
+          if (!isActive && isNeighbor) {
+            e.stopPropagation();
+            onSelectSide();
+          }
+        }}
+        style={{
+          contain: "layout paint",
+          transformOrigin: "50% 100%",
+          pointerEvents: isActive || isNeighbor ? "auto" : "none",
+        }}
+        className={`absolute inset-0 overflow-hidden rounded-[26px] bg-[#121110] shadow-[0_20px_50px_rgba(0,0,0,0.45)] will-change-transform ${
+          !isActive && isNeighbor ? "cursor-pointer" : ""
+        } ${
+          isPopup
+            ? "border-2 border-white/90"
+            : isWeeklyPick
+            ? "border border-[#E84A27]/60 ring-1 ring-[#E84A27]/35"
+            : "border border-white/15"
+        }`}
+      >
+        {/* Full-bleed dish/venue photo with sequential parallax crossfade */}
+        <div className="absolute inset-0 overflow-hidden">
+          <VenueThumb sources={imageSources} alt={venue.name || "Venue"} eager />
+          {activeHeroImage && (
+            <AnimatePresence initial={false} mode="sync">
+              <motion.img
+                key={activeHeroImage}
+                src={activeHeroImage}
+                alt={venue.name || "Venue"}
+                initial={{ opacity: 0, scale: 1.06, x: 12 }}
+                animate={{ opacity: 1, scale: 1, x: 0 }}
+                exit={{ opacity: 0, scale: 0.98, x: -12 }}
+                transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
+                onError={() => gallery.reportBroken(activeHeroImage)}
+                className="absolute inset-0 w-full h-full object-cover object-center will-change-transform"
+              />
+            </AnimatePresence>
+          )}
+        </div>
+        <div className="absolute inset-0 bg-gradient-to-t from-[#121110] via-[#121110]/80 to-black/15 pointer-events-none" />
+
+        {/* Top row: frosted glass rating/open on left; glass close on right */}
+        <div
+          data-slot-top="true"
+          className="relative z-10 flex items-center gap-2 p-3.5 will-change-transform"
+        >
+          <div
+            className={`flex items-center gap-1.5 min-w-0 transition-[margin] duration-300 ${
+              isWeeklyPick && isActive ? "ml-[76px]" : ""
+            }`}
+          >
+            <span className="bg-white/20 backdrop-blur-xl text-white text-[11px] font-bold px-2.5 py-1 rounded-full border border-white/40 shadow-[0_4px_16px_rgba(0,0,0,0.18)] flex items-center gap-1 whitespace-nowrap">
+              <span className="text-[#F5B301]">★</span>
+              <span>{rating}</span>
+              {!isPopup && (
+                <>
+                  <span className="text-white/60">·</span>
+                  <span
+                    className={`inline-block w-1.5 h-1.5 rounded-full ${
+                      live?.isOpen ? "bg-emerald-400" : "bg-red-400"
+                    }`}
+                  />
+                  <span>{live?.isOpen ? "Open" : "Closed"}</span>
+                </>
+              )}
+            </span>
+            {isPopup && (
+              <span className="font-comico font-normal text-[11px] px-2.5 py-1 rounded-full shadow-xs whitespace-nowrap bg-white text-[#181615]">
+                {badgeLabel}
+              </span>
+            )}
+          </div>
+
+          <div className="ml-auto flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              data-slot-close="true"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDismiss();
+              }}
+              aria-label="Close venue card"
+              className="w-7 h-7 rounded-full bg-white/20 backdrop-blur-xl text-white hover:bg-white/30 border border-white/40 shadow-[0_4px_16px_rgba(0,0,0,0.18)] flex items-center justify-center text-[11px] font-bold active:scale-90 transition-colors cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        {/* Bottom editorial stack */}
+        <div className="absolute inset-x-0 bottom-0 z-10 p-4 pt-0 flex flex-col justify-end">
+          <div data-slot-title="true" className="will-change-transform">
+            <h4 className="font-comico font-normal text-[21px] leading-tight text-white drop-shadow-xs truncate">
+              {venue.name}
+            </h4>
+            <p className="text-white/80 text-[11.5px] flex items-center gap-1 truncate mt-0.5">
+              <MapPin className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
+              <span className="truncate">{locationLine}</span>
+            </p>
+          </div>
+
+          <div
+            data-slot-story="true"
+            data-slot-actions="true"
+            className="relative mt-2.5 min-h-[68px]"
+          >
+            {isPopup ? (
+              <div className="flex items-center justify-between gap-2 pt-3">
+                <div className="inline-flex items-center gap-2 min-w-0 bg-[#FAF7F2]/15 backdrop-blur-md border border-white/20 rounded-xl px-3 py-1.5 text-xs font-bold text-[#FAF7F2]">
+                  <Calendar className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
+                  <span className="truncate">
+                    {popupMeta?.dates_label || venue.current_opening_hours_text || "Next Drop TBA"}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenDetails();
+                  }}
+                  className="shrink-0 h-8 px-3.5 rounded-full bg-white text-[#181615] font-comico text-[11px] flex items-center justify-center gap-1 shadow-sm active:scale-95 cursor-pointer whitespace-nowrap"
+                >
+                  <span>Details</span>
+                  <span>↗</span>
+                </button>
+              </div>
+            ) : (
+              <>
+                {gallery.photos.length > 1 && (
+                  <div onClick={(e) => e.stopPropagation()} className="w-full">
+                    <VenuePhotoStrip
+                      photos={gallery.photos}
+                      activeIndex={gallery.activeIndex}
+                      onSelect={gallery.selectPhoto}
+                      onImageError={gallery.reportBroken}
+                      venueName={venue.name}
+                      variant="tapered"
+                    />
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenDetails();
+                  }}
+                  className="absolute bottom-0 right-0 z-20 h-8 px-4 rounded-full bg-white text-[#181615] font-comico text-[11px] flex items-center justify-center gap-1 shadow-md active:scale-95 cursor-pointer whitespace-nowrap"
+                >
+                  <span>Details</span>
+                  <span>↗</span>
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Design 2: Dark bottom hue, borderless top close, bottom title & location inline with white Details ↗ + top pointer arrow
   return (
     <div
       ref={cardRef}
@@ -273,63 +449,67 @@ const SpotlightCard = React.memo(function SpotlightCard({
         }
       }}
       style={{
-        contain: "layout paint",
+        contain: "layout",
         transformOrigin: "50% 100%",
         pointerEvents: isActive || isNeighbor ? "auto" : "none",
       }}
-      className={`absolute inset-0 overflow-hidden rounded-[26px] bg-[#121110] shadow-[0_20px_50px_rgba(0,0,0,0.45)] will-change-transform ${
+      className={`absolute inset-0 overflow-visible rounded-[26px] will-change-transform ${
         !isActive && isNeighbor ? "cursor-pointer" : ""
-      } ${
-        isPopup
-          ? "border-2 border-white/90"
-          : isWeeklyPick
-          ? "border border-[#E84A27]/60 ring-1 ring-[#E84A27]/35"
-          : "border border-white/15"
       }`}
     >
-      {/* Full-bleed dish/venue photo */}
-      <div className="absolute inset-0 overflow-hidden">
-        <VenueThumb sources={imageSources} alt={venue.name || "Venue"} eager />
-      </div>
-      <div className="absolute inset-0 bg-gradient-to-t from-[#121110] via-[#121110]/80 to-black/15 pointer-events-none" />
-
-      {/* Top row: badge on left; rating/status + close ml-auto on right */}
-      <div
-        data-slot-top="true"
-        className="relative z-10 flex items-center gap-2 p-3.5 will-change-transform"
+      {/* Top pointer caret pointing straight up toward the focused map food pin */}
+      <svg
+        data-slot-arrow="true"
+        aria-hidden="true"
+        width="22"
+        height="11"
+        viewBox="0 0 22 11"
+        style={{
+          left: "50%",
+          top: "-9.5px",
+          transform: "translate3d(-50%, 0, 0)",
+          opacity: isActive && cardOpen ? 1 : 0,
+        }}
+        className="pointer-events-none absolute z-20 drop-shadow-[0_-2px_5px_rgba(0,0,0,0.28)]"
       >
-        <div
-          className={`flex items-center gap-1.5 min-w-0 transition-[margin] duration-300 ${
-            isWeeklyPick && isActive ? "ml-[76px]" : ""
-          }`}
-        >
-          <span
-            className={`font-comico font-normal text-[11px] px-2.5 py-1 rounded-full shadow-xs whitespace-nowrap flex items-center gap-1 ${
-              isPopup
-                ? "bg-white text-[#181615]"
-                : "bg-[#E84A27] text-white"
-            }`}
-          >
-            <span>{badgeLabel}</span>
-          </span>
+        <path
+          d="M 2 10.5 L 9.8 2.1 Q 11 0.8 12.2 2.1 L 20 10.5 Z"
+          fill={isPopup ? "#FFFFFF" : "#181615"}
+          stroke={isPopup ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.28)"}
+          strokeWidth="1.25"
+          strokeLinejoin="round"
+        />
+      </svg>
+
+      <div
+        style={{ contain: "layout paint" }}
+        className={`relative w-full h-full overflow-hidden rounded-[26px] bg-[#121110] shadow-[0_20px_50px_rgba(0,0,0,0.42)] ${
+          isPopup
+            ? "border-2 border-white/95"
+            : isWeeklyPick
+            ? "border border-[#E84A27]/60 ring-1 ring-[#E84A27]/35"
+            : "border border-white/15"
+        }`}
+      >
+        {/* Full-bleed venue photo */}
+        <div className="absolute inset-0 overflow-hidden">
+          <VenueThumb sources={imageSources} alt={venue.name || "Venue"} eager />
         </div>
 
-        <div className="ml-auto flex items-center gap-1.5 shrink-0">
-          <span className="bg-black/55 backdrop-blur-md text-white text-[11px] font-bold px-2.5 py-1 rounded-full border border-white/15 flex items-center gap-1 whitespace-nowrap">
-            <span className="text-[#F5B301]">★</span>
-            <span>{rating}</span>
-            {!isPopup && (
-              <>
-                <span className="text-white/50">·</span>
-                <span
-                  className={`inline-block w-1.5 h-1.5 rounded-full ${
-                    live?.isOpen ? "bg-emerald-400" : "bg-red-400"
-                  }`}
-                />
-                <span>{live?.isOpen ? "Open" : "Closed"}</span>
-              </>
-            )}
-          </span>
+        {/* Soft dark hue at bottom so white text needs no boxes */}
+        <div
+          style={{
+            background:
+              "linear-gradient(to top, rgba(18,17,16,0.96) 0%, rgba(18,17,16,0.82) 56%, rgba(18,17,16,0) 100%)",
+          }}
+          className="absolute inset-x-0 bottom-0 h-[52%] pointer-events-none"
+        />
+
+        {/* Top row: borderless ✕ on right (rating removed) */}
+        <div
+          data-slot-top="true"
+          className="relative z-10 flex items-center justify-end gap-2 px-4 pt-3.5 pb-1 will-change-transform"
+        >
           <button
             type="button"
             data-slot-close="true"
@@ -338,87 +518,72 @@ const SpotlightCard = React.memo(function SpotlightCard({
               onDismiss();
             }}
             aria-label="Close venue card"
-            className="w-7 h-7 rounded-full bg-black/55 backdrop-blur-md text-white/90 hover:bg-black border border-white/15 flex items-center justify-center text-[11px] font-bold active:scale-90 transition-colors cursor-pointer"
+            className="w-7 h-7 flex items-center justify-center text-white/90 hover:text-white drop-shadow-[0_1px_6px_rgba(0,0,0,0.85)] text-[15px] font-bold active:scale-90 transition-all cursor-pointer"
           >
             ✕
           </button>
         </div>
-      </div>
 
-      {/* Bottom editorial stack on the dark scrim */}
-      <div className="absolute inset-x-0 bottom-0 z-10 p-4 pt-0 flex flex-col justify-end">
-        <div data-slot-title="true" className="will-change-transform">
-          <h4 className="font-comico font-normal text-[21px] leading-tight text-white drop-shadow-xs truncate">
-            {venue.name}
-          </h4>
-          <p className="text-white/80 text-[11.5px] flex items-center gap-1 truncate mt-0.5">
-            <MapPin className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
-            <span className="truncate">{locationLine}</span>
-          </p>
-        </div>
-
-        {/* Pop-ups show Next Drop / Residency Date here; normal spots show Signature Dish Pill */}
-        {isPopup ? (
-          <div
-            data-slot-story="true"
-            className="mt-2 inline-flex items-center gap-2 self-start max-w-full bg-[#FAF7F2]/15 backdrop-blur-md border border-white/20 rounded-xl px-3 py-1.5 text-xs font-bold text-[#FAF7F2]"
-          >
-            <Calendar className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
-            <span className="truncate">
-              {popupMeta?.dates_label || venue.current_opening_hours_text || "Next Drop TBA"}
-            </span>
-          </div>
-        ) : (
-          <div
-            data-slot-story="true"
-            className="mt-2 inline-flex items-center gap-2 self-start max-w-full bg-[#FAF7F2]/15 backdrop-blur-md border border-white/20 rounded-xl px-3 py-1.5 text-xs font-bold text-[#FAF7F2]"
-          >
-            <SmakrFoodIcon name={dishIconKey} className="w-4 h-4 shrink-0" />
-            <span className="truncate">{heroDishName}</span>
-            {heroDishPrice && (
-              <>
-                <span className="text-white/45 shrink-0">·</span>
-                <span className="text-[#FDEA6B] shrink-0">{heroDishPrice}</span>
-              </>
-            )}
-          </div>
-        )}
-
-        <div data-slot-actions="true" className="mt-3 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpenDetails();
-            }}
-            className="flex-1 h-9 rounded-full bg-white text-[#181615] font-comico text-[11.5px] flex items-center justify-center gap-1 shadow-sm active:scale-95 cursor-pointer whitespace-nowrap"
-          >
-            <span>Details</span>
-            <span>↗</span>
-          </button>
-          {isPopupInactive && instagramUrl ? (
-            <a
-              href={instagramUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="h-9 px-3.5 rounded-full bg-white/15 backdrop-blur-md text-white border border-white/20 font-comico text-[11px] flex items-center justify-center gap-1 active:scale-95 whitespace-nowrap"
+        {/* Bottom dark hue: bolder white Title + Location + Open til ... inline with white Details ↗ */}
+        <div className="absolute inset-x-0 bottom-0 z-10 px-4 pb-3.5 pt-2 flex flex-col justify-end gap-1">
+          {isPopup && (
+            <div
+              data-slot-story="true"
+              className="inline-flex items-center gap-1.5 text-[11px] font-bold text-white/85 self-start"
             >
-              <span>{instagramHandle ? `@${instagramHandle}` : "@Instagram"}</span>
-              <span>↗</span>
-            </a>
-          ) : (
-            <a
-              href={directionsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="h-9 px-3.5 rounded-full bg-white/15 backdrop-blur-md text-white border border-white/20 font-comico text-[11px] flex items-center justify-center gap-1 active:scale-95 whitespace-nowrap"
-            >
-              <span>Directions</span>
-              <span>↗</span>
-            </a>
+              <Calendar className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
+              <span className="truncate">
+                {popupMeta?.dates_label || venue.current_opening_hours_text || "Next Drop TBA"}
+              </span>
+            </div>
           )}
+
+          <div data-slot-title="true" className="will-change-transform">
+            <h4 className="font-comico font-bold tracking-wide text-[18px] sm:text-[19px] leading-snug text-white drop-shadow-xs line-clamp-1">
+              {venue.name}
+            </h4>
+          </div>
+
+          <div
+            data-slot-actions="true"
+            className="flex items-end justify-between gap-2.5"
+          >
+            <div className="min-w-0 flex-1 space-y-0.5">
+              <p className="text-white/85 text-[11.5px] font-medium flex items-center gap-1 truncate">
+                <MapPin className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
+                <span className="truncate">{locationLine}</span>
+              </p>
+              {isPopup ? (
+                <span className="inline-block font-comico text-[10.5px] uppercase tracking-wide text-[#E84A27]">
+                  {badgeLabel}
+                </span>
+              ) : (
+                <p className="text-[11px] font-bold flex items-center gap-1.5 truncate">
+                  <span
+                    className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${
+                      live?.isOpen ? "bg-emerald-400" : "bg-red-400"
+                    }`}
+                  />
+                  <span className={live?.isOpen ? "text-emerald-400" : "text-red-400"}>
+                    {live?.isOpen ? "Open" : "Closed"}
+                    {live?.detailText ? ` · ${live.detailText}` : ""}
+                  </span>
+                </p>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenDetails();
+              }}
+              className="shrink-0 h-8 px-4 rounded-full bg-white hover:bg-white/90 text-[#181615] font-comico text-[11px] flex items-center justify-center gap-1 shadow-sm active:scale-95 cursor-pointer whitespace-nowrap"
+            >
+              <span>Details</span>
+              <span>↗</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -744,8 +909,8 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
       setDisplaySpotlight(selectedVenue);
       return;
     }
-    // Hold the last venue mounted for the 320ms shrink-back & crossfade into the carousel.
-    const timer = setTimeout(() => setDisplaySpotlight(null), 330);
+    // Hold the last venue mounted for the 340ms shrink-back & crossfade into the carousel.
+    const timer = setTimeout(() => setDisplaySpotlight(null), 350);
     return () => clearTimeout(timer);
   }, [selectedVenue?.id]);
 
@@ -1108,6 +1273,7 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
         storyEl: HTMLElement | null;
         actionsEl: HTMLElement | null;
         imgEl: HTMLElement | null;
+        arrowEl: HTMLElement | null;
       }
     >
   >({});
@@ -1123,6 +1289,7 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
           storyEl: el.querySelector<HTMLElement>("[data-slot-story='true']"),
           actionsEl: el.querySelector<HTMLElement>("[data-slot-actions='true']"),
           imgEl: el.querySelector<HTMLElement>("[data-parallax-img='true']"),
+          arrowEl: el.querySelector<HTMLElement>("[data-slot-arrow='true']"),
         };
       } else {
         delete slotNodesRef.current[venueId];
@@ -1192,19 +1359,17 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
       coverStateRef.current = { u, openProgress, dragY };
       const {
         compactScale,
-        compactUnscaledH,
         compactStep,
         expandedStep,
       } = getStageMetrics();
       const slotStep = compactStep + (expandedStep - compactStep) * openProgress;
       const slots = spotlightSlotsRef.current;
       const len = displayedVenues.length;
-      const maxTopClip = Math.max(0, 246 - compactUnscaledH);
 
       if (spotlightStageRef.current) {
-        // Crossfade the stage out smoothly at the end of close so the handoff
-        // to the resting carousel cards never snaps in a single frame.
-        const stageFade = openProgress < 0.35 ? Math.max(0, openProgress / 0.35) : 1;
+        // Keep stage solid through most of close so it scales down smoothly before
+        // crossfading into the resting carousel card over the final 25%.
+        const stageFade = openProgress < 0.25 ? Math.max(0, openProgress / 0.25) : 1;
         spotlightStageRef.current.style.opacity = stageFade.toFixed(3);
       }
 
@@ -1219,37 +1384,34 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
         const pos = effectiveSlot - u;
         const dist = Math.abs(pos);
         const focus = Math.max(0, 1 - dist) * openProgress;
-        const scale = compactScale + (1 - compactScale) * focus;
+        // Pure GPU transform scaling from bottom-center (eliminates per-frame clip-path paint thrash)
+        const scale = (compactScale * 0.88) + (1 - compactScale * 0.88) * focus;
         const x =
           dist <= 1
             ? pos * slotStep
             : Math.sign(pos) * (slotStep + (dist - 1) * compactStep);
-        const y = effectiveSlot === 0 && dragY > 0 ? dragY * 0.75 : 0;
-        const topClip = (1 - focus) * maxTopClip;
-        const radius = 20 + 6 * focus;
+        const y = (effectiveSlot === 0 && dragY > 0 ? dragY * 0.75 : 0) + (1 - focus) * 14;
         const dragFade =
           effectiveSlot === 0 && dragY > 0 ? Math.max(0.4, 1 - dragY / 420) : 1;
-        const cardOpacity = (0.86 + 0.14 * focus) * dragFade;
+        const cardOpacity = (0.72 + 0.28 * focus) * dragFade;
 
-        const { el, topEl, closeEl, titleEl, storyEl, actionsEl, imgEl } = nodes;
+        const { el, closeEl, titleEl, storyEl, actionsEl, imgEl, arrowEl } = nodes;
         el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) scale(${scale.toFixed(4)})`;
-        el.style.clipPath =
-          topClip > 0.5
-            ? `inset(${topClip.toFixed(1)}px 0px 0px 0px round ${radius.toFixed(1)}px)`
-            : "";
         el.style.opacity = cardOpacity.toFixed(3);
         el.style.zIndex = String(Math.round(10 + focus * 10));
 
-        if (topEl) {
-          topEl.style.transform = `translate3d(0, ${topClip.toFixed(1)}px, 0)`;
+        if (arrowEl) {
+          const arrowAlpha = Math.max(0, (focus - 0.55) / 0.45);
+          arrowEl.style.opacity = arrowAlpha.toFixed(3);
+          arrowEl.style.transform = `translate3d(-50%, ${((1 - focus) * 6).toFixed(1)}px, 0) scale(${(0.75 + 0.25 * focus).toFixed(3)})`;
         }
         if (closeEl) {
-          const closeAlpha = Math.max(0, (focus - 0.55) / 0.45);
+          const closeAlpha = Math.max(0, (focus - 0.5) / 0.5);
           closeEl.style.opacity = closeAlpha.toFixed(3);
           closeEl.style.pointerEvents = focus > 0.65 ? "auto" : "none";
         }
         if (titleEl) {
-          titleEl.style.transform = `translate3d(0, ${((1 - focus) * 84).toFixed(1)}px, 0)`;
+          titleEl.style.transform = `translate3d(0, ${((1 - focus) * 26).toFixed(1)}px, 0)`;
         }
         if (storyEl) {
           storyEl.style.opacity = Math.max(0, (focus - 0.35) / 0.65).toFixed(3);
@@ -1260,8 +1422,8 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
           actionsEl.style.pointerEvents = focus > 0.65 ? "auto" : "none";
         }
         if (imgEl) {
-          const parallax = Math.max(-1.4, Math.min(1.4, pos)) * -22;
-          imgEl.style.transform = `translate3d(${parallax.toFixed(1)}px, 0, 0) scale(1.14)`;
+          const parallax = Math.max(-1.4, Math.min(1.4, pos)) * -18;
+          imgEl.style.transform = `translate3d(${parallax.toFixed(1)}px, 0, 0) scale(1.12)`;
         }
       }
     },
@@ -1277,7 +1439,7 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
       const { u: startU, openProgress: startOpen, dragY: startDragY } =
         coverStateRef.current;
       const startedAt = performance.now();
-      const ease = (t: number) => 1 - Math.pow(1 - t, 3.6);
+      const ease = (t: number) => 1 - Math.pow(1 - t, 3.2);
 
       const tick = (now: number) => {
         const raw = Math.min(1, (now - startedAt) / duration);
@@ -1298,7 +1460,7 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
   );
 
   // Unified single-carousel Cover-Flow lifecycle: grow directly out of the
-  // compact slot on open, shrink back into it on close, and finish any live
+  // compact slot on open, shrink cleanly back into it on close, and finish any live
   // swipe morph seamlessly across neighbors.
   useLayoutEffect(() => {
     const venueId = selectedVenue?.id ?? activeSpotlight?.id ?? null;
@@ -1317,17 +1479,17 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
       if (skipNextRecenterRef.current) {
         skipNextRecenterRef.current = false;
       } else {
-        animateCarouselToVenue(selectedVenue.id, 360);
+        animateCarouselToVenue(selectedVenue.id, 340);
       }
 
       if (pendingCoverOffsetRef.current !== null) {
         const startU = pendingCoverOffsetRef.current;
         pendingCoverOffsetRef.current = null;
         applyStageFrame(startU, 1, 0);
-        animateStageTo(0, 1, 360);
-      } else {
-        applyStageFrame(0, 0.78, 0);
         animateStageTo(0, 1, 340);
+      } else {
+        applyStageFrame(0, 0.82, 0);
+        animateStageTo(0, 1, 320);
       }
       return;
     }
@@ -1335,13 +1497,13 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
     if (isOpening) {
       scrollCarouselToVenue(venueId);
       applyStageFrame(0, 0, 0);
-      animateStageTo(0, 1, 420);
+      animateStageTo(0, 1, 360);
       return;
     }
 
     if (isClosing) {
       scrollCarouselToVenue(venueId);
-      animateStageTo(0, 0, 320, 0);
+      animateStageTo(0, 0, 340, 0);
     }
   }, [
     selectedVenue?.id,
@@ -1825,10 +1987,10 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
           <div
             ref={carouselRef}
             onScroll={handleCarouselScroll}
-            className={`relative w-full overflow-x-auto snap-x snap-mandatory no-scrollbar px-6 pt-3 pb-2 flex items-end gap-3 transition-opacity duration-300 ease-out ${
+            className={`relative w-full overflow-x-auto snap-x snap-mandatory no-scrollbar px-6 pt-3 pb-2 flex items-end gap-3 transition-opacity ease-out ${
               !isDesktop && cardOpen
-                ? "opacity-0 pointer-events-none"
-                : "opacity-100 pointer-events-auto"
+                ? "opacity-0 pointer-events-none duration-200 delay-0"
+                : "opacity-100 pointer-events-auto duration-300 delay-75"
             }`}
           >
           {displayedVenues.length === 0 ? (

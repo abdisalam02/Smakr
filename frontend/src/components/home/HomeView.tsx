@@ -91,10 +91,10 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   // skeleton flash. (Zustand's SSR snapshot is its creation state, so the server
   // HTML paints the light skeletons; the RSC payload then fills them in on
   // hydration without any network round-trip.)
-  const seededRef = useRef(false);
+  const lastSeededRef = useRef<HomeInitialData | null>(null);
   useLayoutEffect(() => {
-    if (seededRef.current) return;
-    seededRef.current = true;
+    if (lastSeededRef.current === initialData) return;
+    lastSeededRef.current = initialData;
     const store = useCityPulseStore.getState();
     store.setVenues(initialData.venues);
     store.setFoodPosts(initialData.foodPosts);

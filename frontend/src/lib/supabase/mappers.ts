@@ -277,6 +277,11 @@ export function mapVenueRow(row: VenueRow): Venue {
     curated_reviews: mapReviews(row.curated_reviews),
     opening_hours_json: (row.opening_hours as Record<string, string> | null) ?? null,
     cover_image_url: row.image_url ?? null,
+    place_photos: Array.isArray(signals.place_photos)
+      ? (signals.place_photos as unknown[]).filter(
+          (u): u is string => typeof u === "string" && u.trim().length > 0
+        )
+      : undefined,
     has_wifi: false,
     has_outlets: false,
     silent_zone: false,

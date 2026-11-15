@@ -30,6 +30,8 @@ import { getPopupStatus, getPopupMeta, isPopupVenue } from "@/lib/popupUtils";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import { formatOsloLocation, formatVenueLocationLine } from "@/lib/location";
 import { ExpandableReviewText } from "./ExpandableReviewText";
+import { VenuePhotoStrip, useVenueHeroGallery } from "./VenuePhotoStrip";
+import { VenueDishesGrid } from "./VenueDishesGrid";
 import { incrementBringBack } from "@/lib/supabase/data";
 import { FEED_BLUR_DARK } from "@/lib/feedImages";
 
@@ -82,6 +84,8 @@ export function VenueBottomSheet() {
     morphImageRef.current = null;
   }
   const heroSrc = morphImageRef.current || selectedVenue?.cover_image_url || null;
+  const gallery = useVenueHeroGallery(selectedVenue, heroSrc);
+  const activeHeroSrc = gallery.activePhotoUrl || heroSrc;
 
   const [heroImgReady, setHeroImgReady] = useState(false);
   const [loadedDishIds, setLoadedDishIds] = useState<Record<string, boolean>>({});
@@ -119,8 +123,8 @@ export function VenueBottomSheet() {
   // 2. Title scales down from 1.0 (text-2xl) to 0.85 (text-lg) smoothly
   // 3. Category & open status badges remain visible in both resting & docked states
   // 4. Soft scrim fades in over the docked header (lighter, no expensive blur)
-  const titleTranslateY = useTransform(scrollY, [0, 175], [175, 0], { clamp: true });
-  const navScrimOpacity = useTransform(scrollY, [40, 175], [0, 1], { clamp: true });
+  const titleTranslateY = useTransform(scrollY, [0, 205], [205, 0], { clamp: true });
+  const navScrimOpacity = useTransform(scrollY, [80, 205], [0, 1], { clamp: true });
   const imageParallaxY = useTransform(scrollY, [0, 260], [0, -35], { clamp: true });
   const imageScale = useTransform(scrollY, [-100, 0], [1.12, 1], { clamp: true });
 
@@ -141,6 +145,7 @@ export function VenueBottomSheet() {
         contentScrollRef.current.scrollTop = 0;
       }
       setIsStoryExpanded(false);
+      setShowAllHours(false);
     }
   }, [isVenueDetailModalOpen, sheetY, scrollY]);
 
@@ -158,6 +163,7 @@ export function VenueBottomSheet() {
   const [selectedDish, setSelectedDish] = useState<FoodPost | null>(null);
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [isStoryExpanded, setIsStoryExpanded] = useState(false);
+  const [showAllHours, setShowAllHours] = useState(false);
   const openStatus = getVenueLiveOpenStatus(selectedVenue);
 
   const isPopup = isPopupVenue(selectedVenue);
@@ -452,34 +458,45 @@ export function VenueBottomSheet() {
                 className="relative w-full h-full bg-[#FAF7F2] dark:bg-[#181615] lg:bg-[#FAF7F2]/95 lg:backdrop-blur-sm rounded-t-3xl border-t border-[#181615]/10 dark:border-white/10 shadow-2xl flex flex-col overflow-hidden will-change-transform smakr-bottom-sheet"
               >
               {/* 1. PINNED HERO IMAGE BACKGROUND — Generous, cinematic surface area with subtle parallax */}
-              {heroSrc && (
+              {activeHeroSrc && (
                 <div
-                  className="absolute top-0 inset-x-0 h-[380px] sm:h-[420px] overflow-hidden rounded-t-3xl pointer-events-none z-0"
+                  className="absolute top-0 inset-x-0 h-[380px] sm:h-[420px] overflow-hidden rounded-t-3xl pointer-events-none z-0 bg-[#181615]"
                   data-venue-hero-target
                 >
                   <motion.div
                     style={{ y: imageParallaxY, scale: imageScale }}
                     className="relative w-full h-full origin-top"
                   >
-                    {morphImageRef.current ? (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img
-                        src={morphImageRef.current}
-                        alt={selectedVenue.name}
-                        className="absolute inset-0 w-full h-full object-cover object-center"
-                      />
-                    ) : (
-                      <Image
-                        src={heroSrc}
-                        alt={selectedVenue.name}
-                        fill
-                        priority
-                        className="object-cover object-center"
-                        sizes="(max-width: 640px) 100vw, 600px"
-                        placeholder="blur"
-                        blurDataURL={FEED_BLUR_DARK}
-                      />
-                    )}
+                    <AnimatePresence initial={false} mode="sync">
+                      <motion.div
+                        key={activeHeroSrc}
+                        initial={{ opacity: 0, scale: 1.06, x: 14 }}
+                        animate={{ opacity: 1, scale: 1, x: 0 }}
+                        exit={{ opacity: 0, scale: 0.98, x: -14 }}
+                        transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
+                        className="absolute inset-0"
+                      >
+                        {morphImageRef.current && activeHeroSrc === morphImageRef.current ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img
+                            src={morphImageRef.current}
+                            alt={selectedVenue.name}
+                            className="absolute inset-0 w-full h-full object-cover object-center"
+                          />
+                        ) : (
+                          <Image
+                            src={activeHeroSrc}
+                            alt={selectedVenue.name}
+                            fill
+                            priority
+                            className="object-cover object-center"
+                            sizes="(max-width: 640px) 100vw, 600px"
+                            placeholder="blur"
+                            blurDataURL={FEED_BLUR_DARK}
+                          />
+                        )}
+                      </motion.div>
+                    </AnimatePresence>
                     {/* Permanent subtle dark gradients: top for handle/controls, bottom for resting title legibility */}
                     <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/90" />
                   </motion.div>
@@ -489,10 +506,10 @@ export function VenueBottomSheet() {
               {/* 2. TOP STICKY HEADER BAR & CONTINUOUS MORPHING TITLE */}
               {/* Shows Spot Name, Tag, Open/Closed status & Address with generous spacing in both resting & scrolled states */}
               <div className="absolute top-0 inset-x-0 z-30 pt-2 pb-2.5 px-4 rounded-t-3xl pointer-events-none">
-                {/* Frosted glass scrim: softened blur and gentle transparency so the photo texture stays visible */}
+                {/* Frosted Warm-Oat docked header bar: keeps dark title, badges & address crisp while scrolling */}
                 <motion.div
                   style={{ opacity: navScrimOpacity }}
-                  className="absolute top-0 inset-x-0 h-[88px] sm:h-[94px] bg-gradient-to-b from-[#181615]/75 via-[#181615]/40 to-transparent pointer-events-none rounded-t-3xl"
+                  className="absolute top-0 inset-x-0 h-[112px] sm:h-[116px] bg-[#FAF7F2]/95 backdrop-blur-md border-b border-[#181615]/10 shadow-[0_6px_24px_rgba(24,22,21,0.08)] pointer-events-none rounded-t-3xl"
                 />
 
                 <motion.div
@@ -564,10 +581,10 @@ export function VenueBottomSheet() {
                         )}
                       </div>
 
-                      <h3 className="font-comico text-2xl sm:text-3xl text-white tracking-tight leading-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)] truncate max-w-full">
+                      <h3 className="font-comico text-2xl sm:text-3xl text-[#181615] tracking-tight leading-tight truncate max-w-full">
                         {selectedVenue.name}
                       </h3>
-                      <p className="text-xs sm:text-[13px] text-white/95 flex items-center gap-1 drop-shadow-[0_1px_6px_rgba(0,0,0,0.9)] truncate max-w-full">
+                      <p className="text-xs sm:text-[13px] text-[#181615]/80 font-medium flex items-center gap-1 truncate max-w-full">
                         <MapPin className="w-3.5 h-3.5 text-[#e84a27] shrink-0" />
                         <span className="truncate">
                           {formatVenueLocationLine(selectedVenue)}
@@ -625,12 +642,22 @@ export function VenueBottomSheet() {
                      ========================================================================= */
                   <>
                   {/* Top spacer reveals the pinned hero; the content card tucks
-                      over its lower edge for a layered editorial look. */}
-                  <div className="w-full h-[315px] sm:h-[350px] shrink-0" />
+                      close beneath the resting title/location. */}
+                  <div className="w-full h-[285px] sm:h-[320px] shrink-0" />
 
-                  {/* Content Card: Glides smoothly up under the hero photo with solid background */}
-                  <div className="relative z-10 bg-[#FAF7F2] dark:bg-[#181615] rounded-t-3xl px-4 pt-4 pb-14 space-y-4 shadow-xl border-t border-black/5 dark:border-white/5">
-                    {/* Compact Residency Status & Schedule Ticket Banner */}
+                  {/* Content Card: Unrounded top edge flows seamlessly into the Warm-Oat hue */}
+                  <div className="relative z-10 bg-[#FAF7F2] dark:bg-[#181615] px-4 pt-2 pb-14 space-y-3">
+                    {/* Upward Warm-Oat hue extending smoothly over the resting title, opening & location */}
+                    <div
+                      aria-hidden="true"
+                      style={{
+                        background:
+                          "linear-gradient(to top, rgba(250,247,242,1) 0%, rgba(250,247,242,0.86) 46%, rgba(250,247,242,0) 100%)",
+                      }}
+                      className="pointer-events-none absolute -top-36 inset-x-0 h-36 dark:hidden"
+                    />
+
+                    {/* Compact Residency Status & Schedule */}
                     {isDormant ? (
                       <div className="p-3.5 rounded-2xl bg-[#F3EDE2] dark:bg-[#1E1C1A] border border-dashed border-[#381820]/25 space-y-2.5">
                         <div className="flex items-center justify-between gap-2">
@@ -670,48 +697,48 @@ export function VenueBottomSheet() {
                         )}
                       </div>
                     ) : (
-                      <div className="p-4 rounded-2xl bg-[#F3EDE2] dark:bg-[#1E1C1A] border border-dashed border-[#381820]/25 space-y-3">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-                          {popupMeta?.dates_label && (
-                            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/70 dark:bg-black/20 border border-[#181615]/10">
-                              <Calendar className="w-4 h-4 text-[#E84A27] shrink-0" />
-                              <div>
-                                <div className="text-[10px] text-zinc-400 uppercase font-mono">Dates</div>
-                                <div>{popupMeta.dates_label}</div>
-                              </div>
+                      <div className="space-y-3">
+                        {/* 2-Layer Horizontal Strip: Layer 1 (Dates · Service Hours), Layer 2 (Host Spot + Directions) */}
+                        <div className="space-y-2 py-2 border-y border-[#181615]/8 dark:border-white/10">
+                          {(popupMeta?.dates_label || popupMeta?.daily_hours || selectedVenue.current_opening_hours_text) && (
+                            <div className="flex items-center flex-wrap gap-x-2.5 gap-y-1 text-xs font-semibold text-[#181615] dark:text-zinc-200">
+                              {popupMeta?.dates_label && (
+                                <span className="inline-flex items-center gap-1.5">
+                                  <Calendar className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
+                                  <span>{popupMeta.dates_label}</span>
+                                </span>
+                              )}
+                              {popupMeta?.dates_label && (popupMeta?.daily_hours || selectedVenue.current_opening_hours_text) && (
+                                <span className="text-[#181615]/25 dark:text-white/25">·</span>
+                              )}
+                              {(popupMeta?.daily_hours || selectedVenue.current_opening_hours_text) && (
+                                <span className="inline-flex items-center gap-1.5 text-[#181615]/80 dark:text-zinc-300">
+                                  <Clock className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
+                                  <span>{popupMeta?.daily_hours || selectedVenue.current_opening_hours_text}</span>
+                                </span>
+                              )}
                             </div>
                           )}
-                          {(popupMeta?.daily_hours || selectedVenue.current_opening_hours_text) && (
-                            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-white/70 dark:bg-black/20 border border-[#181615]/10">
-                              <Clock className="w-4 h-4 text-[#E84A27] shrink-0" />
-                              <div>
-                                <div className="text-[10px] text-zinc-400 uppercase font-mono">Service Hours</div>
-                                <div>{popupMeta?.daily_hours || selectedVenue.current_opening_hours_text}</div>
+
+                          {popupHostVenue && (
+                            <div className="flex items-center justify-between gap-2 text-xs">
+                              <div className="flex items-center gap-1.5 min-w-0 font-semibold text-[#181615] dark:text-white">
+                                <MapPin className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
+                                <span className="text-[#181615]/55 dark:text-zinc-400 font-medium shrink-0">Host:</span>
+                                <span className="truncate">{popupHostVenue}</span>
                               </div>
+                              <a
+                                href={googleMapsUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-3 py-1 rounded-full bg-[#EFE9DF] hover:bg-[#E5DDD0] dark:bg-white/10 text-[#181615] dark:text-white text-[11px] font-bold flex items-center gap-1 shrink-0 transition-colors"
+                              >
+                                <span>Directions</span>
+                                <ExternalLink className="w-3 h-3 text-[#E84A27]" />
+                              </a>
                             </div>
                           )}
                         </div>
-
-                        {popupHostVenue && (
-                          <div className="p-2.5 rounded-xl bg-white/70 dark:bg-black/20 border border-[#181615]/10 flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
-                              <MapPin className="w-4 h-4 text-[#E84A27] shrink-0" />
-                              <div>
-                                <div className="text-[10px] text-zinc-400 uppercase font-mono">Host Spot</div>
-                                <div className="text-xs font-bold text-zinc-900 dark:text-white">{popupHostVenue}</div>
-                              </div>
-                            </div>
-                            <a
-                              href={googleMapsUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="px-3 py-1.5 rounded-xl bg-[#181615] hover:bg-black text-white text-xs font-bold flex items-center gap-1 shrink-0"
-                            >
-                              <span>Directions</span>
-                              <ExternalLink className="w-3 h-3 text-zinc-400" />
-                            </a>
-                          </div>
-                        )}
 
                         <div className="flex items-center gap-2 flex-wrap pt-0.5">
                           {popupMeta?.ticket_url && (
@@ -730,15 +757,15 @@ export function VenueBottomSheet() {
                               href={popupMeta.instagram_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex-1 bg-[#181615] hover:bg-[#2a2624] text-[#FAF7F2] border border-[#E84A27]/40 rounded-full py-2.5 px-4 text-xs font-extrabold flex items-center justify-between"
+                              className="flex-1 bg-[#EFE9DF] hover:bg-[#E5DDD0] dark:bg-white/10 dark:hover:bg-white/15 text-[#181615] dark:text-white rounded-full py-2.5 px-4 text-xs flex items-center justify-between transition-colors"
                             >
-                              <span className="flex items-center gap-2">
-                                <span className="w-4 h-4 rounded-full bg-[#E84A27] text-white flex items-center justify-center shrink-0">
-                                  <Instagram className="w-2.5 h-2.5" />
+                              <span className="flex items-center gap-2 min-w-0">
+                                <Instagram className="w-4 h-4 text-[#E84A27] shrink-0" />
+                                <span className="font-comico tracking-wide truncate">
+                                  {instagramHandle ? `@${instagramHandle}` : "Instagram"}
                                 </span>
-                                <span>{instagramHandle ? `@${instagramHandle}` : "Instagram"}</span>
                               </span>
-                              <ExternalLink className="w-3 h-3 text-[#E84A27]" />
+                              <ExternalLink className="w-3.5 h-3.5 text-[#181615]/50 dark:text-white/50 shrink-0" />
                             </a>
                           )}
                         </div>
@@ -746,54 +773,12 @@ export function VenueBottomSheet() {
                     )}
 
                     {/* Signature Dishes immediately visible above the fold */}
-                    {recommendedMeals.length > 0 && (
-                      <div className="space-y-2.5">
-                        <h4 className="font-bold text-zinc-900 dark:text-white text-sm flex items-center gap-1.5">
-                          <Sparkles className="w-4 h-4 text-[#e84a27]" />
-                          <span>Dishes You Can&apos;t Miss ({recommendedMeals.length})</span>
-                        </h4>
-                        <div className="grid grid-cols-2 gap-3">
-                          {recommendedMeals.map((dish) => {
-                            return (
-                              <div
-                                key={dish.id}
-                                onClick={() => setSelectedDish(dish)}
-                                className="group relative p-2.5 rounded-2xl bg-white dark:bg-[#1E1C1A] border border-[#181615]/10 dark:border-white/10 shadow-xs flex flex-col justify-between cursor-pointer hover:border-[#e84a27]/30 hover:shadow-md transition-all active:scale-[0.98]"
-                              >
-                                <div>
-                                  <div className="relative aspect-[4/3] w-full rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 shadow-2xs">
-                                    <Image
-                                      src={dish.image_url}
-                                      alt={dish.dish_name}
-                                      fill
-                                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                                      sizes="(max-width: 640px) 50vw, 240px"
-                                      placeholder="blur"
-                                      blurDataURL={FEED_BLUR_DARK}
-                                    />
-                                    {dish.price_nok && (
-                                      <span className="absolute top-1.5 right-1.5 px-2 py-0.5 rounded-lg bg-[#181615]/85 backdrop-blur-xs text-white font-comico text-[11px] shadow-xs border border-white/10">
-                                        {dish.price_nok} kr
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="mt-2">
-                                    <h5 className="font-comico text-xs sm:text-sm text-[#181615] dark:text-white line-clamp-1 leading-tight group-hover:text-[#e84a27] transition-colors">
-                                      {dish.dish_name}
-                                    </h5>
-                                    {dish.review_text && (
-                                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2 italic leading-tight">
-                                        &ldquo;{dish.review_text}&rdquo;
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
+                    <VenueDishesGrid
+                      dishes={recommendedMeals}
+                      savedPostIds={savedPostIds}
+                      onToggleSave={toggleSavePost}
+                      onSelectDish={setSelectedDish}
+                    />
 
                     {/* Story & Culinary Concept Section */}
                     {selectedVenue.description && (
@@ -839,7 +824,15 @@ export function VenueBottomSheet() {
                       </button>
                     </div>
 
-                  {/* Add Pop-Up Dish Action */}
+                    <VenuePhotoStrip
+                      photos={gallery.photos}
+                      activeIndex={gallery.activeIndex}
+                      onSelect={gallery.selectPhoto}
+                      onImageError={gallery.reportBroken}
+                      venueName={selectedVenue.name}
+                    />
+
+                    {/* Add Pop-Up Dish Action */}
                   <button
                     type="button"
                     onClick={() => {
@@ -859,11 +852,24 @@ export function VenueBottomSheet() {
                    ========================================================================= */
                 <>
                   {/* Top spacer reveals the pinned hero; the content card tucks
-                      over its lower edge for a layered editorial look. */}
-                  <div className="w-full h-[315px] sm:h-[350px] shrink-0" />
+                      close beneath the resting title/location. */}
+                  <div className="w-full h-[285px] sm:h-[320px] shrink-0" />
 
-                  {/* Content Card: Glides smoothly up under the hero photo as user scrolls */}
-                  <div className="relative z-10 bg-[#FAF7F2] dark:bg-[#181615] rounded-t-3xl px-4 pt-4 pb-14 space-y-4 shadow-xl border-t border-black/5 dark:border-white/5">
+                  {/* Content Card: Unrounded top edge flows seamlessly into the Warm-Oat hue */}
+                  <div
+                    className={`relative z-10 bg-[#FAF7F2] dark:bg-[#181615] px-4 pb-14 space-y-3 ${
+                      gallery.photos.length > 1 ? "pt-1.5" : "pt-4"
+                    }`}
+                  >
+                    {/* Upward Warm-Oat hue extending smoothly over the resting title, opening & location */}
+                    <div
+                      aria-hidden="true"
+                      style={{
+                        background:
+                          "linear-gradient(to top, rgba(250,247,242,1) 0%, rgba(250,247,242,0.86) 46%, rgba(250,247,242,0) 100%)",
+                      }}
+                      className="pointer-events-none absolute -top-36 inset-x-0 h-36 dark:hidden"
+                    />
                     {/* Food Truck schedule callout */}
                     {selectedVenue.spot_type === "food_truck" && selectedVenue.location_schedule && (
                       <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-900 dark:text-emerald-300">
@@ -876,6 +882,16 @@ export function VenueBottomSheet() {
                         </div>
                       </div>
                     )}
+
+                    {/* Google-style Horizontal Bento Gallery synced to Hero */}
+                    <VenuePhotoStrip
+                      photos={gallery.photos}
+                      activeIndex={gallery.activeIndex}
+                      onSelect={gallery.selectPhoto}
+                      onImageError={gallery.reportBroken}
+                      venueName={selectedVenue.name}
+                      variant="bento"
+                    />
 
                     {/* Action Buttons */}
                   <div className="grid grid-cols-2 gap-2.5">
@@ -903,7 +919,7 @@ export function VenueBottomSheet() {
 
                   {/* STORY — Directly under Directions & Log a Dish */}
                   {selectedVenue.description && (
-                    <div className="p-3.5 rounded-2xl bg-white/80 dark:bg-[#1E1C1A] border border-[#181615]/8 dark:border-white/10 shadow-2xs space-y-1.5">
+                    <div className="px-0.5 py-0.5 space-y-1.5">
                       <div className="flex items-center justify-between">
                         <h4 className="font-bold text-zinc-700 dark:text-zinc-300 uppercase text-[10px] tracking-wider font-mono">
                           STORY
@@ -955,215 +971,100 @@ export function VenueBottomSheet() {
                     </div>
                   )}
 
-                  {/* Editorial Venue Quick Stats (Rating / Price / Status / Area) */}
-                  <div className="grid grid-cols-4 gap-1 p-2.5 rounded-2xl bg-white/80 dark:bg-[#1E1C1A] border border-[#181615]/8 dark:border-white/10 text-center shadow-2xs">
-                    <div>
-                      <div className="text-[10px] text-zinc-400 uppercase font-mono tracking-wider">Rating</div>
-                      <div className="flex items-center justify-center gap-0.5 mt-0.5">
-                        <span className="text-amber-500 text-xs">★</span>
-                        <span className="font-comico text-sm text-zinc-950 dark:text-white font-bold">
-                          {selectedVenue.google_rating != null
-                            ? selectedVenue.google_rating.toFixed(1)
-                            : "4.8"}
+                  {/* Centered Editorial Venue Meta & Collapsible Opening Hours */}
+                  <div className="space-y-2 pt-2.5 border-t border-[#181615]/8 dark:border-white/10">
+                    <div className="flex flex-col items-center text-center gap-1.5">
+                      <div className="inline-flex items-center justify-center flex-wrap gap-x-2.5 gap-y-1 text-xs text-[#181615]/80 dark:text-zinc-300">
+                        <span className="inline-flex items-center gap-1 font-bold text-[#181615] dark:text-white">
+                          <span className="text-amber-500">★</span>
+                          <span className="tabular-nums">
+                            {selectedVenue.google_rating != null
+                              ? selectedVenue.google_rating.toFixed(1)
+                              : "4.8"}
+                          </span>
+                        </span>
+                        <span className="text-[#181615]/25 dark:text-white/25">·</span>
+                        <span className="font-semibold">{selectedVenue.price_level || "$$"}</span>
+                        <span className="text-[#181615]/25 dark:text-white/25">·</span>
+                        <span className="capitalize font-medium text-[#181615]/70 dark:text-zinc-300">
+                          {selectedVenue.neighborhood || selectedVenue.city || "Sentrum"}
                         </span>
                       </div>
-                    </div>
-                    <div className="border-l border-zinc-200/80 dark:border-white/10">
-                      <div className="text-[10px] text-zinc-400 uppercase font-mono tracking-wider">Price</div>
-                      <div className="font-comico font-bold text-xs text-zinc-900 dark:text-zinc-200 mt-1">
-                        {selectedVenue.price_level || "$$"}
-                      </div>
-                    </div>
-                    <div className="border-l border-zinc-200/80 dark:border-white/10">
-                      <div className="text-[10px] text-zinc-400 uppercase font-mono tracking-wider">Status</div>
-                      <div className="flex items-center justify-center gap-1 mt-1">
+
+                      <button
+                        type="button"
+                        onClick={() => setShowAllHours((v) => !v)}
+                        className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity"
+                      >
                         <span
                           className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                             openStatus.isOpen ? "bg-emerald-500" : "bg-red-500"
                           }`}
                         />
                         <span
-                          className={`text-[11px] font-bold ${
-                            openStatus.isOpen ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"
-                          }`}
+                          className={
+                            openStatus.isOpen
+                              ? "text-emerald-700 dark:text-emerald-400"
+                              : "text-red-700 dark:text-red-400"
+                          }
                         >
                           {openStatus.isOpen ? "Open" : "Closed"}
+                          {openStatus.detailText ? ` · ${openStatus.detailText}` : ""}
                         </span>
-                      </div>
-                    </div>
-                    <div className="border-l border-zinc-200/80 dark:border-white/10">
-                      <div className="text-[10px] text-zinc-400 uppercase font-mono tracking-wider">Area</div>
-                      <div className="font-semibold text-xs text-zinc-900 dark:text-zinc-200 truncate mt-1 capitalize px-1">
-                        {selectedVenue.neighborhood || selectedVenue.city || "Sentrum"}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Culinary Spotlight: Dishes Mini-Feed — 2-Column Visual Card Grid */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-bold text-zinc-900 dark:text-white text-sm">
-                        Dishes You Can't Miss ({recommendedMeals.length})
-                      </h4>
+                        <span className="text-[10px] text-[#181615]/45 dark:text-zinc-400 font-medium">
+                          · {showAllHours ? "Hide hours ▴" : "Hours ▾"}
+                        </span>
+                      </button>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      {recommendedMeals.map((dish) => {
-                        const activeReaction = reactions[dish.id];
-                        const isSaved = savedPostIds.has(dish.id);
-
-                        return (
-                          <div
-                            key={dish.id}
-                            onClick={() => setSelectedDish(dish)}
-                            className="group relative p-2.5 rounded-2xl bg-white dark:bg-[#1E1C1A] border border-[#181615]/10 dark:border-white/10 shadow-xs flex flex-col justify-between cursor-pointer hover:border-[#e84a27]/30 hover:shadow-md transition-all active:scale-[0.98]"
-                          >
-                            <div>
-                              {/* Dish Photo */}
-                              <div className="relative aspect-[4/3] w-full rounded-xl overflow-hidden bg-zinc-900 shadow-2xs">
-                                <Image
-                                  src={dish.image_url}
-                                  alt={dish.dish_name}
-                                  fill
-                                  onLoad={() =>
-                                    setLoadedDishIds((prev) => ({ ...prev, [dish.id]: true }))
-                                  }
-                                  className={`object-cover group-hover:scale-105 transition-all duration-300 ${
-                                    loadedDishIds[dish.id] ? "opacity-100" : "opacity-0"
-                                  }`}
-                                  sizes="(max-width: 640px) 50vw, 240px"
-                                  placeholder="blur"
-                                  blurDataURL={FEED_BLUR_DARK}
-                                />
-                                <div
-                                  aria-hidden="true"
-                                  className={`smakr-shimmer absolute inset-0 pointer-events-none transition-opacity duration-500 ${
-                                    loadedDishIds[dish.id] ? "opacity-0" : "opacity-100"
-                                  }`}
-                                />
-                                {dish.price_nok && (
-                                  <span className="absolute top-1.5 right-1.5 px-2 py-0.5 rounded-lg bg-[#181615]/85 backdrop-blur-xs text-white font-comico text-[11px] shadow-xs border border-white/10">
-                                    {dish.price_nok} kr
-                                  </span>
-                                )}
-                                {dish.rating && (
-                                  <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-amber-300 font-bold text-[10px] flex items-center gap-0.5 shadow-xs">
-                                    <span>★</span>
-                                    <span>{dish.rating}</span>
-                                  </span>
-                                )}
-                              </div>
-
-                              {/* Details */}
-                              <div className="mt-2">
-                                <h5 className="font-comico text-xs sm:text-sm text-[#e84a27] font-bold line-clamp-1 leading-tight">
-                                  {dish.dish_name}
-                                </h5>
-
-                                {dish.review_text && (
-                                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2 italic leading-tight">
-                                    "{dish.review_text}"
-                                  </p>
-                                )}
-
-                                {/* Inline Taste Tags + Bookmark/Save Button */}
-                                <div className="flex items-center justify-between gap-1.5 mt-2">
-                                  <div className="flex flex-wrap items-center gap-1 min-w-0">
-                                    {dish.taste_tags && dish.taste_tags.length > 0 &&
-                                      dish.taste_tags.slice(0, 2).map((tag) => (
-                                        <span
-                                          key={tag}
-                                          className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 text-[9px] font-medium"
-                                        >
-                                          {tag}
-                                        </span>
-                                      ))}
-                                  </div>
-
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      toggleSavePost(dish.id);
-                                    }}
-                                    className={`p-1.5 rounded-lg border transition-all cursor-pointer shrink-0 ${
-                                      isSaved
-                                        ? "bg-[#e84a27] text-white border-[#e84a27] shadow-xs"
-                                        : "bg-[#F5EFE4]/80 dark:bg-white/5 text-zinc-500 hover:text-[#e84a27] border-zinc-200/80 dark:border-white/10 hover:bg-zinc-100"
-                                    }`}
-                                    title={isSaved ? "Saved to your list" : "Save dish"}
-                                    aria-label={isSaved ? "Saved to your list" : "Save dish"}
-                                  >
-                                    <Bookmark className={`w-3.5 h-3.5 ${isSaved ? "fill-current" : ""}`} />
-                                  </button>
-                                </div>
-                              </div>
+                    {showAllHours && (
+                      <div className="pl-1 pr-1 pb-1 space-y-1 text-[11px] text-[#181615]/70 dark:text-zinc-400">
+                        {selectedVenue.opening_hours_json &&
+                        Object.keys(selectedVenue.opening_hours_json).length > 0 ? (
+                          Object.entries(selectedVenue.opening_hours_json).map(([day, hours]) => (
+                            <div key={day} className="flex justify-between py-0.5 border-b border-[#181615]/5 dark:border-white/5 last:border-0">
+                              <span className="font-medium text-[#181615]/60 dark:text-zinc-400">{day}</span>
+                              <span className="tabular-nums font-mono text-[10.5px]">{hours}</span>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Opening Hours & Venue Details */}
-                  <div className="p-3.5 rounded-2xl bg-white dark:bg-[#1E1C1A] border border-[#181615]/10 dark:border-white/10 space-y-2 shadow-2xs">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-900">
-                        <Clock className="w-3.5 h-3.5 text-[#e84a27]" />
-                        <span>Opening Hours</span>
+                          ))
+                        ) : (
+                          <p className="text-[11px] text-[#181615]/60 dark:text-zinc-400">
+                            {selectedVenue.spot_type === "food_truck"
+                              ? selectedVenue.location_schedule || "Operating schedule varies by day."
+                              : selectedVenue.food_category === "coffee" || selectedVenue.food_category === "bakery"
+                              ? "Daily 07:30 – 18:00 (approximate Oslo bakery hours)"
+                              : "Daily 11:30 – 22:30 (approximate Oslo restaurant hours)"}
+                          </p>
+                        )}
                       </div>
-                      <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                          openStatus.isOpen
-                            ? "bg-emerald-50 text-emerald-800 border-emerald-200/80"
-                            : "bg-red-50 text-red-700 border-red-200/80"
-                        }`}
-                      >
-                        {openStatus.statusText}
-                        {openStatus.detailText ? ` · ${openStatus.detailText}` : ""}
-                      </span>
-                    </div>
-                    {selectedVenue.opening_hours_json && Object.keys(selectedVenue.opening_hours_json).length > 0 ? (
-                      <div className="space-y-1 pt-1 text-[11px] text-zinc-600 font-mono">
-                        {Object.entries(selectedVenue.opening_hours_json).map(([day, hours]) => (
-                          <div key={day} className="flex justify-between">
-                            <span className="font-medium text-zinc-500">{day}</span>
-                            <span>{hours}</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-[11px] text-zinc-500 pt-1">
-                        {selectedVenue.spot_type === "food_truck"
-                          ? selectedVenue.location_schedule || "Operating schedule varies by day."
-                          : selectedVenue.food_category === "coffee" || selectedVenue.food_category === "bakery"
-                          ? "Daily 07:30 – 18:00 (approximate Oslo bakery hours)"
-                          : "Daily 11:30 – 22:30 (approximate Oslo restaurant hours)"}
-                      </p>
                     )}
                   </div>
 
-                  {/* Verified Diner Reviews (Show 2 + Toggle for more) */}
-                  <div className="space-y-2.5 pt-1">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-bold text-zinc-900 dark:text-white text-sm flex items-center gap-1.5">
-                        <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                        <span>Reviews ({reviews.length})</span>
+                  {/* Culinary Spotlight: Dishes Mini-Feed — 2-Column Editorial Card Grid */}
+                  <VenueDishesGrid
+                    dishes={recommendedMeals}
+                    savedPostIds={savedPostIds}
+                    onToggleSave={toggleSavePost}
+                    onSelectDish={setSelectedDish}
+                  />
+
+                  {/* Verified Diner Reviews — Clean Editorial Hairline List */}
+                  <div className="space-y-2 pt-2 border-t border-[#181615]/8 dark:border-white/10">
+                    <div className="flex items-center justify-between pt-1">
+                      <h4 className="font-comico font-normal text-[17px] tracking-tight uppercase text-[#181615] dark:text-white">
+                        Reviews
                       </h4>
-                      <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500">
-                        Verified Diners
+                      <span className="text-[11px] font-medium text-[#181615]/50 dark:text-zinc-400 tabular-nums">
+                        {reviews.length} verified
                       </span>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="divide-y divide-[#181615]/8 dark:divide-white/10">
                       {displayedReviews.map((rev) => (
-                        <div
-                          key={rev.id}
-                          className="p-3 rounded-2xl bg-white dark:bg-[#1E1C1A] border border-[#181615]/10 dark:border-white/10 shadow-xs space-y-1.5"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 flex items-center justify-center font-bold text-[10px] text-zinc-700 dark:text-zinc-300 uppercase overflow-hidden shrink-0">
+                        <div key={rev.id} className="py-3 first:pt-1.5 space-y-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="w-6 h-6 rounded-full bg-[#EFE9DF] dark:bg-zinc-800 flex items-center justify-center font-bold text-[10px] text-[#181615] dark:text-zinc-200 uppercase overflow-hidden shrink-0">
                                 {rev.author_photo ? (
                                   // eslint-disable-next-line @next/next/no-img-element
                                   <img
@@ -1175,18 +1076,19 @@ export function VenueBottomSheet() {
                                   rev.author_name[0]
                                 )}
                               </div>
-                              <span className="font-bold text-xs text-zinc-900 dark:text-white">
-                                {rev.author_name}
-                              </span>
+                              <div className="min-w-0 flex items-baseline gap-1.5">
+                                <span className="font-semibold text-xs text-[#181615] dark:text-white truncate">
+                                  {rev.author_name}
+                                </span>
+                                <span className="text-[10.5px] text-[#181615]/45 dark:text-zinc-500 shrink-0">
+                                  {rev.relative_time}
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-1">
-                              <span className="text-amber-500 text-xs">
-                                {"★".repeat(Math.min(5, Math.max(1, Math.round(rev.rating))))}
-                              </span>
-                              <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono ml-1">
-                                {rev.relative_time}
-                              </span>
-                            </div>
+                            <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-[#181615] dark:text-zinc-200 shrink-0 tabular-nums">
+                              <Star className="w-3 h-3 fill-[#F5B301] text-[#F5B301]" />
+                              <span>{Math.min(5, Math.max(1, rev.rating)).toFixed(1)}</span>
+                            </span>
                           </div>
                           <ExpandableReviewText text={rev.text} />
                         </div>
@@ -1195,8 +1097,9 @@ export function VenueBottomSheet() {
 
                     {reviews.length > 2 && (
                       <button
+                        type="button"
                         onClick={() => setShowAllReviews(!showAllReviews)}
-                        className="w-full py-2 px-3 rounded-xl bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 text-zinc-700 dark:text-zinc-200 font-semibold text-xs transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                        className="w-full py-2 rounded-full bg-[#EFE9DF] hover:bg-[#E6DEC9] dark:bg-white/10 dark:hover:bg-white/15 text-[#181615] dark:text-zinc-200 font-semibold text-xs transition-colors flex items-center justify-center cursor-pointer"
                       >
                         <span>{showAllReviews ? "Show fewer reviews" : `Show all ${reviews.length} reviews`}</span>
                       </button>
