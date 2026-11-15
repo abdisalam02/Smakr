@@ -1,15 +1,15 @@
 # STATE.md — CityPulse / Smakr (read first, keep <= 30 lines)
 
-Updated: 2026-11-14
+Updated: 2026-11-15
 
 ## Now
-- Task: Architectural & UI 6-part upgrade — lab route/API guards, map-first dock & GPS pill, spotlight/sheet polish, Foodie invite + curated queue, `/makr` no-login studio & `/admin` Pending Approvals tab.
-- Status: Complete — `npx tsc --noEmit` (0 errors) & `390x844` mobile browser check clean.
+- Task: Deep performance audit — fixed pin-to-card spacing + pointer caret, distance/zoom-aware panning & tile cache (`fadeDuration: 110`, `maxTileCacheSize: 220`), GPU-only dock open/close/swipe (`clipPath` removed), and crisp 60fps `PeepsBootScreen` (`dpr<=1.5`, no fullscreen blur).
+- Status: Ready for verification on `npx tsc --noEmit` & mobile browser.
 
 ## Next (max 3)
-1. Review editorial swimlanes and full-screen map mode visual feedback with team.
-2. Curate and verify photos for remaining 9 staged pop-ups in /admin/seeding-lab.
-3. Seed approved pop-up candidates to production radar.
+1. Preview and export the 2-slide Early Snowfall `@3x` PNG assets in `/ad-reel`.
+2. User to confirm Hrimnir (`270 kr`) & Sapporo (`195 kr`) seeding in `/admin/seeding-lab`.
+3. Curate and verify photos for remaining 9 staged pop-ups in `/admin/seeding-lab`.
 
 ## Decisions (don't reopen)
 - Product is Smakr; the app lives in `frontend/`.
@@ -21,7 +21,7 @@ Updated: 2026-11-14
 - TODO-VERIFY: confirm partner claim copy before launch.
 
 ## Recent (max 5, one line each)
+- 2026-11-15 — Shipped 2-slide Early Snowfall (`oslo-snowfall-bowls`) Preset 2 + real bowl photos in `CarouselStoryDeck.tsx`; `npx tsc --noEmit` clean
+- 2026-11-15 — Audited `place_photos`, wired `place_photos` + `opening_hours` in seeding lab/`serverData.ts`, and expanded Hrimnir + Sapporo to 7 curated photos
 - 2026-11-14 — Shipped Tasks 1–6: lab guards, map-first dock & GPS pill, deduped location/pop-up sheets, `SmakrFoodieInviteModal` + moderated submission queue, 4-block feed rhythm, `/makr` studio, & `/admin` Pending Approvals tab; `npx tsc --noEmit` + `390x844` clean
 - 2026-11-14 — Mounted Skiper 39 crowd boot on `/` (`HomeView.tsx`) with instant 21-cell starter streaming, spring logo + radar ping, and collapsible mobile Boot Lab controls; `npx tsc --noEmit` clean
-- 2026-11-14 — Refined `SPRITE_OVERRIDES` across all 41 flagged Open Peeps sprites (pockets, glasses, cheeks, lapels, arms/fingers) in `bustCrowdPeep.ts`; `npx tsc --noEmit` clean
-- 2026-11-13 — Rebuilt `/admin` & `/admin/seeding-lab` with preview-first click-to-edit cards, mobile sheets, admin API guards, WebP uploads, and live seeded DB sync; tsc + 19/19 security tests pass
