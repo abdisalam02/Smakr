@@ -2318,6 +2318,25 @@ export function MapRadarView() {
         }}
       />
 
+      {/* Soft top & bottom page-cream hues matching the ad backdrop so the map
+          feathers cleanly into the floating logo, profile pill, and bottom nav */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute top-0 inset-x-0 h-[126px] sm:h-[136px] z-[5]"
+        style={{
+          background:
+            "linear-gradient(180deg, color-mix(in srgb, var(--background, #FAF7F2) 94%, transparent) 0%, color-mix(in srgb, var(--background, #FAF7F2) 74%, transparent) 38%, color-mix(in srgb, var(--background, #FAF7F2) 26%, transparent) 72%, transparent 100%)",
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute bottom-0 inset-x-0 h-[144px] sm:h-[164px] z-[5]"
+        style={{
+          background:
+            "linear-gradient(to top, color-mix(in srgb, var(--background, #FAF7F2) 96%, transparent) 0%, color-mix(in srgb, var(--background, #FAF7F2) 76%, transparent) 44%, color-mix(in srgb, var(--background, #FAF7F2) 26%, transparent) 75%, transparent 100%)",
+        }}
+      />
+
       {/* Style Switcher Pills (Bottom-left on desktop only, completely clear of filters and feed) */}
       <div className="hidden lg:flex absolute left-4 bottom-6 z-20 items-center gap-1 p-1 rounded-xl bg-[#FAF7F2]/55 dark:bg-[#181615]/55 backdrop-blur-md border border-white/40 shadow-sm text-xs">
         <button

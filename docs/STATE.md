@@ -3,7 +3,7 @@
 Updated: 2026-11-15
 
 ## Now
-- Task: Resolved boot skeleton flash, hidden bottom attribution popup, Weekly Pick bubble/neighbor mascot overlap, clickable active spotlight cards, instant sheet photo preloading, tag removal + lighter Warm-Oat scrim, smooth sticky-title sheet scroll, and snappier Feed ↔ Map transitions.
+- Task: Added ad-style top and bottom page-cream gradient hues in `MapRadarView.tsx` and matched translucent Warm-Oat capsules in `Header.tsx` & `FoodViewSlider.tsx` so map edges wash seamlessly into the logo, profile, and bottom nav.
 - Status: Complete — `npx tsc --noEmit` exited `0`; ready for visual QA in browser.
 
 ## Next (max 3)

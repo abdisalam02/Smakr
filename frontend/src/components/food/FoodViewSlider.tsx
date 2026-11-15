@@ -51,7 +51,7 @@ export function FoodViewSlider({
       onPointerDown={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}
       onTouchEnd={(e) => e.stopPropagation()}
-      className={`pointer-events-auto select-none bg-[#FAF7F2]/90 dark:bg-[#181615]/90 backdrop-blur-md border border-[#181615]/10 dark:border-white/15 shadow-lg rounded-full h-11 px-1.5 py-1 flex items-center gap-1.5 ${className}`}
+      className={`pointer-events-auto select-none bg-[#FAF7F2]/80 dark:bg-[#181615]/85 backdrop-blur-md border border-[#181615]/[0.08] dark:border-white/15 shadow-lg rounded-full h-11 px-1.5 py-1 flex items-center gap-1.5 ${className}`}
       style={{
         WebkitTouchCallout: "none",
         WebkitUserSelect: "none",

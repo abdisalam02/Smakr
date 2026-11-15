@@ -91,14 +91,14 @@ export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
       {/* Warm-oat frosted bar, revealed once the feed is scrolled so swimlane
           titles can never bleed behind the logo or account pill. */}
       <div className="w-full max-w-7xl mx-auto flex items-center justify-between gap-3">
-        {/* Top-Left Pill: Frosted glass capsule */}
+        {/* Top-Left Pill: Warm-oat translucent capsule so top map hue seeps in */}
         <div className="flex items-center gap-3 pointer-events-auto shrink-0">
-          <div className="bg-white/45 dark:bg-stone-900/45 backdrop-blur-md shadow-sm border border-white/40 dark:border-white/10 rounded-full px-3.5 py-1.5 hover:bg-white/60 dark:hover:bg-stone-900/60 transition-all">
+          <div className="bg-[#FAF7F2]/55 dark:bg-stone-900/50 backdrop-blur-md shadow-xs border border-[#181615]/[0.07] dark:border-white/10 rounded-full px-3.5 py-1.5 hover:bg-[#FAF7F2]/75 dark:hover:bg-stone-900/65 transition-all">
             <SmakrLogo variant="solid-orange" />
           </div>
         </div>
 
-        {/* Top-Right Pill: Matching frosted capsule */}
+        {/* Top-Right Pill: Matching Warm-oat capsule */}
         <div className="flex items-center gap-2 pointer-events-auto shrink-0">
           {currentUser ? (
             <div className="relative" ref={menuRef}>
@@ -106,7 +106,7 @@ export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
                 onClick={() => setMenuOpen((v) => !v)}
                 aria-haspopup="menu"
                 aria-expanded={menuOpen}
-                className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full bg-white/75 dark:bg-stone-900/75 backdrop-blur-md shadow-sm border border-black/10 dark:border-white/10 hover:bg-white/90 dark:hover:bg-stone-900/90 transition-all active:scale-95"
+                className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full bg-[#FAF7F2]/65 dark:bg-stone-900/70 backdrop-blur-md shadow-xs border border-[#181615]/[0.08] dark:border-white/10 hover:bg-[#FAF7F2]/85 dark:hover:bg-stone-900/85 transition-all active:scale-95"
                 title="Account menu"
               >
                 <span className="w-7 h-7 rounded-full bg-zinc-100 flex items-center justify-center overflow-hidden ring-1 ring-black/5 shrink-0">
@@ -266,7 +266,7 @@ export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
             </div>
           ) : !isAuthResolved ? (
             <div
-              className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full bg-white/45 dark:bg-stone-900/45 backdrop-blur-md shadow-sm border border-white/40 dark:border-white/10 animate-pulse"
+              className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full bg-[#FAF7F2]/55 dark:bg-stone-900/50 backdrop-blur-md shadow-xs border border-[#181615]/[0.07] dark:border-white/10 animate-pulse"
               aria-label="Loading account"
             >
               <span className="w-7 h-7 rounded-full bg-zinc-200 dark:bg-zinc-700" />
@@ -275,7 +275,7 @@ export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
           ) : (
             <button
               onClick={() => setIsAuthModalOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/45 dark:bg-stone-900/45 backdrop-blur-md shadow-sm border border-white/40 dark:border-white/10 hover:bg-white/60 dark:hover:bg-stone-900/60 text-xs font-semibold text-zinc-800 dark:text-zinc-200 transition-all active:scale-95"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#FAF7F2]/55 dark:bg-stone-900/50 backdrop-blur-md shadow-xs border border-[#181615]/[0.07] dark:border-white/10 hover:bg-[#FAF7F2]/75 dark:hover:bg-stone-900/65 text-xs font-semibold text-zinc-800 dark:text-zinc-200 transition-all active:scale-95"
             >
               Sign In
             </button>
