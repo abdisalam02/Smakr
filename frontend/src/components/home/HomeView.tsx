@@ -131,7 +131,8 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
     return () => mq.removeEventListener("change", update);
   }, []);
 
-  const venues = useCityPulseStore((state) => state.venues);
+  const storeVenues = useCityPulseStore((state) => state.venues);
+  const venues = storeVenues.length > 0 ? storeVenues : initialData.venues;
   // O(1) venue lookups for the feed filters — `venues.find` inside a filter
   // loop was O(posts × venues) and made every filter tap feel sluggish.
   const venueById = useMemo(
@@ -141,7 +142,8 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   const selectedVenue = useCityPulseStore((state) => state.selectedVenue);
   const setSelectedVenue = useCityPulseStore((state) => state.setSelectedVenue);
   const viewMode = useCityPulseStore((state) => state.viewMode);
-  const foodPosts = useCityPulseStore((state) => state.foodPosts);
+  const storeFoodPosts = useCityPulseStore((state) => state.foodPosts);
+  const foodPosts = storeFoodPosts.length > 0 ? storeFoodPosts : initialData.foodPosts;
   // O(1) top curated dish post lookup per venue for instant card rendering
   const topPostByVenueId = useMemo(() => {
     const map = new Map<string, { photo?: string; dishName?: string; priceNok?: number | null }>();
@@ -898,7 +900,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
             : viewMode === "feed"
             ? "w-full max-w-5xl mx-auto opacity-100 border-r-0"
             : "w-[46%] xl:w-[42%] opacity-100 border-r border-zinc-200/80"
-        } h-full bg-[#F5F0E6] dark:bg-[#181615] flex-col overflow-hidden transition-all duration-350 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[width,opacity] relative shrink-0`}
+        } h-full bg-[#F5F0E6] dark:bg-[#181615] flex-col overflow-hidden transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[width,opacity] relative shrink-0`}
       >
         <AnimatePresence mode="wait" initial={false}>
           {selectedVenue ? (
@@ -1053,7 +1055,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
 
         {/* Bottom-of-Map Neighborhood Dock + Spot Cards */}
         <div
-          className={`absolute left-0 right-0 z-20 pointer-events-auto transition-all duration-[600ms] ${
+          className={`absolute left-0 right-0 z-20 pointer-events-auto transition-all duration-[220ms] ${
             viewMode === "map"
               ? "opacity-100 translate-y-0"
               : "opacity-0 translate-y-4 pointer-events-none"
@@ -1068,7 +1070,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
       {/* ========================================================================= */}
       {!isDesktop && (
         <div
-          className={`lg:hidden fixed inset-0 bg-[#FAF7F2]/[0.38] backdrop-blur-md dark:bg-[#181615]/60 z-30 overflow-hidden flex flex-col will-change-transform w-full max-w-[100vw] transition-[transform,opacity] duration-[700ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          className={`lg:hidden fixed inset-0 bg-[#FAF7F2]/[0.96] dark:bg-[#181615]/[0.96] z-30 overflow-hidden flex flex-col will-change-transform w-full max-w-[100vw] transition-[transform,opacity] duration-[260ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
             viewMode === "map"
               ? "-translate-x-full opacity-0 pointer-events-none shadow-none"
               : "translate-x-0 opacity-100 pointer-events-auto shadow-2xl"
@@ -1188,7 +1190,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
       {/* ========================================================================= */}
       {(!isDesktop || viewMode === "map") && (
       <div
-        className={`fixed left-1/2 -translate-x-1/2 z-[45] pointer-events-auto flex items-center justify-center transition-all duration-[500ms] ease-out ${
+        className={`fixed left-1/2 -translate-x-1/2 z-[45] pointer-events-auto flex items-center justify-center transition-all duration-[220ms] ease-out ${
           isVenueDetailModalOpen || showBoot
             ? "opacity-0 pointer-events-none translate-y-12 scale-90"
             : "opacity-100 translate-y-0 scale-100"

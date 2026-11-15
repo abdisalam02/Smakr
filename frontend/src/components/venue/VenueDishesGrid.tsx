@@ -1,10 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
-import Image from "next/image";
+import React from "react";
 import { Bookmark } from "lucide-react";
 import type { FoodPost } from "@/types";
-import { FEED_BLUR_DARK } from "@/lib/feedImages";
 
 interface VenueDishesGridProps {
   dishes: FoodPost[];
@@ -21,8 +19,6 @@ export function VenueDishesGrid({
   onToggleSave,
   onSelectDish,
 }: VenueDishesGridProps) {
-  const [loadedIds, setLoadedIds] = useState<Record<string, boolean>>({});
-
   if (dishes.length === 0) return null;
 
   return (
@@ -53,29 +49,14 @@ export function VenueDishesGrid({
             >
               <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-[#181615] border border-[#181615]/10 dark:border-white/10 shadow-xs transition-transform duration-200 group-active:scale-[0.97]">
                 {imgSrc ? (
-                  <>
-                    <Image
-                      src={imgSrc}
-                      alt={dish.dish_name}
-                      fill
-                      onLoad={() =>
-                        setLoadedIds((prev) => ({ ...prev, [dish.id]: true }))
-                      }
-                      placeholder="blur"
-                      blurDataURL={FEED_BLUR_DARK}
-                      sizes="172px"
-                      unoptimized={imgSrc.startsWith("/api/places/photos")}
-                      className={`object-cover group-hover:scale-105 transition-all duration-300 ${
-                        loadedIds[dish.id] ? "opacity-100" : "opacity-0"
-                      }`}
-                    />
-                    <div
-                      aria-hidden="true"
-                      className={`smakr-shimmer absolute inset-0 pointer-events-none transition-opacity duration-500 ${
-                        loadedIds[dish.id] ? "opacity-0" : "opacity-100"
-                      }`}
-                    />
-                  </>
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={imgSrc}
+                    alt={dish.dish_name}
+                    loading="eager"
+                    decoding="async"
+                    className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
+                  />
                 ) : null}
 
                 <button

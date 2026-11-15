@@ -252,29 +252,6 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
             </button>
           </div>
         </div>
-
-        {/* Category + dietary pills */}
-        <div className="flex items-center gap-1.5 flex-wrap px-4 pb-2.5">
-          {(() => {
-            const taxonomy = resolveEntityTaxonomy(venue);
-            return (
-              <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-1 rounded-full bg-[#e84a27]/10 text-[#e84a27] border border-[#e84a27]/20 inline-flex items-center gap-1">
-                <SmakrFoodIcon name={taxonomy.spotKind} className="w-3.5 h-3.5 object-contain" />
-                <span>{taxonomy.spotLabel}</span>
-              </span>
-            );
-          })()}
-
-          {venue.price_level && (
-            <span className="text-[10px] font-mono font-bold px-2 py-1 rounded-full bg-[var(--surface-raised)] text-zinc-600 border border-[var(--surface-border)]">
-              {venue.price_level}
-            </span>
-          )}
-
-          {venue.dietary_tags?.map((tag) => (
-            <DietaryBadge key={tag} tag={tag} />
-          ))}
-        </div>
       </div>
 
       {/* ================= SCROLLABLE BODY ================= */}
@@ -300,18 +277,16 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
                   transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
                   className="absolute inset-0"
                 >
-                  <Image
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
                     src={heroDisplayUrl}
                     alt={venue.name}
-                    fill
+                    fetchPriority="high"
+                    decoding="async"
                     onLoad={() => setHeroImgReady(true)}
-                    placeholder="blur"
-                    blurDataURL={FEED_BLUR_DARK}
-                    className={`object-cover transition-all duration-500 group-hover/hero:scale-[1.03] ${
+                    className={`w-full h-full object-cover object-center transition-all duration-300 group-hover/hero:scale-[1.03] ${
                       heroImgReady ? "opacity-100" : "opacity-0"
                     }`}
-                    sizes="600px"
-                    priority
                   />
                 </motion.div>
               </AnimatePresence>

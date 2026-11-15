@@ -1,18 +1,18 @@
-import { FoodPostCardSkeleton } from "@/components/food/CardSkeletons";
-
 export default function Loading() {
   return (
-    <main className="min-h-dvh bg-[#FAF7F2] dark:bg-[#181615]" aria-busy="true">
-      <div className="mx-auto max-w-xl space-y-4 p-4 pt-20">
-        <div className="h-8 w-40 rounded-full bg-zinc-200/80 animate-pulse" />
-        <div className="flex gap-2 overflow-hidden">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-9 w-24 shrink-0 rounded-full bg-zinc-200/80 animate-pulse" />
-          ))}
+    <main
+      aria-busy="true"
+      className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#FAF7F2] select-none overflow-hidden"
+    >
+      <div className="absolute inset-x-4 top-[24%] sm:top-[22%] flex flex-col items-center text-center pointer-events-none">
+        <div className="flex items-baseline gap-2.5 sm:gap-3">
+          <span className="font-comico text-5xl sm:text-6xl md:text-7xl tracking-wide text-[#e84a27] drop-shadow-[0_4px_0_rgba(43,24,16,0.14)]">
+            SMAKR
+          </span>
+          <span className="text-[10px] sm:text-xs font-sans font-bold tracking-[0.22em] uppercase text-[#181615]/55">
+            OSLO
+          </span>
         </div>
-        {Array.from({ length: 2 }).map((_, i) => (
-          <FoodPostCardSkeleton key={i} />
-        ))}
       </div>
     </main>
   );

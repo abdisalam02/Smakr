@@ -75,7 +75,7 @@ export function FoodViewSlider({
           <motion.div
             layoutId="activeFeedTabPill"
             className="absolute inset-0 bg-[#e84a27] rounded-full shadow-xs -z-10 pointer-events-none"
-            transition={{ type: "spring", stiffness: 360, damping: 30, mass: 0.8 }}
+            transition={{ type: "spring", stiffness: 520, damping: 34, mass: 0.5 }}
           />
         )}
         <span className="flex items-center gap-1.5 shrink-0 pointer-events-none">
@@ -128,7 +128,7 @@ export function FoodViewSlider({
           <motion.div
             layoutId="activeFeedTabPill"
             className="absolute inset-0 bg-[#e84a27] rounded-full shadow-xs -z-10 pointer-events-none"
-            transition={{ type: "spring", stiffness: 360, damping: 30, mass: 0.8 }}
+            transition={{ type: "spring", stiffness: 520, damping: 34, mass: 0.5 }}
           />
         )}
         <span className="flex items-center gap-1.5 shrink-0 pointer-events-none">

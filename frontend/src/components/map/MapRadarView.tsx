@@ -24,8 +24,42 @@ import {
   SELECTION_CARD_HEIGHT,
   SELECTION_CARD_BOTTOM_INSET,
   SELECTION_PIN_GAP,
+  WEEKLY_PICK_PIN_GAP,
   selectionFlightDuration,
 } from "@/lib/mapMotion";
+
+/**
+ * Hides the floating map mascot when the user selects the Weekly Pick itself
+ * (the card's perched mascot takes over) or a spot right next to it so it
+ * never photobombs neighboring pins like King Falafel.
+ */
+function shouldSuppressMapMascot(
+  selectedVenue: Venue | null | undefined,
+  pick: { venue_id?: string | null; coords?: number[] },
+  map: maplibregl.Map | null
+): boolean {
+  if (!selectedVenue) return false;
+  if (selectedVenue.id === pick.venue_id) return true;
+  const [pickLng, pickLat] = pick.coords ?? [];
+  if (
+    typeof pickLng !== "number" ||
+    typeof pickLat !== "number" ||
+    typeof selectedVenue.longitude !== "number" ||
+    typeof selectedVenue.latitude !== "number"
+  ) {
+    return false;
+  }
+  const cosLat = Math.cos((pickLat * Math.PI) / 180);
+  const dxMeters = (selectedVenue.longitude - pickLng) * 111320 * cosLat;
+  const dyMeters = (selectedVenue.latitude - pickLat) * 111320;
+  if (Math.hypot(dxMeters, dyMeters) <= 260) return true;
+  if (map) {
+    const pPick = map.project([pickLng, pickLat]);
+    const pSel = map.project([selectedVenue.longitude, selectedVenue.latitude]);
+    if (Math.hypot(pPick.x - pSel.x, pPick.y - pSel.y) < 175) return true;
+  }
+  return false;
+}
 import { Venue } from "@/types";
 import {
   createMascotDOMElement,
@@ -582,11 +616,12 @@ export function MapRadarView() {
         reason === "venue-pin" ||
         reason === "weekly-pick" ||
         (reason === "mapCenter-effect" && Boolean(useCityPulseStore.getState().selectedVenue));
+      const pinGap = reason === "weekly-pick" ? WEEKLY_PICK_PIN_GAP : SELECTION_PIN_GAP;
       const bottomPad = isMobile
         ? isVenuePin
           ? Math.min(
               containerH - 120,
-              Math.max(360, SELECTION_CARD_HEIGHT + SELECTION_CARD_BOTTOM_INSET + SELECTION_PIN_GAP)
+              Math.max(360, SELECTION_CARD_HEIGHT + SELECTION_CARD_BOTTOM_INSET + pinGap)
             )
           : Math.min(160, Math.max(80, Math.round(containerH * 0.20)))
         : 0;
@@ -1052,10 +1087,10 @@ export function MapRadarView() {
     const pick = state.weeklyPick;
     const [lng, lat] = pick.coords;
     if (typeof lng !== "number" || typeof lat !== "number") return;
-    // When the weekly venue is the selected card, the card's own mascot takes
-    // over; keep the map mascot out of the way.
-    const isPickSelected = state.selectedVenue?.id === pick.venue_id;
-    const hideMascot = isPickSelected || weeklyMascotSuppressedRef.current;
+    // Hide the map mascot when the weekly spot is selected (the card mascot
+    // takes over) or when a neighboring pin is selected nearby.
+    const isSuppressed = shouldSuppressMapMascot(state.selectedVenue, pick, map);
+    const hideMascot = isSuppressed || weeklyMascotSuppressedRef.current;
 
     // Check if any filter is active and whether the Weekly Pick venue passes the active filter
     const hasActiveFilter =
@@ -1225,7 +1260,7 @@ export function MapRadarView() {
       style: styleUrl,
       center: currentCenter,
       zoom: currentZoom,
-      attributionControl: { compact: true },
+      attributionControl: false,
       dragRotate: false,
       pitchWithRotate: false,
       maxPitch: 60,
@@ -1357,7 +1392,9 @@ export function MapRadarView() {
           const h = map.getContainer().clientHeight;
           const targetX = w / 2;
           const cardTop = h - (SELECTION_CARD_HEIGHT + SELECTION_CARD_BOTTOM_INSET);
-          const targetY = cardTop - SELECTION_PIN_GAP;
+          const pinGap =
+            v.id === moveState.weeklyPick.venue_id ? WEEKLY_PICK_PIN_GAP : SELECTION_PIN_GAP;
+          const targetY = cardTop - pinGap;
           const drift = Math.hypot(p.x - targetX, p.y - targetY);
           if (drift > 90) {
             moveState.setSelectedVenue(null);
@@ -1477,10 +1514,13 @@ export function MapRadarView() {
         mapHeight - (SELECTION_CARD_HEIGHT + SELECTION_CARD_BOTTOM_INSET);
 
       // Deterministic Mercator math: solve for the camera centre that projects
-      // the selected venue cleanly ABOVE the spotlight card + pointer arrow.
+      // the selected venue cleanly ABOVE the spotlight card + pointer arrow
+      // (and above the perched mascot/bubble on Weekly Pick cards).
+      const pinGap =
+        venue.id === state.weeklyPick.venue_id ? WEEKLY_PICK_PIN_GAP : SELECTION_PIN_GAP;
       let center: [number, number] = [venue.longitude, venue.latitude];
       if (isMobileViewport) {
-        const targetY = cardTop - SELECTION_PIN_GAP;
+        const targetY = cardTop - pinGap;
         // Derive the map's world size from the public projection so the math
         // works regardless of MapLibre's internal tile size.
         const p0 = map.project([venue.longitude, venue.latitude]);
@@ -1505,7 +1545,7 @@ export function MapRadarView() {
       const viewH = container.clientHeight || mapHeight;
       const pinNow = map.project([venue.longitude, venue.latitude]);
       const targetScreenX = viewW / 2;
-      const targetScreenY = isMobileViewport ? cardTop - SELECTION_PIN_GAP : viewH / 2;
+      const targetScreenY = isMobileViewport ? cardTop - pinGap : viewH / 2;
       const panDistance = Math.hypot(
         pinNow.x - targetScreenX,
         pinNow.y - targetScreenY
@@ -1560,12 +1600,17 @@ export function MapRadarView() {
       }
 
       // Smoothly hand off between the map mascot and the card's perched mascot
-      // on click/unclick instead of snapping display:none abruptly.
+      // on click/unclick, and hide the mascot if a neighboring pin is selected.
       const weeklyRoot = weeklyMarkerRef.current?.getElement();
       if (weeklyRoot) {
-        const pickId = useCityPulseStore.getState().weeklyPick.venue_id;
+        const currentState = useCityPulseStore.getState();
         const inner = weeklyInnerRef.current;
-        if (nextId === pickId) {
+        const shouldHide = shouldSuppressMapMascot(
+          currentState.selectedVenue,
+          currentState.weeklyPick,
+          map
+        );
+        if (shouldHide) {
           weeklyMascotSuppressedRef.current = true;
           if (inner && typeof inner.animate === "function") {
             for (const anim of inner.getAnimations()) anim.cancel();
@@ -1581,7 +1626,14 @@ export function MapRadarView() {
               }
             );
             exitAnim.addEventListener("finish", () => {
-              if (useCityPulseStore.getState().selectedVenue?.id === pickId) {
+              const latest = useCityPulseStore.getState();
+              if (
+                shouldSuppressMapMascot(
+                  latest.selectedVenue,
+                  latest.weeklyPick,
+                  mapInstance.current
+                )
+              ) {
                 weeklyRoot.style.display = "none";
                 exitAnim.cancel();
               }
@@ -1589,12 +1641,18 @@ export function MapRadarView() {
           } else {
             weeklyRoot.style.display = "none";
           }
-        } else if (weeklyMascotSuppressedRef.current || prevId === pickId) {
+        } else if (weeklyMascotSuppressedRef.current) {
           weeklyMascotSuppressedRef.current = true;
           window.setTimeout(() => {
             weeklyMascotSuppressedRef.current = false;
             const st = useCityPulseStore.getState();
-            if (st.selectedVenue?.id !== pickId) {
+            if (
+              !shouldSuppressMapMascot(
+                st.selectedVenue,
+                st.weeklyPick,
+                mapInstance.current
+              )
+            ) {
               const root = weeklyMarkerRef.current?.getElement();
               if (root) {
                 root.style.display = "block";

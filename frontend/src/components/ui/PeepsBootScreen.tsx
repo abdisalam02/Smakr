@@ -143,7 +143,7 @@ export function PeepsBootScreen({
   const [atlasBuilding, setAtlasBuilding] = useState(true);
   const [atlasVersion, setAtlasVersion] = useState(0);
   const [atlasUrl, setAtlasUrl] = useState<string | null>(null);
-  const [showLogo, setShowLogo] = useState(false);
+  const [showLogo, setShowLogo] = useState(true);
   const [showSubline, setShowSubline] = useState(false);
   const [deck, setDeck] = useState<number[]>([]);
   const [dismissing, setDismissing] = useState(false);
@@ -255,12 +255,10 @@ export function PeepsBootScreen({
   // ── 4. Staggered Smakr logo popup — fires right after peeps begin walking ─
   useEffect(() => {
     if (!atlasReady) return;
-    setShowLogo(false);
+    setShowLogo(true);
     setShowSubline(false);
-    const tLogo = window.setTimeout(() => setShowLogo(true), 160);
-    const tSub = window.setTimeout(() => setShowSubline(true), 340);
+    const tSub = window.setTimeout(() => setShowSubline(true), 220);
     return () => {
-      window.clearTimeout(tLogo);
       window.clearTimeout(tSub);
     };
   }, [atlasReady]);
@@ -428,7 +426,7 @@ export function PeepsBootScreen({
         mobilePreview
           ? "absolute left-1/2 top-1/2 h-[760px] max-h-[92dvh] w-[390px] max-w-[94vw] -translate-x-1/2 -translate-y-1/2 rounded-[2.5rem] border-[10px] border-[#181615] shadow-2xl"
           : "fixed inset-0"
-      } z-[100] flex flex-col items-center justify-between bg-[#FAF7F2]/[0.94] select-none overflow-hidden transition-opacity duration-[380ms] ease-out will-change-opacity ${
+      } z-[100] flex flex-col items-center justify-between bg-[#FAF7F2] select-none overflow-hidden transition-opacity duration-[380ms] ease-out will-change-opacity ${
         dismissing ? "opacity-0 pointer-events-none" : "opacity-100"
       }`}
     >

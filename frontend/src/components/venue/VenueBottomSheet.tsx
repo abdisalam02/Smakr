@@ -123,10 +123,9 @@ export function VenueBottomSheet() {
   // 2. Title scales down from 1.0 (text-2xl) to 0.85 (text-lg) smoothly
   // 3. Category & open status badges remain visible in both resting & docked states
   // 4. Soft scrim fades in over the docked header (lighter, no expensive blur)
-  const titleTranslateY = useTransform(scrollY, [0, 205], [205, 0], { clamp: true });
-  const navScrimOpacity = useTransform(scrollY, [80, 205], [0, 1], { clamp: true });
+  const titleTranslateY = useTransform(scrollY, [0, 190], [190, 0], { clamp: true });
+  const navScrimOpacity = useTransform(scrollY, [70, 190], [0, 1], { clamp: true });
   const imageParallaxY = useTransform(scrollY, [0, 260], [0, -35], { clamp: true });
-  const imageScale = useTransform(scrollY, [-100, 0], [1.12, 1], { clamp: true });
 
   const isDraggingRef = React.useRef(false);
   const dragStartYRef = React.useRef(0);
@@ -339,15 +338,17 @@ export function VenueBottomSheet() {
     }
   };
 
-  // 2. Scrollable content pull-down to close when at top (scrollTop <= 1)
+  // 2. Scrollable content pull-down to close when at top (scrollTop <= 0)
   const handleContentTouchStart = (e: React.TouchEvent) => {
     const scrollTop = contentScrollRef.current ? contentScrollRef.current.scrollTop : 0;
-    if (scrollTop <= 1) {
+    if (scrollTop <= 0) {
       contentTouchStartYRef.current = e.touches[0].clientY;
       lastTouchYRef.current = e.touches[0].clientY;
       lastTouchTimeRef.current = Date.now();
       currentVelocityRef.current = 0;
       isContentPullingRef.current = false;
+    } else {
+      contentTouchStartYRef.current = null;
     }
   };
 
@@ -356,28 +357,36 @@ export function VenueBottomSheet() {
     const currentY = e.touches[0].clientY;
     const scrollTop = contentScrollRef.current ? contentScrollRef.current.scrollTop : 0;
 
-    if (scrollTop <= 1) {
-      const pullDown = currentY - contentTouchStartYRef.current;
-      if (pullDown > 6) {
-        isContentPullingRef.current = true;
-        isDraggingRef.current = true;
-
-        const now = Date.now();
-        const timeDelta = Math.max(1, now - lastTouchTimeRef.current);
-        currentVelocityRef.current = (currentY - lastTouchYRef.current) / timeDelta;
-        lastTouchYRef.current = currentY;
-        lastTouchTimeRef.current = now;
-
-        const nextY = Math.max(0, pullDown);
-        currentYRef.current = nextY;
-        sheetY.set(nextY);
-      }
-    } else {
+    if (scrollTop > 0) {
+      contentTouchStartYRef.current = null;
       if (isContentPullingRef.current) {
         isContentPullingRef.current = false;
         isDraggingRef.current = false;
         sheetY.set(0);
       }
+      return;
+    }
+
+    const pullDown = currentY - contentTouchStartYRef.current;
+    // Let upward swipes (scrolling down the page) release pull-to-close cleanly
+    if (pullDown < -4 && !isContentPullingRef.current) {
+      contentTouchStartYRef.current = null;
+      return;
+    }
+
+    if (pullDown > 6) {
+      isContentPullingRef.current = true;
+      isDraggingRef.current = true;
+
+      const now = Date.now();
+      const timeDelta = Math.max(1, now - lastTouchTimeRef.current);
+      currentVelocityRef.current = (currentY - lastTouchYRef.current) / timeDelta;
+      lastTouchYRef.current = currentY;
+      lastTouchTimeRef.current = now;
+
+      const nextY = Math.max(0, pullDown);
+      currentYRef.current = nextY;
+      sheetY.set(nextY);
     }
   };
 
@@ -464,52 +473,46 @@ export function VenueBottomSheet() {
                   data-venue-hero-target
                 >
                   <motion.div
-                    style={{ y: imageParallaxY, scale: imageScale }}
-                    className="relative w-full h-full origin-top"
+                    style={{ y: imageParallaxY }}
+                    className="relative w-full h-full"
                   >
                     <AnimatePresence initial={false} mode="sync">
                       <motion.div
                         key={activeHeroSrc}
-                        initial={{ opacity: 0, scale: 1.06, x: 14 }}
-                        animate={{ opacity: 1, scale: 1, x: 0 }}
-                        exit={{ opacity: 0, scale: 0.98, x: -14 }}
-                        transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
+                        initial={{ opacity: 0, scale: 1.04 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
                         className="absolute inset-0"
                       >
-                        {morphImageRef.current && activeHeroSrc === morphImageRef.current ? (
-                          /* eslint-disable-next-line @next/next/no-img-element */
-                          <img
-                            src={morphImageRef.current}
-                            alt={selectedVenue.name}
-                            className="absolute inset-0 w-full h-full object-cover object-center"
-                          />
-                        ) : (
-                          <Image
-                            src={activeHeroSrc}
-                            alt={selectedVenue.name}
-                            fill
-                            priority
-                            className="object-cover object-center"
-                            sizes="(max-width: 640px) 100vw, 600px"
-                            placeholder="blur"
-                            blurDataURL={FEED_BLUR_DARK}
-                          />
-                        )}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={
+                            morphImageRef.current && activeHeroSrc === morphImageRef.current
+                              ? morphImageRef.current
+                              : activeHeroSrc
+                          }
+                          alt={selectedVenue.name}
+                          loading="eager"
+                          decoding="async"
+                          fetchPriority="high"
+                          className="absolute inset-0 w-full h-full object-cover object-center"
+                        />
                       </motion.div>
                     </AnimatePresence>
-                    {/* Permanent subtle dark gradients: top for handle/controls, bottom for resting title legibility */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/90" />
+                    {/* Light top scrim keeps close button readable without muddy overlap */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-transparent" />
                   </motion.div>
                 </div>
               )}
 
               {/* 2. TOP STICKY HEADER BAR & CONTINUOUS MORPHING TITLE */}
-              {/* Shows Spot Name, Tag, Open/Closed status & Address with generous spacing in both resting & scrolled states */}
+              {/* Shows Spot Name, Open/Closed status & Address with generous spacing in both resting & scrolled states */}
               <div className="absolute top-0 inset-x-0 z-30 pt-2 pb-2.5 px-4 rounded-t-3xl pointer-events-none">
-                {/* Frosted Warm-Oat docked header bar: keeps dark title, badges & address crisp while scrolling */}
+                {/* Flat Warm-Oat docked header bar (avoids backdrop-blur recompositing during scroll) */}
                 <motion.div
                   style={{ opacity: navScrimOpacity }}
-                  className="absolute top-0 inset-x-0 h-[112px] sm:h-[116px] bg-[#FAF7F2]/95 backdrop-blur-md border-b border-[#181615]/10 shadow-[0_6px_24px_rgba(24,22,21,0.08)] pointer-events-none rounded-t-3xl"
+                  className="absolute top-0 inset-x-0 h-[112px] sm:h-[116px] bg-[#FAF7F2] dark:bg-[#181615] border-b border-[#181615]/10 shadow-[0_6px_24px_rgba(24,22,21,0.08)] pointer-events-none rounded-t-3xl"
                 />
 
                 <motion.div
@@ -549,27 +552,18 @@ export function VenueBottomSheet() {
                       }
                       className="min-w-0 pr-24 pointer-events-none select-none will-change-transform flex flex-col gap-1"
                     >
-                      {/* Category tag & Closed/Open live badge — always visible in both resting & docked states */}
+                      {/* Closed/Open live badge — category tags omitted on restaurant sheet */}
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        {isPopup ? (
-                          <span className="px-2 py-0.5 rounded-md bg-white/20 backdrop-blur-md text-[10px] font-bold text-white border border-white/25">
-                            {isDormant ? "Between Residencies" : "Oslo Residency"}
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded-md bg-black/50 backdrop-blur-md text-[10px] font-bold text-white/95 border border-white/15 uppercase tracking-wider">
-                            {selectedVenue.food_category ? selectedVenue.food_category.replace(/_/g, " ") : "Oslo Spot"}
-                          </span>
-                        )}
                         {isPopup && isDormant ? (
-                          <span className="px-2 py-0.5 rounded-md backdrop-blur-md text-[10px] font-bold flex items-center gap-1 border shadow-xs bg-amber-950/75 text-amber-200 border-amber-500/40">
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 border shadow-xs bg-amber-950/90 text-amber-200 border-amber-500/40">
                             <span>⏳ Between Drops · Next Date TBA</span>
                           </span>
                         ) : (
                           <span
-                            className={`px-2 py-0.5 rounded-md backdrop-blur-md text-[10px] font-bold flex items-center gap-1 border shadow-xs ${
+                            className={`px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 border shadow-xs ${
                               openStatus.isOpen
-                                ? "bg-emerald-950/70 text-emerald-300 border-emerald-500/35"
-                                : "bg-red-950/70 text-red-300 border-red-500/35"
+                                ? "bg-emerald-950/90 text-emerald-300 border-emerald-500/35"
+                                : "bg-red-950/90 text-red-300 border-red-500/35"
                             }`}
                           >
                             <span className={`w-1.5 h-1.5 rounded-full ${openStatus.isOpen ? "bg-emerald-400" : "bg-red-400"}`} />
@@ -647,14 +641,14 @@ export function VenueBottomSheet() {
 
                   {/* Content Card: Unrounded top edge flows seamlessly into the Warm-Oat hue */}
                   <div className="relative z-10 bg-[#FAF7F2] dark:bg-[#181615] px-4 pt-2 pb-14 space-y-3">
-                    {/* Upward Warm-Oat hue extending smoothly over the resting title, opening & location */}
+                    {/* Lightened upward Warm-Oat hue over the resting title & location */}
                     <div
                       aria-hidden="true"
                       style={{
                         background:
-                          "linear-gradient(to top, rgba(250,247,242,1) 0%, rgba(250,247,242,0.86) 46%, rgba(250,247,242,0) 100%)",
+                          "linear-gradient(to top, rgba(250,247,242,1) 0%, rgba(250,247,242,0.55) 45%, rgba(250,247,242,0) 100%)",
                       }}
-                      className="pointer-events-none absolute -top-36 inset-x-0 h-36 dark:hidden"
+                      className="pointer-events-none absolute -top-24 inset-x-0 h-24 dark:hidden"
                     />
 
                     {/* Compact Residency Status & Schedule */}
@@ -861,14 +855,14 @@ export function VenueBottomSheet() {
                       gallery.photos.length > 1 ? "pt-1.5" : "pt-4"
                     }`}
                   >
-                    {/* Upward Warm-Oat hue extending smoothly over the resting title, opening & location */}
+                    {/* Lightened upward Warm-Oat hue over the resting title & location */}
                     <div
                       aria-hidden="true"
                       style={{
                         background:
-                          "linear-gradient(to top, rgba(250,247,242,1) 0%, rgba(250,247,242,0.86) 46%, rgba(250,247,242,0) 100%)",
+                          "linear-gradient(to top, rgba(250,247,242,1) 0%, rgba(250,247,242,0.55) 45%, rgba(250,247,242,0) 100%)",
                       }}
-                      className="pointer-events-none absolute -top-36 inset-x-0 h-36 dark:hidden"
+                      className="pointer-events-none absolute -top-24 inset-x-0 h-24 dark:hidden"
                     />
                     {/* Food Truck schedule callout */}
                     {selectedVenue.spot_type === "food_truck" && selectedVenue.location_schedule && (

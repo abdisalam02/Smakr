@@ -278,6 +278,9 @@ const SpotlightCard = React.memo(function SpotlightCard({
           if (!isActive && isNeighbor) {
             e.stopPropagation();
             onSelectSide();
+          } else if (isActive && cardOpen) {
+            e.stopPropagation();
+            onOpenDetails();
           }
         }}
         style={{
@@ -286,7 +289,7 @@ const SpotlightCard = React.memo(function SpotlightCard({
           pointerEvents: isActive || isNeighbor ? "auto" : "none",
         }}
         className={`absolute inset-0 overflow-hidden rounded-[26px] bg-[#121110] shadow-[0_20px_50px_rgba(0,0,0,0.45)] will-change-transform ${
-          !isActive && isNeighbor ? "cursor-pointer" : ""
+          (!isActive && isNeighbor) || (isActive && cardOpen) ? "cursor-pointer" : ""
         } ${
           isPopup
             ? "border-2 border-white/90"
@@ -446,6 +449,9 @@ const SpotlightCard = React.memo(function SpotlightCard({
         if (!isActive && isNeighbor) {
           e.stopPropagation();
           onSelectSide();
+        } else if (isActive && cardOpen) {
+          e.stopPropagation();
+          onOpenDetails();
         }
       }}
       style={{
@@ -454,12 +460,13 @@ const SpotlightCard = React.memo(function SpotlightCard({
         pointerEvents: isActive || isNeighbor ? "auto" : "none",
       }}
       className={`absolute inset-0 overflow-visible rounded-[26px] will-change-transform ${
-        !isActive && isNeighbor ? "cursor-pointer" : ""
+        (!isActive && isNeighbor) || (isActive && cardOpen) ? "cursor-pointer" : ""
       }`}
     >
-      {/* Top pointer caret pointing straight up toward the focused map food pin */}
+      {/* Top pointer caret pointing straight up toward the focused map food pin (hidden for Weekly Pick so perched mascot owns top edge) */}
       <svg
         data-slot-arrow="true"
+        data-weekly={isWeeklyPick ? "true" : "false"}
         aria-hidden="true"
         width="22"
         height="11"
@@ -468,7 +475,7 @@ const SpotlightCard = React.memo(function SpotlightCard({
           left: "50%",
           top: "-9.5px",
           transform: "translate3d(-50%, 0, 0)",
-          opacity: isActive && cardOpen ? 1 : 0,
+          opacity: isActive && cardOpen && !isWeeklyPick ? 1 : 0,
         }}
         className="pointer-events-none absolute z-20 drop-shadow-[0_-2px_5px_rgba(0,0,0,0.28)]"
       >
@@ -1101,29 +1108,54 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
     }
   }, [selectedVenue?.id, activeHoodId, displayedVenues]);
 
-  // Warm the neighbourhood images so the next/previous swipe target is already
-  // decoded when the gesture ends (a late decode reads as a snap mid-animation).
+  // Warm the active venue's detail sheet photos (hero + place_photos + dishes)
+  // alongside left/right swipe neighbors so opening Details is instantaneous.
   useEffect(() => {
-    const currentId = activeSpotlight?.id;
-    if (!currentId || displayedVenues.length < 2) return;
-    const index = displayedVenues.findIndex((v) => v.id === currentId);
-    if (index === -1) return;
-    const neighbours = [
-      displayedVenues[(index - 1 + displayedVenues.length) % displayedVenues.length],
-      displayedVenues[(index + 1) % displayedVenues.length],
-    ];
-    for (const venue of neighbours) {
-      if (!venue) continue;
-      const url =
-        venue.cover_image_url ||
-        (venue as VenueWithDishes).dishes?.[0]?.image_url ||
-        dishPhotoByVenueId.get(venue.id);
-      if (!url) continue;
+    if (!activeSpotlight) return;
+    const urls = new Set<string>();
+    const addUrl = (url?: string | null) => {
+      if (typeof url === "string" && url.trim().length > 0) urls.add(url);
+    };
+
+    addUrl(activeSpotlight.cover_image_url);
+    addUrl(dishPhotoByVenueId.get(activeSpotlight.id));
+    if (Array.isArray(activeSpotlight.place_photos)) {
+      for (const p of activeSpotlight.place_photos.slice(0, 4)) addUrl(p);
+    }
+    const dishes = (activeSpotlight as VenueWithDishes).dishes;
+    if (Array.isArray(dishes)) {
+      for (const d of dishes.slice(0, 4)) addUrl(d?.image_url);
+    }
+    for (const post of foodPosts) {
+      if (post.spot_id === activeSpotlight.id && !post.is_archived) {
+        addUrl(post.image_url);
+      }
+    }
+
+    if (displayedVenues.length >= 2) {
+      const index = displayedVenues.findIndex((v) => v.id === activeSpotlight.id);
+      if (index !== -1) {
+        const neighbours = [
+          displayedVenues[(index - 1 + displayedVenues.length) % displayedVenues.length],
+          displayedVenues[(index + 1) % displayedVenues.length],
+        ];
+        for (const venue of neighbours) {
+          if (!venue) continue;
+          addUrl(
+            venue.cover_image_url ||
+              (venue as VenueWithDishes).dishes?.[0]?.image_url ||
+              dishPhotoByVenueId.get(venue.id)
+          );
+        }
+      }
+    }
+
+    for (const url of urls) {
       const img = new Image();
       img.src = url;
       img.decode?.().catch(() => {});
     }
-  }, [activeSpotlight?.id, displayedVenues, dishPhotoByVenueId]);
+  }, [activeSpotlight, displayedVenues, dishPhotoByVenueId, foodPosts]);
 
   // Parallax & 3D Focal-Scale Carousel Physics (60fps requestAnimationFrame throttled)
   const rafRef = useRef<number | null>(null);
@@ -1401,9 +1433,13 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
         el.style.zIndex = String(Math.round(10 + focus * 10));
 
         if (arrowEl) {
-          const arrowAlpha = Math.max(0, (focus - 0.55) / 0.45);
-          arrowEl.style.opacity = arrowAlpha.toFixed(3);
-          arrowEl.style.transform = `translate3d(-50%, ${((1 - focus) * 6).toFixed(1)}px, 0) scale(${(0.75 + 0.25 * focus).toFixed(3)})`;
+          if (arrowEl.dataset.weekly === "true") {
+            arrowEl.style.opacity = "0";
+          } else {
+            const arrowAlpha = Math.max(0, (focus - 0.55) / 0.45);
+            arrowEl.style.opacity = arrowAlpha.toFixed(3);
+            arrowEl.style.transform = `translate3d(-50%, ${((1 - focus) * 6).toFixed(1)}px, 0) scale(${(0.75 + 0.25 * focus).toFixed(3)})`;
+          }
         }
         if (closeEl) {
           const closeAlpha = Math.max(0, (focus - 0.5) / 0.5);
@@ -2020,22 +2056,22 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
             <div className="relative pointer-events-none">
               {isWeeklyPickSpot && (
                 <div
-                  className={`pointer-events-none absolute left-2 -top-[82px] z-30 flex items-start transition-all ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                  className={`pointer-events-none absolute left-2 -top-[64px] z-30 flex items-start transition-all ease-[cubic-bezier(0.22,1,0.36,1)] ${
                     cardOpen
                       ? "opacity-100 translate-y-0 scale-100 duration-300 delay-75"
                       : "opacity-0 translate-y-4 scale-90 duration-200 delay-0"
                   }`}
                 >
-                  {/* Mascot perched directly into the top-left corner of the card */}
+                  {/* Mascot perched compactly at the top-left corner so pin clears bubble above */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src="/mascot/smakr-pick-pointing.svg"
                     alt="Smakr Pick pointing at the venue"
-                    className="w-[96px] h-[116px] shrink-0 object-contain drop-shadow-[0_6px_12px_rgba(24,22,21,0.28)]"
+                    className="w-[80px] h-[96px] shrink-0 object-contain drop-shadow-[0_6px_12px_rgba(24,22,21,0.28)]"
                   />
                   {/* Comic speech bubble beside the mascot's mouth */}
                   <div
-                    className={`relative -ml-2.5 mt-3 max-w-[215px] rounded-[18px] bg-[#FAF7F2] border-[1.75px] border-[#181615] px-3 py-1.5 shadow-[0_6px_16px_rgba(24,22,21,0.18)] transition-all ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                    className={`relative -ml-2 mt-4 max-w-[205px] rounded-[18px] bg-[#FAF7F2] border-[1.75px] border-[#181615] px-3 py-1.5 shadow-[0_6px_16px_rgba(24,22,21,0.18)] transition-all ease-[cubic-bezier(0.22,1,0.36,1)] ${
                       cardOpen
                         ? "opacity-100 translate-x-0 scale-100 duration-300 delay-150"
                         : "opacity-0 -translate-x-2 scale-90 duration-150 delay-0"

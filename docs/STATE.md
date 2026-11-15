@@ -3,8 +3,8 @@
 Updated: 2026-11-15
 
 ## Now
-- Task: Deep performance audit — fixed pin-to-card spacing + pointer caret, distance/zoom-aware panning & tile cache (`fadeDuration: 110`, `maxTileCacheSize: 220`), GPU-only dock open/close/swipe (`clipPath` removed), and crisp 60fps `PeepsBootScreen` (`dpr<=1.5`, no fullscreen blur).
-- Status: Ready for verification on `npx tsc --noEmit` & mobile browser.
+- Task: Resolved boot skeleton flash, hidden bottom attribution popup, Weekly Pick bubble/neighbor mascot overlap, clickable active spotlight cards, instant sheet photo preloading, tag removal + lighter Warm-Oat scrim, smooth sticky-title sheet scroll, and snappier Feed ↔ Map transitions.
+- Status: Complete — `npx tsc --noEmit` exited `0`; ready for visual QA in browser.
 
 ## Next (max 3)
 1. Preview and export the 2-slide Early Snowfall `@3x` PNG assets in `/ad-reel`.

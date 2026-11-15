@@ -6,13 +6,16 @@ export const SELECTION_CARD_BOTTOM_INSET = 84;
 // Clear vertical gap (px) between the top edge of the spotlight card + pointer
 // arrow and the selected food pin center above it.
 export const SELECTION_PIN_GAP = 54;
+// Extra clearance when the Weekly Pick is active so the pin clears the mascot speech bubble.
+export const WEEKLY_PICK_PIN_GAP = 98;
 
 /** Screen distance (px) from the current projection to the focused spot. */
 export function selectionPanDistance(
   map: { project: (lngLat: [number, number]) => { x: number; y: number }; getContainer: () => HTMLElement },
   lng: number,
   lat: number,
-  mobile: boolean
+  mobile: boolean,
+  pinGap = SELECTION_PIN_GAP
 ) {
   const container = map.getContainer();
   const w = container.clientWidth || 390;
@@ -20,7 +23,7 @@ export function selectionPanDistance(
   const pin = map.project([lng, lat]);
   const cardTop = h - (SELECTION_CARD_HEIGHT + SELECTION_CARD_BOTTOM_INSET);
   const targetX = w / 2;
-  const targetY = mobile ? cardTop - SELECTION_PIN_GAP : h / 2;
+  const targetY = mobile ? cardTop - pinGap : h / 2;
   return Math.hypot(pin.x - targetX, pin.y - targetY);
 }
 

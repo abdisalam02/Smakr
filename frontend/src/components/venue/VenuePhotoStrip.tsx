@@ -173,7 +173,7 @@ export function VenuePhotoStrip({
           const bigTilt = [-2.5, 2.2, -2.0, 2.5][gIdx % 4];
           return (
             <React.Fragment key={group.big.url}>
-              <motion.button
+              <button
                 ref={(el) => {
                   itemRefs.current[group.big.idx] = el;
                 }}
@@ -181,39 +181,36 @@ export function VenuePhotoStrip({
                 role="tab"
                 aria-selected={bigActive}
                 aria-label={`Show ${venueName} photo ${group.big.idx + 1} of ${photos.length}`}
-                initial={false}
-                animate={{
-                  rotate: bigActive ? 0 : bigTilt,
-                  scale: bigActive ? 1.02 : 1,
+                style={{
+                  transform: `rotate(${bigActive ? 0 : bigTilt}deg) scale(${bigActive ? 1.02 : 1})`,
                   opacity: bigActive ? 1 : 0.9,
                 }}
-                transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
                 onClick={() => onSelect(group.big.idx)}
-                className={`relative snap-start shrink-0 w-[128px] sm:w-[142px] h-[148px] sm:h-[164px] rounded-2xl overflow-hidden cursor-pointer select-none focus:outline-none after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:bg-gradient-to-b after:from-white/20 after:via-transparent after:to-black/10 ${
+                className={`relative snap-start shrink-0 w-[128px] sm:w-[142px] h-[148px] sm:h-[164px] rounded-2xl overflow-hidden cursor-pointer select-none focus:outline-none transition-transform duration-200 ease-out after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:bg-gradient-to-b after:from-white/20 after:via-transparent after:to-black/10 ${
                   bigActive
                     ? "border-2 border-white dark:border-white/90 shadow-[0_8px_20px_rgba(24,22,21,0.22)] z-10"
                     : "border-2 border-white/80 dark:border-white/25 shadow-[0_4px_12px_rgba(24,22,21,0.12)] hover:opacity-100"
                 }`}
               >
-                <motion.img
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
                   src={group.big.url}
                   alt={`${venueName} photo ${group.big.idx + 1}`}
                   loading="eager"
+                  decoding="async"
                   draggable={false}
-                  initial={false}
-                  animate={{ scale: bigActive ? 1.0 : 1.06 }}
-                  transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
+                  style={{ transform: `scale(${bigActive ? 1.0 : 1.06})` }}
                   onError={() => onImageError?.(group.big.url)}
-                  className="w-full h-full object-cover object-center will-change-transform"
+                  className="w-full h-full object-cover object-center will-change-transform transition-transform duration-200 ease-out"
                 />
-              </motion.button>
+              </button>
 
               {group.smalls.length > 0 && (
                 <div className="flex flex-col gap-3 w-[96px] sm:w-[106px] h-[148px] sm:h-[164px] shrink-0 snap-start">
                   {group.smalls.map(({ url, idx, tilt }) => {
                     const isActive = idx === activeIndex;
                     return (
-                      <motion.button
+                      <button
                         key={url}
                         ref={(el) => {
                           itemRefs.current[idx] = el;
@@ -222,32 +219,29 @@ export function VenuePhotoStrip({
                         role="tab"
                         aria-selected={isActive}
                         aria-label={`Show ${venueName} photo ${idx + 1} of ${photos.length}`}
-                        initial={false}
-                        animate={{
-                          rotate: isActive ? 0 : tilt,
-                          scale: isActive ? 1.04 : 1,
+                        style={{
+                          transform: `rotate(${isActive ? 0 : tilt}deg) scale(${isActive ? 1.04 : 1})`,
                           opacity: isActive ? 1 : 0.9,
                         }}
-                        transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
                         onClick={() => onSelect(idx)}
-                        className={`relative flex-1 w-full rounded-xl overflow-hidden cursor-pointer select-none focus:outline-none after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:bg-gradient-to-b after:from-white/20 after:via-transparent after:to-black/10 ${
+                        className={`relative flex-1 w-full rounded-xl overflow-hidden cursor-pointer select-none focus:outline-none transition-transform duration-200 ease-out after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:bg-gradient-to-b after:from-white/20 after:via-transparent after:to-black/10 ${
                           isActive
                             ? "border-2 border-white dark:border-white/90 shadow-[0_8px_18px_rgba(24,22,21,0.24)] z-10"
                             : "border-2 border-white dark:border-white/30 shadow-[0_4px_12px_rgba(24,22,21,0.14)] hover:opacity-100"
                         }`}
                       >
-                        <motion.img
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
                           src={url}
                           alt={`${venueName} photo ${idx + 1}`}
                           loading="eager"
+                          decoding="async"
                           draggable={false}
-                          initial={false}
-                          animate={{ scale: isActive ? 1.0 : 1.08 }}
-                          transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
+                          style={{ transform: `scale(${isActive ? 1.0 : 1.08})` }}
                           onError={() => onImageError?.(url)}
-                          className="w-full h-full object-cover object-center will-change-transform"
+                          className="w-full h-full object-cover object-center will-change-transform transition-transform duration-200 ease-out"
                         />
-                      </motion.button>
+                      </button>
                     );
                   })}
                 </div>
