@@ -714,7 +714,13 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
     return (
       <div className={gridClass}>
         {/* BLOCK 1: Smakr Weekly Pick Split Banner + Pop-Up Dishes Carousel + first editorial cards */}
-        <div className="col-span-full my-0.5">
+        <div
+          className="col-span-full my-0.5 will-change-[transform,opacity]"
+          style={{
+            transform: "translate3d(0, calc(var(--feed-scroll, 0) * 0.1px), 0) scale(calc(1 - min(var(--feed-scroll, 0), 180) * 0.0001))",
+            opacity: "calc(1 - min(var(--feed-scroll, 0), 200) * 0.0012)",
+          }}
+        >
           <SmakrWeeklyPickSplitBanner />
         </div>
         {(() => {
@@ -898,17 +904,41 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   const prevModeRef = useRef<string>(feedMode);
 
   // Independent scroll per mode (prevents Food and Spots from scrolling together)
+  const mobileTopVeilRef = useRef<HTMLDivElement>(null);
+  const mobileFilterWrapRef = useRef<HTMLDivElement>(null);
+  const desktopTopLipRef = useRef<HTMLDivElement>(null);
+
+  const syncScrollVisuals = useCallback((el: HTMLDivElement | null, isMobileEl: boolean) => {
+    if (!el) return;
+    const y = Math.max(0, el.scrollTop);
+    const progress = Math.min(1, y / 60);
+    el.style.setProperty("--feed-scroll", String(Math.min(220, y)));
+
+    if (isMobileEl) {
+      if (mobileTopVeilRef.current) {
+        mobileTopVeilRef.current.style.opacity = String((progress * 0.82).toFixed(3));
+      }
+      if (mobileFilterWrapRef.current) {
+        mobileFilterWrapRef.current.style.transform = `translate3d(0, ${(-progress * 2).toFixed(2)}px, 0)`;
+      }
+    } else if (desktopTopLipRef.current) {
+      desktopTopLipRef.current.style.opacity = String((progress * 0.85).toFixed(3));
+    }
+  }, []);
+
   const handleDesktopScroll = useCallback(() => {
     if (desktopFeedScrollRef.current) {
       modeScrollRef.current[feedMode] = desktopFeedScrollRef.current.scrollTop;
+      syncScrollVisuals(desktopFeedScrollRef.current, false);
     }
-  }, [feedMode]);
+  }, [feedMode, syncScrollVisuals]);
 
   const handleMobileScroll = useCallback(() => {
     if (feedScrollRef.current) {
       modeScrollRef.current[feedMode] = feedScrollRef.current.scrollTop;
+      syncScrollVisuals(feedScrollRef.current, true);
     }
-  }, [feedMode]);
+  }, [feedMode, syncScrollVisuals]);
 
   useEffect(() => {
     if (prevModeRef.current !== feedMode) {
@@ -917,16 +947,18 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
       const applyScroll = () => {
         if (desktopFeedScrollRef.current) {
           desktopFeedScrollRef.current.scrollTop = targetScroll;
+          syncScrollVisuals(desktopFeedScrollRef.current, false);
         }
         if (feedScrollRef.current) {
           feedScrollRef.current.scrollTop = targetScroll;
+          syncScrollVisuals(feedScrollRef.current, true);
         }
       };
       applyScroll();
       const timer = setTimeout(applyScroll, 20);
       return () => clearTimeout(timer);
     }
-  }, [feedMode]);
+  }, [feedMode, syncScrollVisuals]);
 
   return (
     <div className="relative flex-1 w-full h-screen h-[100dvh] min-h-[100dvh] max-h-[100dvh] overflow-hidden bg-zinc-100 lg:flex lg:pt-[57px]">
@@ -981,12 +1013,18 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
               transition={{ duration: 0.18, ease: "easeOut" }}
               className="flex flex-col h-full w-full overflow-hidden"
             >
-              <div className="sticky top-0 z-20 bg-[#F5F0E6]/95 dark:bg-[#181615]/95 backdrop-blur-md">
+              <div className="sticky top-0 z-20 bg-[#F5F0E6]/95 dark:bg-[#181615]/95 backdrop-blur-md relative">
                 {isHydratingData && foodPosts.length === 0 ? (
                   <FeedFilterBarSkeleton />
                 ) : (
                   <FeedFilterBar />
                 )}
+                <div
+                  ref={desktopTopLipRef}
+                  aria-hidden="true"
+                  style={{ opacity: 0 }}
+                  className="pointer-events-none absolute inset-x-0 -bottom-5 h-5 bg-gradient-to-b from-[#F5F0E6]/75 via-[#F5F0E6]/35 to-transparent dark:from-[#181615]/75 dark:via-[#181615]/35 transition-opacity duration-150"
+                />
               </div>
               <div
                 ref={desktopFeedScrollRef}
@@ -1131,9 +1169,19 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
               : "translate-x-0 opacity-100 pointer-events-auto shadow-2xl"
           }`}
         >
+          {/* Scroll-reactive Warm Oat frosted veil behind header & filter bar so cards
+              feather gently instead of peeking sharply between floating pills. */}
+          <div
+            ref={mobileTopVeilRef}
+            aria-hidden="true"
+            style={{ opacity: 0 }}
+            className="pointer-events-none absolute inset-x-0 top-0 h-[118px] z-[15] bg-gradient-to-b from-[#FAF7F2]/85 via-[#FAF7F2]/55 to-transparent dark:from-[#181615]/85 dark:via-[#181615]/55 backdrop-blur-[4px] [mask-image:linear-gradient(to_bottom,black_48%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_48%,transparent_100%)] transition-opacity duration-150"
+          />
+
           {/* Floating filter bar + Dishes/Spots toggle under the SMAKR header. */}
           <div
-            className={`absolute inset-x-0 top-[64px] z-20 pointer-events-auto w-full max-w-full overflow-hidden transition-opacity duration-150 ${
+            ref={mobileFilterWrapRef}
+            className={`absolute inset-x-0 top-[64px] z-20 pointer-events-auto w-full max-w-full overflow-hidden transition-opacity duration-150 will-change-transform ${
               isVenueDetailModalOpen ? "opacity-0 pointer-events-none" : "opacity-100"
             }`}
           >
@@ -1145,11 +1193,17 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
           </div>
 
           {/* Scrollable Feed Dishes or Spots — starts at the top so cards can
-              scroll behind the header/filters; pt clears the overlays. */}
+              feather softly behind the header/filters; pt clears the overlays. */}
           <div
             ref={feedScrollRef}
             data-feed-scroll
             onScroll={handleMobileScroll}
+            style={{
+              WebkitMaskImage:
+                "linear-gradient(to bottom, transparent 0px, transparent 48px, rgba(0,0,0,0.4) 84px, #000 116px)",
+              maskImage:
+                "linear-gradient(to bottom, transparent 0px, transparent 48px, rgba(0,0,0,0.4) 84px, #000 116px)",
+            }}
             className="flex-1 min-h-0 overflow-y-auto px-3 pt-[122px] pb-32 space-y-2.5 no-scrollbar overscroll-contain"
           >
             {/* 1. Mobile Pop-ups Panel */}

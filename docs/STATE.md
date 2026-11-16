@@ -3,8 +3,8 @@
 Updated: 2026-11-16
 
 ## Now
-- Task: Audited localhost vs deployed (`smakr.no`), fixed mobile map framing (`[10.7485, 59.9145]` @ z13), added pin decluttering (`<14.8z`) + `Pop-ups` filter `fitBounds`, and aligned `HomeView` `endCap` to `aspect-[6/7]`.
-- Status: Complete — `npx tsc --noEmit` & `npm run test:security` (23/23) passed; ready to push when approved.
+- Task: Cropped & uploaded new `U WAN SUM` `Egg coffee` image (`egg-coffee-cropped.webp`), replaced the DB post (`52ebca64`), and polished filter dropdown fade, spotlight pop-up card, & sheet touch sensitivity.
+- Status: Complete — verified live on `localhost:3001` (`egg-coffee-cropped.webp` + `U WAN SUM` in `Pop-Up Dishes`); `npx tsc --noEmit` clean.
 
 ## Next (max 3)
 1. Preview and export the 2-slide Early Snowfall `@3x` PNG assets in `/ad-reel`.

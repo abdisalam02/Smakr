@@ -140,6 +140,8 @@ export function VenueBottomSheet() {
   const currentVelocityRef = React.useRef(0);
   const isContentPullingRef = React.useRef(false);
   const contentTouchStartYRef = React.useRef<number | null>(null);
+  const contentTouchStartXRef = React.useRef<number | null>(null);
+  const contentAxisLockRef = React.useRef<"x" | "y" | null>(null);
 
   useEffect(() => {
     if (isVenueDetailModalOpen) {
@@ -335,8 +337,8 @@ export function VenueBottomSheet() {
     const finalY = currentYRef.current;
     const velocity = currentVelocityRef.current;
 
-    // Fast flick down or pulled down > 45px closes immediately (0ms delay, single Framer Motion exit)
-    if (finalY > 45 || velocity > 0.22) {
+    // Require an intentional drag down (> 85px) or clear downward flick (> 0.5 px/ms)
+    if (finalY > 85 || velocity > 0.5) {
       handleClose();
     } else {
       animate(sheetY, 0, { type: "spring", stiffness: 440, damping: 34 });
@@ -345,25 +347,43 @@ export function VenueBottomSheet() {
 
   // 2. Scrollable content pull-down to close when at top (scrollTop <= 0)
   const handleContentTouchStart = (e: React.TouchEvent) => {
+    const target = e.target as HTMLElement | null;
+    // Never hijack touches inside horizontal carousels (photo strip / dishes grid)
+    if (target?.closest('[data-horizontal-carousel="true"]')) {
+      contentTouchStartYRef.current = null;
+      contentTouchStartXRef.current = null;
+      contentAxisLockRef.current = "x";
+      return;
+    }
+
     const scrollTop = contentScrollRef.current ? contentScrollRef.current.scrollTop : 0;
     if (scrollTop <= 0) {
       contentTouchStartYRef.current = e.touches[0].clientY;
+      contentTouchStartXRef.current = e.touches[0].clientX;
+      contentAxisLockRef.current = null;
       lastTouchYRef.current = e.touches[0].clientY;
       lastTouchTimeRef.current = Date.now();
       currentVelocityRef.current = 0;
       isContentPullingRef.current = false;
     } else {
       contentTouchStartYRef.current = null;
+      contentTouchStartXRef.current = null;
+      contentAxisLockRef.current = null;
     }
   };
 
   const handleContentTouchMove = (e: React.TouchEvent) => {
-    if (contentTouchStartYRef.current === null) return;
+    if (contentTouchStartYRef.current === null || contentTouchStartXRef.current === null) return;
+    if (contentAxisLockRef.current === "x") return;
+
     const currentY = e.touches[0].clientY;
+    const currentX = e.touches[0].clientX;
     const scrollTop = contentScrollRef.current ? contentScrollRef.current.scrollTop : 0;
 
     if (scrollTop > 0) {
       contentTouchStartYRef.current = null;
+      contentTouchStartXRef.current = null;
+      contentAxisLockRef.current = null;
       if (isContentPullingRef.current) {
         isContentPullingRef.current = false;
         isDraggingRef.current = false;
@@ -373,13 +393,27 @@ export function VenueBottomSheet() {
     }
 
     const pullDown = currentY - contentTouchStartYRef.current;
+    const dx = Math.abs(currentX - contentTouchStartXRef.current);
+
     // Let upward swipes (scrolling down the page) release pull-to-close cleanly
     if (pullDown < -4 && !isContentPullingRef.current) {
       contentTouchStartYRef.current = null;
+      contentTouchStartXRef.current = null;
       return;
     }
 
-    if (pullDown > 6) {
+    // Lock axis once movement clears 8px; horizontal or diagonal swipes never close the sheet
+    if (contentAxisLockRef.current === null && (Math.abs(pullDown) > 8 || dx > 8)) {
+      if (dx >= Math.abs(pullDown) * 0.85) {
+        contentAxisLockRef.current = "x";
+        contentTouchStartYRef.current = null;
+        return;
+      }
+      contentAxisLockRef.current = "y";
+    }
+
+    const PULL_DEADZONE = 22;
+    if (contentAxisLockRef.current === "y" && pullDown > PULL_DEADZONE) {
       isContentPullingRef.current = true;
       isDraggingRef.current = true;
 
@@ -389,7 +423,7 @@ export function VenueBottomSheet() {
       lastTouchYRef.current = currentY;
       lastTouchTimeRef.current = now;
 
-      const nextY = Math.max(0, pullDown);
+      const nextY = Math.max(0, pullDown - PULL_DEADZONE);
       currentYRef.current = nextY;
       sheetY.set(nextY);
     }
@@ -398,16 +432,18 @@ export function VenueBottomSheet() {
   const handleContentTouchEnd = (e: React.TouchEvent) => {
     if (isContentPullingRef.current && contentTouchStartYRef.current !== null) {
       const endY = e.changedTouches[0].clientY;
-      const pullDown = endY - contentTouchStartYRef.current;
+      const effectivePull = Math.max(0, endY - contentTouchStartYRef.current - 22);
       const velocity = currentVelocityRef.current;
 
-      if (pullDown > 45 || velocity > 0.22) {
+      if (effectivePull > 105 || velocity > 0.65) {
         handleClose();
       } else {
         animate(sheetY, 0, { type: "spring", stiffness: 440, damping: 34 });
       }
     }
     contentTouchStartYRef.current = null;
+    contentTouchStartXRef.current = null;
+    contentAxisLockRef.current = null;
     isContentPullingRef.current = false;
     isDraggingRef.current = false;
   };

@@ -533,31 +533,11 @@ const SpotlightCard = React.memo(function SpotlightCard({
           className="absolute inset-x-0 bottom-0 h-[56%] pointer-events-none"
         />
 
-        {/* Top row: Pop-Up Event Ticket Ribbon on left (when isPopup) + borderless ✕ on right */}
+        {/* Top row: borderless ✕ close button */}
         <div
           data-slot-top="true"
-          className={`relative z-10 flex items-center gap-2 px-4 pt-3.5 pb-1 will-change-transform ${
-            isPopup ? "justify-between" : "justify-end"
-          }`}
+          className="relative z-10 flex items-center justify-end gap-2 px-4 pt-3.5 pb-1 will-change-transform"
         >
-          {isPopup && popupLifecycle && (
-            <span
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-comico text-[10px] tracking-wide uppercase shadow-md ${
-                popupLifecycle.state === "live"
-                  ? "bg-[#E84A27] text-white"
-                  : popupLifecycle.state === "upcoming"
-                  ? "bg-[#FAF7F2] text-[#E84A27] border border-[#E84A27]/35"
-                  : popupLifecycle.state === "passed"
-                  ? "bg-[#FAF7F2]/92 text-[#181615]"
-                  : "bg-[#181615]/85 text-[#FAF7F2] border border-white/25"
-              }`}
-            >
-              {popupLifecycle.state === "live" && (
-                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse shrink-0" />
-              )}
-              <span>✦ {popupLifecycle.badgeLabel}</span>
-            </span>
-          )}
           <button
             type="button"
             data-slot-close="true"
@@ -572,7 +552,7 @@ const SpotlightCard = React.memo(function SpotlightCard({
           </button>
         </div>
 
-        {/* Bottom dark hue: bolder white Title + Location + status inline with white Details ↗ */}
+        {/* Bottom dark hue: date line + title + Pop-up tag + address inline with white Details ↗ */}
         <div className="absolute inset-x-0 bottom-0 z-10 px-4 pb-3.5 pt-2 flex flex-col justify-end gap-1">
           {isPopup && (
             <div
@@ -581,15 +561,7 @@ const SpotlightCard = React.memo(function SpotlightCard({
             >
               <Calendar className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
               <span className="truncate">
-                {popupLifecycle?.state === "passed"
-                  ? popupHostVenue
-                    ? `Last hosted at ${popupHostVenue}`
-                    : popupLifecycle.shortDateLabel
-                  : popupLifecycle?.state === "tba"
-                  ? "Roaming Oslo · Next date TBA"
-                  : popupHostVenue
-                  ? `Hosted at ${popupHostVenue}`
-                  : popupLifecycle?.shortDateLabel || "Oslo Pop-Up"}
+                {popupLifecycle?.shortDateLabel || "Oslo Pop-Up"}
               </span>
             </div>
           )}
@@ -598,6 +570,12 @@ const SpotlightCard = React.memo(function SpotlightCard({
             <h4 className="font-comico font-bold tracking-wide text-[18px] sm:text-[19px] leading-snug text-white drop-shadow-xs line-clamp-1">
               {venue.name}
             </h4>
+            {isPopup && (
+              <p className="inline-flex items-center gap-1 text-[11px] font-bold text-white/90 mt-0.5">
+                <SmakrFoodIcon name="popup" className="w-3.5 h-3.5 shrink-0" />
+                <span>Pop-up</span>
+              </p>
+            )}
           </div>
 
           <div

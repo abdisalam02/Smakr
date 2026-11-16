@@ -2395,22 +2395,22 @@ export function MapRadarView() {
         }}
       />
 
-      {/* Soft top & bottom page-cream hues matching the ad backdrop so the map
-          feathers cleanly into the floating logo, profile pill, and bottom nav */}
+      {/* Soft top & bottom page-cream hues feathering lightly into the floating
+          header pills and bottom nav without obscuring map detail */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute top-0 inset-x-0 h-[126px] sm:h-[136px] z-[5]"
+        className="pointer-events-none absolute top-0 inset-x-0 h-[88px] sm:h-[96px] z-[5]"
         style={{
           background:
-            "linear-gradient(180deg, color-mix(in srgb, var(--background, #FAF7F2) 94%, transparent) 0%, color-mix(in srgb, var(--background, #FAF7F2) 74%, transparent) 38%, color-mix(in srgb, var(--background, #FAF7F2) 26%, transparent) 72%, transparent 100%)",
+            "linear-gradient(180deg, color-mix(in srgb, var(--background, #FAF7F2) 68%, transparent) 0%, color-mix(in srgb, var(--background, #FAF7F2) 38%, transparent) 42%, color-mix(in srgb, var(--background, #FAF7F2) 12%, transparent) 74%, transparent 100%)",
         }}
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute bottom-0 inset-x-0 h-[144px] sm:h-[164px] z-[5]"
+        className="pointer-events-none absolute bottom-0 inset-x-0 h-[104px] sm:h-[116px] z-[5]"
         style={{
           background:
-            "linear-gradient(to top, color-mix(in srgb, var(--background, #FAF7F2) 96%, transparent) 0%, color-mix(in srgb, var(--background, #FAF7F2) 76%, transparent) 44%, color-mix(in srgb, var(--background, #FAF7F2) 26%, transparent) 75%, transparent 100%)",
+            "linear-gradient(to top, color-mix(in srgb, var(--background, #FAF7F2) 72%, transparent) 0%, color-mix(in srgb, var(--background, #FAF7F2) 40%, transparent) 44%, color-mix(in srgb, var(--background, #FAF7F2) 12%, transparent) 76%, transparent 100%)",
         }}
       />
 

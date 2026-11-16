@@ -150,20 +150,12 @@ async function main() {
   const MINT_ID = "e41bc1ac-192c-4508-b882-8ade4bb65005";
   const CRANTZ_ID = "dd829981-3f91-4126-b732-78d1b50ab6a8";
 
-  // Inspect & clean up U WAN SUM dishes (remove any basic Egg Coffee if user requested)
+  // Inspect U WAN SUM dishes (preserve user-added dishes)
   const { data: uwanPosts } = await supabase
     .from("food_posts")
     .select("id,dish_name,price_nok,dish_image")
     .eq("venue_id", UWAN_ID);
   console.log("U WAN SUM current food_posts:", JSON.stringify(uwanPosts || [], null, 2));
-
-  for (const p of uwanPosts || []) {
-    const nameLower = (p.dish_name || "").toLowerCase();
-    if (nameLower === "egg coffee" || nameLower.includes("egg & coconut") || nameLower.includes("vietnamese egg")) {
-      const { error } = await supabase.from("food_posts").delete().eq("id", p.id);
-      console.log(`Removed U WAN SUM egg coffee post (${p.dish_name} · ${p.id}):`, error ? error.message : "OK");
-    }
-  }
 
   // Upload Downloads folders
   const uwanPhotos = await uploadLocalFolder("C:\\Users\\abdis\\Downloads\\u-wan-sum", "u-wan-sum");

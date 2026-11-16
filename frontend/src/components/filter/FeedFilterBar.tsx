@@ -849,7 +849,7 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                 e.preventDefault();
               }
             }}
-            className="w-full rounded-b-2xl border-t border-white/50 dark:border-white/10 bg-[#FAF7F2]/80 dark:bg-[#181615]/80 backdrop-blur-xl shadow-[0_18px_40px_rgba(24,22,21,0.14)] px-3.5 pt-2 pb-2.5 space-y-2.5 select-none touch-pan-x cursor-grab active:cursor-grabbing"
+            className="w-full rounded-b-2xl bg-gradient-to-b from-[#FAF7F2]/25 via-[#FAF7F2]/88 to-[#FAF7F2]/78 dark:from-[#181615]/25 dark:via-[#181615]/88 dark:to-[#181615]/78 backdrop-blur-xl shadow-[0_18px_36px_-10px_rgba(24,22,21,0.12)] px-3.5 pt-2.5 pb-2.5 space-y-2.5 select-none touch-pan-x cursor-grab active:cursor-grabbing"
           >
                 {/* Header: Compact Row (Categories + active on left, Reset on right) */}
                 <div className="flex items-center justify-between">

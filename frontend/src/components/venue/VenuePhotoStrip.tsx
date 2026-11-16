@@ -166,7 +166,8 @@ export function VenuePhotoStrip({
         ref={stripRef}
         role="tablist"
         aria-label={`${venueName} photos`}
-        className="flex items-stretch gap-3.5 overflow-x-auto snap-x snap-mandatory no-scrollbar -mx-4 px-4 py-2.5"
+        data-horizontal-carousel="true"
+        className="flex items-stretch gap-3.5 overflow-x-auto snap-x snap-mandatory no-scrollbar -mx-4 px-4 py-2.5 touch-pan-x"
       >
         {groups.map((group, gIdx) => {
           const bigActive = group.big.idx === activeIndex;
@@ -324,13 +325,14 @@ export function VenuePhotoStrip({
         ref={stripRef}
         role="tablist"
         aria-label={`${venueName} photos`}
+        data-horizontal-carousel="true"
         style={{
           maskImage:
             "linear-gradient(to right, transparent 0%, black 11%, black 89%, transparent 100%)",
           WebkitMaskImage:
             "linear-gradient(to right, transparent 0%, black 11%, black 89%, transparent 100%)",
         }}
-        className={`mx-auto w-fit max-w-full flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 px-4 ${
+        className={`mx-auto w-fit max-w-full flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 px-4 touch-pan-x ${
           compact ? "min-h-[54px]" : "min-h-[64px]"
         }`}
       >
