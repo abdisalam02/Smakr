@@ -15,7 +15,8 @@ import {
   ensureBustAvatarSvg,
   type OpenPeepsPresetId,
 } from "@/lib/onboardingAvatar";
-import { getPopupStatus, getPopupMeta } from "@/lib/popupUtils";
+import { getPopupStatus, getPopupMeta, resolvePopupLifecycle } from "@/lib/popupUtils";
+import { resolveVenueDisplayBadge } from "@/lib/taxonomy";
 import { formatOsloLocation } from "@/lib/location";
 import { getDistanceInMeters, formatDistance } from "@/lib/math";
 
@@ -97,30 +98,34 @@ export const FoodPostCard = React.memo(function FoodPostCard({
   const popupStatus = getPopupStatus(linkedVenue);
   const popupMeta = linkedVenue ? getPopupMeta(linkedVenue) : null;
   const isPopup = linkedVenue?.spot_type === "popup" || post.spot_type === "popup";
+  const popupLifecycle = isPopup && linkedVenue ? resolvePopupLifecycle(linkedVenue) : null;
   // Pop-ups always span a full row, so they keep the large layout even in 2-up grid mode.
   const isGridMode = (compact || rawGridMode) && !isPopup;
   const isPopupInactive = Boolean(
     isPopup && (
-      !popupMeta?.dates_label ||
-      popupMeta.dates_label.toLowerCase().includes("tba") ||
-      popupMeta.residency_status === "between_residencies" ||
-      popupStatus.status === "dormant" ||
-      popupStatus.status === "expired" ||
-      popupStatus.status === "grace" ||
-      (!linkedVenue?.popup_start_date && !linkedVenue?.popup_end_date && !popupMeta?.dates_label)
+      popupLifecycle?.state === "tba" ||
+      popupLifecycle?.state === "passed" ||
+      (!popupLifecycle && (
+        !popupMeta?.dates_label ||
+        popupMeta.dates_label.toLowerCase().includes("tba") ||
+        popupMeta.residency_status === "between_residencies" ||
+        popupStatus.status === "dormant" ||
+        popupStatus.status === "expired" ||
+        popupStatus.status === "grace"
+      ))
     )
   );
   const isPopupActive = isPopup && !isPopupInactive;
 
-  // A pop-up has no confirmed location if address is TBA, host venue is TBA, or dormant
+  // A pop-up has no confirmed location only when it is TBA / roaming without a host address
   const isLocationTBA = Boolean(
     isPopup && (
+      popupLifecycle?.state === "tba" ||
       !linkedVenue?.address ||
       linkedVenue.address.toLowerCase().includes("tba") ||
       !post.spot_address ||
       post.spot_address.toLowerCase().includes("tba") ||
-      popupMeta?.host_venue_name?.toLowerCase().includes("tba") ||
-      isPopupInactive
+      popupMeta?.host_venue_name?.toLowerCase().includes("tba")
     )
   );
   const hasConfirmedLocation = !isLocationTBA;
@@ -441,17 +446,32 @@ export const FoodPostCard = React.memo(function FoodPostCard({
 
   const popupDateOnlyLine = React.useMemo(() => {
     if (!isPopup) return null;
+    if (popupLifecycle) {
+      return popupLifecycle.shortDateLabel;
+    }
     const rawDates = (popupMeta?.dates_label || post.drop_badge || "").replace(/\s*Drop$/i, "").trim();
     if (rawDates && !rawDates.toLowerCase().includes("tba")) {
       return rawDates;
     }
-    const hours = popupMeta?.daily_hours || linkedVenue?.current_opening_hours_text;
-    if (hours && !hours.toLowerCase().includes("tba")) {
-      return hours.replace(/\s*until sold out/i, "").trim();
-    }
-    if (isPopupInactive) return "Next Drop TBA";
+    if (isPopupInactive) return "Next drop TBA";
     return "Weekend Drop";
-  }, [isPopup, popupMeta?.dates_label, popupMeta?.daily_hours, post.drop_badge, linkedVenue?.current_opening_hours_text, isPopupInactive]);
+  }, [isPopup, popupLifecycle, popupMeta?.dates_label, post.drop_badge, isPopupInactive]);
+
+  const popupSpotType = React.useMemo(() => {
+    if (!isPopup) return null;
+    const badge = resolveVenueDisplayBadge(
+      linkedVenue || { name: post.spot_name, food_category: post.category }
+    );
+    const tag =
+      badge?.mainTag && badge.mainTag !== "FOOD" && badge.mainTag !== "POP-UP"
+        ? badge.mainTag
+        : post.category || (linkedVenue as any)?.food_category || "Pop-Up";
+    return tag
+      .toLowerCase()
+      .split(" ")
+      .map((w) => (w === "&" ? "&" : w.charAt(0).toUpperCase() + w.slice(1)))
+      .join(" ");
+  }, [isPopup, linkedVenue, post.spot_name, post.category]);
 
   return (
     <article
@@ -461,21 +481,19 @@ export const FoodPostCard = React.memo(function FoodPostCard({
         fillHeight ? "h-full" : ""
       } ${
         isPopup
-          ? "border-2 border-white shadow-[0_8px_24px_rgba(24,22,21,0.16)]"
+          ? "border border-white/20 shadow-[0_8px_24px_rgba(24,22,21,0.16)]"
           : isSelected
           ? "ring-2 ring-white border-white/80"
           : "border-black/[0.08] dark:border-white/10"
-      } ${
-        popupStatus.isDimmedCard ? "opacity-50 grayscale-[20%]" : ""
-      }`}
+      } ${""}`}
     >
       {/* Full-Bleed Photography Hero Container */}
       <div className={`relative w-full overflow-hidden bg-[#E8E0D2] dark:bg-[#24201D] ${
         fillHeight
           ? "h-full min-h-0"
           : isGridMode
-          ? "aspect-[4/5] min-h-[220px] sm:min-h-[260px]"
-          : "aspect-[4/3] min-h-[320px]"
+          ? "aspect-[6/7]"
+          : "aspect-[4/3] sm:aspect-[16/10]"
       }`}>
         {imgError || !post.image_url ? (
           <div className="absolute inset-0 flex items-center justify-center bg-[#F3EDE2] dark:bg-[#24201D]">
@@ -521,15 +539,14 @@ export const FoodPostCard = React.memo(function FoodPostCard({
         <div className="absolute top-3 inset-x-3 flex items-start justify-between gap-2 z-10 pointer-events-auto">
           {/* Top-Left: Pop-up / Price / Kitchen Badge */}
           <div className="flex flex-wrap items-center gap-1.5 max-w-[75%]">
-            {/* Pop-up Badge in Top-Left */}
+            {/* Pop-up Icon + Spot Type (What they serve) in Top-Left */}
             {isPopup && (
               <span
-                className={`font-comico font-normal tracking-wide rounded-full shadow-md flex items-center gap-1.5 whitespace-nowrap bg-[#181615]/80 backdrop-blur-md text-white border border-white/90 ${
-                  isGridMode ? "px-2.5 py-0.5 text-[11px]" : "px-3 py-1 text-xs"
-                }`}
+                className="px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1.5 bg-black/45 backdrop-blur-md text-white border border-white/20 text-[10.5px] font-bold whitespace-nowrap"
+                title="Pop-Up"
               >
-                <SmakrFoodIcon name="popup" className={`${isGridMode ? "w-3.5 h-3.5" : "w-4 h-4"} shrink-0`} />
-                <span>POP-UP DROP</span>
+                <SmakrFoodIcon name="popup" className="w-3.5 h-3.5 shrink-0" />
+                <span>{popupSpotType || "Pop-Up"}</span>
               </span>
             )}
 
@@ -623,13 +640,6 @@ export const FoodPostCard = React.memo(function FoodPostCard({
               </button>
             )}
 
-            {/* Pop-Up Price Pill in Top-Right next to Bookmark */}
-            {isPopup && typeof post.price_nok === "number" && post.price_nok > 0 && (
-              <span className="font-comico font-bold tracking-tight bg-[#e84a27] text-white px-2.5 py-1 rounded-full text-xs shadow-md whitespace-nowrap">
-                {post.price_nok} kr
-              </span>
-            )}
-
             {/* Regular Spot Rating Pill (hidden in 2-col grid mode to de-clutter top row) */}
             {!isPopup && !isGridMode && (
               <span className="bg-black/75 text-amber-400 font-bold px-2.5 py-1 rounded-full text-xs border border-white/10 flex items-center gap-1 shadow-xs whitespace-nowrap">
@@ -678,27 +688,17 @@ export const FoodPostCard = React.memo(function FoodPostCard({
             {post.dish_name}
           </h3>
 
-          {/* Pop-Up Date Only Under Title */}
-          {isPopup && popupDateOnlyLine && !isGridMode && (
-            <div className="mt-1 flex items-center gap-1.5 text-[12px] font-bold text-[#FF8566] drop-shadow-xs">
-              <Calendar className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
-              <span>{popupDateOnlyLine}</span>
-            </div>
-          )}
-
-          {/* Venue & Location (Pop-Up Icon + Pop-Up Name for pop-ups; MapPin + Venue Name for regular spots) */}
+          {/* Location row: Pop-ups show MapPin + neighborhood (spot name sits outside below the card) */}
           <div className={`${isGridMode ? "text-[11.5px]" : "text-[13.5px]"} font-semibold text-white/95 drop-shadow-xs mt-1 flex items-center gap-1.5 flex-wrap`}>
-            {isPopup ? (
-              <SmakrFoodIcon name="popup" className={`${isGridMode ? "w-4 h-4" : "w-4 h-4"} shrink-0`} />
-            ) : (
-              <MapPin className={`${isGridMode ? "w-3.5 h-3.5" : "w-[15px] h-[15px]"} text-[#e84a27] shrink-0`} />
+            <MapPin className={`${isGridMode ? "w-3.5 h-3.5" : "w-[15px] h-[15px]"} text-[#e84a27] shrink-0`} />
+            {!isPopup && (
+              <span className="font-semibold text-white truncate max-w-[175px] sm:max-w-none">
+                {post.spot_name}
+              </span>
             )}
-            <span className="font-semibold text-white truncate max-w-[175px] sm:max-w-none">
-              {post.spot_name}
-            </span>
             {!isGridMode && (
               <>
-                <span className="text-zinc-400">·</span>
+                {!isPopup && <span className="text-zinc-400">·</span>}
                 <span>{hasConfirmedLocation ? locationInfo.neighborhood : "Location TBA"}</span>
               </>
             )}
@@ -725,8 +725,8 @@ export const FoodPostCard = React.memo(function FoodPostCard({
             </div>
           )}
 
-          {/* Author & Interactive Actions Footer (Hidden in 2-col Grid Mode) */}
-          {!isGridMode && (
+          {/* Author & Interactive Actions Footer (Hidden in 2-col Grid Mode and Pop-Up cards) */}
+          {!isGridMode && !isPopup && (
             <div className={`flex items-center ${isPopup ? "justify-end" : "justify-between"} gap-2 pt-1.5 mt-0.5 flex-wrap`}>
               {/* Left: Author Avatar Badge + @handle (inline and grounded) */}
               {!isPopup && (
@@ -755,35 +755,35 @@ export const FoodPostCard = React.memo(function FoodPostCard({
 
               {/* Right Group: Tactile Actions */}
               <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-                {/* Action 1: Clean Circular Share Icon Button */}
-                <button
-                  type="button"
-                  onClick={handleShareDish}
-                  className="relative before:absolute before:-inset-2 before:content-[''] touch-manipulation h-9 w-9 rounded-full bg-[#181615]/75 hover:bg-[#181615] border border-white/20 text-[#FAF7F2] active:scale-90 transition-all flex items-center justify-center cursor-pointer shrink-0"
-                  title="Send 'Spise her?' to a friend"
-                  aria-label="Share dish"
-                >
-                  <Send className="w-3.5 h-3.5 stroke-[2] -translate-x-[0.5px] translate-y-[0.5px]" />
-                </button>
-
-                {/* Pop-Up IG ↗ Pill right next to MAP ↗ */}
-                {isPopup && popupInstagramUrl && (
-                  <a
-                    href={popupInstagramUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="relative before:absolute before:-inset-2 before:content-[''] touch-manipulation h-9 px-3 text-xs rounded-full bg-[#181615]/80 hover:bg-[#E84A27] text-[#FAF7F2] hover:text-white border border-white/20 shadow-sm active:scale-95 transition-all font-bold flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap"
-                    title="Follow on Instagram for drop alerts"
-                    aria-label="Follow on Instagram"
+                {/* Action 1: Clean Circular Share Icon Button (non-popups only) */}
+                {!isPopup && (
+                  <button
+                    type="button"
+                    onClick={handleShareDish}
+                    className="relative before:absolute before:-inset-2 before:content-[''] touch-manipulation h-9 w-9 rounded-full bg-[#181615]/75 hover:bg-[#181615] border border-white/20 text-[#FAF7F2] active:scale-90 transition-all flex items-center justify-center cursor-pointer shrink-0"
+                    title="Send 'Spise her?' to a friend"
+                    aria-label="Share dish"
                   >
-                    <span className="font-comico font-bold tracking-tight">IG</span>
-                    <ArrowUpRight className="w-3 h-3 stroke-[2.8] text-[#E84A27]" />
-                  </a>
+                    <Send className="w-3.5 h-3.5 stroke-[2] -translate-x-[0.5px] translate-y-[0.5px]" />
+                  </button>
                 )}
 
-                {/* Action 2: Clean Solid Cream [Map ↗] Button */}
-                {hasConfirmedLocation ? (
+                {/* Action 2: Details ↗ for Pop-ups, or Map ↗ for regular spots */}
+                {isPopup ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenDetails();
+                    }}
+                    className="relative before:absolute before:-inset-2 before:content-[''] touch-manipulation h-8 px-3.5 text-xs rounded-full bg-[#FAF7F2] hover:bg-white text-[#181615] border border-[#181615]/15 shadow-sm active:scale-95 transition-transform duration-100 font-bold flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap"
+                    title="View drop details"
+                    aria-label="View drop details"
+                  >
+                    <span className="font-comico font-bold tracking-tight text-[#181615]">Details</span>
+                    <ArrowUpRight className="w-3 h-3 stroke-[2.8] text-[#E84A27]" />
+                  </button>
+                ) : hasConfirmedLocation ? (
                   <button
                     type="button"
                     onClick={(e) => {
@@ -796,17 +796,6 @@ export const FoodPostCard = React.memo(function FoodPostCard({
                   >
                     <span className="font-comico font-bold tracking-tight text-[#181615]">Map</span>
                     <ArrowUpRight className="w-3 h-3 stroke-[2.8] text-[#E84A27]" />
-                  </button>
-                ) : isPopup ? (
-                  <button
-                    type="button"
-                    onClick={handleOpenDetails}
-                    className="h-9 px-3.5 text-xs rounded-full bg-[#FAF7F2] text-[#181615] border-2 border-[#181615] shadow-[0_2px_0_#181615] hover:bg-[#E84A27] hover:text-white hover:border-[#181615] active:translate-y-[1px] active:shadow-none transition-all font-extrabold flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap"
-                    title="View drop details"
-                    aria-label="View drop details"
-                  >
-                    <span>Details</span>
-                    <ArrowUpRight className="w-3 h-3 stroke-[2.5]" />
                   </button>
                 ) : null}
               </div>

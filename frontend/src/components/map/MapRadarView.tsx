@@ -83,7 +83,13 @@ import { resolveEntityTaxonomy, resolveVenueDisplayBadge, resolveDishIconKey } f
 import { getIconDisplay } from "@/lib/iconRegistry";
 import { formatDistance } from "@/lib/math";
 import { getDirectionsUrl, formatVenueLocationLine } from "@/lib/location";
-import { getPopupStatus, getPopupUrgencyLabel, getPopupMeta, isPopupVenue } from "@/lib/popupUtils";
+import {
+  getPopupStatus,
+  getPopupUrgencyLabel,
+  getPopupMeta,
+  isPopupVenue,
+  resolvePopupLifecycle,
+} from "@/lib/popupUtils";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import {
   buildOpenPeepsSvg,
@@ -420,10 +426,14 @@ function createAquarellePinElement(
   inner.style.boxSizing = "border-box";
   inner.style.transformOrigin = "bottom center";
 
+  if (popupStatus.lifecycle === "passed") {
+    inner.style.opacity = "0.72";
+  }
+
   const haloHtml = isFreshBatch
     ? `<div style="position:absolute;top:-6px;left:-6px;width:46px;height:46px;border-radius:9999px;border:2px solid #e84a27;background:rgba(232,74,39,0.25);animation:ping 1.4s cubic-bezier(0,0,0.2,1) infinite;pointer-events:none;"></div>`
     : popupStatus.isPulsingMarker
-    ? `<div style="position:absolute;top:-5px;left:-5px;width:44px;height:44px;border-radius:9999px;border:2px solid #f59e0b;background:rgba(245,158,11,0.2);animation:ping 1.6s cubic-bezier(0,0,0.2,1) infinite;pointer-events:none;"></div>`
+    ? `<div style="position:absolute;top:-5px;left:-5px;width:44px;height:44px;border-radius:9999px;border:2px solid #e84a27;background:rgba(232,74,39,0.22);animation:ping 1.6s cubic-bezier(0,0,0.2,1) infinite;pointer-events:none;"></div>`
     : "";
 
   let kitchenBadgeHtml = "";
@@ -438,19 +448,27 @@ function createAquarellePinElement(
   const popupTopBadgeHtml = isPopup
     ? `<div style="
         position: absolute;
-        top: -12px;
+        bottom: -9px;
         left: 50%;
         transform: translateX(-50%);
-        width: 18px;
-        height: 18px;
-        filter: drop-shadow(0 2px 4px rgba(24, 22, 21, 0.35));
+        background: rgba(232, 74, 39, 0.76);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        color: #FAF7F2;
+        font-family: var(--font-comico, sans-serif);
+        font-size: 8px;
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: 0.02em;
+        padding: 2.5px 6px;
+        border-radius: 9999px;
+        border: none;
+        box-shadow: 0 2px 8px rgba(232, 74, 39, 0.32);
+        white-space: nowrap;
         pointer-events: none;
         z-index: 10;
-      ">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" style="display:block; overflow:visible;">
-          ${SMAKR_ICON_SVG_BODIES.popup}
-        </svg>
-      </div>`
+        ${popupStatus.lifecycle === "passed" ? "opacity: 0.85;" : ""}
+      ">Pop-up</div>`
     : "";
 
   inner.innerHTML = `
@@ -883,7 +901,7 @@ export function MapRadarView() {
       const venueBadge = resolveVenueDisplayBadge(venue);
       const badgePinKey = resolveCustomIconKey(venueBadge.pinIcon) || "";
       const dishKey = resolveCustomIconKey(venueTax.dishCategory) || venueTax.dishCategory;
-      const pinKey = `v5|${badgePinKey}|${venue.icon ?? ""}|${dishKey}|${venue.spot_type ?? ""}|${popupStatus.status}|${kitchenStatus}|${venue.food_category}|${venue.name}|${venue.popup_end_date ?? ""}|${overrideIconKey ?? ""}|${isWeeklyPickVenue ? "1" : "0"}`;
+      const pinKey = `v6|${badgePinKey}|${venue.icon ?? ""}|${dishKey}|${venue.spot_type ?? ""}|${popupStatus.status}|${popupStatus.lifecycle ?? ""}|${kitchenStatus}|${venue.food_category}|${venue.name}|${venue.popup_end_date ?? ""}|${overrideIconKey ?? ""}|${isWeeklyPickVenue ? "1" : "0"}`;
 
       let existing = markerPoolRef.current.get(venue.id);
       if (existing && existing.rootEl.dataset.pinKey !== pinKey) {
@@ -2134,7 +2152,7 @@ export function MapRadarView() {
                   font-family: var(--font-comico, sans-serif);
                 ">
                   <span style="width: 5px; height: 5px; border-radius: 50%; background: #e84a27;"></span>
-                  ${popupMeta?.dates_label ? popupMeta.dates_label : "Pop-Up Drop"}
+                  ${resolvePopupLifecycle(selectedVenue).badgeLabel}
                 </span>
               ` : `
                 <span style="

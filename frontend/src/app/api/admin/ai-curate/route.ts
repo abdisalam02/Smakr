@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { requireAdmin } from "../_auth";
 import {
   PLACES_API_BASE,
   PLACES_FIELD_MASK,
@@ -10,30 +11,8 @@ import {
   type PlaceResult,
 } from "@/lib/places/google";
 import { curatedVenuePhotos } from "@/lib/places/curatedPhotos";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
-
-/**
- * Only admins may spend AI/Places quota here.
- * Public card rendering uses a deterministic local fallback instead.
- */
-async function canUseAiCurator(): Promise<boolean> {
-  const supabase = await getSupabaseServerClient();
-  if (!supabase) return false;
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return false;
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  return profile?.role === "admin";
-}
 
 function resolveGeminiApiKey(): string {
   const fromEnv =
@@ -450,12 +429,8 @@ async function callGeminiGenerateContent(
 
 export async function POST(req: NextRequest) {
   try {
-    if (!(await canUseAiCurator())) {
-      return NextResponse.json(
-        { error: "Unauthorized. Admin account required." },
-        { status: 403 }
-      );
-    }
+    const auth = await requireAdmin();
+    if (!auth.ok) return auth.response;
 
     const body = (await req.json()) as AiCurateRequest;
     const apiKey = resolveGeminiApiKey();

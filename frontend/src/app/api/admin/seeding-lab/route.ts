@@ -56,6 +56,10 @@ export interface StagedCandidateSpot {
   icon: string;
   spot_type: "restaurant" | "cafe" | "food_truck" | "popup" | "pop_up";
   cover_image_url: string;
+  place_photos?: string[];
+  candidate_photos?: string[];
+  google_place_id?: string;
+  google_reviews_count?: number;
   price_level?: "$" | "$$" | "$$$";
   google_rating?: number | null;
   signature_dish?: string;
@@ -63,6 +67,9 @@ export interface StagedCandidateSpot {
   verification_status: VerificationStatus;
   notes?: string;
   instagram_url?: string;
+  website_uri?: string;
+  opening_hours_text?: string;
+  opening_hours?: Record<string, string>;
   popup_meta?: Record<string, any>;
   dish_highlights: StagedDishHighlight[];
 }
@@ -202,6 +209,23 @@ async function syncSpotToSupabase(
     spot.cover_image_url = finalCoverUrl;
   }
 
+  // Build deduplicated pre-ingested Supabase CDN gallery for VenuePhotoStrip / VenuePhotoStack
+  const rawGallery = [
+    ...(spot.place_photos ?? []),
+    ...(spot.candidate_photos ?? []),
+    ...(finalCoverUrl ? [finalCoverUrl] : []),
+    ...ingestedDishes.map((d) => d.finalUrl),
+  ].filter((u): u is string => typeof u === "string" && u.trim().length > 0 && !u.includes("/api/places/photos"));
+
+  const ingestedPlacePhotos: string[] = [];
+  for (const rawUrl of rawGallery) {
+    if (ingestedPlacePhotos.length >= 8) break;
+    const cdnUrl = await ingestPhotoToStorage(supabase, rawUrl, "cover");
+    if (cdnUrl && !ingestedPlacePhotos.includes(cdnUrl)) {
+      ingestedPlacePhotos.push(cdnUrl);
+    }
+  }
+
   const signatureDishes = spot.signature_dish
     ? [
         spot.signature_dish,
@@ -239,11 +263,27 @@ async function syncSpotToSupabase(
     : undefined;
 
   const candidateSlugLookup = slugify(spot.id || spot.name);
-  let { data: existingVenue } = await supabase
-    .from("venues")
-    .select("id, name, vibe_signals")
-    .eq("slug", candidateSlugLookup)
-    .maybeSingle();
+  const resolvedWebsite = spot.website_uri || extractedIg || null;
+  const resolvedHours = isPopup ? dropScheduleText : spot.opening_hours_text || null;
+  let existingVenue: { id: string; name: string; vibe_signals: unknown } | null = null;
+
+  if (spot.google_place_id) {
+    const byPlaceId = await supabase
+      .from("venues")
+      .select("id, name, vibe_signals")
+      .eq("google_place_id", spot.google_place_id)
+      .maybeSingle();
+    existingVenue = byPlaceId.data;
+  }
+
+  if (!existingVenue) {
+    const bySlug = await supabase
+      .from("venues")
+      .select("id, name, vibe_signals")
+      .eq("slug", candidateSlugLookup)
+      .maybeSingle();
+    existingVenue = bySlug.data;
+  }
 
   if (!existingVenue) {
     const byName = await supabase
@@ -282,16 +322,21 @@ async function syncSpotToSupabase(
         image_url: finalCoverUrl || undefined,
         price_level: spot.price_level || "$$",
         google_rating: spot.google_rating ?? 4.7,
+        ...(spot.google_reviews_count !== undefined ? { google_reviews_count: spot.google_reviews_count } : {}),
+        ...(spot.google_place_id ? { google_place_id: spot.google_place_id } : {}),
         spot_type: spot.spot_type || "restaurant",
         description: spot.why_curated || null,
         signature_dishes: signatureDishes,
-        website_uri: extractedIg || undefined,
-        current_opening_hours_text: isPopup ? dropScheduleText : undefined,
+        website_uri: resolvedWebsite || undefined,
+        current_opening_hours_text: resolvedHours || undefined,
+        ...(spot.opening_hours ? { opening_hours: spot.opening_hours } : {}),
         updated_at: new Date().toISOString(),
         vibe_signals: {
           ...prevSignals,
           icon: spot.icon,
           spot_type: spot.spot_type || "restaurant",
+          ...(ingestedPlacePhotos.length ? { place_photos: ingestedPlacePhotos } : {}),
+          ...(spot.candidate_photos?.length ? { candidate_photos: spot.candidate_photos } : {}),
           ...(popupMeta ? { popup_meta: popupMeta } : {}),
         },
       })
@@ -321,15 +366,19 @@ async function syncSpotToSupabase(
           price_level: spot.price_level || "$$",
           open_now: true,
           google_rating: spot.google_rating ?? 4.7,
-          google_reviews_count: 45,
+          google_reviews_count: spot.google_reviews_count ?? 45,
+          google_place_id: spot.google_place_id || null,
           spot_type: spot.spot_type || "restaurant",
           description: spot.why_curated || null,
           signature_dishes: signatureDishes,
-          website_uri: extractedIg || null,
-          current_opening_hours_text: isPopup ? dropScheduleText : null,
+          website_uri: resolvedWebsite,
+          current_opening_hours_text: resolvedHours,
+          opening_hours: spot.opening_hours ?? {},
           vibe_signals: {
             icon: spot.icon,
             spot_type: spot.spot_type || "restaurant",
+            ...(ingestedPlacePhotos.length ? { place_photos: ingestedPlacePhotos } : {}),
+            ...(spot.candidate_photos?.length ? { candidate_photos: spot.candidate_photos } : {}),
             ...(popupMeta ? { popup_meta: popupMeta } : {}),
           },
         })

@@ -26,7 +26,12 @@ import { useVenueDetail } from "@/hooks/useVenueDetail";
 import { formatDistance } from "@/lib/math";
 import { FoodPost, ReviewItem } from "@/types";
 import { DishDetailPopup } from "@/components/food/DishDetailPopup";
-import { getPopupStatus, getPopupMeta, isPopupVenue } from "@/lib/popupUtils";
+import {
+  getPopupStatus,
+  getPopupMeta,
+  isPopupVenue,
+  resolvePopupLifecycle,
+} from "@/lib/popupUtils";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import { formatOsloLocation, formatVenueLocationLine } from "@/lib/location";
 import { ExpandableReviewText } from "./ExpandableReviewText";
@@ -167,9 +172,9 @@ export function VenueBottomSheet() {
 
   const isPopup = isPopupVenue(selectedVenue);
   const popupMeta = selectedVenue ? getPopupMeta(selectedVenue) : null;
+  const popupLifecycle = isPopup && selectedVenue ? resolvePopupLifecycle(selectedVenue) : null;
   const isDormant =
-    popupMeta?.residency_status === "between_residencies" ||
-    Boolean(popupMeta?.dates_label?.toLowerCase().includes("tba"));
+    popupLifecycle?.state === "tba" || popupLifecycle?.state === "passed";
   const popupHostVenue =
     popupMeta?.host_venue_name &&
     !popupMeta.host_venue_name.toLowerCase().includes("tba") &&
@@ -500,8 +505,15 @@ export function VenueBottomSheet() {
                         />
                       </motion.div>
                     </AnimatePresence>
-                    {/* Light top scrim keeps close button readable without muddy overlap */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-transparent" />
+                    {/* Top scrim for controls + rich bottom black hue behind resting white title/address */}
+                    <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/50 to-transparent" />
+                    <div
+                      className="absolute inset-x-0 bottom-0 h-[220px]"
+                      style={{
+                        background:
+                          "linear-gradient(to top, rgba(24,22,21,0.96) 0%, rgba(24,22,21,0.84) 44%, rgba(24,22,21,0.36) 76%, rgba(24,22,21,0) 100%)",
+                      }}
+                    />
                   </motion.div>
                 </div>
               )}
@@ -509,10 +521,14 @@ export function VenueBottomSheet() {
               {/* 2. TOP STICKY HEADER BAR & CONTINUOUS MORPHING TITLE */}
               {/* Shows Spot Name, Open/Closed status & Address with generous spacing in both resting & scrolled states */}
               <div className="absolute top-0 inset-x-0 z-30 pt-2 pb-2.5 px-4 rounded-t-3xl pointer-events-none">
-                {/* Flat Warm-Oat docked header bar (avoids backdrop-blur recompositing during scroll) */}
+                {/* Dark Espresso docked header bar fading softly at bottom so white title stays crisp */}
                 <motion.div
-                  style={{ opacity: navScrimOpacity }}
-                  className="absolute top-0 inset-x-0 h-[112px] sm:h-[116px] bg-[#FAF7F2] dark:bg-[#181615] border-b border-[#181615]/10 shadow-[0_6px_24px_rgba(24,22,21,0.08)] pointer-events-none rounded-t-3xl"
+                  style={{
+                    opacity: navScrimOpacity,
+                    background:
+                      "linear-gradient(to bottom, #181615 0%, rgba(24,22,21,0.98) 76%, rgba(24,22,21,0.75) 88%, rgba(24,22,21,0) 100%)",
+                  }}
+                  className="absolute top-0 inset-x-0 h-[136px] sm:h-[140px] pointer-events-none rounded-t-3xl"
                 />
 
                 <motion.div
@@ -552,11 +568,22 @@ export function VenueBottomSheet() {
                       }
                       className="min-w-0 pr-24 pointer-events-none select-none will-change-transform flex flex-col gap-1"
                     >
-                      {/* Closed/Open live badge — category tags omitted on restaurant sheet */}
+                      {/* Closed/Open live badge for restaurants, or 4-state lifecycle badge for pop-ups */}
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        {isPopup && isDormant ? (
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 border shadow-xs bg-amber-950/90 text-amber-200 border-amber-500/40">
-                            <span>⏳ Between Drops · Next Date TBA</span>
+                        {isPopup && popupLifecycle ? (
+                          <span
+                            className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1.5 border shadow-xs ${
+                              popupLifecycle.state === "live"
+                                ? "bg-[#E84A27] text-white border-[#E84A27]"
+                                : popupLifecycle.state === "upcoming"
+                                ? "bg-[#181615]/90 text-[#FAF7F2] border-white/20"
+                                : "bg-[#2C2623]/90 text-[#FAF7F2]/90 border-white/15"
+                            }`}
+                          >
+                            {popupLifecycle.state === "live" && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                            )}
+                            <span>{popupLifecycle.badgeLabel}</span>
                           </span>
                         ) : (
                           <span
@@ -575,10 +602,18 @@ export function VenueBottomSheet() {
                         )}
                       </div>
 
-                      <h3 className="font-comico text-2xl sm:text-3xl text-[#181615] tracking-tight leading-tight truncate max-w-full">
+                      <h3
+                        className={`font-comico text-[#FAF7F2] tracking-tight leading-[1.15] line-clamp-2 max-w-full drop-shadow-[0_1px_4px_rgba(0,0,0,0.22)] ${
+                          selectedVenue.name.length > 24
+                            ? "text-[18px] sm:text-2xl"
+                            : selectedVenue.name.length > 16
+                            ? "text-[20px] sm:text-2xl"
+                            : "text-2xl sm:text-3xl"
+                        }`}
+                      >
                         {selectedVenue.name}
                       </h3>
-                      <p className="text-xs sm:text-[13px] text-[#181615]/80 font-medium flex items-center gap-1 truncate max-w-full">
+                      <p className="text-xs sm:text-[13px] text-[#FAF7F2]/85 font-medium flex items-center gap-1 truncate max-w-full">
                         <MapPin className="w-3.5 h-3.5 text-[#e84a27] shrink-0" />
                         <span className="truncate">
                           {formatVenueLocationLine(selectedVenue)}
@@ -639,158 +674,153 @@ export function VenueBottomSheet() {
                       close beneath the resting title/location. */}
                   <div className="w-full h-[285px] sm:h-[320px] shrink-0" />
 
-                  {/* Content Card: Unrounded top edge flows seamlessly into the Warm-Oat hue */}
+                  {/* Content Card: One continuous dark-to-cream hue (from above title, fading gradually behind carousel into #FAF7F2) */}
                   <div className="relative z-10 bg-[#FAF7F2] dark:bg-[#181615] px-4 pt-2 pb-14 space-y-3">
-                    {/* Lightened upward Warm-Oat hue over the resting title & location */}
                     <div
                       aria-hidden="true"
                       style={{
+                        marginTop: 0,
                         background:
-                          "linear-gradient(to top, rgba(250,247,242,1) 0%, rgba(250,247,242,0.55) 45%, rgba(250,247,242,0) 100%)",
+                          "linear-gradient(to bottom, rgba(24,22,21,0) 0%, rgba(24,22,21,0.52) 24%, rgba(24,22,21,1) 48%, rgba(24,22,21,1) 56%, rgba(24,22,21,0.52) 74%, rgba(24,22,21,0.14) 89%, rgba(24,22,21,0) 100%)",
                       }}
-                      className="pointer-events-none absolute -top-24 inset-x-0 h-24 dark:hidden"
+                      className="pointer-events-none absolute -top-40 inset-x-0 h-[310px] dark:hidden"
                     />
 
-                    {/* Compact Residency Status & Schedule */}
-                    {isDormant ? (
-                      <div className="p-3.5 rounded-2xl bg-[#F3EDE2] dark:bg-[#1E1C1A] border border-dashed border-[#381820]/25 space-y-2.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-[11px] font-bold uppercase tracking-wider text-[#181615] dark:text-[#FAF7F2] flex items-center gap-1.5">
-                            <span>⏳</span>
-                            <span>Between Drops · Next Date TBA</span>
-                          </span>
-                          {popupContact && (
-                            <a
-                              href={popupContact.startsWith("http") ? popupContact : `mailto:${popupContact}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[10.5px] font-bold text-[#E84A27] hover:underline shrink-0"
-                            >
-                              Inquiries ↗
-                            </a>
-                          )}
-                        </div>
-                        <p className="text-[11.5px] text-zinc-700 dark:text-zinc-300 leading-snug">
-                          Next Oslo location &amp; drop window announced on Instagram.
-                        </p>
-                        {popupMeta?.instagram_url && (
-                          <a
-                            href={popupMeta.instagram_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-full bg-[#181615] hover:bg-[#2a2624] text-[#FAF7F2] border border-[#E84A27]/40 rounded-full py-2.5 px-4 text-xs font-extrabold flex items-center justify-between transition-all active:scale-[0.98]"
-                          >
-                            <span className="flex items-center gap-2">
-                              <span className="w-5 h-5 rounded-full bg-[#E84A27] text-white flex items-center justify-center shrink-0">
-                                <Instagram className="w-3 h-3" />
-                              </span>
-                              <span>Follow {instagramHandle ? `@${instagramHandle}` : "Instagram"} for Drop Alerts</span>
+                    {/* Google-style Horizontal Bento Gallery right under resting title & address */}
+                    <div className="relative z-10">
+                      <VenuePhotoStrip
+                        photos={gallery.photos}
+                        activeIndex={gallery.activeIndex}
+                        onSelect={gallery.selectPhoto}
+                        onImageError={gallery.reportBroken}
+                        venueName={selectedVenue.name}
+                        variant="bento"
+                      />
+                    </div>
+
+                    {/* Unified 4-State Pop-Up Header Strip (Live / Upcoming / Passed / TBA) */}
+                    <div className="space-y-3">
+                      <div className="space-y-2 py-2 border-y border-[#181615]/8 dark:border-white/10">
+                        {/* Line 1: Single non-duplicated Date & Hours */}
+                        <div className="flex items-center flex-wrap gap-x-2.5 gap-y-1 text-xs font-semibold text-[#181615] dark:text-zinc-200">
+                          {popupLifecycle?.state === "tba" ? (
+                            <span className="inline-flex items-center gap-1.5 text-[#181615]/80 dark:text-zinc-300">
+                              <Calendar className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
+                              <span>Next drop date TBA</span>
                             </span>
-                            <ExternalLink className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
-                          </a>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {/* 2-Layer Horizontal Strip: Layer 1 (Dates · Service Hours), Layer 2 (Host Spot + Directions) */}
-                        <div className="space-y-2 py-2 border-y border-[#181615]/8 dark:border-white/10">
-                          {(popupMeta?.dates_label || popupMeta?.daily_hours || selectedVenue.current_opening_hours_text) && (
-                            <div className="flex items-center flex-wrap gap-x-2.5 gap-y-1 text-xs font-semibold text-[#181615] dark:text-zinc-200">
-                              {popupMeta?.dates_label && (
+                          ) : popupLifecycle?.state === "passed" ? (
+                            <span className="inline-flex items-center gap-1.5 text-[#181615]/75 dark:text-zinc-300">
+                              <Clock className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
+                              <span>
+                                Last pop-up{popupLifecycle.dateDisplay ? ` · ${popupLifecycle.dateDisplay}` : ""}
+                              </span>
+                            </span>
+                          ) : (
+                            <>
+                              {popupLifecycle?.dateDisplay && (
                                 <span className="inline-flex items-center gap-1.5">
                                   <Calendar className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
-                                  <span>{popupMeta.dates_label}</span>
+                                  <span>{popupLifecycle.dateDisplay}</span>
                                 </span>
                               )}
-                              {popupMeta?.dates_label && (popupMeta?.daily_hours || selectedVenue.current_opening_hours_text) && (
+                              {popupLifecycle?.dateDisplay && popupLifecycle?.hoursDisplay && (
                                 <span className="text-[#181615]/25 dark:text-white/25">·</span>
                               )}
-                              {(popupMeta?.daily_hours || selectedVenue.current_opening_hours_text) && (
+                              {popupLifecycle?.hoursDisplay && (
                                 <span className="inline-flex items-center gap-1.5 text-[#181615]/80 dark:text-zinc-300">
                                   <Clock className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
-                                  <span>{popupMeta?.daily_hours || selectedVenue.current_opening_hours_text}</span>
+                                  <span>{popupLifecycle.hoursDisplay}</span>
                                 </span>
                               )}
-                            </div>
-                          )}
-
-                          {popupHostVenue && (
-                            <div className="flex items-center justify-between gap-2 text-xs">
-                              <div className="flex items-center gap-1.5 min-w-0 font-semibold text-[#181615] dark:text-white">
-                                <MapPin className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
-                                <span className="text-[#181615]/55 dark:text-zinc-400 font-medium shrink-0">Host:</span>
-                                <span className="truncate">{popupHostVenue}</span>
-                              </div>
-                              <a
-                                href={googleMapsUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="px-3 py-1 rounded-full bg-[#EFE9DF] hover:bg-[#E5DDD0] dark:bg-white/10 text-[#181615] dark:text-white text-[11px] font-bold flex items-center gap-1 shrink-0 transition-colors"
-                              >
-                                <span>Directions</span>
-                                <ExternalLink className="w-3 h-3 text-[#E84A27]" />
-                              </a>
-                            </div>
+                            </>
                           )}
                         </div>
 
-                        <div className="flex items-center gap-2 flex-wrap pt-0.5">
-                          {popupMeta?.ticket_url && (
+                        {/* Line 2: Host / Roaming Location + Directions */}
+                        {popupHostVenue ? (
+                          <div className="flex items-center justify-between gap-2 text-xs">
+                            <div className="flex items-center gap-1.5 min-w-0 font-semibold text-[#181615] dark:text-white">
+                              <MapPin className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
+                              <span className="text-[#181615]/55 dark:text-zinc-400 font-medium shrink-0">
+                                {popupLifecycle?.state === "passed" ? "Last host:" : "Host:"}
+                              </span>
+                              <span className="truncate">{popupHostVenue}</span>
+                            </div>
                             <a
-                              href={popupMeta.ticket_url}
+                              href={googleMapsUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex-1 py-2.5 px-4 rounded-full bg-[#E84A27] hover:bg-[#D43D1C] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs"
+                              className="px-3 py-1 rounded-full bg-[#EFE9DF] hover:bg-[#E5DDD0] dark:bg-white/10 text-[#181615] dark:text-white text-[11px] font-bold flex items-center gap-1 shrink-0 transition-colors"
                             >
-                              <span>RSVP / Drop Tickets</span>
-                              <ExternalLink className="w-3.5 h-3.5" />
+                              <span>Directions</span>
+                              <ExternalLink className="w-3 h-3 text-[#E84A27]" />
                             </a>
-                          )}
+                          </div>
+                        ) : popupLifecycle?.state === "tba" ? (
+                          <div className="flex items-center gap-1.5 text-xs font-medium text-[#181615]/75 dark:text-zinc-300">
+                            <MapPin className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
+                            <span>Roaming Oslo · Next location announced on Instagram</span>
+                          </div>
+                        ) : null}
+                      </div>
+
+                      {/* Floating Instagram @handle (borderless) + optional active RSVP pill */}
+                      {(popupMeta?.instagram_url || (popupMeta?.ticket_url && !isDormant)) && (
+                        <div className="flex items-center justify-between gap-3 flex-wrap">
                           {popupMeta?.instagram_url && (
                             <a
                               href={popupMeta.instagram_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex-1 bg-[#EFE9DF] hover:bg-[#E5DDD0] dark:bg-white/10 dark:hover:bg-white/15 text-[#181615] dark:text-white rounded-full py-2.5 px-4 text-xs flex items-center justify-between transition-colors"
+                              className="inline-flex items-center gap-1.5 py-0.5 text-xs text-[#181615] dark:text-white hover:text-[#E84A27] transition-colors group"
                             >
-                              <span className="flex items-center gap-2 min-w-0">
-                                <Instagram className="w-4 h-4 text-[#E84A27] shrink-0" />
-                                <span className="font-comico tracking-wide truncate">
-                                  {instagramHandle ? `@${instagramHandle}` : "Instagram"}
-                                </span>
+                              <Instagram className="w-4 h-4 text-[#E84A27] shrink-0" />
+                              <span className="font-comico tracking-wide underline-offset-4 group-hover:underline">
+                                {instagramHandle ? `@${instagramHandle}` : "Instagram"}
                               </span>
-                              <ExternalLink className="w-3.5 h-3.5 text-[#181615]/50 dark:text-white/50 shrink-0" />
+                              <ExternalLink className="w-3 h-3 text-[#181615]/45 dark:text-white/45 shrink-0" />
+                            </a>
+                          )}
+                          {popupMeta?.ticket_url && !isDormant && (
+                            <a
+                              href={popupMeta.ticket_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="py-1.5 px-3.5 rounded-full bg-[#E84A27] hover:bg-[#D43D1C] text-white font-bold text-[11px] inline-flex items-center gap-1.5 shadow-xs"
+                            >
+                              <span>RSVP / Drop Tickets</span>
+                              <ExternalLink className="w-3 h-3" />
                             </a>
                           )}
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
 
-                    {/* Signature Dishes immediately visible above the fold */}
-                    <VenueDishesGrid
-                      dishes={recommendedMeals}
-                      savedPostIds={savedPostIds}
-                      onToggleSave={toggleSavePost}
-                      onSelectDish={setSelectedDish}
-                    />
-
-                    {/* Story & Culinary Concept Section */}
+                    {/* Story & Culinary Concept directly beneath the floating handle */}
                     {selectedVenue.description && (
-                      <div className="px-1 py-1 space-y-1.5">
-                        <div className="text-[10.5px] font-mono font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                      <div className="px-1 py-0.5 space-y-1.5">
+                        <div className="text-[10.5px] font-comico uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
                           <span>✦ STORY</span>
                         </div>
-                        <p className="text-[14px] sm:text-[15.5px] text-[#181615]/90 dark:text-zinc-100 leading-relaxed whitespace-pre-line font-medium">
+                        <p className="font-comico text-[13.5px] sm:text-[15px] text-[#181615]/90 dark:text-zinc-100 leading-relaxed whitespace-pre-line font-normal">
                           {selectedVenue.description}
                         </p>
                         {popupMeta?.guest_chef && (
-                          <div className="pt-1.5 text-xs text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
+                          <div className="pt-1 text-xs text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
                             <span className="font-bold text-zinc-900 dark:text-white">Resident Chef:</span>
                             <span>{popupMeta.guest_chef}</span>
                           </div>
                         )}
                       </div>
                     )}
+
+                    {/* Signature Dishes */}
+                    <VenueDishesGrid
+                      dishes={recommendedMeals}
+                      savedPostIds={savedPostIds}
+                      onToggleSave={toggleSavePost}
+                      onSelectDish={setSelectedDish}
+                    />
 
                     {/* Community Bring-Back / Going Reaction Card */}
                     <div className="p-4 rounded-3xl bg-white dark:bg-[#1E1C1A] border border-[#181615]/10 flex items-center justify-between gap-3">
@@ -818,14 +848,6 @@ export function VenueBottomSheet() {
                       </button>
                     </div>
 
-                    <VenuePhotoStrip
-                      photos={gallery.photos}
-                      activeIndex={gallery.activeIndex}
-                      onSelect={gallery.selectPhoto}
-                      onImageError={gallery.reportBroken}
-                      venueName={selectedVenue.name}
-                    />
-
                     {/* Add Pop-Up Dish Action */}
                   <button
                     type="button"
@@ -849,24 +871,25 @@ export function VenueBottomSheet() {
                       close beneath the resting title/location. */}
                   <div className="w-full h-[285px] sm:h-[320px] shrink-0" />
 
-                  {/* Content Card: Unrounded top edge flows seamlessly into the Warm-Oat hue */}
+                  {/* Content Card: One continuous dark-to-cream hue (from above title, fading gradually behind carousel into #FAF7F2) */}
                   <div
                     className={`relative z-10 bg-[#FAF7F2] dark:bg-[#181615] px-4 pb-14 space-y-3 ${
                       gallery.photos.length > 1 ? "pt-1.5" : "pt-4"
                     }`}
                   >
-                    {/* Lightened upward Warm-Oat hue over the resting title & location */}
                     <div
                       aria-hidden="true"
                       style={{
+                        marginTop: 0,
                         background:
-                          "linear-gradient(to top, rgba(250,247,242,1) 0%, rgba(250,247,242,0.55) 45%, rgba(250,247,242,0) 100%)",
+                          "linear-gradient(to bottom, rgba(24,22,21,0) 0%, rgba(24,22,21,0.52) 24%, rgba(24,22,21,1) 48%, rgba(24,22,21,1) 56%, rgba(24,22,21,0.52) 74%, rgba(24,22,21,0.14) 89%, rgba(24,22,21,0) 100%)",
                       }}
-                      className="pointer-events-none absolute -top-24 inset-x-0 h-24 dark:hidden"
+                      className="pointer-events-none absolute -top-40 inset-x-0 h-[310px] dark:hidden"
                     />
+
                     {/* Food Truck schedule callout */}
                     {selectedVenue.spot_type === "food_truck" && selectedVenue.location_schedule && (
-                      <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-900 dark:text-emerald-300">
+                      <div className="relative z-10 flex items-center gap-2.5 p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-900 dark:text-emerald-300">
                         <span className="text-xl">🚚</span>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-bold">Food Truck Schedule</p>
@@ -878,14 +901,16 @@ export function VenueBottomSheet() {
                     )}
 
                     {/* Google-style Horizontal Bento Gallery synced to Hero */}
-                    <VenuePhotoStrip
-                      photos={gallery.photos}
-                      activeIndex={gallery.activeIndex}
-                      onSelect={gallery.selectPhoto}
-                      onImageError={gallery.reportBroken}
-                      venueName={selectedVenue.name}
-                      variant="bento"
-                    />
+                    <div className="relative z-10">
+                      <VenuePhotoStrip
+                        photos={gallery.photos}
+                        activeIndex={gallery.activeIndex}
+                        onSelect={gallery.selectPhoto}
+                        onImageError={gallery.reportBroken}
+                        venueName={selectedVenue.name}
+                        variant="bento"
+                      />
+                    </div>
 
                     {/* Action Buttons */}
                   <div className="grid grid-cols-2 gap-2.5">

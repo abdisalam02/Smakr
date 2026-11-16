@@ -1,10 +1,10 @@
 # STATE.md — CityPulse / Smakr (read first, keep <= 30 lines)
 
-Updated: 2026-11-15
+Updated: 2026-11-16
 
 ## Now
-- Task: Added ad-style top and bottom page-cream gradient hues in `MapRadarView.tsx` and matched translucent Warm-Oat capsules in `Header.tsx` & `FoodViewSlider.tsx` so map edges wash seamlessly into the logo, profile, and bottom nav.
-- Status: Complete — `npx tsc --noEmit` exited `0`; ready for visual QA in browser.
+- Task: Tuned grid card aspect ratio to `aspect-[6/7]` (slightly taller than wide) in `FoodPostCard.tsx`.
+- Status: Complete — `npx tsc --noEmit` exited `0`; awaiting push confirmation.
 
 ## Next (max 3)
 1. Preview and export the 2-slide Early Snowfall `@3x` PNG assets in `/ad-reel`.
@@ -21,7 +21,8 @@ Updated: 2026-11-15
 - TODO-VERIFY: confirm partner claim copy before launch.
 
 ## Recent (max 5, one line each)
+- 2026-11-16 — Built hybrid pop-up scraper: Playwright CLI (`sync:popups`), Apify IG fallback, NO/EN date-time-location parser, `public/popup-sync-report.json`, and admin `sync-popups` queue route; tsc + security 23/23
+- 2026-11-16 — Fixed `/admin` persistence & admin APIs: makr pop-up UUID insert, kitchen-token link, official-pick/weekly-drop persistence, seeder author FK, publish/archive toggles, shared `requireAdmin()`; tsc + security clean
 - 2026-11-15 — Shipped 2-slide Early Snowfall (`oslo-snowfall-bowls`) Preset 2 + real bowl photos in `CarouselStoryDeck.tsx`; `npx tsc --noEmit` clean
 - 2026-11-15 — Audited `place_photos`, wired `place_photos` + `opening_hours` in seeding lab/`serverData.ts`, and expanded Hrimnir + Sapporo to 7 curated photos
 - 2026-11-14 — Shipped Tasks 1–6: lab guards, map-first dock & GPS pill, deduped location/pop-up sheets, `SmakrFoodieInviteModal` + moderated submission queue, 4-block feed rhythm, `/makr` studio, & `/admin` Pending Approvals tab; `npx tsc --noEmit` + `390x844` clean
-- 2026-11-14 — Mounted Skiper 39 crowd boot on `/` (`HomeView.tsx`) with instant 21-cell starter streaming, spring logo + radar ping, and collapsible mobile Boot Lab controls; `npx tsc --noEmit` clean

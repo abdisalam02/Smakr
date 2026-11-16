@@ -196,6 +196,13 @@ export function BulkVenueSeeder() {
       return;
     }
 
+    // `food_posts.author_id` is an FK to profiles.id — never a venue id.
+    const authorId = currentUser?.id;
+    if (!authorId) {
+      showToast("Sign in as an admin before publishing spots.");
+      return;
+    }
+
     setIsCommitting(true);
     setCommitProgress({ current: 0, total: selected.length });
     let successCount = 0;
@@ -256,7 +263,7 @@ export function BulkVenueSeeder() {
         // 2. Insert signature dish linked to venue
         const pResult = await insertFoodPost({
           venueId,
-          authorId: currentUser?.id || vResult.venue.id,
+          authorId,
           dishName: item.dishName,
           category: item.category,
           dishImage: resolvedPhoto,

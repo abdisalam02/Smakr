@@ -1,47 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { requireAdmin } from "../../_auth";
 import { ingestGooglePhotoToSupabase } from "@/lib/storage/ingestGooglePhoto";
 
 export const runtime = "nodejs";
-
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const SUPABASE_SERVICE_KEY =
-  process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-
-function getAdminClient() {
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) return null;
-  return createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
-
-async function verifyAdminAuth(): Promise<{ isAdmin: boolean; userId?: string }> {
-  const ssrClient = await getSupabaseServerClient();
-  if (!ssrClient) return { isAdmin: false };
-
-  const {
-    data: { user },
-  } = await ssrClient.auth.getUser();
-
-  if (!user) return { isAdmin: false };
-
-  const supabase = getAdminClient();
-  if (!supabase) return { isAdmin: false };
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (profile?.role === "admin") {
-    return { isAdmin: true, userId: user.id };
-  }
-
-  return { isAdmin: false };
-}
 
 function isValidImageUrl(url: string): boolean {
   if (!url) return false;
@@ -62,18 +24,10 @@ function isValidImageUrl(url: string): boolean {
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = await verifyAdminAuth();
-    if (!auth.isAdmin) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized. Admin session required." },
-        { status: 403 }
-      );
-    }
+    const auth = await requireAdmin();
+    if (!auth.ok) return auth.response;
 
-    const supabase = getAdminClient();
-    if (!supabase) {
-      return NextResponse.json({ success: false, error: "Database unconfigured" }, { status: 500 });
-    }
+    const supabase = auth.adminClient;
 
     const body = await req.json().catch(() => ({}));
     const claimId = typeof body.claimId === "string" ? body.claimId.trim() : "";

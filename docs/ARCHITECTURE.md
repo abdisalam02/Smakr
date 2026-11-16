@@ -23,13 +23,19 @@
 ## 4. Data layers (Supabase)
 | Table / asset | Purpose | Read / write |
 |---|---|---|
-| `venues` | Restaurant metadata: name, coordinates (lat/lng), area, Google place info, cover images | `serverData.ts` (read); `data.ts`, `components/admin/VenueImporter.tsx` (write) |
+| `venues` | Restaurant metadata: name, coordinates (lat/lng), area, Google place info (`google_place_id`, `opening_hours` JSONB), cover image, & `vibe_signals.place_photos` (`string[]` pre-ingested Supabase CDN gallery) | `serverData.ts` (read); `data.ts`, `components/admin/VenueImporter.tsx`, `/api/admin/seeding-lab`, `scripts/backfill_venue_place_photos.mjs` (write) |
 | `food_posts` | Community + curated dish posts: price, taste notes, diner quotes, images; FKs to `venues` and `profiles` | `serverData.ts` / `data.ts` (read + write); `components/food/CreateFoodPostModal.tsx`, `components/admin/EditPostModal.tsx` |
 | `weekly_picks` | The Weekly Drop: one active featured dish + mascot pick (`is_active`, `dish_name`, `dish_image`, `speech_bubble`, `week_label`, `price_nok`, coords) | `serverData.ts` (`fetchActiveWeeklyDropServer`) |
 | `profiles` | Author handle, name, `avatar_url`, `is_official` | embedded in `food_posts` selects |
-| Storage bucket `dish-photos` | Public bucket for user-uploaded meal photos | `components/food/CreateFoodPostModal.tsx` (`storage.from("dish-photos")`) |
+| Storage bucket `dish-photos` | Public bucket for user-uploaded meal photos & `google-cache/<sha256_28>.webp` Google Places WebP cache | `components/food/CreateFoodPostModal.tsx`, `lib/storage/ingestGooglePhoto.ts`, `scripts/backfill_venue_place_photos.mjs` |
 
 > The Weekly Drop is stored in the **`weekly_picks`** table; `weekly_drop` is not a table.
+
+## 4b. Venue Google Places Photo Gallery & Opening Hours
+- **Zero runtime Google API calls on detail open:** `venues.vibe_signals.place_photos` holds up to 8 permanent `dish-photos/google-cache/*.webp` Supabase Storage URLs (mapped to `Venue.place_photos` in `lib/supabase/mappers.ts`, filtering out `/api/places/photos` proxy URLs).
+- **UI gallery components:** `useVenueHeroGallery` & `VenuePhotoStrip` (`variant="bento" | "tapered" | "strip"`, 4.5s hero auto-cycle) in `frontend/src/components/venue/VenuePhotoStrip.tsx`, `VenuePhotoStack.tsx`, `VenueBottomSheet.tsx`, and `VenueDetailPane.tsx` (1-big + 2-small + 1-big Google-style bento strip).
+- **Backfill & Seeding:** Older restaurants are backfilled via `frontend/scripts/backfill_venue_place_photos.mjs` (`ref -> cdnUrl` cached in `frontend/curation/google_photo_cdn_cache.json`); `/api/admin/seeding-lab` persists `vibe_signals.place_photos` & `opening_hours` JSONB on commit.
+- **Opening hours:** `getVenueLiveOpenStatus` (`frontend/src/lib/openingHours.ts`) reads `venues.opening_hours` JSONB (3-letter weekday keys e.g. `mon`–`sun`), NOT `current_opening_hours_text` — omitting JSONB keys triggers the `11:30–22:30` fallback.
 
 ## 5. Route → file matrix
 | Route | File |

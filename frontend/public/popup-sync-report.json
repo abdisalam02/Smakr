@@ -1,0 +1,195 @@
+{
+  "generated_at": "2026-11-16T17:16:54.566Z",
+  "apify_enabled": true,
+  "watchlist": [
+    "uwansamofficial",
+    "mintonwheels",
+    "crantzcookies",
+    "called_chewiess"
+  ],
+  "entries": [
+    {
+      "handle": "uwansamofficial",
+      "name": "U WAN SUM",
+      "site": "https://uwansam.no",
+      "sources": [
+        {
+          "kind": "tiktok",
+          "url": "https://www.tiktok.com/@uwansamofficial",
+          "ok": true,
+          "fetched_at": "2026-11-16T17:15:53.718Z",
+          "snippets": [
+            "Undertekster støttes ikke akkurat nå",
+            "Oversett alltid innlegg",
+            "Beskrivelser og bildetekster blir oversatt, unntatt for språk du har ekskludert."
+          ]
+        },
+        {
+          "kind": "website",
+          "url": "https://uwansam.no",
+          "ok": true,
+          "fetched_at": "2026-11-16T17:15:58.801Z",
+          "bio": "UWANSAM er en pop up i Oslo med vietnamesisk kaffe, egyptisk gjestfrihet og nye smaker. Finn neste pop up og bli med i Kaffeklubben.",
+          "snippets": [
+            "En smak av Vietnam · varme fra Egypt · laget i Oslo",
+            "En pop up i Oslo der vietnamesisk kaffekultur møter egyptisk gjestfrihet. Vi serverer historier, nysgjerrighet og noe du vil ha mer av.",
+            "“You want some?” er den lille setningen som åpner et bord, en samtale og kanskje et helt nytt kafferom."
+          ]
+        },
+        {
+          "kind": "apify",
+          "url": "https://www.instagram.com/uwansamofficial",
+          "ok": true,
+          "fetched_at": "2026-11-16T17:16:01.527Z",
+          "bio": "Vietnamesisk pop-up kafé \nEt møte mellom kultur, håndverk og smak.\n🕰️søndag 22.november + 6.desember \n📍Kristian Augusts gate 21, Oslo",
+          "snippets": [
+            "Ny vintermeny just dropped. \n\n#oslo #popup #iskaffe #coffee #meny",
+            "Endelig!!! Har jobbet altfor lenge med den nye menyen og ikke minst å perfeksjonere bakverket som kan passe med drikkene, så det gledes sånn til at dere kan smake!!!😭🥹\n\nAdresse: Kristian Augusts gate 21\nTid: 12 - til vi blir utsolgt. \n\nHva tror du smakene på den nye menyen er? \n\n#popup #oslo #kaffe #new #vietnamese",
+            "A good day indeed <3"
+          ]
+        }
+      ],
+      "raw_snippets": [
+        "Undertekster støttes ikke akkurat nå",
+        "Oversett alltid innlegg",
+        "Beskrivelser og bildetekster blir oversatt, unntatt for språk du har ekskludert.",
+        "UWANSAM er en pop up i Oslo med vietnamesisk kaffe, egyptisk gjestfrihet og nye smaker. Finn neste pop up og bli med i Kaffeklubben.",
+        "En smak av Vietnam · varme fra Egypt · laget i Oslo",
+        "En pop up i Oslo der vietnamesisk kaffekultur møter egyptisk gjestfrihet. Vi serverer historier, nysgjerrighet og noe du vil ha mer av.",
+        "“You want some?” er den lille setningen som åpner et bord, en samtale og kanskje et helt nytt kafferom.",
+        "Vietnamesisk pop-up kafé \nEt møte mellom kultur, håndverk og smak.\n🕰️søndag 22.november + 6.desember \n📍Kristian Augusts gate 21, Oslo",
+        "Ny vintermeny just dropped. \n\n#oslo #popup #iskaffe #coffee #meny",
+        "Endelig!!! Har jobbet altfor lenge med den nye menyen og ikke minst å perfeksjonere bakverket som kan passe med drikkene, så det gledes sånn til at dere kan smake!!!😭🥹\n\nAdresse: Kristian Augusts gate 21\nTid: 12 - til vi blir utsolgt. \n\nHva tror du smakene på den nye menyen er? \n\n#popup #oslo #kaffe #new #vietnamese",
+        "A good day indeed <3"
+      ],
+      "drop_dates": "22. nov",
+      "drop_hours": null,
+      "location": null,
+      "neighborhood": "sentrum",
+      "confidence": 0.5,
+      "checked_at": "2026-11-16T17:16:23.151Z"
+    },
+    {
+      "handle": "mintonwheels",
+      "name": "Mint on Wheels",
+      "sources": [
+        {
+          "kind": "tiktok",
+          "url": "https://www.tiktok.com/@mintonwheels",
+          "ok": true,
+          "fetched_at": "2026-11-16T17:16:23.210Z",
+          "bio": "mintonwheels · Ingen bio ennå.",
+          "snippets": [
+            "Ingen bio ennå."
+          ]
+        },
+        {
+          "kind": "apify",
+          "url": "https://www.instagram.com/mintonwheels",
+          "ok": false,
+          "fetched_at": "2026-11-16T17:16:25.574Z",
+          "snippets": [],
+          "error": "Apify returned no biography or captions"
+        }
+      ],
+      "raw_snippets": [
+        "mintonwheels · Ingen bio ennå.",
+        "Ingen bio ennå."
+      ],
+      "drop_dates": null,
+      "drop_hours": null,
+      "location": null,
+      "neighborhood": "sentrum",
+      "confidence": 0.1,
+      "checked_at": "2026-11-16T17:16:34.924Z"
+    },
+    {
+      "handle": "crantzcookies",
+      "name": "Crantz Cookies",
+      "site": "https://crantz.no",
+      "sources": [
+        {
+          "kind": "tiktok",
+          "url": "https://www.tiktok.com/@crantzcookies",
+          "ok": true,
+          "fetched_at": "2026-11-16T17:16:34.987Z",
+          "bio": "crantzcookies · 💌 crantzcookies@gmail.com",
+          "snippets": [
+            "💌 crantzcookies@gmail.com"
+          ]
+        },
+        {
+          "kind": "website",
+          "url": "https://crantz.no",
+          "ok": true,
+          "fetched_at": "2026-11-16T17:16:37.307Z",
+          "bio": "Norges Beste cookies. Crantz Cookies baker håndlagde NYC-style cookies i Oslo. Bestill cookies til events eller besøk oss på pop-up. Classic, Kinder, Biskoff, Double Chocolate, Red Velvet. Chunky, gooey. laget av to søstre med en stor drøm",
+          "snippets": [
+            "FINAL POP-UP | MOSSEPORTEN",
+            "FINAL POP-UP | MOSSEPORTEN",
+            "FINAL POP-UP | MOSSEPORTEN"
+          ]
+        },
+        {
+          "kind": "apify",
+          "url": "https://www.instagram.com/crantzcookies",
+          "ok": true,
+          "fetched_at": "2026-11-16T17:16:39.203Z",
+          "bio": "💌 crantzcookies@gmail.com",
+          "snippets": [
+            "Dag 9/12 🍪\n\nFørste dag med kunder i butikken er over, og wow, for en dag. Det var så spesielt å åpne dørene til VÅR EGEN butikk. Ikke alt satt perfekt, men dere gjorde det til en super opplevelse. Vi skal jobbe med alt til grand opening. Takk til alle som kom innom💙💙\n\nI morgen får du siste sjanse til pop-up priser før vi stenger for å gjøre lokalet klart.\n\n📍 Operagata 61a, Bjørvika\n📅 Søndag 15. november kl. 11–16\n\n#crantzcookies #bjørvika #cookies #oslo #popup",
+            "Cookie pop-up denne helgen i vår nye butikk🫶🏼🥹🎉\n\nOvnen er på plass, men disken mangler fortsatt. Så før vi åpner for fullt, tester vi alt med en soft launch, og dere får cookies til lavere priser.\n\n📍 Operagata 61a, Bjørvika\n📅 Lørdag 14. november kl. 11–18\n📅 Søndag 15. november kl. 11–16\n\nVi gleder oss til å se dere!💙🙏\n\n#crantzcookies #bjørvika #cookies #oslo #popup",
+            "Dag 7 av 12\n\nEndelig begynner ting å ligne på noe. Vi er i gang med maling, men det er bare en av mange ting som gjenstår. \n\nVi tviler litt på at dette går, men kanskje vi kan få til en popup nå til helgen om dere vil!? Skriv i kommentarfeltet\n\nDet avhenger helt av at vi får ovnen i tide i dette snø kaoset 🥶\n\n#crantzcookies #cookies #oslo #bjørvika #nycookies"
+          ]
+        }
+      ],
+      "raw_snippets": [
+        "crantzcookies · 💌 crantzcookies@gmail.com",
+        "💌 crantzcookies@gmail.com",
+        "Norges Beste cookies. Crantz Cookies baker håndlagde NYC-style cookies i Oslo. Bestill cookies til events eller besøk oss på pop-up. Classic, Kinder, Biskoff, Double Chocolate, Red Velvet. Chunky, gooey. laget av to søstre med en stor drøm",
+        "FINAL POP-UP | MOSSEPORTEN",
+        "FINAL POP-UP | MOSSEPORTEN",
+        "FINAL POP-UP | MOSSEPORTEN",
+        "💌 crantzcookies@gmail.com",
+        "Dag 9/12 🍪\n\nFørste dag med kunder i butikken er over, og wow, for en dag. Det var så spesielt å åpne dørene til VÅR EGEN butikk. Ikke alt satt perfekt, men dere gjorde det til en super opplevelse. Vi skal jobbe med alt til grand opening. Takk til alle som kom innom💙💙\n\nI morgen får du siste sjanse til pop-up priser før vi stenger for å gjøre lokalet klart.\n\n📍 Operagata 61a, Bjørvika\n📅 Søndag 15. november kl. 11–16\n\n#crantzcookies #bjørvika #cookies #oslo #popup",
+        "Cookie pop-up denne helgen i vår nye butikk🫶🏼🥹🎉\n\nOvnen er på plass, men disken mangler fortsatt. Så før vi åpner for fullt, tester vi alt med en soft launch, og dere får cookies til lavere priser.\n\n📍 Operagata 61a, Bjørvika\n📅 Lørdag 14. november kl. 11–18\n📅 Søndag 15. november kl. 11–16\n\nVi gleder oss til å se dere!💙🙏\n\n#crantzcookies #bjørvika #cookies #oslo #popup",
+        "Dag 7 av 12\n\nEndelig begynner ting å ligne på noe. Vi er i gang med maling, men det er bare en av mange ting som gjenstår. \n\nVi tviler litt på at dette går, men kanskje vi kan få til en popup nå til helgen om dere vil!? Skriv i kommentarfeltet\n\nDet avhenger helt av at vi får ovnen i tide i dette snø kaoset 🥶\n\n#crantzcookies #cookies #oslo #bjørvika #nycookies"
+      ],
+      "drop_dates": "15. nov",
+      "drop_hours": "11:00–16:00",
+      "location": "Bjørvika",
+      "neighborhood": "sentrum",
+      "confidence": 1,
+      "checked_at": "2026-11-16T17:16:48.094Z"
+    },
+    {
+      "handle": "called_chewiess",
+      "name": "Called Chewiess",
+      "sources": [
+        {
+          "kind": "tiktok",
+          "url": "https://www.tiktok.com/@called_chewiess",
+          "ok": false,
+          "fetched_at": "2026-11-16T17:16:48.145Z",
+          "snippets": [],
+          "error": "TikTok returned no readable bio/captions (bot wall?)"
+        },
+        {
+          "kind": "apify",
+          "url": "https://www.instagram.com/called_chewiess",
+          "ok": false,
+          "fetched_at": "2026-11-16T17:16:50.394Z",
+          "snippets": [],
+          "error": "Apify returned no biography or captions"
+        }
+      ],
+      "raw_snippets": [],
+      "drop_dates": null,
+      "drop_hours": null,
+      "location": null,
+      "neighborhood": "sentrum",
+      "confidence": 0.1,
+      "checked_at": "2026-11-16T17:16:54.405Z"
+    }
+  ]
+}

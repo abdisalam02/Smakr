@@ -224,19 +224,14 @@ export async function PATCH(req: NextRequest) {
           is_published: true,
         });
       } else if (matchedItem.kind === "makr_popup") {
-        const slug = matchedItem.venue_name
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/(^-|-$)/g, "")
-          .slice(0, 48);
-        const newVenueId = `${slug || "popup"}-${Date.now().toString(36)}`;
-        await auth.adminClient.from("venues").insert({
-          id: newVenueId,
+        // Let Postgres generate a real UUID — a slug+timestamp id is not a UUID
+        // and crashes the insert. The map icon belongs in vibe_signals, never
+        // in a top-level venues.icon column.
+        const { error: popupInsertErr } = await auth.adminClient.from("venues").insert({
           name: matchedItem.venue_name,
           address: matchedItem.is_location_tba ? "Oslo" : matchedItem.address || String(matchedItem.neighborhood || "Oslo"),
           neighborhood: String(matchedItem.neighborhood || "Sentrum"),
           category: matchedItem.category || "street_food",
-          icon: matchedItem.icon_key || matchedItem.category || "popup",
           latitude: matchedItem.latitude ?? 59.9139,
           longitude: matchedItem.longitude ?? 10.7522,
           image_url: matchedItem.photo_url || null,
@@ -246,6 +241,7 @@ export async function PATCH(req: NextRequest) {
           dietary_tags: matchedItem.dietary_tags || [],
           signature_dishes: matchedItem.dish_name ? [matchedItem.dish_name] : [],
           vibe_signals: {
+            icon: matchedItem.icon_key || matchedItem.category || "popup",
             popup_meta: {
               instagram: matchedItem.instagram_handle ? `@${matchedItem.instagram_handle}` : undefined,
               dates: matchedItem.drop_dates,
@@ -254,6 +250,14 @@ export async function PATCH(req: NextRequest) {
             },
           },
         });
+
+        if (popupInsertErr) {
+          console.error("[api/makr/submit PATCH] popup venue insert failed:", popupInsertErr);
+          return NextResponse.json(
+            { success: false, error: `Could not create pop-up venue: ${popupInsertErr.message}` },
+            { status: 500 }
+          );
+        }
       } else if (matchedItem.kind === "makr_photos" && matchedItem.venue_id && matchedItem.photo_url) {
         if (matchedItem.dish_name) {
           await auth.adminClient.from("food_posts").insert({

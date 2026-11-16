@@ -225,7 +225,7 @@ export function formatVenueLocationLine(venue?: {
   const nhLower = nh.toLowerCase();
 
   if (isBetweenDrops && (genericSet.has(addrLower) || addrLower === nhLower)) {
-    return "Roaming Pop-Up · Oslo";
+    return "Roaming Oslo · Location TBA";
   }
 
   if (!cleanFirstPart || genericSet.has(addrLower) || addrLower === nhLower) {
@@ -233,7 +233,7 @@ export function formatVenueLocationLine(venue?: {
   }
 
   if (isBetweenDrops) {
-    return "Roaming Pop-Up · Oslo";
+    return "Roaming Oslo · Location TBA";
   }
 
   return `${cleanFirstPart} · ${nh}`;

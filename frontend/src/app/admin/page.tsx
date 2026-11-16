@@ -46,6 +46,7 @@ import { BulkVenueSeeder } from "@/components/admin/BulkVenueSeeder";
 import { EditPostModal } from "@/components/admin/EditPostModal";
 import {
   broadcastWeeklyPick,
+  fetchActiveWeeklyDrop,
   fetchFoodPosts,
   fetchVenues,
   deleteVenueById,
@@ -202,6 +203,19 @@ export default function AdminControlCenterPage() {
     showToast(`Updated ${venue.name} status`);
   };
 
+  const handleToggleOfficialPick = async (post: FoodPost) => {
+    const nextPick = !post.is_official_pick;
+    toggleOfficialPick(post.id); // optimistic
+    const { error } = await updateFoodPostDb(post.id, { isOfficialPick: nextPick });
+    if (error) {
+      toggleOfficialPick(post.id); // roll back the optimistic flip
+      showToast(error);
+      return;
+    }
+    await triggerAdminRevalidate();
+    showToast(nextPick ? "Added to Smakr Picks" : "Removed from Smakr Picks");
+  };
+
   /* ---------- Weekly Dispatch form ---------- */
   const [venueId, setVenueId] = useState(weeklyPick.venue_id);
   const [dishName, setDishName] = useState(weeklyPick.dish_name);
@@ -228,15 +242,20 @@ export default function AdminControlCenterPage() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [v, p] = await Promise.all([fetchVenues(), fetchFoodPosts()]);
+      const [v, p, drop] = await Promise.all([
+        fetchVenues(),
+        fetchFoodPosts(),
+        fetchActiveWeeklyDrop(),
+      ]);
       if (cancelled) return;
       setVenues(v);
       setFoodPosts(p);
+      setWeeklyPick(drop);
     })();
     return () => {
       cancelled = true;
     };
-  }, [setVenues, setFoodPosts]);
+  }, [setVenues, setFoodPosts, setWeeklyPick]);
 
   /* ---------- Add Venue form ---------- */
   const [vName, setVName] = useState("");
@@ -2063,32 +2082,32 @@ export default function AdminControlCenterPage() {
                       <button
                         type="button"
                         onClick={async () => {
-                          let token = v.kitchen_status?.kitchen_token;
-                          if (!token) {
-                            token = `smk_kitch_${v.id.replace(/[^a-z0-9]/gi, "").slice(0, 8)}_${Math.random().toString(36).substring(2, 8)}`;
-                            const newStatus = {
-                              status: v.kitchen_status?.status || "normal",
-                              kitchen_token: token,
-                              verified_kitchen: true,
-                              updated_at: new Date().toISOString(),
-                            };
-                            const res = await updateVenueDb(v.id, {
-                              kitchenStatus: newStatus,
+                          try {
+                            // Tokens live in the private venue_kitchen_tokens table.
+                            // Never synthesize them client-side or write them to JSONB.
+                            const res = await fetch("/api/admin/kitchen-token", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ venueId: v.id }),
                             });
-                            if (!res.success) {
-                              showToast(res.error || "Could not create kitchen link.");
+                            const data = await res.json().catch(() => ({}));
+                            if (!res.ok || !data?.success || !data?.token) {
+                              showToast(data?.error || "Could not create kitchen link.");
                               return;
                             }
-                            updateVenue(v.id, {
-                              kitchen_status: newStatus,
-                            });
-                          }
-                          const url = `${window.location.origin}/kitchen/${token}`;
-                          if (typeof navigator !== "undefined" && navigator.clipboard) {
-                            await navigator.clipboard.writeText(url);
-                            showToast(`Copied Kitchen Remote Link for ${v.name}`);
-                          } else {
-                            prompt("Kitchen Magic Link:", url);
+                            const url = `${window.location.origin}${
+                              typeof data.url === "string" ? data.url : `/kitchen/${data.token}`
+                            }`;
+                            if (typeof navigator !== "undefined" && navigator.clipboard) {
+                              await navigator.clipboard.writeText(url);
+                              showToast(`Copied Kitchen Remote Link for ${v.name}`);
+                            } else {
+                              prompt("Kitchen Magic Link:", url);
+                            }
+                          } catch (err) {
+                            showToast(
+                              err instanceof Error ? err.message : "Could not create kitchen link."
+                            );
                           }
                         }}
                         className="px-2.5 py-1.5 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-[#e84a27] text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
@@ -2236,7 +2255,7 @@ export default function AdminControlCenterPage() {
                   <div className="pt-2 border-t border-[#181615]/5 flex items-center justify-between gap-1.5">
                     <button
                       type="button"
-                      onClick={() => toggleOfficialPick(post.id)}
+                      onClick={() => handleToggleOfficialPick(post)}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                         post.is_official_pick
                           ? "bg-[#181615] text-white shadow-xs"

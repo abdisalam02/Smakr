@@ -24,6 +24,7 @@ import {
   MASCOT_VIEWBOX_WIDTH,
   MASCOT_VIEWBOX_HEIGHT,
 } from "@/components/avatar/MascotCharacter";
+import { OfficialMascotEditor } from "@/components/mascot/OfficialMascotEditor";
 import {
   ACCESSORY_COLOR_SWATCHES,
   BOTTOM_COLOR_SWATCHES,
@@ -253,6 +254,7 @@ export default function MascotStudioPage() {
   const setCurrentUser = useCityPulseStore((state) => state.setCurrentUser);
   const isAdmin = currentUser?.role === "admin";
 
+  const [studioMode, setStudioMode] = useState<"official" | "dicebear">("official");
   const [stage, setStage] = useState<StageBg>("oat");
   const [tab, setTab] = useState<TabId>("anatomy");
   const [saved, setSaved] = useState(false);
@@ -417,70 +419,129 @@ export default function MascotStudioPage() {
             <span>Back to Food Radar</span>
           </Link>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleShuffle}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#e84a27] hover:bg-[#d23e1d] text-white border border-[#e84a27] shadow-xs text-xs font-semibold transition-all active:scale-95"
-              title="Randomize a look"
-            >
-              <Shuffle className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Shuffle</span>
-            </button>
-            <button
-              onClick={handleReset}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/95 hover:bg-white text-zinc-700 border border-zinc-200 shadow-xs text-xs font-semibold transition-all active:scale-95"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Reset</span>
-            </button>
-          </div>
+          {studioMode === "dicebear" && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleShuffle}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#e84a27] hover:bg-[#d23e1d] text-white border border-[#e84a27] shadow-xs text-xs font-semibold transition-all active:scale-95"
+                title="Randomize a look"
+              >
+                <Shuffle className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Shuffle</span>
+              </button>
+              <button
+                onClick={handleReset}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/95 hover:bg-white text-zinc-700 border border-zinc-200 shadow-xs text-xs font-semibold transition-all active:scale-95"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Reset</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* ============ Title ============ */}
         <div className="mb-5">
           <div className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-widest text-[#e84a27] mb-1">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>DiceBear dual-engine pipeline</span>
+            <span>
+              {studioMode === "official"
+                ? "Official Smakr Vector Rig · smakr-pick-pointing.svg"
+                : "DiceBear dual-engine pipeline"}
+            </span>
           </div>
           <h1 className="font-comico text-3xl sm:text-4xl text-zinc-900 leading-tight">
             Smakr <span className="text-[#e84a27]">Mascot</span> Studio
           </h1>
         </div>
 
-        {/* ============ Style universe switcher ============ */}
-        <div className="mb-5 p-1 rounded-2xl bg-zinc-100 border border-zinc-200 grid grid-cols-2 gap-1">
-          {MASCOT_ENGINE_OPTIONS.map((engine) => {
-            const active = config.engine === engine.id;
-            return (
-              <button
-                key={engine.id}
-                onClick={() => update({ engine: engine.id })}
-                aria-pressed={active}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all ${
-                  active ? "bg-white shadow-xs ring-1 ring-zinc-200" : "hover:bg-white/60"
+        {/* ============ Top-level Studio Mode Switcher ============ */}
+        <div className="mb-5 p-1.5 rounded-2xl bg-[#EAE2D3] border border-[#DFD5C3] grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+          <button
+            type="button"
+            onClick={() => setStudioMode("official")}
+            aria-pressed={studioMode === "official"}
+            className={`flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-left transition-all cursor-pointer ${
+              studioMode === "official"
+                ? "bg-[#1E2738] text-[#FAF7F2] shadow-sm"
+                : "bg-transparent text-zinc-700 hover:bg-white/60"
+            }`}
+          >
+            <div>
+              <span className="block text-xs sm:text-sm font-bold">
+                ★ Official Smakr Mascot (Pointing Rig)
+              </span>
+              <span
+                className={`block text-[11px] ${
+                  studioMode === "official" ? "text-[#C8B79E]" : "text-zinc-500"
                 }`}
               >
-                <span className="text-lg leading-none" aria-hidden>
-                  {engine.emoji}
-                </span>
-                <span className="min-w-0">
-                  <span
-                    className={`block text-xs font-bold truncate ${
-                      active ? "text-zinc-900" : "text-zinc-600"
-                    }`}
-                  >
-                    {engine.label}{" "}
-                    <span className="font-mono text-[10px] text-zinc-400">({engine.short})</span>
-                  </span>
-                  <span className="block text-[10px] text-zinc-400 truncate">{engine.tagline}</span>
-                </span>
-                {active && <Check className="w-3.5 h-3.5 text-[#e84a27] ml-auto shrink-0" />}
-              </button>
-            );
-          })}
+                Navy Sherpa Work Jacket · Layer transforms · App SVG Sync
+              </span>
+            </div>
+            {studioMode === "official" && <Check className="w-4 h-4 text-[#e84a27] shrink-0" />}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStudioMode("dicebear")}
+            aria-pressed={studioMode === "dicebear"}
+            className={`flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-left transition-all cursor-pointer ${
+              studioMode === "dicebear"
+                ? "bg-white text-zinc-900 shadow-sm ring-1 ring-zinc-200"
+                : "bg-transparent text-zinc-700 hover:bg-white/60"
+            }`}
+          >
+            <div>
+              <span className="block text-xs sm:text-sm font-bold">
+                Community Foodie Avatars (DiceBear)
+              </span>
+              <span className="block text-[11px] text-zinc-500">
+                Open Peeps &amp; Micah member profile avatars
+              </span>
+            </div>
+            {studioMode === "dicebear" && <Check className="w-4 h-4 text-[#e84a27] shrink-0" />}
+          </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {studioMode === "official" ? (
+          <OfficialMascotEditor showToast={showToast} />
+        ) : (
+          <>
+            {/* ============ Style universe switcher ============ */}
+            <div className="mb-5 p-1 rounded-2xl bg-zinc-100 border border-zinc-200 grid grid-cols-2 gap-1">
+              {MASCOT_ENGINE_OPTIONS.map((engine) => {
+                const active = config.engine === engine.id;
+                return (
+                  <button
+                    key={engine.id}
+                    onClick={() => update({ engine: engine.id })}
+                    aria-pressed={active}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all ${
+                      active ? "bg-white shadow-xs ring-1 ring-zinc-200" : "hover:bg-white/60"
+                    }`}
+                  >
+                    <span className="text-lg leading-none" aria-hidden>
+                      {engine.emoji}
+                    </span>
+                    <span className="min-w-0">
+                      <span
+                        className={`block text-xs font-bold truncate ${
+                          active ? "text-zinc-900" : "text-zinc-600"
+                        }`}
+                      >
+                        {engine.label}{" "}
+                        <span className="font-mono text-[10px] text-zinc-400">({engine.short})</span>
+                      </span>
+                      <span className="block text-[10px] text-zinc-400 truncate">{engine.tagline}</span>
+                    </span>
+                    {active && <Check className="w-3.5 h-3.5 text-[#e84a27] ml-auto shrink-0" />}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {/* ================= LEFT: Stage ================= */}
           <div className="space-y-4">
             <div className="rounded-3xl border border-zinc-200 bg-white p-4 shadow-xs">
@@ -850,6 +911,8 @@ export default function MascotStudioPage() {
             )}
           </div>
         </div>
+          </>
+        )}
       </div>
     </div>
   );

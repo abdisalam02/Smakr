@@ -76,11 +76,18 @@ for (const table of requiredTables) {
 
 // 4. Admin API Route Authorization Verification
 console.log('\n[Test 4] Admin Route Handlers Authorization Guards');
-const adminAiCurate = fs.readFileSync(path.resolve('src', 'app', 'api', 'admin', 'ai-curate', 'route.ts'), 'utf8');
-assert(adminAiCurate.includes('canUseAiCurator()'), '/api/admin/ai-curate enforces server-side admin check');
-
-const adminBulkEnrich = fs.readFileSync(path.resolve('src', 'app', 'api', 'admin', 'bulk-enrich', 'route.ts'), 'utf8');
-assert(adminBulkEnrich.includes('verifyAdminAuth()'), '/api/admin/bulk-enrich enforces server-side admin check');
+const adminRoutesWithSharedGuard = [
+  ['ai-curate', ['src', 'app', 'api', 'admin', 'ai-curate', 'route.ts']],
+  ['bulk-enrich', ['src', 'app', 'api', 'admin', 'bulk-enrich', 'route.ts']],
+  ['kitchen-token', ['src', 'app', 'api', 'admin', 'kitchen-token', 'route.ts']],
+  ['partner-claims', ['src', 'app', 'api', 'admin', 'partner-claims', 'route.ts']],
+  ['partner-claims/resolve', ['src', 'app', 'api', 'admin', 'partner-claims', 'resolve', 'route.ts']],
+  ['sync-popups', ['src', 'app', 'api', 'admin', 'sync-popups', 'route.ts']],
+];
+for (const [label, segments] of adminRoutesWithSharedGuard) {
+  const code = fs.readFileSync(path.resolve(...segments), 'utf8');
+  assert(code.includes('requireAdmin()'), `/api/admin/${label} enforces server-side admin check`);
+}
 
 const middlewareCode = fs.readFileSync(path.resolve('src', 'middleware.ts'), 'utf8');
 assert(middlewareCode.includes('isAdminRoute') && middlewareCode.includes('!user'), 'Middleware intercepts unauthenticated access to /admin, /studio, /mascot-studio');

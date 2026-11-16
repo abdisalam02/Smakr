@@ -1,0 +1,23 @@
+{
+  "system": "Smakr Food Icon Art Generation Pipeline",
+  "model": "gemini-3.1-flash-lite-image",
+  "roles": {
+    "primary_map_icon": {
+      "style": "Nordic Specialty Realism",
+      "formula": "Transformative original props, natural soft morning daylight, hyper-tactile micro-textures (charred seasoning, crispy crust, moisture, froth, grain), zero plastic CGI sheen, completely unbranded, pure solid white background for alpha flood-fill cutout.",
+      "winning_recipe_reference": "Var 15 (Nordic Specialty Café Realism to-go cup)"
+    },
+    "filter_dropdown_undercategory": {
+      "style": "Vintage Culinary Sketchbook Watercolor",
+      "formula": "300gsm cold-press cotton paper tooth, fine sepia dip-pen contours with intentional hand wobble and tremor, loose watercolor washes with gentle pigment pooling and water bleed edges, authentic analog book illustration feel.",
+      "winning_recipe_reference": "Var 2 / Var 13 (Artisan Sketchbook Watercolor)"
+    }
+  },
+  "completed_icons": {
+    "matcha": {
+      "map_pin": "/icons/food/matcha.webp",
+      "dropdown_filter": "/icons/food/matcha_cup.webp",
+      "source_models": ["var_15_togo_scandi_realism", "var_2_cafe_menu_sketch"]
+    }
+  }
+}

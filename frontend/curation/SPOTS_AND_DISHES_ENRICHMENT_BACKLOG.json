@@ -1,0 +1,513 @@
+[
+  {
+    "venue_id": "40d7d83d-8686-47f0-9d78-727f535b5c32",
+    "venue_name": "175°C K-fried",
+    "address": "Norway, Oslo, Vulkan, NO",
+    "neighborhood": "sentrum",
+    "category": "k_chicken",
+    "price_level": "$$",
+    "has_description": false,
+    "current_description": "",
+    "total_active_dishes": 1,
+    "dishes_needing_enrichment": [
+      {
+        "dish_id": "d9d0671c-31d3-474c-aff3-f7859a55bfb6",
+        "dish_name": "Korean Fried Chicken",
+        "category": "k_chicken",
+        "current_price_nok": 159,
+        "current_review_text": "",
+        "current_taste_tags": [],
+        "lacking": [
+          "review_text",
+          "taste_tags"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "29305b8b-4938-4989-81e3-4a18813be6cf",
+    "venue_name": "Cocoa Café",
+    "address": "Toftes Gate 48A, 0556 Oslo, Norway",
+    "neighborhood": "sentrum",
+    "category": "Coffee",
+    "price_level": "$$",
+    "has_description": false,
+    "current_description": "",
+    "total_active_dishes": 1,
+    "dishes_needing_enrichment": [
+      {
+        "dish_id": "90cc7855-17ba-4ea4-8f9b-8b0e3e02ceb2",
+        "dish_name": "Hot Cocoa",
+        "category": "coffee",
+        "current_price_nok": 70,
+        "current_review_text": "",
+        "current_taste_tags": [],
+        "lacking": [
+          "review_text",
+          "taste_tags"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "f137417c-d536-4a14-a169-8e2e5a6615fe",
+    "venue_name": "Crave",
+    "address": "Voldgata 1, 2000 Lillestrøm, Norway",
+    "neighborhood": "Lillestrøm",
+    "category": "Food",
+    "price_level": "$$",
+    "has_description": false,
+    "current_description": "",
+    "total_active_dishes": 1,
+    "dishes_needing_enrichment": [
+      {
+        "dish_id": "f00c9bac-25e2-4f0c-88f3-e7fe572d2d7c",
+        "dish_name": "Cloud Pancakes",
+        "category": "dessert",
+        "current_price_nok": null,
+        "current_review_text": "",
+        "current_taste_tags": [],
+        "lacking": [
+          "price_nok",
+          "review_text",
+          "taste_tags"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "9320b20c-eb48-4a41-a3d5-a5bb34a74488",
+    "venue_name": "Daglig Brød",
+    "address": "Alnafetgata 1B, 0192 Oslo, Norway",
+    "neighborhood": "Bjørvika",
+    "category": "Bakery",
+    "price_level": "$",
+    "has_description": false,
+    "current_description": "",
+    "total_active_dishes": 1,
+    "dishes_needing_enrichment": [
+      {
+        "dish_id": "67e6e54e-166a-4335-938c-6db79bdda78a",
+        "dish_name": "Boller",
+        "category": "bakery",
+        "current_price_nok": 135,
+        "current_review_text": "",
+        "current_taste_tags": [],
+        "lacking": [
+          "review_text",
+          "taste_tags"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "6952e7c0-1ae9-4865-b81b-272858404d95",
+    "venue_name": "Digg Pizza - Grønland",
+    "address": "Grønlandsleiret 1, 0190 Oslo, Norway",
+    "neighborhood": "Bjørvika",
+    "category": "Pizza",
+    "price_level": "$$",
+    "has_description": false,
+    "current_description": "",
+    "total_active_dishes": 1,
+    "dishes_needing_enrichment": [
+      {
+        "dish_id": "1fff0c27-66ef-485e-ac2f-81fd23932ab6",
+        "dish_name": "cheddar pizza",
+        "category": "pizza",
+        "current_price_nok": 148,
+        "current_review_text": "custom pizza",
+        "current_taste_tags": [],
+        "lacking": [
+          "review_text",
+          "taste_tags"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "579a51b3-ebb5-4638-a64c-8aed027563bd",
+    "venue_name": "Dirty Taco",
+    "address": "Olaf Ryes plass 9, 0552 Oslo",
+    "neighborhood": "grunerlokka",
+    "category": "Food",
+    "price_level": "$$",
+    "has_description": false,
+    "current_description": "",
+    "total_active_dishes": 1,
+    "dishes_needing_enrichment": [
+      {
+        "dish_id": "58e4518c-1cd2-4099-b47e-5143a08386c5",
+        "dish_name": "Birria Tacos with Consomé",
+        "category": "tacos",
+        "current_price_nok": 145,
+        "current_review_text": "Standout birria tacos with consomé at Dirty Taco—balanced flavor, crisp texture, and cooked to order.",
+        "current_taste_tags": [],
+        "lacking": [
+          "taste_tags"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "4f717139-89a1-4180-9e5e-1d5b80896a67",
+    "venue_name": "Em Oi!",
+    "address": "Brugata 15, 0186 Oslo, Norway",
+    "neighborhood": "Grønland",
+    "category": "Street Food",
+    "price_level": "$$",
+    "has_description": false,
+    "current_description": "",
+    "total_active_dishes": 2,
+    "dishes_needing_enrichment": [
+      {
+        "dish_id": "ed1417fe-3144-4b4f-ac5b-33e3cf0e10d4",
+        "dish_name": "Coconut Coffee",
+        "category": "coffee",
+        "current_price_nok": 79,
+        "current_review_text": "",
+        "current_taste_tags": [],
+        "lacking": [
+          "review_text",
+          "taste_tags"
+        ]
+      },
+      {
+        "dish_id": "6ef59bc2-e54b-4be2-b954-677fcd38caa4",
+        "dish_name": "Pho",
+        "category": "ramen",
+        "current_price_nok": 200,
+        "current_review_text": "",
+        "current_taste_tags": [],
+        "lacking": [
+          "review_text",
+          "taste_tags"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "a9bc2f3b-0714-4a12-863a-2517e9bab590",
+    "venue_name": "Fuglen Coffee Roasters",
+    "address": "St. Halvards gate 33, 0192 Oslo, Norway",
+    "neighborhood": "sentrum",
+    "category": "Coffee",
+    "price_level": "$$",
+    "has_description": false,
+    "current_description": "",
+    "total_active_dishes": 1,
+    "dishes_needing_enrichment": [
+      {
+        "dish_id": "260bb0d0-ef3c-4765-97fb-4efcab8a353d",
+        "dish_name": "70% Tanzania Chocolate",
+        "category": "dessert",
+        "current_price_nok": 80,
+        "current_review_text": "",
+        "current_taste_tags": [],
+        "lacking": [
+          "review_text",
+          "taste_tags"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "80c10c09-c945-4983-8dd2-3090cf3cc665",
+    "venue_name": "Håndbakt Tøyen",
+    "address": "Kjølberggata 21, 0653 Oslo, Norway",
+    "neighborhood": "sentrum",
+    "category": "Bakery",
+    "price_level": "$$",
+    "has_description": false,
+    "current_description": "",
+    "total_active_dishes": 1,
+    "dishes_needing_enrichment": [
+      {
+        "dish_id": "cdc62622-e623-4f08-8fcc-eb1b2cdef669",
+        "dish_name": "Kardemommebolle",
+        "category": "bakery",
+        "current_price_nok": 59,
+        "current_review_text": "",
+        "current_taste_tags": [],
+        "lacking": [
+          "review_text",
+          "taste_tags"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "d25493ea-1659-4fa0-b7d3-7349d6b07349",
+    "venue_name": "Kuro Oslo",
+    "address": "Rathkes gate 9C, 0558 Oslo, Norway",
+    "neighborhood": "sentrum",
+    "category": "Coffee",
+    "price_level": "$$",
+    "has_description": false,
+    "current_description": "",
+    "total_active_dishes": 1,
+    "dishes_needing_enrichment": [
+      {
+        "dish_id": "08aad0fc-bf8d-42d6-9512-4062bd0d81bb",
+        "dish_name": "Pumpkin spice Latte",
+        "category": "coffee",
+        "current_price_nok": 89,
+        "current_review_text": "",
+        "current_taste_tags": [],
+        "lacking": [
+          "review_text",
+          "taste_tags"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "cea02b51-450d-45e7-b8d6-6c98435470b3",
+    "venue_name": "Kveitemjøl",
+    "address": "Fjordalléen 10, 0250 Oslo, Norway",
+    "neighborhood": "sentrum",
+    "category": "cinnamon_roll",
+    "price_level": "$$",
+    "has_description": false,
+    "current_description": "",
+    "total_active_dishes": 1,
+    "dishes_needing_enrichment": [
+      {
+        "dish_id": "c9f234c9-0b41-408e-a4ab-baf873eb6848",
+        "dish_name": "kanelbolle",
+        "category": "cinnamon_roll",
+        "current_price_nok": 59,
+        "current_review_text": "",
+        "current_taste_tags": [],
+        "lacking": [
+          "review_text",
+          "taste_tags"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "9d71ce5e-89c4-49e0-9da3-11b87a1087f0",
+    "venue_name": "Lai Zai - Viet Street Food",
+    "address": "Thorvald Meyers gate 83A, 0552 Oslo, Norway",
+    "neighborhood": "grunerlokka",
+    "category": "vietnamese",
+    "price_level": "$$",
+    "has_description": false,
+    "current_description": "",
+    "total_active_dishes": 1,
+    "dishes_needing_enrichment": [
+      {
+        "dish_id": "b98f8c35-aac1-4dac-81f5-d38d7ec96192",
+        "dish_name": "Bánh Mì Sa Tế",
+        "category": "vietnamese",
+        "current_price_nok": 130,
+        "current_review_text": "",
+        "current_taste_tags": [],
+        "lacking": [
+          "review_text",
+          "taste_tags"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "fc0775b3-cfe4-420d-ad0f-ffe0c50f8195",
+    "venue_name": "Mandi House restaurant Oslo بيت المندي، ،yemeni restaurant",
+    "address": "Tøyengata 29, 0578 Oslo",
+    "neighborhood": "toyen",
+    "category": "rice_bowls",
+    "price_level": "$$",
+    "has_description": false,
+    "current_description": "",
+    "total_active_dishes": 1,
+    "dishes_needing_enrichment": [
+      {
+        "dish_id": "935c4597-3774-44fc-aeda-cfdc1d71b1d6",
+        "dish_name": "Lamb Mandi Platter",
+        "category": "rice_bowls",
+        "current_price_nok": 225,
+        "current_review_text": "Standout lamb mandi platter at Mandi House restaurant Oslo بيت المندي، ،yemeni restaurant—balanced flavor, crisp texture, and cooked to order.",
+        "current_taste_tags": [],
+        "lacking": [
+          "taste_tags"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "c0e5aaba-cddd-4897-a47f-b7af8c7e8986",
+    "venue_name": "Masala Politics",
+    "address": "Karl Johans gate 13, 0154 Oslo, Norway",
+    "neighborhood": "sentrum",
+    "category": "naan",
+    "price_level": "$$",
+    "has_description": false,
+    "current_description": "",
+    "total_active_dishes": 1,
+    "dishes_needing_enrichment": [
+      {
+        "dish_id": "24394440-7233-43db-bd62-5e4f548677ee",
+        "dish_name": "Chicken korma",
+        "category": "naan",
+        "current_price_nok": 300,
+        "current_review_text": "",
+        "current_taste_tags": [],
+        "lacking": [
+          "review_text",
+          "taste_tags"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "58e4a775-e75a-4322-8b48-7ed325e19ec5",
+    "venue_name": "Miso Ramen",
+    "address": "Munkedamsveien 31, 0251 Oslo",
+    "neighborhood": "sentrum",
+    "category": "Ramen",
+    "price_level": "$$",
+    "has_description": false,
+    "current_description": "",
+    "total_active_dishes": 1,
+    "dishes_needing_enrichment": [
+      {
+        "dish_id": "9fddf276-09b6-4630-be41-1f6331cb6d2d",
+        "dish_name": "Spicy Miso Tonkotsu Ramen",
+        "category": "ramen",
+        "current_price_nok": 215,
+        "current_review_text": "Standout spicy miso tonkotsu ramen at Miso Ramen—balanced flavor, crisp texture, and cooked to order.",
+        "current_taste_tags": [],
+        "lacking": [
+          "taste_tags"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "31fc5cc9-302a-448d-b79b-5d47e4c797fb",
+    "venue_name": "Ochaya - The Matcha",
+    "address": "Bernt Ankers gate 6a, 0183 Oslo, Norway",
+    "neighborhood": "sentrum",
+    "category": "Matcha",
+    "price_level": "$$",
+    "has_description": false,
+    "current_description": "",
+    "total_active_dishes": 1,
+    "dishes_needing_enrichment": [
+      {
+        "dish_id": "4fea0070-94d9-4b2e-819a-fd463c63e769",
+        "dish_name": "Biscoff Matcha",
+        "category": "matcha",
+        "current_price_nok": 78,
+        "current_review_text": "",
+        "current_taste_tags": [],
+        "lacking": [
+          "review_text",
+          "taste_tags"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "09bfa8ca-da77-4b62-b15e-e88b9674f561",
+    "venue_name": "Stykke - Hasle",
+    "address": "Bøkkerveien 11, 0579 Oslo, Norway",
+    "neighborhood": "sentrum",
+    "category": "Pizza",
+    "price_level": "$$",
+    "has_description": false,
+    "current_description": "",
+    "total_active_dishes": 1,
+    "dishes_needing_enrichment": [
+      {
+        "dish_id": "b3789f96-4c92-4569-969d-da120c29f7b0",
+        "dish_name": "Chicken teriyaki Slice",
+        "category": "pizza",
+        "current_price_nok": 80,
+        "current_review_text": "",
+        "current_taste_tags": [],
+        "lacking": [
+          "review_text",
+          "taste_tags"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "d8d80f28-7757-41bc-8b46-e64cbe103992",
+    "venue_name": "U WAN SUM",
+    "address": "Oslo, Norway",
+    "neighborhood": "sentrum",
+    "category": "Coffee",
+    "price_level": "$$",
+    "has_description": true,
+    "current_description": "En pop up i Oslo der vietnamesisk kaffekultur møter egyptisk gjestfrihet. Vi serverer historier, nysgjerrighet og noe du vil ha mer av.",
+    "total_active_dishes": 1,
+    "dishes_needing_enrichment": [
+      {
+        "dish_id": "1e5d85b4-90ad-4455-964a-1be9048ea709",
+        "dish_name": "Egg coffee",
+        "category": "coffee",
+        "current_price_nok": null,
+        "current_review_text": "",
+        "current_taste_tags": [],
+        "lacking": [
+          "price_nok",
+          "review_text",
+          "taste_tags"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "d0cd7f48-b5f5-40f6-81d9-dd18e7a831f7",
+    "venue_name": "Yum Cha",
+    "address": "Ole Vigs gate 24B, 0366 Oslo, Norway",
+    "neighborhood": "Majorstuen",
+    "category": "dumplings",
+    "price_level": "$$",
+    "has_description": false,
+    "current_description": "",
+    "total_active_dishes": 1,
+    "dishes_needing_enrichment": [
+      {
+        "dish_id": "f434dfb4-d3a9-4754-80f0-d7f425278cb2",
+        "dish_name": "dumplings",
+        "category": "dumplings",
+        "current_price_nok": null,
+        "current_review_text": "",
+        "current_taste_tags": [],
+        "lacking": [
+          "price_nok",
+          "review_text",
+          "taste_tags"
+        ]
+      }
+    ]
+  },
+  {
+    "venue_id": "6c0c16d2-d919-4ec2-9834-dcd6aa9bc2a1",
+    "venue_name": "Zam Zam avd HASLE",
+    "address": "Hovinveien 39, 0661 Oslo",
+    "neighborhood": "sentrum",
+    "category": "cheesesteak",
+    "price_level": "$$",
+    "has_description": false,
+    "current_description": "",
+    "total_active_dishes": 1,
+    "dishes_needing_enrichment": [
+      {
+        "dish_id": "753e72c6-a4db-4a5b-b6fd-6ce5e8d0c159",
+        "dish_name": "cheesesteak",
+        "category": "cheesesteak",
+        "current_price_nok": 175,
+        "current_review_text": "Standout cheesesteak at Zam Zam avd HASLE—balanced flavor, crisp texture, and cooked to order.",
+        "current_taste_tags": [],
+        "lacking": [
+          "taste_tags"
+        ]
+      }
+    ]
+  }
+]

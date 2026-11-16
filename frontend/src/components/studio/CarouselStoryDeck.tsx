@@ -8,7 +8,13 @@ import { SmakrMascotRig } from "@/components/studio/SmakrMascotRig";
 import { OFFICIAL_SMAKR_MASCOT_CONFIG } from "@/lib/officialSmakrMascot";
 
 export type StoryPresetId = "how-smakr-works" | "oslo-snowfall-bowls";
-export type StoryAspectId = "4:5" | "9:16";
+export type StoryAspectId = "1:1" | "4:5" | "9:16";
+
+function getStoryNativeHeight(aspect: StoryAspectId): number {
+  if (aspect === "9:16") return 1920;
+  if (aspect === "1:1") return 1080;
+  return 1350;
+}
 
 const STORY_PRESET_LABELS: Record<StoryPresetId, string> = {
   "how-smakr-works": "How Smakr Works (5 Slides)",
@@ -1610,9 +1616,10 @@ function EarlySnowSlideCanvas({
   aspect: StoryAspectId;
 }) {
   const is916 = aspect === "9:16";
-  const h = is916 ? 1920 : 1350;
-  const topPad = is916 ? 96 : 52;
-  const bottomPad = slideNum === 1 ? (is916 ? 92 : 44) : is916 ? 64 : 40;
+  const is11 = aspect === "1:1";
+  const h = getStoryNativeHeight(aspect);
+  const topPad = is916 ? 96 : is11 ? 38 : 52;
+  const bottomPad = slideNum === 1 ? (is916 ? 92 : is11 ? 26 : 44) : is916 ? 64 : is11 ? 24 : 40;
   const sidePad = 56;
 
   return (
@@ -1706,7 +1713,7 @@ function EarlySnowSlideCanvas({
                   jacketStyle="navy-sherpa"
                   hatColor={OFFICIAL_SMAKR_MASCOT_CONFIG.hatColor}
                   headContrastColor={OFFICIAL_SMAKR_MASCOT_CONFIG.hairColor}
-                  size={is916 ? 470 : 375}
+                  size={is916 ? 470 : is11 ? 300 : 375}
                   stickerOutline
                 />
               </div>
@@ -1717,7 +1724,7 @@ function EarlySnowSlideCanvas({
                   display: "flex",
                   justifyContent: "flex-start",
                   marginLeft: is916 ? -54 : -44,
-                  paddingTop: is916 ? 78 : 54,
+                  paddingTop: is916 ? 78 : is11 ? 32 : 54,
                 }}
               >
                 <SnowfallSpeechBubble is916={is916} />
@@ -1732,7 +1739,7 @@ function EarlySnowSlideCanvas({
                 left: 0,
                 right: 0,
                 bottom: 0,
-                height: is916 ? 560 : 410,
+                height: is916 ? 560 : is11 ? 330 : 410,
                 background:
                   "linear-gradient(to top, rgba(250, 247, 242, 0.96) 0%, rgba(250, 247, 242, 0.80) 58%, rgba(250, 247, 242, 0) 100%)",
                 zIndex: 18,
@@ -1750,7 +1757,7 @@ function EarlySnowSlideCanvas({
                 gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
                 alignItems: "start",
                 gap: is916 ? 20 : 18,
-                marginBottom: is916 ? 26 : 14,
+                marginBottom: is916 ? 26 : is11 ? 6 : 14,
               }}
             >
               {EARLY_SNOW_SLIDE_1_BOWLS.map((bowl) => (
@@ -1767,7 +1774,7 @@ function EarlySnowSlideCanvas({
                     style={{
                       position: "relative",
                       width: "100%",
-                      height: is916 ? 316 : 248,
+                      height: is916 ? 316 : is11 ? 186 : 248,
                       borderRadius: 22,
                       border: "4px solid #FFFFFF",
                       boxShadow: "0 20px 42px rgba(24, 22, 21, 0.22)",
@@ -1860,7 +1867,9 @@ function EarlySnowSlideCanvas({
                 zIndex: 20,
                 width: "100%",
                 flex: 1,
-                marginTop: is916 ? 12 : 6,
+                marginTop: is916 ? 12 : is11 ? 2 : 6,
+                transform: is11 ? "scale(0.84)" : undefined,
+                transformOrigin: "top center",
               }}
             >
               {/* Dashed route trail linking Hrimnir -> Sapporo -> Em Oi! icon centers 1:1 */}
@@ -1926,7 +1935,7 @@ function EarlySnowSlideCanvas({
                 left: 0,
                 right: 0,
                 bottom: 0,
-                height: is916 ? 340 : 240,
+                height: is916 ? 340 : is11 ? 185 : 240,
                 background:
                   "linear-gradient(to top, rgba(250, 247, 242, 0.96) 0%, rgba(250, 247, 242, 0.80) 58%, rgba(250, 247, 242, 0) 100%)",
                 zIndex: 18,
@@ -1950,9 +1959,10 @@ function StorySlideCanvas({
   aspect: StoryAspectId;
 }) {
   const is916 = aspect === "9:16";
-  const h = is916 ? 1920 : 1350;
-  const topPad = is916 ? 94 : 50;
-  const bottomPad = is916 ? 64 : 40;
+  const is11 = aspect === "1:1";
+  const h = getStoryNativeHeight(aspect);
+  const topPad = is916 ? 94 : is11 ? 36 : 50;
+  const bottomPad = is916 ? 64 : is11 ? 24 : 40;
   const sidePad = 56;
 
   return (
@@ -3245,10 +3255,21 @@ export function CarouselStoryDeck() {
   const activeSlides = presetId === "oslo-snowfall-bowls" ? SNOWFALL_SLIDE_META : SLIDE_META;
   const activePresetLabel = STORY_PRESET_LABELS[presetId];
   const is916 = aspect === "9:16";
-  const nativeH = is916 ? 1920 : 1350;
+  const is11 = aspect === "1:1";
+  const nativeH = getStoryNativeHeight(aspect);
   // Scale 2-slide decks larger for comfortable inspection while fitting 5-slide decks side-by-side
   const previewScale =
-    activeSlides.length === 2 ? (is916 ? 0.285 : 0.315) : is916 ? 0.24 : 0.285;
+    activeSlides.length === 2
+      ? is916
+        ? 0.285
+        : is11
+          ? 0.34
+          : 0.315
+      : is916
+        ? 0.24
+        : is11
+          ? 0.30
+          : 0.285;
   const previewW = Math.round(1080 * previewScale);
   const previewH = Math.round(nativeH * previewScale);
 
@@ -3270,7 +3291,7 @@ export function CarouselStoryDeck() {
       if (!node) return;
       const meta = activeSlides.find((s) => s.num === slideNum);
       if (!meta) return;
-      const aspectSlug = is916 ? "9_16" : "4_5";
+      const aspectSlug = aspect.replace(":", "_");
       const blob = await toBlob(node, {
         width: 1080,
         height: nativeH,
@@ -3290,7 +3311,7 @@ export function CarouselStoryDeck() {
       link.click();
       setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
     },
-    [activeSlides, is916, nativeH, presetId]
+    [activeSlides, aspect, nativeH, presetId]
   );
 
   const handleExportOne = async (slideNum: 1 | 2 | 3 | 4 | 5) => {
@@ -3353,6 +3374,15 @@ export function CarouselStoryDeck() {
         {/* Aspect + Batch Export */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center p-1 rounded-xl bg-black/40 border border-white/10 text-xs">
+            <button
+              type="button"
+              onClick={() => setAspect("1:1")}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                aspect === "1:1" ? "bg-white text-stone-900" : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              1:1 (1080×1080)
+            </button>
             <button
               type="button"
               onClick={() => setAspect("4:5")}
@@ -3491,7 +3521,7 @@ export function CarouselStoryDeck() {
             </div>
 
             {(() => {
-              const modalScale = is916 ? 0.42 : 0.56;
+              const modalScale = is916 ? 0.42 : is11 ? 0.64 : 0.56;
               return (
                 <div
                   style={{

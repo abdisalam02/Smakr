@@ -525,7 +525,10 @@ export function resolveVenueDisplayBadge(venue?: Partial<Venue> | null): VenueDi
     return { mainTag: "PANCAKES", pinIcon: "pancakes", filterTags: ["dessert", "pancakes", "toast", "sweet"] };
   }
   if (nameLower.includes("u wan sum")) {
-    return { mainTag: "DRINKS POP-UP", pinIcon: "drinks", filterTags: ["popup", "coffee", "matcha", "drinks"] };
+    return { flag: "🇻🇳", mainTag: "VIET COFFEE", pinIcon: "viet_coffee", filterTags: ["popup", "coffee", "viet_coffee", "drinks"] };
+  }
+  if (nameLower.includes("crantz")) {
+    return { mainTag: "COOKIES", pinIcon: "cookie", filterTags: ["bakery", "dessert", "cookie", "popup"] };
   }
 
   // 2. Additional Known Candidates & Pop-Ups
@@ -651,10 +654,18 @@ export function resolveDishIconKey(dishName?: string | null, dishCategory?: stri
 
   // 1. Exact beverage detection
   if (
+    name.includes("egg coffee") ||
+    name.includes("viet coffee") ||
+    name.includes("vietnamese coffee") ||
+    name.includes("cà phê") ||
+    name.includes("ca phe")
+  ) {
+    return "viet_coffee";
+  }
+  if (
     name.includes("coffee") ||
     name.includes("kaffe") ||
     name.includes("latte") ||
-    name.includes("cà phê") ||
     name.includes("espresso") ||
     name.includes("pour-over")
   ) {
@@ -662,6 +673,9 @@ export function resolveDishIconKey(dishName?: string | null, dishCategory?: stri
   }
   if (name.includes("matcha") || name.includes("hojicha") || name.includes("usucha") || name.includes("tea") || name.includes("te")) {
     return "matcha";
+  }
+  if (name.includes("cookie") || cat === "cookie") {
+    return "cookie";
   }
   if (name.includes("cocoa") || name.includes("chocolate") || name.includes("sjokolade")) {
     return "dessert";

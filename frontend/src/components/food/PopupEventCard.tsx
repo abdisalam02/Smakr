@@ -4,7 +4,7 @@ import React from "react";
 import Image from "next/image";
 import { Bookmark, Flame, Calendar, Clock, ExternalLink } from "lucide-react";
 import type { FoodPost, Venue } from "@/types";
-import { getPopupStatus, getPopupMeta } from "@/lib/popupUtils";
+import { getPopupStatus, getPopupMeta, resolvePopupLifecycle } from "@/lib/popupUtils";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 
 export interface PopupEventCardProps {
@@ -40,19 +40,11 @@ export function PopupEventCard({
   const displayCategory =
     rawCategory.charAt(0).toUpperCase() + rawCategory.slice(1).replace(/_/g, " ");
 
-  const residencyStatus =
-    popupMeta?.residency_status ||
-    (popupStatus.status === "upcoming"
-      ? "next_confirmed"
-      : popupStatus.status === "expired" || popupStatus.status === "grace" || popupStatus.status === "dormant"
-      ? "between_residencies"
-      : "active");
-
-  const isDormant =
-    residencyStatus === "between_residencies" ||
-    Boolean(popupMeta?.dates_label?.toLowerCase().includes("tba"));
-  const isUpcoming = residencyStatus === "next_confirmed";
-  const isActive = residencyStatus === "active" && !isDormant;
+  const popupLifecycle = resolvePopupLifecycle(venue);
+  const isDormant = popupLifecycle.state === "tba";
+  const isPassed = popupLifecycle.state === "passed";
+  const isUpcoming = popupLifecycle.state === "upcoming";
+  const isActive = popupLifecycle.state === "live";
 
   const postId = post?.id || `popup_post_${venue.id}`;
   const isSaved = savedPostIds ? savedPostIds.has(postId) : false;
@@ -109,7 +101,11 @@ export function PopupEventCard({
         <div className="flex items-center gap-1.5">
           {isDormant ? (
             <span className="px-2.5 py-0.5 rounded-full bg-stone-900/80 backdrop-blur-md text-stone-300 text-[10px] font-bold border border-white/15 uppercase tracking-wider">
-              Inactive · TBA
+              Next Drop TBA
+            </span>
+          ) : isPassed ? (
+            <span className="px-2.5 py-0.5 rounded-full bg-[#FAF7F2]/90 text-[#181615] text-[10px] font-bold uppercase tracking-wider shadow-xs">
+              {popupLifecycle.badgeLabel}
             </span>
           ) : isActive ? (
             <span className="px-2.5 py-0.5 rounded-full bg-[#E84A27] text-white text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-xs">
@@ -119,7 +115,7 @@ export function PopupEventCard({
           ) : !compact ? (
             <span className="px-2.5 py-0.5 rounded-full bg-[#FAF7F2] text-[#181615] text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-xs">
               <Calendar className="w-2.5 h-2.5" />
-              <span>Next Drop</span>
+              <span>{popupLifecycle.badgeLabel}</span>
             </span>
           ) : null}
 

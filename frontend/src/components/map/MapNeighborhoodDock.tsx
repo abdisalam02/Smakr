@@ -7,7 +7,12 @@ import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { resolveVenueDisplayBadge, resolveEntityTaxonomy, resolveDishIconKey, FOOD_GROUPS } from "@/lib/taxonomy";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import { formatOsloLocation, formatVenueLocationLine, normalizeOsloNeighborhoodDisplay, getDirectionsUrl } from "@/lib/location";
-import { isVisibleInFeed, getPopupStatus, getPopupMeta } from "@/lib/popupUtils";
+import {
+  isVisibleInFeed,
+  getPopupStatus,
+  getPopupMeta,
+  resolvePopupLifecycle,
+} from "@/lib/popupUtils";
 import { SmakrFoodIcon } from "@/components/food/FoodIcons";
 import { VenuePhotoStrip, useVenueHeroGallery } from "@/components/venue/VenuePhotoStrip";
 import { endInstantVenueSheet } from "@/lib/venueMorph";
@@ -95,10 +100,10 @@ const DockCarouselCard = React.memo(function DockCarouselCard({
   const signature = venue.signature_dishes?.[0] || mainTag;
   const flagIso = badge.flag ? FLAG_ISO_MAP[badge.flag] : null;
   const ratingText = venue.google_rating != null ? venue.google_rating.toFixed(1) : "4.8";
-  const isPopup = venue.spot_type === "popup";
-  const popupMeta = isPopup ? getPopupMeta(venue) : null;
-  const bottomAccentText = isPopup
-    ? popupMeta?.dates_label || venue.current_opening_hours_text || "Next Drop TBA"
+  const isPopup = venue.spot_type === "popup" || venue.spot_type === "pop_up";
+  const popupLifecycle = isPopup ? resolvePopupLifecycle(venue) : null;
+  const bottomAccentText = isPopup && popupLifecycle
+    ? popupLifecycle.shortDateLabel
     : `✦ ${signature}`;
   const thumbSources = [
     venue.cover_image_url,
@@ -112,7 +117,9 @@ const DockCarouselCard = React.memo(function DockCarouselCard({
       onClick={() => onSelect(venue)}
       className={`relative w-[260px] h-[118px] shrink-0 snap-center rounded-2xl overflow-hidden cursor-pointer select-none bg-[#181615] shadow-lg will-change-transform ${
         isPopup
-          ? "border-2 border-white/85 hover:border-white"
+          ? popupLifecycle?.state === "live" || popupLifecycle?.state === "upcoming"
+            ? "border-2 border-[#E84A27]/85 hover:border-[#E84A27]"
+            : "border-2 border-white/80 hover:border-white"
           : "border border-white/15 hover:border-white/35"
       }`}
     >
@@ -134,8 +141,19 @@ const DockCarouselCard = React.memo(function DockCarouselCard({
         <div className="flex items-center justify-between gap-1.5">
           <div className="flex items-center gap-1.5 min-w-0">
             {isPopup ? (
-              <span className="bg-white text-[#181615] text-[10px] font-comico font-normal px-2.5 py-0.5 rounded-full shadow-xs whitespace-nowrap">
-                POP-UP
+              <span
+                className={`text-[10px] font-comico font-normal px-2.5 py-0.5 rounded-full shadow-xs whitespace-nowrap inline-flex items-center gap-1 ${
+                  popupLifecycle?.state === "live"
+                    ? "bg-[#E84A27] text-white"
+                    : popupLifecycle?.state === "upcoming"
+                    ? "bg-[#FAF7F2] text-[#E84A27] border border-[#E84A27]/35"
+                    : "bg-[#FAF7F2]/95 text-[#181615]"
+                }`}
+              >
+                {popupLifecycle?.state === "live" && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                )}
+                <span>POP-UP</span>
               </span>
             ) : (
               <div className="bg-[#FAF7F2]/95 text-[#181615] text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 truncate border border-[#EAE5DC] shadow-xs max-w-[140px]">
@@ -221,14 +239,15 @@ const SpotlightCard = React.memo(function SpotlightCard({
   onSelectSide: () => void;
   cardRef: (el: HTMLDivElement | null) => void;
 }) {
-  const isPopup = venue.spot_type === "popup";
-  const popupStatus = getPopupStatus(venue);
+  const isPopup = venue.spot_type === "popup" || venue.spot_type === "pop_up";
   const popupMeta = getPopupMeta(venue);
-  const isPopupInactive =
-    isPopup &&
-    (popupMeta?.residency_status === "between_residencies" ||
-      Boolean(popupMeta?.dates_label?.toLowerCase().includes("tba")) ||
-      popupStatus.status !== "active");
+  const popupLifecycle = isPopup ? resolvePopupLifecycle(venue) : null;
+  const popupHostVenue =
+    popupMeta?.host_venue_name &&
+    !popupMeta.host_venue_name.toLowerCase().includes("tba") &&
+    !popupMeta.host_venue_name.toLowerCase().includes("host")
+      ? popupMeta.host_venue_name
+      : null;
 
   const locationLine = formatVenueLocationLine(venue);
   const matchingPost = foodPosts.find(
@@ -490,12 +509,14 @@ const SpotlightCard = React.memo(function SpotlightCard({
 
       <div
         style={{ contain: "layout paint" }}
-        className={`relative w-full h-full overflow-hidden rounded-[26px] bg-[#121110] shadow-[0_20px_50px_rgba(0,0,0,0.42)] ${
+        className={`relative w-full h-full overflow-hidden rounded-[26px] bg-[#121110] ${
           isPopup
-            ? "border-2 border-white/95"
+            ? popupLifecycle?.state === "live" || popupLifecycle?.state === "upcoming"
+              ? "border-2 border-[#E84A27]/90 ring-2 ring-[#E84A27]/25 shadow-[0_22px_54px_rgba(232,74,39,0.28)]"
+              : "border-2 border-[#FAF7F2]/85 ring-1 ring-white/25 shadow-[0_20px_50px_rgba(0,0,0,0.45)]"
             : isWeeklyPick
-            ? "border border-[#E84A27]/60 ring-1 ring-[#E84A27]/35"
-            : "border border-white/15"
+            ? "border border-[#E84A27]/60 ring-1 ring-[#E84A27]/35 shadow-[0_20px_50px_rgba(0,0,0,0.42)]"
+            : "border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.42)]"
         }`}
       >
         {/* Full-bleed venue photo */}
@@ -509,14 +530,34 @@ const SpotlightCard = React.memo(function SpotlightCard({
             background:
               "linear-gradient(to top, rgba(18,17,16,0.96) 0%, rgba(18,17,16,0.82) 56%, rgba(18,17,16,0) 100%)",
           }}
-          className="absolute inset-x-0 bottom-0 h-[52%] pointer-events-none"
+          className="absolute inset-x-0 bottom-0 h-[56%] pointer-events-none"
         />
 
-        {/* Top row: borderless ✕ on right (rating removed) */}
+        {/* Top row: Pop-Up Event Ticket Ribbon on left (when isPopup) + borderless ✕ on right */}
         <div
           data-slot-top="true"
-          className="relative z-10 flex items-center justify-end gap-2 px-4 pt-3.5 pb-1 will-change-transform"
+          className={`relative z-10 flex items-center gap-2 px-4 pt-3.5 pb-1 will-change-transform ${
+            isPopup ? "justify-between" : "justify-end"
+          }`}
         >
+          {isPopup && popupLifecycle && (
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-comico text-[10px] tracking-wide uppercase shadow-md ${
+                popupLifecycle.state === "live"
+                  ? "bg-[#E84A27] text-white"
+                  : popupLifecycle.state === "upcoming"
+                  ? "bg-[#FAF7F2] text-[#E84A27] border border-[#E84A27]/35"
+                  : popupLifecycle.state === "passed"
+                  ? "bg-[#FAF7F2]/92 text-[#181615]"
+                  : "bg-[#181615]/85 text-[#FAF7F2] border border-white/25"
+              }`}
+            >
+              {popupLifecycle.state === "live" && (
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse shrink-0" />
+              )}
+              <span>✦ {popupLifecycle.badgeLabel}</span>
+            </span>
+          )}
           <button
             type="button"
             data-slot-close="true"
@@ -531,16 +572,24 @@ const SpotlightCard = React.memo(function SpotlightCard({
           </button>
         </div>
 
-        {/* Bottom dark hue: bolder white Title + Location + Open til ... inline with white Details ↗ */}
+        {/* Bottom dark hue: bolder white Title + Location + status inline with white Details ↗ */}
         <div className="absolute inset-x-0 bottom-0 z-10 px-4 pb-3.5 pt-2 flex flex-col justify-end gap-1">
           {isPopup && (
             <div
               data-slot-story="true"
-              className="inline-flex items-center gap-1.5 text-[11px] font-bold text-white/85 self-start"
+              className="w-full border-t border-dashed border-white/25 pt-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-white/85"
             >
               <Calendar className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
               <span className="truncate">
-                {popupMeta?.dates_label || venue.current_opening_hours_text || "Next Drop TBA"}
+                {popupLifecycle?.state === "passed"
+                  ? popupHostVenue
+                    ? `Last hosted at ${popupHostVenue}`
+                    : popupLifecycle.shortDateLabel
+                  : popupLifecycle?.state === "tba"
+                  ? "Roaming Oslo · Next date TBA"
+                  : popupHostVenue
+                  ? `Hosted at ${popupHostVenue}`
+                  : popupLifecycle?.shortDateLabel || "Oslo Pop-Up"}
               </span>
             </div>
           )}
@@ -560,11 +609,7 @@ const SpotlightCard = React.memo(function SpotlightCard({
                 <MapPin className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
                 <span className="truncate">{locationLine}</span>
               </p>
-              {isPopup ? (
-                <span className="inline-block font-comico text-[10.5px] uppercase tracking-wide text-[#E84A27]">
-                  {badgeLabel}
-                </span>
-              ) : (
+              {!isPopup && (
                 <p className="text-[11px] font-bold flex items-center gap-1.5 truncate">
                   <span
                     className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${

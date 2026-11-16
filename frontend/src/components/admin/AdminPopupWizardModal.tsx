@@ -59,15 +59,20 @@ export function AdminPopupWizardModal({
   const [description, setDescription] = useState("");
   const [selectedImageUrl, setSelectedImageUrl] = useState("");
   const [category, setCategory] = useState<FoodCategory>("street_food");
-  const [isDateTba, setIsDateTba] = useState(false);
+  const [residencyMode, setResidencyMode] = useState<ResidencyStatus>("active");
+  const [popupStartDate, setPopupStartDate] = useState("");
+  const [popupEndDate, setPopupEndDate] = useState("");
   const [datesLabel, setDatesLabel] = useState("");
   const [hostSearch, setHostSearch] = useState("");
+  const [matchedHostVenue, setMatchedHostVenue] = useState<Venue | null>(null);
   const [dailyHours, setDailyHours] = useState("");
   const [socialUrl, setSocialUrl] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [priceNok, setPriceNok] = useState<number | string>("");
   const [portionCap, setPortionCap] = useState("");
   const [guestChef, setGuestChef] = useState("");
+
+  const isDateTba = residencyMode === "between_residencies";
 
   const [isPublishing, setIsPublishing] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
@@ -111,13 +116,27 @@ export function AdminPopupWizardModal({
       setCategory(editingPopupVenue.food_category || "street_food");
       const meta = editingPopupVenue.popup_meta;
       const isTba = Boolean(
-        meta?.dates_label?.toLowerCase().includes("tba") ||
         meta?.residency_status === "between_residencies" ||
-        meta?.host_venue_name?.toLowerCase().includes("tba")
+          meta?.dates_label?.toLowerCase().includes("tba")
       );
-      setIsDateTba(isTba);
+      setResidencyMode(
+        isTba
+          ? "between_residencies"
+          : meta?.residency_status || "active"
+      );
+      setPopupStartDate(editingPopupVenue.popup_start_date?.slice(0, 10) || "");
+      setPopupEndDate(editingPopupVenue.popup_end_date?.slice(0, 10) || "");
       setDatesLabel(meta?.dates_label || "");
-      setHostSearch(meta?.host_venue_name && !meta.host_venue_name.toLowerCase().includes("tba") ? meta.host_venue_name : "");
+      const initialHost =
+        meta?.host_venue_name && !meta.host_venue_name.toLowerCase().includes("tba")
+          ? meta.host_venue_name
+          : "";
+      setHostSearch(initialHost);
+      setMatchedHostVenue(
+        meta?.host_venue_id
+          ? venues.find((v) => v.id === meta.host_venue_id) || null
+          : null
+      );
       setDailyHours(meta?.daily_hours || meta?.event_hours || editingPopupVenue.current_opening_hours_text || "");
       setSocialUrl(meta?.instagram_url || meta?.tiktok_url || "");
       setContactEmail(meta?.ticket_url || editingPopupVenue.website_uri?.replace(/^mailto:/, "") || "");
@@ -129,9 +148,12 @@ export function AdminPopupWizardModal({
       setDescription("");
       setSelectedImageUrl("");
       setCategory("street_food");
-      setIsDateTba(false);
+      setResidencyMode("active");
+      setPopupStartDate("");
+      setPopupEndDate("");
       setDatesLabel("");
       setHostSearch("");
+      setMatchedHostVenue(null);
       setDailyHours("");
       setSocialUrl("");
       setContactEmail("");
@@ -140,26 +162,59 @@ export function AdminPopupWizardModal({
       setGuestChef("");
       setShowOptionalDetails(false);
     }
-  }, [isOpen, editingPopupVenue]);
+  }, [isOpen, editingPopupVenue, venues]);
+
+  // Auto-resolve host coordinates/address/neighborhood when matched or editing
+  const resolvedLat =
+    matchedHostVenue?.latitude ??
+    (editingPopupVenue?.latitude && editingPopupVenue.latitude !== 0
+      ? editingPopupVenue.latitude
+      : 59.9139);
+  const resolvedLng =
+    matchedHostVenue?.longitude ??
+    (editingPopupVenue?.longitude && editingPopupVenue.longitude !== 0
+      ? editingPopupVenue.longitude
+      : 10.7522);
+  const resolvedNeighborhood: Neighborhood =
+    matchedHostVenue?.neighborhood ??
+    editingPopupVenue?.neighborhood ??
+    "sentrum";
+  const resolvedAddress = isDateTba
+    ? "Oslo, Norway"
+    : matchedHostVenue?.address ||
+      (hostSearch
+        ? hostSearch.toLowerCase().includes("oslo")
+          ? hostSearch
+          : `${hostSearch}, Oslo`
+        : editingPopupVenue?.address || "Oslo, Norway");
 
   // Derived effective values
-  const effectiveDatesLabel = isDateTba ? "Dates TBA" : datesLabel || "Upcoming Drop";
-  const effectiveHostName = isDateTba ? "Location TBA" : hostSearch || "Oslo Pop-Up";
-  const effectiveStatus: ResidencyStatus = isDateTba ? "between_residencies" : "active";
+  const effectiveDatesLabel = isDateTba
+    ? "Dates TBA"
+    : datesLabel ||
+      (popupStartDate && popupEndDate
+        ? `${new Date(popupStartDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${new Date(popupEndDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+        : popupEndDate
+        ? new Date(popupEndDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+        : "Upcoming Drop");
+  const effectiveHostName = isDateTba ? "Location TBA" : matchedHostVenue?.name || hostSearch || "Oslo Pop-Up";
+  const effectiveStatus: ResidencyStatus = residencyMode;
 
   const previewVenue: Venue = {
     id: editingPopupVenue?.id || `popup_${Date.now()}`,
     name: popupName || "Oslo Pop-Up Residency",
     description: description || undefined,
-    address: isDateTba ? "Oslo, Norway" : hostSearch ? `${hostSearch}, Oslo` : "Oslo, Norway",
+    address: resolvedAddress,
     city: "Oslo",
-    neighborhood: "sentrum" as Neighborhood,
-    latitude: 59.9139,
-    longitude: 10.7522,
+    neighborhood: resolvedNeighborhood,
+    latitude: resolvedLat,
+    longitude: resolvedLng,
     cover_image_url: selectedImageUrl,
     spot_type: "popup",
     food_category: category,
-    signature_dishes: [],
+    signature_dishes: editingPopupVenue?.signature_dishes || [],
+    popup_start_date: isDateTba ? null : popupStartDate || null,
+    popup_end_date: isDateTba ? null : popupEndDate || null,
     current_opening_hours_text: isDateTba ? undefined : dailyHours || undefined,
     website_uri: contactEmail.startsWith("http") ? contactEmail : contactEmail ? `mailto:${contactEmail}` : undefined,
     place_type: "cafe",
@@ -188,7 +243,8 @@ export function AdminPopupWizardModal({
       brand_id: editingPopupVenue?.popup_meta?.brand_id || `brand_${Date.now()}`,
       residency_status: effectiveStatus,
       host_venue_name: effectiveHostName,
-      host_address: isDateTba ? "Oslo, Norway" : hostSearch || "Oslo, Norway",
+      host_venue_id: matchedHostVenue?.id || editingPopupVenue?.popup_meta?.host_venue_id,
+      host_address: resolvedAddress,
       guest_chef: guestChef || undefined,
       dates_label: effectiveDatesLabel,
       daily_hours: isDateTba ? undefined : dailyHours || undefined,
@@ -206,8 +262,8 @@ export function AdminPopupWizardModal({
     spot_id: previewVenue.id,
     spot_name: previewVenue.name,
     spot_address: previewVenue.address,
-    spot_neighborhood: "sentrum" as Neighborhood,
-    spot_coords: [10.7522, 59.9139],
+    spot_neighborhood: resolvedNeighborhood,
+    spot_coords: [resolvedLng, resolvedLat],
     dish_name: popupName || "Oslo Pop-Up Drop",
     price_nok: typeof priceNok === "number" ? priceNok : priceNok ? parseInt(priceNok as string, 10) || null : null,
     category,
@@ -246,9 +302,17 @@ export function AdminPopupWizardModal({
         const updateResult = await updateVenueDb(finalVenue.id, {
           name: finalVenue.name,
           address: finalVenue.address,
+          neighborhood: resolvedNeighborhood,
+          category,
+          latitude: resolvedLat,
+          longitude: resolvedLng,
           description: description || undefined,
           imageUrl: finalVenue.cover_image_url || undefined,
           spotType: "popup",
+          popupStartDate: isDateTba ? null : popupStartDate || null,
+          popupEndDate: isDateTba ? null : popupEndDate || null,
+          currentOpeningHoursText: isDateTba ? "" : dailyHours || "",
+          websiteUri: finalVenue.website_uri || "",
           popupMeta: finalVenue.popup_meta || undefined,
         });
 
@@ -258,6 +322,7 @@ export function AdminPopupWizardModal({
         }
 
         updateVenue(finalVenue.id, finalVenue);
+        await triggerAdminRevalidate();
         showToast("Updated residency: " + finalVenue.name, "success");
       } else {
         const venueResult = await insertVenue({
@@ -268,10 +333,12 @@ export function AdminPopupWizardModal({
           longitude: finalVenue.longitude,
           imageUrl: finalVenue.cover_image_url || undefined,
           description: description || undefined,
+          popupStartDate: isDateTba ? undefined : popupStartDate || undefined,
+          popupEndDate: isDateTba ? undefined : popupEndDate || undefined,
           currentOpeningHoursText: isDateTba ? undefined : dailyHours || undefined,
           spotType: "popup",
           popupMeta: finalVenue.popup_meta || undefined,
-          neighborhood: "sentrum" as any,
+          neighborhood: resolvedNeighborhood,
         });
 
         if (!venueResult.success || !venueResult.venue) {
@@ -285,6 +352,7 @@ export function AdminPopupWizardModal({
         } else {
           addVenue(savedVenue);
         }
+        await triggerAdminRevalidate();
 
         // Persist the popup's dish card too, not just the venue shell.
         if (currentUser?.id) {
@@ -557,63 +625,131 @@ export function AdminPopupWizardModal({
                 Drop Schedule &amp; Operational Status
               </label>
 
-              {/* 2-way status toggle */}
-              <div className="grid grid-cols-2 gap-2">
+              {/* 3-way residency mode selector (expired dates auto-flip to Last Pop-Up) */}
+              <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsDateTba(false)}
-                  className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    !isDateTba
+                  onClick={() => setResidencyMode("active")}
+                  className={`py-2 px-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    residencyMode === "active"
                       ? "bg-[#181615] text-white border-[#181615] shadow-xs"
                       : "bg-white dark:bg-[#181615] text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700"
                   }`}
                 >
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span>Live or Confirmed Drop</span>
+                  <span>Live Drop</span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setIsDateTba(true)}
-                  className={`py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    isDateTba
+                  onClick={() => setResidencyMode("next_confirmed")}
+                  className={`py-2 px-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    residencyMode === "next_confirmed"
+                      ? "bg-[#181615] text-white border-[#181615] shadow-xs"
+                      : "bg-white dark:bg-[#181615] text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700"
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-amber-400" />
+                  <span>Upcoming</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setResidencyMode("between_residencies")}
+                  className={`py-2 px-2.5 rounded-xl border text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    residencyMode === "between_residencies"
                       ? "bg-[#E84A27] text-white border-[#E84A27] shadow-xs"
                       : "bg-white dark:bg-[#181615] text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700"
                   }`}
                 >
                   <span className="w-2 h-2 rounded-full bg-stone-300" />
-                  <span>Dates TBA / Inactive</span>
+                  <span>Dates TBA</span>
                 </button>
               </div>
 
-              {/* When ACTIVE: Show clean Dates, Host & Hours */}
+              {/* When ACTIVE or UPCOMING: Show Start/End Dates, Display Label, Host Picker & Hours */}
               {!isDateTba ? (
                 <div className="pt-2 border-t border-[#181615]/10 space-y-3 animate-in fade-in duration-200">
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300">
+                        Start Date
+                      </label>
+                      <input
+                        type="date"
+                        value={popupStartDate}
+                        onChange={(e) => setPopupStartDate(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#181615] border border-[#181615]/15 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#E84A27]"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300">
+                        End Date (Auto-expires after)
+                      </label>
+                      <input
+                        type="date"
+                        value={popupEndDate}
+                        onChange={(e) => setPopupEndDate(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#181615] border border-[#181615]/15 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#E84A27]"
+                      />
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div className="space-y-1">
                       <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300">
-                        Dates Window
+                        Dates Window Label
                       </label>
                       <input
                         type="text"
                         value={datesLabel}
                         onChange={(e) => setDatesLabel(e.target.value)}
-                        placeholder="e.g. Oct 24–26 or This Weekend"
+                        placeholder="e.g. Nov 21 – Nov 23"
                         className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#181615] border border-[#181615]/15 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#E84A27]"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300">
-                        Host Venue or Location
+                      <label className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 flex items-center justify-between">
+                        <span>Host Venue or Address</span>
+                        {matchedHostVenue && (
+                          <span className="text-[10px] font-semibold text-emerald-700">GPS Linked</span>
+                        )}
                       </label>
                       <input
                         type="text"
                         value={hostSearch}
-                        onChange={(e) => setHostSearch(e.target.value)}
-                        placeholder="e.g. Becco, Fuglen, Trekanten, Youngstorget"
+                        onChange={(e) => {
+                          setHostSearch(e.target.value);
+                          setMatchedHostVenue(null);
+                        }}
+                        placeholder="Search Oslo venue or enter street..."
                         className="w-full px-3 py-2 rounded-xl bg-white dark:bg-[#181615] border border-[#181615]/15 text-xs text-zinc-900 dark:text-white focus:outline-none focus:border-[#E84A27]"
                       />
+                      {hostSearch.trim().length >= 2 && !matchedHostVenue && (
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {venues
+                            .filter(
+                              (v) =>
+                                v.spot_type !== "popup" &&
+                                v.name.toLowerCase().includes(hostSearch.trim().toLowerCase())
+                            )
+                            .slice(0, 4)
+                            .map((host) => (
+                              <button
+                                key={host.id}
+                                type="button"
+                                onClick={() => {
+                                  setHostSearch(host.name);
+                                  setMatchedHostVenue(host);
+                                }}
+                                className="px-2 py-0.5 rounded-full bg-white border border-[#181615]/15 text-[10px] font-semibold text-[#181615] hover:border-[#E84A27] cursor-pointer"
+                              >
+                                📍 {host.name}
+                              </button>
+                            ))}
+                        </div>
+                      )}
                     </div>
                   </div>
 

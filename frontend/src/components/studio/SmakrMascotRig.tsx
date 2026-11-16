@@ -91,6 +91,7 @@ export function normalizeBlushBodyId(pose: string | undefined): string {
   }
   const clean = pose.toLowerCase().replace(/[^a-z0-9]+/g, '-');
   if (clean === 'jacket2') return 'jacket-2';
+  if (clean === 'jacket-pockets' || clean === 'jacketpockets' || clean === 'navy-sherpa-pockets') return 'jacket-pockets';
   if (clean === 'jacket1') return 'jacket-1';
   if (clean === 'pointingup') return 'pointing-up';
   if (clean === 'whatever') return 'shrug';

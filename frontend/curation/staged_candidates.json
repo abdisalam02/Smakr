@@ -249,7 +249,7 @@
     "spot_type": "restaurant",
     "cover_image_url": "",
     "price_level": "$",
-    "google_rating": 5.0,
+    "google_rating": 5,
     "signature_dish": "Blåbær & Sitron Scone",
     "why_curated": "Tender, buttery crumb studded with wild blueberries and topped with a tart lemon glaze, baked fresh in small batches.",
     "verification_status": "needs_photo",
@@ -1511,6 +1511,139 @@
           "caramelized-onions",
           "gruyere-crust",
           "savory-broth"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "hrimnir-ramen",
+    "name": "Hrimnir Ramen",
+    "address": "Maridalsveien 9A, 0178 Oslo",
+    "neighborhood": "sentrum",
+    "latitude": 59.9213763,
+    "longitude": 10.7514386,
+    "food_category": "ramen",
+    "icon": "ramen",
+    "spot_type": "restaurant",
+    "google_place_id": "ChIJc41X4YduQUYRsXHstRp-S3M",
+    "google_reviews_count": 1606,
+    "cover_image_url": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/f25fe316f84f42971ca18e21c360.webp",
+    "place_photos": [
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/f25fe316f84f42971ca18e21c360.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/1261678528e07ae199cd9fb84ef7.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/12be60e0c6948168c1d5c6c7d4ad.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/f769980b177788fe2b203ab472e6.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/f5d4e4919b0ad0068f6916b7f15e.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/49a197cdb39cc578410bbbd524b7.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/1c1e58d450109e5ddc30d9362a19.webp"
+    ],
+    "candidate_photos": [
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/f25fe316f84f42971ca18e21c360.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/1261678528e07ae199cd9fb84ef7.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/12be60e0c6948168c1d5c6c7d4ad.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/f769980b177788fe2b203ab472e6.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/f5d4e4919b0ad0068f6916b7f15e.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/49a197cdb39cc578410bbbd524b7.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/1c1e58d450109e5ddc30d9362a19.webp"
+    ],
+    "price_level": "$$",
+    "google_rating": 4.4,
+    "signature_dish": "Spicy Miso Ramen",
+    "why_curated": "Nordic fermentation meets Japanese ramen craft. Hrimnir makes its own noodles from scratch, ferments miso from local grains, and finishes toppings over glowing charcoal.",
+    "verification_status": "seeded",
+    "website_uri": "https://www.hrimnir-ramen.no",
+    "instagram_url": "https://www.instagram.com/hrimnirramen/",
+    "opening_hours_text": "Mon-Sat: 13:00-22:30 (kitchen 21:00), Sun: 13:00-21:30 (kitchen 20:00)",
+    "opening_hours": {
+      "mon": "13:00-22:30",
+      "tue": "13:00-22:30",
+      "wed": "13:00-22:30",
+      "thu": "13:00-22:30",
+      "fri": "13:00-22:30",
+      "sat": "13:00-22:30",
+      "sun": "13:00-21:30"
+    },
+    "notes": "Google Place pin updated from 59.9209/10.7519 to 59.9213763/10.7514386. Note: 270 kr is slightly above CURATION.md 260 kr sweet-spot ceiling; live website omits individual prices.",
+    "dish_highlights": [
+      {
+        "id": "hrimnir-ramen-dish-1",
+        "dish_name": "Spicy Miso Ramen",
+        "category": "ramen",
+        "price_nok": 270,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/f25fe316f84f42971ca18e21c360.webp",
+        "is_verified_food_photo": true,
+        "review_text": "Slow-simmered chicken paitan broth with house-fermented spicy miso, smoky pork belly chashu, coffee-cured egg, charred cabbage, pickled daikon, and handmade noodles.",
+        "taste_tags": [
+          "spicy",
+          "fermented-miso",
+          "handmade-noodles",
+          "charcoal-finished"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "sapporo-ramen-bar",
+    "name": "Sapporo Ramen Bar",
+    "address": "Maridalsveien 21, 0175 Oslo",
+    "neighborhood": "grunerlokka",
+    "latitude": 59.9233329,
+    "longitude": 10.7514626,
+    "food_category": "ramen",
+    "icon": "ramen",
+    "spot_type": "restaurant",
+    "google_place_id": "ChIJkR3SgWVuQUYR3WrB1Gaxs_c",
+    "google_reviews_count": 933,
+    "cover_image_url": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/a50e693ce58c80f90d7695fe0942.webp",
+    "place_photos": [
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/a50e693ce58c80f90d7695fe0942.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/0077854c50b22277b9a43ec87918.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/f10fb29184c0210949937dafe27a.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/f1a1a157fb265818eb3420f5e2b2.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/ec88f8b6cc71c722da6d59477ad2.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/b8447a1b17618623ab7d5445dc3c.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/800835e776ede5cb509a8aa8d6f3.webp"
+    ],
+    "candidate_photos": [
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/a50e693ce58c80f90d7695fe0942.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/0077854c50b22277b9a43ec87918.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/f10fb29184c0210949937dafe27a.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/f1a1a157fb265818eb3420f5e2b2.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/ec88f8b6cc71c722da6d59477ad2.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/b8447a1b17618623ab7d5445dc3c.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/800835e776ede5cb509a8aa8d6f3.webp"
+    ],
+    "price_level": "$$",
+    "google_rating": 4.4,
+    "signature_dish": "Spicy Sapporo Miso Ramen",
+    "why_curated": "Hokkaido-style counter-service ramen stall on the edge of Vulkan with short evening hours, steaming rich broth bowls, crispy gyoza, and drop-in seating only.",
+    "verification_status": "seeded",
+    "website_uri": "https://sappororamen.no",
+    "opening_hours_text": "Mon: Closed, Tue-Fri: 15:00-19:30, Sat: 13:00-19:00, Sun: Closed (drop-in only)",
+    "opening_hours": {
+      "mon": "Closed",
+      "tue": "15:00-19:30",
+      "wed": "15:00-19:30",
+      "thu": "15:00-19:30",
+      "fri": "15:00-19:30",
+      "sat": "13:00-19:00",
+      "sun": "Closed"
+    },
+    "notes": "Google Place pin updated from 59.9229/10.7519 to 59.9233329/10.7514626. Menu lists Miso and Spicy separately; live pricing sits in QR ordering (confirm 195 kr vs earlier 215 kr draft).",
+    "dish_highlights": [
+      {
+        "id": "sapporo-ramen-bar-dish-1",
+        "dish_name": "Spicy Sapporo Miso Ramen",
+        "category": "ramen",
+        "price_nok": 195,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/a50e693ce58c80f90d7695fe0942.webp",
+        "is_verified_food_photo": true,
+        "review_text": "Steaming Hokkaido-style rich miso broth with chili heat, tender sliced pork chashu, soft-boiled ajitama egg, spring scallions, and springy ramen noodles.",
+        "taste_tags": [
+          "spicy",
+          "rich-miso",
+          "hokkaido-style",
+          "counter-service"
         ]
       }
     ]

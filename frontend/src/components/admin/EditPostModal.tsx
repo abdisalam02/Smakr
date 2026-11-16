@@ -66,6 +66,8 @@ export function EditPostModal({ post, onClose }: EditPostModalProps) {
   );
   const [fetchingReviews, setFetchingReviews] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [published, setPublished] = useState(post.is_published ?? !post.is_archived);
+  const [archived, setArchived] = useState(Boolean(post.is_archived));
 
   // Interactive preview focus panel + Google photo refs
   const [googlePhotos, setGooglePhotos] = useState<string[]>([]);
@@ -177,6 +179,8 @@ export function EditPostModal({ post, onClose }: EditPostModalProps) {
       dietary_tags: cleanDietary,
       diner_quotes: quotes,
       category: category,
+      is_published: published,
+      is_archived: archived,
     };
     if (venue) {
       updates.spot_name = venue.name;
@@ -196,6 +200,8 @@ export function EditPostModal({ post, onClose }: EditPostModalProps) {
       priceNok: parsedPrice,
       dietaryTags: updatedDietary,
       dinerQuotes: quotes,
+      isPublished: published,
+      isArchived: archived,
     });
 
     // Persist the freshly-fetched Google metrics onto the venue so its card
@@ -216,7 +222,13 @@ export function EditPostModal({ post, onClose }: EditPostModalProps) {
       showToast(`Saved locally — database update failed (${error}).`);
     } else {
       await triggerAdminRevalidate();
-      showToast("Dish updated — feed refreshed!");
+      showToast(
+        archived
+          ? "Dish archived — hidden from the feed."
+          : !published
+          ? "Dish saved as a draft — not visible in the feed."
+          : "Dish updated — feed refreshed!"
+      );
     }
     onClose();
   };
@@ -685,23 +697,69 @@ export function EditPostModal({ post, onClose }: EditPostModalProps) {
         </div>
 
         {/* Sticky Footer */}
-        <div className="px-4 sm:px-5 py-3 border-t border-[#EAE5DC] bg-white flex items-center justify-end gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-3.5 py-2 rounded-xl bg-[#FAF7F2] border border-[#EAE5DC] text-zinc-600 text-xs font-semibold hover:bg-zinc-100 cursor-pointer"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#e84a27] hover:bg-[#d23e1d] disabled:opacity-60 text-white text-xs font-bold shadow-md shadow-[#e84a27]/25 transition-all cursor-pointer"
-          >
-            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-            <span>Save Changes</span>
-          </button>
+        <div className="px-4 sm:px-5 py-3 border-t border-[#EAE5DC] bg-white flex flex-wrap items-center justify-between gap-2 shrink-0">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+              Visibility
+            </span>
+            <button
+              type="button"
+              aria-pressed={published}
+              onClick={() => {
+                const next = !published;
+                setPublished(next);
+                if (next) setArchived(false);
+              }}
+              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10.5px] font-bold transition-colors cursor-pointer ${
+                published
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "border-zinc-200 bg-zinc-50 text-zinc-500 hover:text-zinc-700"
+              }`}
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${published ? "bg-emerald-500" : "bg-zinc-400"}`}
+              />
+              Published
+            </button>
+            <button
+              type="button"
+              aria-pressed={archived}
+              onClick={() => {
+                const next = !archived;
+                setArchived(next);
+                if (next) setPublished(false);
+              }}
+              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10.5px] font-bold transition-colors cursor-pointer ${
+                archived
+                  ? "border-rose-200 bg-rose-50 text-rose-700"
+                  : "border-zinc-200 bg-zinc-50 text-zinc-500 hover:text-zinc-700"
+              }`}
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${archived ? "bg-rose-500" : "bg-zinc-400"}`}
+              />
+              Archived
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-3.5 py-2 rounded-xl bg-[#FAF7F2] border border-[#EAE5DC] text-zinc-600 text-xs font-semibold hover:bg-zinc-100 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#e84a27] hover:bg-[#d23e1d] disabled:opacity-60 text-white text-xs font-bold shadow-md shadow-[#e84a27]/25 transition-all cursor-pointer"
+            >
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              <span>Save Changes</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

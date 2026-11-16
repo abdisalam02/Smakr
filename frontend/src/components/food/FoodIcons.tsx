@@ -196,6 +196,11 @@ SMAKR_ICON_SVG_BODIES.manakish = SMAKR_ICON_SVG_BODIES.naan;
 SMAKR_ICON_SVG_BODIES.cocoa = SMAKR_ICON_SVG_BODIES.coffee;
 SMAKR_ICON_SVG_BODIES.hot_chocolate = SMAKR_ICON_SVG_BODIES.coffee;
 SMAKR_ICON_SVG_BODIES.chai = SMAKR_ICON_SVG_BODIES.coffee;
+SMAKR_ICON_SVG_BODIES.viet_coffee = `<image href="/icons/food/viet_coffee.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.egg_coffee = SMAKR_ICON_SVG_BODIES.viet_coffee;
+SMAKR_ICON_SVG_BODIES.vietnamese_coffee = SMAKR_ICON_SVG_BODIES.viet_coffee;
+SMAKR_ICON_SVG_BODIES.cookie = `<image href="/icons/food/cookie.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.cookies = SMAKR_ICON_SVG_BODIES.cookie;
 SMAKR_ICON_SVG_BODIES.noodles = SMAKR_ICON_SVG_BODIES.ramen;
 
 /**
@@ -228,11 +233,16 @@ export const DISH_ICON_WEBP: Record<string, string> = {
   fried_chicken: "/icons/food/fried_chicken.webp",
   coffee: "/icons/food/coffee.webp",
   iced_coffee: "/icons/food/coffee.webp",
+  viet_coffee: "/icons/food/viet_coffee.webp",
+  egg_coffee: "/icons/food/viet_coffee.webp",
+  vietnamese_coffee: "/icons/food/viet_coffee.webp",
   ramen: "/icons/food/ramen.webp",
   croissant: "/icons/food/croissant.webp",
   bakery: "/icons/food/croissant.webp",
   cinnamon_roll: "/icons/food/cinnamon_roll.webp",
   kanelbolle: "/icons/food/cinnamon_roll.webp",
+  cookie: "/icons/food/cookie.webp",
+  cookies: "/icons/food/cookie.webp",
   naan: "/icons/food/naan.webp",
   flatbread: "/icons/food/naan.webp",
   banh_mi: "/icons/food/banh_mi.webp",
@@ -277,6 +287,8 @@ export const CUSTOM_VECTOR_ICONS = new Set([
   "flatbread",
   "bakery",
   "croissant",
+  "cookie",
+  "cookies",
   "cinnamon_roll",
   "kanelbolle",
   "cardamom_bun",
@@ -286,6 +298,9 @@ export const CUSTOM_VECTOR_ICONS = new Set([
   "pasta",
   "pizza_pasta",
   "coffee",
+  "viet_coffee",
+  "egg_coffee",
+  "vietnamese_coffee",
   "banh_mi",
   "vietnamese",
   "pho",

@@ -31,7 +31,12 @@ import { useVenueDetail } from "@/hooks/useVenueDetail";
 import { DietaryBadge } from "@/components/ui/DietaryBadge";
 import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
 import { DishDetailPopup } from "@/components/food/DishDetailPopup";
-import { getPopupStatus, getPopupMeta, isPopupVenue } from "@/lib/popupUtils";
+import {
+  getPopupStatus,
+  getPopupMeta,
+  isPopupVenue,
+  resolvePopupLifecycle,
+} from "@/lib/popupUtils";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import { formatOsloLocation } from "@/lib/location";
 import { SmakrFoodIcon, isCustomFoodIcon, resolveCustomIconKey } from "@/components/food/FoodIcons";
@@ -171,9 +176,9 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
 
   const isPopup = isPopupVenue(venue);
   const popupMeta = venue ? getPopupMeta(venue) : null;
+  const popupLifecycle = isPopup ? resolvePopupLifecycle(venue) : null;
   const isDormant =
-    popupMeta?.residency_status === "between_residencies" ||
-    Boolean(popupMeta?.dates_label?.toLowerCase().includes("tba"));
+    popupLifecycle?.state === "tba" || popupLifecycle?.state === "passed";
   const popupHostVenue =
     popupMeta?.host_venue_name &&
     !popupMeta.host_venue_name.toLowerCase().includes("tba") &&
@@ -341,15 +346,17 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
               <span className="px-2.5 py-0.5 rounded-full bg-[#E84A27]/10 text-[#E84A27] text-[10px] font-bold uppercase tracking-wider">
                 🎟️ Pop-Up Residency
               </span>
-              {isDormant ? (
-                <span className="px-2 py-0.5 rounded-md bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-300 text-[10px] font-bold uppercase">
-                  Inactive
-                </span>
-              ) : (
-                <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold uppercase">
-                  Live Drop
-                </span>
-              )}
+              <span
+                className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
+                  popupLifecycle?.state === "live"
+                    ? "bg-[#E84A27] text-white"
+                    : popupLifecycle?.state === "upcoming"
+                    ? "bg-[#181615] text-[#FAF7F2]"
+                    : "bg-stone-200 dark:bg-stone-800 text-stone-700 dark:text-stone-300"
+                }`}
+              >
+                {popupLifecycle?.badgeLabel || "Pop-Up"}
+              </span>
             </div>
           )}
 
@@ -360,10 +367,10 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
           <div className="flex items-center gap-1.5 flex-wrap">
             {isPopup ? (
               <span className="text-xs text-zinc-500 font-medium">
-                {isDormant
-                  ? "Oslo · Dates & location announcing soon"
-                  : popupMeta?.dates_label
-                  ? `Oslo · ${popupMeta.dates_label}`
+                {popupLifecycle?.state === "tba"
+                  ? "Roaming Oslo · Dates & location TBA"
+                  : popupLifecycle?.state === "passed"
+                  ? `${popupLifecycle.badgeLabel}${popupHostVenue ? ` · Last hosted at ${popupHostVenue}` : ""}`
                   : popupHostVenue
                   ? `Hosted at ${popupHostVenue}`
                   : `${formatOsloLocation(venue.address, venue.city || neighborhoodLabel).neighborhood || "Oslo"} · Pop-Up Drop`}
@@ -400,125 +407,102 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
             )}
           </div>
 
-          {venue.description && (
-            <div className="pt-2 space-y-1">
-              <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
-                STORY
-              </div>
-              <p className="text-[13.5px] sm:text-[14.5px] text-[#181615]/90 dark:text-zinc-200 leading-relaxed font-medium">
-                {venue.description}
-              </p>
-            </div>
-          )}
-
-          {/* Quick Action Links: Distinct for Pop-up vs Restaurant */}
+          {/* Unified 4-State Pop-Up Schedule & Floating Handle */}
           {isPopup ? (
             <div className="space-y-3 pt-2">
-              <div className="p-4 rounded-2xl bg-[#F5EFE4] dark:bg-[#1E1C1A] border border-[#181615]/10 space-y-3">
-                {isDormant ? (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <span className="px-2.5 py-1 rounded-full bg-stone-300 dark:bg-stone-700 text-stone-800 dark:text-stone-200 text-xs font-bold uppercase tracking-wider">
-                        ⏳ Dates &amp; Location TBA
-                      </span>
-                    </div>
-                    <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                      Next residency dates and location are being confirmed. Follow Instagram for drop updates.
-                    </p>
-                    {instagramUrl && (
-                      <a
-                        href={instagramUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-amber-600 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
-                      >
-                        <Instagram className="w-4 h-4" />
-                        <span>Follow {instagramHandle ? `@${instagramHandle}` : "on Instagram"} for Drop Alerts</span>
-                        <ExternalLink className="w-3.5 h-3.5 opacity-80" />
-                      </a>
-                    )}
-                    {venue.website_uri && (
-                      <a
-                        href={venue.website_uri}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full py-2 px-3 rounded-xl bg-white dark:bg-[#2A2622] border border-[#181615]/10 text-xs font-bold text-zinc-800 dark:text-zinc-200 flex items-center justify-center gap-1.5"
-                      >
-                        <Globe className="w-3.5 h-3.5 text-zinc-500" />
-                        <span>Website / Inquiries</span>
-                      </a>
-                    )}
-                  </>
+              <div className="space-y-2 py-2 border-y border-[#181615]/10 dark:border-white/10 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                {popupLifecycle?.state === "tba" ? (
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-[#E84A27]" />
+                    <span>Next drop date TBA · Roaming Oslo</span>
+                  </div>
+                ) : popupLifecycle?.state === "passed" ? (
+                  <div className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-300">
+                    <Clock className="w-3.5 h-3.5 text-[#E84A27]" />
+                    <span>Last pop-up{popupLifecycle.dateDisplay ? ` · ${popupLifecycle.dateDisplay}` : ""}</span>
+                  </div>
                 ) : (
-                  <>
-                    <div className="text-xs font-semibold space-y-1 text-zinc-800 dark:text-zinc-200">
-                      {(popupMeta?.dates_label || venue.current_opening_hours_text) && (
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5 text-[#E84A27]" />
-                          <span>{popupMeta?.dates_label || venue.current_opening_hours_text}</span>
-                        </div>
-                      )}
-                      {popupMeta?.daily_hours && popupMeta.daily_hours !== popupMeta.dates_label && (
-                        <div className="flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5 text-[#E84A27]" />
-                          <span>{popupMeta.daily_hours}</span>
-                        </div>
-                      )}
-                    </div>
+                  <div className="flex items-center flex-wrap gap-x-2.5 gap-y-1">
+                    {popupLifecycle?.dateDisplay && (
+                      <span className="inline-flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-[#E84A27]" />
+                        <span>{popupLifecycle.dateDisplay}</span>
+                      </span>
+                    )}
+                    {popupLifecycle?.dateDisplay && popupLifecycle?.hoursDisplay && (
+                      <span className="text-zinc-300">·</span>
+                    )}
+                    {popupLifecycle?.hoursDisplay && (
+                      <span className="inline-flex items-center gap-1.5 text-zinc-600 dark:text-zinc-300">
+                        <Clock className="w-3.5 h-3.5 text-[#E84A27]" />
+                        <span>{popupLifecycle.hoursDisplay}</span>
+                      </span>
+                    )}
+                  </div>
+                )}
 
-                    <div className="space-y-2 pt-1">
-                      {instagramUrl && (
-                        <a
-                          href={instagramUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-pink-600 via-rose-600 to-amber-600 hover:opacity-95 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
-                        >
-                          <Instagram className="w-4 h-4" />
-                          <span>Follow {instagramHandle ? `@${instagramHandle}` : "on Instagram"} for Drop Alerts</span>
-                          <ExternalLink className="w-3.5 h-3.5 opacity-80" />
-                        </a>
-                      )}
-
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {popupHostVenue && (
-                          <a
-                            href={googleMapsUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex-1 py-2 px-3 rounded-xl bg-[#181615] text-white hover:bg-black text-xs font-bold flex items-center justify-center gap-1.5"
-                          >
-                            <MapPin className="w-3.5 h-3.5 text-[#E84A27]" />
-                            <span>Directions to {popupHostVenue}</span>
-                            <ExternalLink className="w-3 h-3" />
-                          </a>
-                        )}
-                        {popupMeta?.ticket_url && (
-                          <a
-                            href={popupMeta.ticket_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="py-2 px-4 rounded-xl bg-[#E84A27] hover:bg-[#D43D1C] text-white text-xs font-bold"
-                          >
-                            RSVP / Tickets
-                          </a>
-                        )}
-                        {venue.website_uri && !venue.website_uri.includes("instagram.com") && (
-                          <a
-                            href={venue.website_uri}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="py-2 px-3 rounded-xl bg-white dark:bg-[#2A2622] border border-[#181615]/10 text-xs font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1"
-                          >
-                            <Globe className="w-3.5 h-3.5 text-zinc-500" />
-                            <span>Website</span>
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  </>
+                {popupHostVenue && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-1.5 truncate">
+                      <MapPin className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
+                      <span className="text-zinc-500 font-medium shrink-0">
+                        {popupLifecycle?.state === "passed" ? "Last host:" : "Host:"}
+                      </span>
+                      <span className="truncate">{popupHostVenue}</span>
+                    </span>
+                    <a
+                      href={googleMapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2.5 py-1 rounded-full bg-[#EFE9DF] hover:bg-[#E5DDD0] dark:bg-white/10 text-[#181615] dark:text-white text-[11px] font-bold flex items-center gap-1 shrink-0"
+                    >
+                      <span>Directions</span>
+                      <ExternalLink className="w-3 h-3 text-[#E84A27]" />
+                    </a>
+                  </div>
                 )}
               </div>
+
+              {(instagramUrl || (popupMeta?.ticket_url && !isDormant)) && (
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  {instagramUrl && (
+                    <a
+                      href={instagramUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 py-0.5 text-xs text-[#181615] dark:text-white hover:text-[#E84A27] transition-colors group"
+                    >
+                      <Instagram className="w-4 h-4 text-[#E84A27] shrink-0" />
+                      <span className="font-comico tracking-wide underline-offset-4 group-hover:underline">
+                        {instagramHandle ? `@${instagramHandle}` : "Instagram"}
+                      </span>
+                      <ExternalLink className="w-3 h-3 opacity-50 shrink-0" />
+                    </a>
+                  )}
+                  {popupMeta?.ticket_url && !isDormant && (
+                    <a
+                      href={popupMeta.ticket_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="py-1.5 px-3.5 rounded-full bg-[#E84A27] hover:bg-[#D43D1C] text-white text-[11px] font-bold inline-flex items-center gap-1"
+                    >
+                      <span>RSVP / Tickets</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {venue.description && (
+                <div className="pt-1 space-y-1">
+                  <div className="text-[10px] font-comico uppercase tracking-wider text-zinc-400">
+                    ✦ STORY
+                  </div>
+                  <p className="font-comico text-[14px] sm:text-[15px] text-[#181615]/90 dark:text-zinc-200 leading-relaxed font-normal">
+                    {venue.description}
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex items-center gap-2 flex-wrap pt-1">

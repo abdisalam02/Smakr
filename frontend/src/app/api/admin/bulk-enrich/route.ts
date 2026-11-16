@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { requireAdmin } from "../_auth";
 import {
   PLACES_API_BASE,
   PLACES_FIELD_MASK,
@@ -18,35 +17,6 @@ import { ingestGooglePhotoToSupabase } from "@/lib/storage/ingestGooglePhoto";
 import type { DietaryTag, FoodCategory, ReviewItem } from "@/types";
 
 export const runtime = "nodejs";
-
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const SUPABASE_KEY =
-  process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-
-function getAdminClient(): SupabaseClient | null {
-  if (!SUPABASE_URL || !SUPABASE_KEY) return null;
-  return createClient(SUPABASE_URL, SUPABASE_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
-
-async function verifyAdminAuth(): Promise<boolean> {
-  const supabase = await getSupabaseServerClient();
-  if (!supabase) return false;
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return false;
-
-  const admin = getAdminClient();
-  if (!admin) return false;
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-  return profile?.role === "admin";
-}
 
 function resolveGeminiApiKey(): string {
   const fromEnv =
@@ -333,12 +303,8 @@ function resolveFallbackPrice(dishName: string, venueName: string, category: str
 
 export async function POST(req: NextRequest) {
   try {
-    if (!(await verifyAdminAuth())) {
-      return NextResponse.json(
-        { error: "Unauthorized. Admin session required." },
-        { status: 403 }
-      );
-    }
+    const auth = await requireAdmin();
+    if (!auth.ok) return auth.response;
 
     const body = await req.json();
     const lines = Array.isArray(body.lines) ? body.lines : [];

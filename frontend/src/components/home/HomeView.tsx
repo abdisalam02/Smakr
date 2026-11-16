@@ -30,7 +30,7 @@ import { PeepsBootScreen } from "@/components/ui/PeepsBootScreen";
 import { motion, AnimatePresence } from "motion/react";
 import { Utensils } from "lucide-react";
 import type { FoodPost, Venue, WeeklyPick } from "@/types";
-import { isVisibleInFeed, getPopupUrgencyScore, isPopupVenue } from "@/lib/popupUtils";
+import { isVisibleInFeed, getPopupUrgencyScore, isPopupVenue, resolvePopupLifecycle } from "@/lib/popupUtils";
 import { resolveEntityTaxonomy } from "@/lib/taxonomy";
 
 const useIsomorphicLayoutEffect =
@@ -713,13 +713,68 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
 
     return (
       <div className={gridClass}>
-        {/* BLOCK 1: Smakr Weekly Pick Split Banner + Featured Pop-Up + first 4 editorial cards */}
+        {/* BLOCK 1: Smakr Weekly Pick Split Banner + Pop-Up Dishes Carousel + first editorial cards */}
         <div className="col-span-full my-0.5">
           <SmakrWeeklyPickSplitBanner />
         </div>
-        {heroPost && (
-          <div className="col-span-full">{renderCard(heroPost)}</div>
-        )}
+        {(() => {
+          const popupDishes = [
+            ...(heroPost ? [heroPost] : []),
+            ...filteredPosts.filter((p) => {
+              if (heroPost && p.id === heroPost.id) return false;
+              const v = venueById.get(p.spot_id);
+              return p.spot_type === "popup" || v?.spot_type === "popup" || Boolean(p.is_drop);
+            }),
+          ];
+          if (popupDishes.length === 0) return null;
+          return (
+            <section className="col-span-full -mx-3 px-3 py-1.5">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <h3 className="text-[19px] font-comico font-normal tracking-tight text-[#181615] dark:text-zinc-100 uppercase leading-tight flex items-center gap-1.5 min-w-0">
+                  <span>Pop-Up Dishes</span>
+                </h3>
+                {popupDishes.length > 1 && (
+                  <span className="text-[#E84A27] font-comico text-[11px] whitespace-nowrap shrink-0">
+                    Swipe →
+                  </span>
+                )}
+              </div>
+              <div className="overflow-x-auto snap-x snap-mandatory flex gap-3 pb-2 no-scrollbar">
+                {popupDishes.map((post) => {
+                  const v = venueById.get(post.spot_id) ?? null;
+                  const lifecycle = v ? resolvePopupLifecycle(v) : null;
+                  const dateLabel =
+                    lifecycle?.shortDateLabel ||
+                    (post.drop_badge ? post.drop_badge.replace(/\s*Drop$/i, "").trim() : null) ||
+                    null;
+                  return (
+                    <div
+                      key={`popup-hero-${post.id}`}
+                      className="w-[225px] sm:w-[250px] shrink-0 snap-start flex flex-col items-center"
+                    >
+                      <div className="w-full h-[250px] sm:h-[265px] overflow-hidden rounded-[24px]">
+                        <FoodPostCard
+                          post={post}
+                          index={0}
+                          fillHeight
+                          linkedVenue={v}
+                        />
+                      </div>
+                      <p className="mt-1.5 px-1 text-center font-comico font-bold text-[13px] sm:text-[14px] leading-tight text-[#E84A27] truncate w-full">
+                        {v?.name || post.spot_name}
+                      </p>
+                      {dateLabel && (
+                        <p className="mt-0.5 px-1 text-center text-[11px] sm:text-[11.5px] font-medium text-stone-500 dark:text-zinc-400 truncate w-full">
+                          {dateLabel}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })()}
         {renderRow(rowAfterHero)}
 
         {/* BLOCK 2: Compact Bare-Background Oslo Foodies Callout */}
