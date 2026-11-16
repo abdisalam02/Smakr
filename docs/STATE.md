@@ -3,8 +3,8 @@
 Updated: 2026-11-16
 
 ## Now
-- Task: Tuned grid card aspect ratio to `aspect-[6/7]` (slightly taller than wide) in `FoodPostCard.tsx`.
-- Status: Complete — `npx tsc --noEmit` exited `0`; awaiting push confirmation.
+- Task: Audited localhost vs deployed (`smakr.no`), fixed mobile map framing (`[10.7485, 59.9145]` @ z13), added pin decluttering (`<14.8z`) + `Pop-ups` filter `fitBounds`, and aligned `HomeView` `endCap` to `aspect-[6/7]`.
+- Status: Complete — `npx tsc --noEmit` & `npm run test:security` (23/23) passed; ready to push when approved.
 
 ## Next (max 3)
 1. Preview and export the 2-slide Early Snowfall `@3x` PNG assets in `/ad-reel`.

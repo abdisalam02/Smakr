@@ -653,7 +653,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
     const endCap = (
       <div
         key="feed-endcap"
-        className="rounded-[26px] bg-[#F2EDE4] border border-[#E6DFD3] p-4 flex flex-col justify-between aspect-[4/5]"
+        className="rounded-[26px] bg-[#F2EDE4] border border-[#E6DFD3] p-4 flex flex-col justify-between aspect-[6/7]"
       >
         <div>
           <p className="font-comico font-normal text-[15px] uppercase tracking-tight text-[#181615]">

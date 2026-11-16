@@ -891,6 +891,35 @@ export function MapRadarView() {
 
     // 2. Reconcile or create markers for visible venues
     const currentWeeklyVenueId = state.weeklyPick.venue_id;
+    const currentZoom = map.getZoom();
+
+    // Gently nudge neighboring pins apart at city zoom (< 14.8) so closely placed
+    // spots (e.g. Crantz Cookies & Mint on Wheels in Bjørvika) don't cover each other.
+    const offsetByVenueId = new Map<string, [number, number]>();
+    if (currentZoom < 14.8 && visibleVenues.length > 1) {
+      const pxPerDegLng = (512 * Math.pow(2, currentZoom)) / 360;
+      const pxPerDegLat = pxPerDegLng / Math.cos((59.9145 * Math.PI) / 180);
+      const minDist = 42;
+      for (let i = 0; i < visibleVenues.length; i++) {
+        const a = visibleVenues[i];
+        for (let j = i + 1; j < visibleVenues.length; j++) {
+          const b = visibleVenues[j];
+          const dx = (b.longitude - a.longitude) * pxPerDegLng;
+          const dy = -(b.latitude - a.latitude) * pxPerDegLat;
+          const dist = Math.hypot(dx, dy);
+          if (dist < minDist) {
+            const push = (minDist - dist) / 2;
+            const ux = dist > 0.5 ? dx / dist : 0.707;
+            const uy = dist > 0.5 ? dy / dist : -0.707;
+            const prevA = offsetByVenueId.get(a.id) ?? [0, 0];
+            const prevB = offsetByVenueId.get(b.id) ?? [0, 0];
+            offsetByVenueId.set(a.id, [Math.round(prevA[0] - ux * push), Math.round(prevA[1] - uy * push)]);
+            offsetByVenueId.set(b.id, [Math.round(prevB[0] + ux * push), Math.round(prevB[1] + uy * push)]);
+          }
+        }
+      }
+    }
+
     visibleVenues.forEach((venue) => {
       const isSelected = currentSelectedId === venue.id;
       const isWeeklyPickVenue = venue.id === currentWeeklyVenueId;
@@ -902,6 +931,7 @@ export function MapRadarView() {
       const badgePinKey = resolveCustomIconKey(venueBadge.pinIcon) || "";
       const dishKey = resolveCustomIconKey(venueTax.dishCategory) || venueTax.dishCategory;
       const pinKey = `v6|${badgePinKey}|${venue.icon ?? ""}|${dishKey}|${venue.spot_type ?? ""}|${popupStatus.status}|${popupStatus.lifecycle ?? ""}|${kitchenStatus}|${venue.food_category}|${venue.name}|${venue.popup_end_date ?? ""}|${overrideIconKey ?? ""}|${isWeeklyPickVenue ? "1" : "0"}`;
+      const pinOffset = offsetByVenueId.get(venue.id) ?? [0, 0];
 
       let existing = markerPoolRef.current.get(venue.id);
       if (existing && existing.rootEl.dataset.pinKey !== pinKey) {
@@ -909,9 +939,9 @@ export function MapRadarView() {
         markerPoolRef.current.delete(venue.id);
         existing = undefined;
       }
-      const currentZoom = map.getZoom();
       if (existing) {
         existing.marker.setLngLat([venue.longitude, venue.latitude]);
+        existing.marker.setOffset(pinOffset);
         existing.rootEl.style.display = "";
         applyPinState(existing.rootEl, isSelected, currentZoom);
         return;
@@ -962,6 +992,7 @@ export function MapRadarView() {
       const marker = new maplibregl.Marker({
         element: el,
         anchor: "center",
+        offset: pinOffset,
       })
         .setLngLat([venue.longitude, venue.latitude])
         .addTo(map);
@@ -1390,6 +1421,15 @@ export function MapRadarView() {
       }
     });
 
+    let wasDecluttered = map.getZoom() < 14.8;
+    map.on("zoomend", () => {
+      const nextDecluttered = map.getZoom() < 14.8;
+      if (nextDecluttered !== wasDecluttered) {
+        wasDecluttered = nextDecluttered;
+        renderMarkers();
+      }
+    });
+
     // After a large pan / pitch, force a repaint so no canvas region is left
     // blank. IMPORTANT: never call `map.resize()` here — resize re-enters
     // `moveend`, which recurses/loops and can leave the canvas half-rendered.
@@ -1728,29 +1768,48 @@ export function MapRadarView() {
     return unsubscribe;
   }, []);
 
-  // 2.5 Auto-fit map camera ONLY when the user actively changes the category filter.
+  // 2.5 Auto-fit map camera ONLY when the user actively changes a map filter pill.
   // Never fire on mount, and never fire on venue list updates or geolocation fixes.
-  const prevCategoryRef = useRef<string>(mapCategory);
+  const activeFilterSig = `${mapCategory}|${selectedGroup ?? ""}|${selectedSpotKind ?? ""}|${spotTypeFilter ?? "all"}`;
+  const prevFilterSigRef = useRef<string>(activeFilterSig);
   useEffect(() => {
     const map = mapInstance.current;
     if (!map) return;
 
-    if (prevCategoryRef.current === mapCategory) return;
-    prevCategoryRef.current = mapCategory;
+    if (prevFilterSigRef.current === activeFilterSig) return;
+    prevFilterSigRef.current = activeFilterSig;
 
     const venues = useCityPulseStore.getState().venues;
 
-    if (mapCategory === "all") {
+    const isDefaultAll =
+      mapCategory === "all" &&
+      !selectedGroup &&
+      !selectedSpotKind &&
+      (!spotTypeFilter || spotTypeFilter === "all");
+
+    if (isDefaultAll) {
       map.flyTo({
-        center: [10.7516, 59.9171],
-        zoom: 13.5,
+        center: [10.7485, 59.9145],
+        zoom: 13.0,
         duration: 800,
         essential: true,
       });
       return;
     }
 
-    const matching = venues.filter((v) => v.food_category === mapCategory);
+    const matching = venues.filter((v) => {
+      if (getPopupStatus(v).hideMapPin) return false;
+      if (selectedSpotKind === "popup" || spotTypeFilter === "popup") {
+        return isPopupVenue(v);
+      }
+      if (selectedGroup) {
+        return resolveEntityTaxonomy(v).group.id === selectedGroup;
+      }
+      if (mapCategory !== "all") {
+        return v.food_category === mapCategory || resolveEntityTaxonomy(v).dishCategory === mapCategory;
+      }
+      return true;
+    });
 
     const validSpots = matching.filter(
       (v) =>
@@ -1785,22 +1844,22 @@ export function MapRadarView() {
       const w = container?.clientWidth || (typeof window !== "undefined" ? window.innerWidth : 360);
       const h = container?.clientHeight || (typeof window !== "undefined" ? window.innerHeight : 600);
 
-      // Ensure padding doesn't exceed container dimensions to prevent NaN bounds
-      const padTop = Math.max(20, Math.min(60, Math.floor(h * 0.1)));
-      const padBottom = Math.max(30, Math.min(100, Math.floor(h * 0.2)));
-      const padSide = Math.max(20, Math.min(45, Math.floor(w * 0.1)));
+      // Clear top header/filter pills and bottom dock/nav on mobile
+      const padTop = Math.max(100, Math.min(140, Math.floor(h * 0.16)));
+      const padBottom = Math.max(150, Math.min(220, Math.floor(h * 0.25)));
+      const padSide = Math.max(36, Math.min(64, Math.floor(w * 0.11)));
 
       if (h - padTop - padBottom > 60 && w - padSide * 2 > 60) {
         map.fitBounds(bounds, {
           padding: { top: padTop, bottom: padBottom, left: padSide, right: padSide },
-          maxZoom: 15.2,
+          maxZoom: 14.8,
           duration: 850,
         });
       } else {
         const center = bounds.getCenter();
         map.flyTo({
           center: [center.lng, center.lat],
-          zoom: 13.8,
+          zoom: 13.0,
           duration: 800,
           essential: true,
         });
@@ -1808,7 +1867,7 @@ export function MapRadarView() {
     } catch (err) {
       console.warn("Map auto-fit failed gracefully:", err);
     }
-  }, [mapCategory]);
+  }, [activeFilterSig, mapCategory, selectedGroup, selectedSpotKind, spotTypeFilter]);
 
   // 3. Switch style safely on theme change
   useEffect(() => {

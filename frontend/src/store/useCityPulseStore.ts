@@ -256,8 +256,9 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
   // No phantom location on load — the "You're here" puck only appears once the
   // user shares their location (avoids overlapping the Weekly Pick marker).
   userLocation: null,
-  mapCenter: [10.7516, 59.9171], // Oslo Sentrum (Torggata / Youngstorget)
-  mapZoom: 13.8,
+  // Frame Tullinløkka (U WAN SUM) through Bjørvika (Crantz & Mint on Wheels) above the dock on mobile.
+  mapCenter: [10.7485, 59.9145],
+  mapZoom: 13.0,
   viewMode: "map",
   // The feed is DB-driven — start empty and hydrate via fetchFoodPosts().
   foodPosts: [],
