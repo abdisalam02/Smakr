@@ -2,12 +2,12 @@
 
 import React, { useCallback, useRef, useState } from "react";
 import { toBlob } from "html-to-image";
-import { Download, Loader2, Maximize2, Snowflake, Sparkles, X } from "lucide-react";
+import { Download, Loader2, Maximize2, Snowflake, Sparkles, Ticket, X } from "lucide-react";
 import { comico } from "@/lib/fonts";
 import { SmakrMascotRig } from "@/components/studio/SmakrMascotRig";
 import { OFFICIAL_SMAKR_MASCOT_CONFIG } from "@/lib/officialSmakrMascot";
 
-export type StoryPresetId = "how-smakr-works" | "oslo-snowfall-bowls";
+export type StoryPresetId = "how-smakr-works" | "oslo-snowfall-bowls" | "oslo-popup-radar";
 export type StoryAspectId = "1:1" | "4:5" | "9:16";
 
 function getStoryNativeHeight(aspect: StoryAspectId): number {
@@ -19,6 +19,7 @@ function getStoryNativeHeight(aspect: StoryAspectId): number {
 const STORY_PRESET_LABELS: Record<StoryPresetId, string> = {
   "how-smakr-works": "How Smakr Works (5 Slides)",
   "oslo-snowfall-bowls": "❄️ Early Snow: 3 Steaming Bowls — 2 Slides",
+  "oslo-popup-radar": "🎟️ Oslo Pop-Up Radar: U Wan Sum, Mint on Wheels & Crantz — 4 Slides",
 };
 
 interface SlidePinData {
@@ -315,6 +316,124 @@ const SNOWFALL_SLIDE_META: SlideMetaEntry[] = [
   { num: 2, pillLabel: "02 · 3 OSLO SPOTS REVEALED", fileSlug: "smakr_early_snow_slide_02" },
 ];
 
+const POPUP_SLIDE_META: SlideMetaEntry[] = [
+  { num: 1, pillLabel: "01 · POP-UP RADAR", fileSlug: "smakr_popup_slide_01" },
+  { num: 2, pillLabel: "02 · U WAN' SAM?", fileSlug: "smakr_popup_slide_02_uwansam" },
+  { num: 3, pillLabel: "03 · MINT ON WHEELS", fileSlug: "smakr_popup_slide_03_mint" },
+  { num: 4, pillLabel: "04 · CRANTZ COOKIES", fileSlug: "smakr_popup_slide_04_crantz" },
+];
+
+interface PopupPolaroidCard {
+  id: string;
+  img: string;
+  title: string;
+  teaser: string;
+  pill: string;
+  rotate: string;
+  pos916: React.CSSProperties;
+  pos45: React.CSSProperties;
+}
+
+const POPUP_SLIDE_1_POLAROIDS: PopupPolaroidCard[] = [
+  {
+    id: "popup-uwansum",
+    img: "/ad-slides/u_wan_sum_popup.webp",
+    title: "Vietnamese Egg & Coconut Phin Coffee",
+    teaser: "Confirmed Oslo drop in 6 days (Nov 22)",
+    pill: "Pop-Up #1 →",
+    rotate: "rotate(-3deg)",
+    pos916: { left: 10, top: 28, width: 320 },
+    pos45: { left: 6, top: 6, width: 292 },
+  },
+  {
+    id: "popup-mint",
+    img: "/uploads/seeds/mint-on-wheels_mint-on-wheels-dish-1_1794239080384_7a5025e0.webp",
+    title: "Double Biscoff Uji Matcha",
+    teaser: "Just popped up at Mike's Corner (Nov 14)",
+    pill: "75 kr",
+    rotate: "rotate(2.5deg)",
+    pos916: { right: 10, top: 52, width: 316 },
+    pos45: { right: 6, top: 18, width: 290 },
+  },
+  {
+    id: "popup-crantz",
+    img: "/ad-slides/crantz_cookies_popup.webp",
+    title: "Molten Biscoff & Kinder NYC Cookies",
+    teaser: "100+ recipe tests · Next drop loading",
+    pill: "50–60 kr",
+    rotate: "rotate(-1.5deg)",
+    pos916: { right: 24, bottom: 26, width: 324 },
+    pos45: { right: 12, bottom: 6, width: 296 },
+  },
+];
+
+interface PopupRevealSpot {
+  id: string;
+  pinLabel: string;
+  pinIcon: string;
+  img: string;
+  name: string;
+  locationLine: string;
+  statusPill: string;
+  dishPill: string;
+  description: string;
+  pinPos916: React.CSSProperties;
+  pinPos45: React.CSSProperties;
+  cardPos916: React.CSSProperties;
+  cardPos45: React.CSSProperties;
+}
+
+const POPUP_SLIDE_2_SPOTS: PopupRevealSpot[] = [
+  {
+    id: "uwansum",
+    pinLabel: "Tullinløkka · Nov 22",
+    pinIcon: "/icons/food/coffee.webp",
+    img: "/ad-slides/u_wan_sum_popup.webp",
+    name: "U WAN SUM",
+    locationLine: "📍 Tullinløkka · Next Drop: Sun Nov 22",
+    statusPill: "🔥 NOV 22 DROP",
+    dishPill: "✨ Vietnamese Egg & Phin Coffee",
+    description:
+      "Vietnamese Robusta phin coffee meets Egyptian hospitality by Amira Nasr El Din. Catch their next live drop at Tullinløkka on Nov 22.",
+    pinPos916: { left: 110, top: 44, transform: "translateX(-50%)" },
+    pinPos45: { left: 108, top: 16, transform: "translateX(-50%)" },
+    cardPos916: { right: 0, top: 24, width: 735 },
+    cardPos45: { right: 0, top: 8, width: 730 },
+  },
+  {
+    id: "mint",
+    pinLabel: "Oslobukta / Løren",
+    pinIcon: "/icons/food/matcha_cup.webp",
+    img: "/uploads/seeds/mint-on-wheels_mint-on-wheels-dish-1_1794239080384_7a5025e0.webp",
+    name: "MINT ON WHEELS",
+    locationLine: "📍 Oslobukta / Løren · Roaming Matcha Cart",
+    statusPill: "⏳ NOV 14 MIKE'S CORNER",
+    dishPill: "🍵 Double Biscoff Matcha · 75 kr",
+    description:
+      "Ceremonial Uji, Kyoto matcha on wheels. Just wrapped a 1-day drop at Mike's Corner—track their next Oslo street stop on Smakr.",
+    pinPos916: { right: 86, top: 416 },
+    pinPos45: { right: 82, top: 234 },
+    cardPos916: { left: 0, top: 374, width: 735 },
+    cardPos45: { left: 0, top: 204, width: 730 },
+  },
+  {
+    id: "crantz",
+    pinLabel: "Bjørvika & Vulkan",
+    pinIcon: "/icons/food/croissant.webp",
+    img: "/ad-slides/crantz_cookies_popup.webp",
+    name: "CRANTZ COOKIES",
+    locationLine: "📍 Bjørvika & Vulkan · Pop-Up Bakery",
+    statusPill: "🍪 NEXT DROP LOADING",
+    dishPill: "✨ Biscoff & Kinder Cookies · 50–60 kr",
+    description:
+      "Handmade chunky NYC-style cookies with molten cores by sisters Felicia & Adele. Known for sell-out drops at Bjørvika and Vulkan.",
+    pinPos916: { left: 110, top: 752, transform: "translateX(-50%)" },
+    pinPos45: { left: 108, top: 452 },
+    cardPos916: { right: 0, top: 718, width: 735 },
+    cardPos45: { right: 0, top: 414, width: 730 },
+  },
+];
+
 const SANS_STACK =
   'var(--font-jakarta), "Plus Jakarta Sans", var(--font-dmsans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 
@@ -546,11 +665,13 @@ function SlideBackdrop({
   mapTransform,
   scrimColor = "rgba(250, 247, 242, 0.14)",
   topFade = true,
+  bottomFade = false,
 }: {
   is916: boolean;
   mapTransform?: string;
   scrimColor?: string;
   topFade?: boolean;
+  bottomFade?: boolean;
 }) {
   const bgSrc = is916 ? "/ad-slides/pure_oslo_map_9_16.png" : "/ad-slides/pure_oslo_map_4_5.png";
   return (
@@ -594,6 +715,17 @@ function SlideBackdrop({
             inset: 0,
             background:
               "linear-gradient(180deg, rgba(250, 247, 242, 0.94) 0%, rgba(250, 247, 242, 0.78) 16%, rgba(250, 247, 242, 0.30) 27%, rgba(250, 247, 242, 0) 38%)",
+            zIndex: 2,
+          }}
+        />
+      )}
+      {bottomFade && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "linear-gradient(0deg, rgba(250, 247, 242, 0.96) 0%, rgba(250, 247, 242, 0.78) 14%, rgba(250, 247, 242, 0.25) 26%, rgba(250, 247, 242, 0) 36%)",
             zIndex: 2,
           }}
         />
@@ -1951,6 +2083,1157 @@ function EarlySnowSlideCanvas({
   );
 }
 
+function UWanSamPeekingEyes({ size = 56 }: { size?: number }) {
+  return (
+    <svg width={size} height={Math.round(size * 0.85)} viewBox="0 0 88 74" fill="none" aria-hidden="true">
+      {/* Left eyebrow + eye */}
+      <path d="M 10 14 Q 24 6, 38 14" stroke="#42170D" strokeWidth="4.2" strokeLinecap="round" />
+      <ellipse cx="24" cy="34" rx="15" ry="16" fill="#FFFFFF" stroke="#42170D" strokeWidth="4.2" />
+      <path d="M 9 30 Q 24 27, 39 30" stroke="#42170D" strokeWidth="3.5" strokeLinecap="round" />
+      <circle cx="29" cy="38" r="7.5" fill="#42170D" />
+      {/* Right eyebrow + eye */}
+      <path d="M 50 14 Q 64 6, 78 14" stroke="#42170D" strokeWidth="4.2" strokeLinecap="round" />
+      <ellipse cx="64" cy="34" rx="15" ry="16" fill="#FFFFFF" stroke="#42170D" strokeWidth="4.2" />
+      <path d="M 49 30 Q 64 27, 79 30" stroke="#42170D" strokeWidth="3.5" strokeLinecap="round" />
+      <circle cx="59" cy="38" r="7.5" fill="#42170D" />
+      {/* Tiny nose + smirk */}
+      <ellipse cx="44" cy="52" rx="5.5" ry="4" fill="#FFFFFF" stroke="#42170D" strokeWidth="3.4" />
+      <path d="M 24 63 Q 44 70, 62 61" stroke="#42170D" strokeWidth="4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function PopupCardFooterBar({ label }: { label: string }) {
+  return (
+    <div
+      style={{
+        height: 46,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "0 14px",
+        marginTop: 6,
+      }}
+    >
+      <span
+        style={{
+          fontFamily: `${comico.style.fontFamily}, sans-serif`,
+          fontSize: 21,
+          fontWeight: 400,
+          color: "#FAF7F2",
+          letterSpacing: "0.02em",
+        }}
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
+
+function PopupRadarSlideCanvas({
+  slideNum,
+  aspect,
+}: {
+  slideNum: 1 | 2 | 3 | 4;
+  aspect: StoryAspectId;
+}) {
+  const is916 = aspect === "9:16";
+  const is11 = aspect === "1:1";
+  const h = getStoryNativeHeight(aspect);
+  const sidePad = 52;
+
+  if (slideNum === 1) {
+    const topPad = is916 ? 84 : is11 ? 34 : 50;
+    const bottomPad = is916 ? 56 : is11 ? 24 : 38;
+    const fanScale = is916 ? 1.02 : is11 ? 0.78 : 0.94;
+
+    return (
+      <div
+        style={{
+          width: 1080,
+          height: h,
+          position: "relative",
+          fontFamily: SANS_STACK,
+          color: "#181615",
+          background: "#FAF7F2",
+          overflow: "hidden",
+          WebkitFontSmoothing: "antialiased",
+        }}
+      >
+        <SlideBackdrop is916={is916} scrimColor="rgba(250, 247, 242, 0.22)" topFade bottomFade />
+
+        {/* Bottom warm-oat fade so staircase cards & footer stay crisp */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: is916 ? 340 : is11 ? 210 : 260,
+            background:
+              "linear-gradient(to top, rgba(250, 247, 242, 0.96) 0%, rgba(250, 247, 242, 0.80) 58%, rgba(250, 247, 242, 0) 100%)",
+            zIndex: 6,
+            pointerEvents: "none",
+          }}
+        />
+
+        <div
+          style={{
+            width: 1080,
+            height: h,
+            position: "relative",
+            zIndex: 10,
+            padding: `${topPad}px ${sidePad}px ${bottomPad}px ${sidePad}px`,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "space-between",
+            boxSizing: "border-box",
+          }}
+        >
+          {/* Top Brand + Headline + Mascot Row */}
+          <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <span
+                style={{
+                  fontFamily: `${comico.style.fontFamily}, sans-serif`,
+                  fontSize: is916 ? 78 : is11 ? 56 : 68,
+                  color: "#e84a27",
+                  letterSpacing: "0.06em",
+                  lineHeight: 1,
+                }}
+              >
+                SMAKR
+              </span>
+            </div>
+
+            <div
+              style={{
+                width: "100%",
+                maxWidth: 920,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: is916 ? 22 : 18,
+                marginTop: is916 ? 24 : is11 ? 8 : 16,
+              }}
+            >
+              <div
+                style={{
+                  flexShrink: 0,
+                  filter: "drop-shadow(0 18px 34px rgba(24, 22, 21, 0.22))",
+                }}
+              >
+                <SmakrMascotRig
+                  frameMode="bust-only"
+                  bodyPose="jacket-2"
+                  face={OFFICIAL_SMAKR_MASCOT_CONFIG.peepsFace}
+                  head={OFFICIAL_SMAKR_MASCOT_CONFIG.peepsHead}
+                  accessories="glasses-2"
+                  facialHair="none"
+                  skinColor={OFFICIAL_SMAKR_MASCOT_CONFIG.skinColor}
+                  clothingColor="#1E2738"
+                  innerClothingColor="#FAF7F2"
+                  sherpaColor="#C8B79E"
+                  jacketStyle="navy-sherpa"
+                  hatColor={OFFICIAL_SMAKR_MASCOT_CONFIG.hatColor}
+                  headContrastColor={OFFICIAL_SMAKR_MASCOT_CONFIG.hairColor}
+                  size={is916 ? 345 : is11 ? 240 : 300}
+                  stickerOutline
+                />
+              </div>
+
+              <div style={{ textAlign: "left", maxWidth: 540 }}>
+                <div
+                  style={{
+                    fontFamily: SANS_STACK,
+                    fontSize: is916 ? 54 : is11 ? 38 : 45,
+                    fontWeight: 900,
+                    lineHeight: 1.05,
+                    letterSpacing: "-0.03em",
+                    color: "#181615",
+                  }}
+                >
+                  Oslo&apos;s pop-up scene
+                  <br />
+                  <span style={{ color: "#e84a27" }}>is moving fast.</span>
+                </div>
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    background: "#FDECE7",
+                    color: "#181615",
+                    borderRadius: 999,
+                    padding: is916 ? "8px 20px" : "6px 14px",
+                    fontSize: is916 ? 18 : 13,
+                    fontWeight: 800,
+                    letterSpacing: "0.14em",
+                    textTransform: "uppercase",
+                    marginTop: is916 ? 14 : 8,
+                    lineHeight: 1,
+                  }}
+                >
+                  + HERE FOR THE WEEKEND · GONE BY MONDAY
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Center-Lower Stage: 3 Tilted Burnt-Paprika Food Polaroids in a Left-to-Right Staircase */}
+          <div
+            style={{
+              position: "relative",
+              width: 976,
+              height: is916 ? 560 : 490,
+              marginTop: is916 ? 12 : 4,
+              transform: `scale(${fanScale})`,
+              transformOrigin: "center center",
+            }}
+          >
+            {/* Ghost Step 0 (Top-Left, dimmed continuation with blurred placeholder content) */}
+            <div
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                left: -255,
+                top: -64,
+                width: 342,
+                background: "#C87D6A",
+                borderRadius: 30,
+                padding: 14,
+                boxShadow: "0 18px 40px rgba(24, 22, 21, 0.14)",
+                transform: "rotate(-8deg)",
+                opacity: 0.68,
+                zIndex: 4,
+                pointerEvents: "none",
+              }}
+            >
+              <div
+                style={{
+                  height: 296,
+                  borderRadius: 22,
+                  overflow: "hidden",
+                  background: "#EDE6DA",
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/ad-slides/u_wan_sum_egg_coffee.webp"
+                  alt=""
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    filter: "blur(8px) saturate(0.55)",
+                    opacity: 0.48,
+                    transform: "scale(1.1)",
+                  }}
+                />
+              </div>
+              <div
+                style={{
+                  height: 46,
+                  marginTop: 6,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: SANS_STACK,
+                    fontSize: 21,
+                    fontWeight: 900,
+                    color: "#FAF7F2",
+                    filter: "blur(3.5px)",
+                    opacity: 0.55,
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  OSLO POP-UP
+                </span>
+              </div>
+            </div>
+
+            {/* Step 1 (Left, highest): U WAN' SAM? (Cream #F5EFE0 + Maroon #42170D) */}
+            <div
+              style={{
+                position: "absolute",
+                left: 14,
+                top: 0,
+                width: 342,
+                background: "#F5EFE0",
+                borderRadius: 30,
+                padding: 14,
+                boxShadow: "0 24px 48px rgba(24, 22, 21, 0.22)",
+                transform: "rotate(-6deg)",
+                zIndex: 10,
+              }}
+            >
+              <div
+                style={{
+                  height: 296,
+                  borderRadius: 22,
+                  overflow: "hidden",
+                  background: "#FAF7F2",
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/ad-slides/u_wan_sum_egg_coffee.webp"
+                  alt="U Wan Sam Egg Coffee"
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                />
+              </div>
+              <div
+                style={{
+                  height: 46,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 10,
+                  marginTop: 6,
+                }}
+              >
+                <UWanSamPeekingEyes size={30} />
+                <span
+                  style={{
+                    fontFamily: SANS_STACK,
+                    fontSize: 22,
+                    fontWeight: 900,
+                    color: "#42170D",
+                    letterSpacing: "-0.02em",
+                  }}
+                >
+                  U WAN&apos; SAM?
+                </span>
+              </div>
+            </div>
+
+            {/* Step 2 (Center, middle): MINT ON WHEELS (Forest Matcha #3B6E52 + Sage Mint #D6E6C8) */}
+            <div
+              style={{
+                position: "absolute",
+                left: "50%",
+                top: 64,
+                width: 348,
+                background: "#3B6E52",
+                borderRadius: 30,
+                padding: 14,
+                boxShadow: "0 28px 56px rgba(24, 22, 21, 0.26)",
+                transform: "translateX(-50%) rotate(2.5deg)",
+                zIndex: 18,
+              }}
+            >
+              <div
+                style={{
+                  height: 302,
+                  borderRadius: 22,
+                  overflow: "hidden",
+                  background: "#FAF7F2",
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/uploads/seeds/mint-on-wheels_mint-on-wheels-dish-1_1794239080384_7a5025e0.webp"
+                  alt="Mint on Wheels Double Biscoff Matcha"
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                />
+              </div>
+              <div
+                style={{
+                  height: 46,
+                  display: "flex",
+                  alignItems: "baseline",
+                  justifyContent: "center",
+                  gap: 8,
+                  marginTop: 6,
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: SANS_STACK,
+                    fontSize: 26,
+                    fontWeight: 900,
+                    fontStyle: "italic",
+                    color: "#D6E6C8",
+                    letterSpacing: "-0.03em",
+                  }}
+                >
+                  mint.
+                </span>
+                <span
+                  style={{
+                    fontFamily: SANS_STACK,
+                    fontSize: 11.5,
+                    fontWeight: 800,
+                    color: "rgba(214, 230, 200, 0.88)",
+                    letterSpacing: "0.08em",
+                  }}
+                >
+                  ON WHEELS
+                </span>
+              </div>
+            </div>
+
+            {/* Step 3 (Right, lowest): CRANTZ COOKIES (Royal Cobalt #1E2B7B + Blush Pink #F9B4CE) */}
+            <div
+              style={{
+                position: "absolute",
+                right: 14,
+                top: 128,
+                width: 342,
+                background: "#1E2B7B",
+                borderRadius: 30,
+                padding: 14,
+                boxShadow: "0 32px 64px rgba(24, 22, 21, 0.30)",
+                transform: "rotate(-5deg)",
+                zIndex: 25,
+              }}
+            >
+              <div
+                style={{
+                  height: 296,
+                  borderRadius: 22,
+                  overflow: "hidden",
+                  background: "#FAF7F2",
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/ad-slides/crantz_cookies_popup.webp"
+                  alt="Crantz Cookies molten chocolate"
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                />
+              </div>
+              <div
+                style={{
+                  height: 46,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginTop: 6,
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: 'Georgia, "Times New Roman", serif',
+                    fontSize: 25,
+                    fontWeight: 700,
+                    fontStyle: "italic",
+                    color: "#F9B4CE",
+                    letterSpacing: "0.01em",
+                  }}
+                >
+                  Crantz Cookies
+                </span>
+              </div>
+            </div>
+
+            {/* Ghost Step 4 (Bottom-Right, dimmed continuation with blurred placeholder content) */}
+            <div
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                right: -255,
+                top: 192,
+                width: 342,
+                background: "#7B5A65",
+                borderRadius: 30,
+                padding: 14,
+                boxShadow: "0 18px 40px rgba(24, 22, 21, 0.14)",
+                transform: "rotate(-3deg)",
+                opacity: 0.68,
+                zIndex: 4,
+                pointerEvents: "none",
+              }}
+            >
+              <div
+                style={{
+                  height: 296,
+                  borderRadius: 22,
+                  overflow: "hidden",
+                  background: "#EDE6DA",
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/ad-slides/crantz_cookies_popup.webp"
+                  alt=""
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    filter: "blur(8px) saturate(0.55)",
+                    opacity: 0.48,
+                    transform: "scale(1.1)",
+                  }}
+                />
+              </div>
+              <div
+                style={{
+                  height: 46,
+                  marginTop: 6,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: SANS_STACK,
+                    fontSize: 21,
+                    fontWeight: 900,
+                    color: "#FAF7F2",
+                    filter: "blur(3.5px)",
+                    opacity: 0.55,
+                    letterSpacing: "0.04em",
+                  }}
+                >
+                  NEXT DROP
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Description text under the cards, aligned left */}
+          <div
+            style={{
+              width: "100%",
+              textAlign: "left",
+              paddingLeft: 14,
+              marginTop: is916 ? 24 : is11 ? 12 : 18,
+            }}
+          >
+            <div
+              style={{
+                fontSize: is916 ? 21 : is11 ? 15.5 : 18,
+                fontWeight: 600,
+                lineHeight: 1.34,
+                color: "#57534E",
+                maxWidth: 620,
+              }}
+            >
+              Phin-dripped egg coffee, Kyoto matcha on wheels, and molten NYC cookies. Here is where they drop next.
+            </div>
+          </div>
+
+          {/* Minimal Orange-on-Cream Footer */}
+          <div
+            style={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              {[1, 2, 3, 4].map((dot) => (
+                <span
+                  key={dot}
+                  style={{
+                    width: dot === 1 ? 26 : 7,
+                    height: 6,
+                    borderRadius: 999,
+                    background: dot === 1 ? "#e84a27" : "rgba(24, 22, 21, 0.24)",
+                  }}
+                />
+              ))}
+            </div>
+            <div
+              style={{
+                color: "#e84a27",
+                fontSize: is916 ? 16 : 14,
+                fontWeight: 800,
+                letterSpacing: "0.02em",
+              }}
+            >
+              01 / 04 · Next: U WAN&apos; SAM? →
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // SLIDES 2, 3, 4: Dedicated Pop-Up Spotlights (U WAN' SAM?, Mint on Wheels, Crantz Cookies)
+  const topPad = is916 ? 76 : is11 ? 30 : 44;
+  const bottomPad = is916 ? 54 : is11 ? 24 : 36;
+  const cardH = is916 ? 880 : is11 ? 460 : 640;
+
+  const isMirrored = slideNum === 3;
+  const spotlightCfg =
+    slideNum === 3
+      ? {
+          bg: "#F7F4EB",
+          primary: "#2D5A3C",
+          accent: "#A82035",
+          secondaryAccent: "#A82035",
+          topWarmth: "rgba(46, 90, 59, 0.12)",
+          spotlight916:
+            "radial-gradient(ellipse 32% 16% at 26% 51%, rgba(247, 244, 235, 0) 0%, rgba(247, 244, 235, 0.78) 58%, rgba(247, 244, 235, 0.98) 100%)",
+          spotlight45:
+            "radial-gradient(ellipse 34% 20% at 26% 50%, rgba(247, 244, 235, 0) 0%, rgba(247, 244, 235, 0.78) 58%, rgba(247, 244, 235, 0.98) 100%)",
+          mapTransform: is916 ? "scale(1.45) translate(-26%, -10%)" : "scale(1.40) translate(-26%, -10%)",
+          storyText:
+            "OSLO'S ROAMING CEREMONIAL UJI MATCHA BAR WHISKING SMALL-BATCH KYOTO TEA ON WHEELS. AFTER SUMMER DROPS AT LØREN TORG, THEIR '26 FALL EDITION MENU BRINGS BISCOFF BUTTER, CREMÈ BRÛLEE, AND COOKIES & CREAM MATCHA STRAIGHT TO OSLOBUKTA.",
+          nextDropText: "🎟️ RECENT DROP: MIKE'S CORNER · NEXT TBA",
+          addressText: "Operagata 77d · Oslobukta",
+          facts: ["UJI CEREMONIAL", "DOUBLE BISCOFF", "MATCHA CART", "@MINTONWHEEELS"],
+          heroSrc: "/ad-slides/mint_cups_outdoor.jpg",
+          heroAlt: "Mint on Wheels Outdoor 4-Cup Matcha Pours",
+          bottomPhotos: [
+            {
+              src: "/ad-slides/mint_double_biscoff.webp",
+              alt: "Mint on Wheels Double Biscoff Matcha Cup",
+            },
+            { src: "/ad-slides/mint_photo_2.webp", alt: "Mint on Wheels 4-Cup Iced Matcha Lineup" },
+            { src: "/ad-slides/mint_photo_3.webp", alt: "Mint on Wheels Ceremonial Whisk" },
+          ] as Array<{ src: string; alt: string; style?: React.CSSProperties }>,
+          nextLabel: "03 / 04 · Next: Crantz Cookies →",
+        }
+      : slideNum === 4
+        ? {
+            bg: "#F3F7FC",
+            primary: "#1E2B7B",
+            accent: "#F45D8E",
+            secondaryAccent: "#F45D8E",
+            topWarmth: "rgba(30, 43, 123, 0.12)",
+            spotlight916:
+              "radial-gradient(ellipse 32% 16% at 74% 51%, rgba(243, 247, 252, 0) 0%, rgba(243, 247, 252, 0.78) 58%, rgba(243, 247, 252, 0.98) 100%)",
+            spotlight45:
+              "radial-gradient(ellipse 34% 20% at 74% 50%, rgba(243, 247, 252, 0) 0%, rgba(243, 247, 252, 0.78) 58%, rgba(243, 247, 252, 0.98) 100%)",
+            mapTransform: is916 ? "scale(1.42) translate(6%, -8%)" : "scale(1.38) translate(6%, -8%)",
+            storyText:
+              "STARTED IN OSLO BY SISTERS FELICIA AND ADELE AFTER TESTING 100+ DOUGH RECIPES INSPIRED BY LONDON'S ICONIC BAKERIES. FAMOUS FOR CHUNKY NYC-STYLE COOKIES STUFFED WITH MOLTEN BISCOFF ('THE GOLDEN ONE'), KINDER DREAM, AND FLAKY SEA SALT DARK CHOCOLATE.",
+            nextDropText: "🎟️ NEXT OSLO DROP LOADING · BJØRVIKA & VULKAN",
+            addressText: "Dronning Eufemias gate 22 · Bjørvika",
+            facts: ["NYC THICK-BAKED", "MOLTEN CENTERS", "WEEKEND DROPS", "@CRANTZCOOKIES"],
+            heroSrc: "/ad-slides/crantz_cookies_popup.webp",
+            heroAlt: "Crantz Cookies molten chocolate",
+            bottomPhotos: [
+              { src: "/ad-slides/crantz_photo_2.webp", alt: "Crantz Cookies Molten Center" },
+              { src: "/ad-slides/crantz_photo_3.webp", alt: "Crantz Cookies Tray Stack" },
+              { src: "/images/popups/crantz-cookie-3.jpg", alt: "Crantz Cookies Biscoff The Golden One" },
+            ] as Array<{ src: string; alt: string; style?: React.CSSProperties }>,
+            nextLabel: "04 / 04 · Track Pop-Ups on smakr.no ↗",
+          }
+        : {
+            bg: "#F5EFE0",
+            primary: "#42170D",
+            accent: "#1D4ED8",
+            secondaryAccent: "#1D4ED8",
+            topWarmth: "rgba(66, 23, 13, 0.14)",
+            spotlight916:
+              "radial-gradient(ellipse 32% 16% at 74% 51%, rgba(245, 239, 224, 0) 0%, rgba(245, 239, 224, 0.78) 58%, rgba(245, 239, 224, 0.98) 100%)",
+            spotlight45:
+              "radial-gradient(ellipse 34% 20% at 74% 50%, rgba(245, 239, 224, 0) 0%, rgba(245, 239, 224, 0.78) 58%, rgba(245, 239, 224, 0.98) 100%)",
+            mapTransform: is916 ? "scale(1.42) translate(14%, 2%)" : "scale(1.38) translate(14%, 2%)",
+            storyText:
+              "Born after a trip to Vietnam and rooted in Cairo hospitality, founder Amira Nasr El Din built U WAN' SAM? around one simple question: “You want some?” Expect slow-dripped Vietnamese Robusta phin coffee, creamy egg & coconut foam cups, and iced hibiscus at their roaming Oslo pop-ups.",
+            nextDropText: "🎟️ NEXT OSLO DROP · SUN NOV 22",
+            addressText: "Kristian Augusts gate 21 · Tullinløkka",
+            facts: ["Slow-Drip Phin", "Vietnam × Cairo", "Roaming Pop-Up", "@uwansamofficial"],
+            heroSrc: "/ad-slides/u_wan_sum_ricefield.jpg",
+            heroAlt: "U Wan Sam Vietnamese iced coffee",
+            bottomPhotos: [
+              { src: "/ad-slides/u_wan_sum_egg_coffee.webp", alt: "U Wan Sam Egg Coffee" },
+              { src: "/ad-slides/u_wan_sum_popup.webp", alt: "U Wan Sam Pop-Up Service" },
+              { src: "/ad-slides/u_wan_sum_photo_1.webp", alt: "U Wan Sam Vietnamese Iced Coffee" },
+            ],
+            nextLabel: "02 / 04 · Next: Mint on Wheels →",
+          };
+
+  const chromePrimaryInk =
+    slideNum === 2
+      ? "#3A1F16"
+      : slideNum === 3
+        ? "#2D5A3C"
+        : "#1E2B7B";
+
+  const heroPhotoBlock = (
+    <div
+      style={{
+        position: "relative",
+        height: cardH,
+        borderRadius: 28,
+        overflow: "hidden",
+        boxShadow: "0 22px 48px rgba(24, 22, 21, 0.16)",
+        background: spotlightCfg.primary,
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={spotlightCfg.heroSrc}
+        alt={spotlightCfg.heroAlt}
+        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+      />
+    </div>
+  );
+
+  const storyAndPinBlock = (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        height: cardH,
+        padding: is916 ? "0 8px" : "0 4px",
+        boxSizing: "border-box",
+      }}
+    >
+      <div>
+        <div
+          style={{
+            fontFamily: 'Impact, "Arial Black", sans-serif',
+            fontSize: is916 ? 52 : is11 ? 34 : 42,
+            fontWeight: 900,
+            letterSpacing: "0.02em",
+            color: spotlightCfg.accent,
+            textTransform: "uppercase",
+            lineHeight: 0.95,
+          }}
+        >
+          STORY
+        </div>
+
+        <div
+          style={{
+            marginTop: is916 ? 24 : 14,
+            fontFamily: `${comico.style.fontFamily}, sans-serif`,
+            fontSize: is916 ? 25 : is11 ? 16 : 20,
+            lineHeight: 1.38,
+            color: spotlightCfg.primary,
+            letterSpacing: "0.01em",
+          }}
+        >
+          {spotlightCfg.storyText}
+        </div>
+
+        <div
+          style={{
+            marginTop: is916 ? 22 : 12,
+            fontFamily: 'Impact, "Arial Narrow", sans-serif',
+            fontSize: is916 ? 26 : is11 ? 18 : 22,
+            letterSpacing: "0.04em",
+            color: spotlightCfg.accent,
+            textTransform: "uppercase",
+          }}
+        >
+          {spotlightCfg.nextDropText}
+        </div>
+      </div>
+
+      {/* Exposed Map Pin centered in the spotlight */}
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          marginTop: is916 ? 14 : 6,
+        }}
+      >
+        {/* Paper Pushpin SVG */}
+        <svg
+          width={is916 ? 46 : 36}
+          height={is916 ? 54 : 42}
+          viewBox="0 0 64 76"
+          fill="none"
+          style={{
+            marginBottom: is916 ? -14 : -10,
+            zIndex: 2,
+            filter: "drop-shadow(0 6px 10px rgba(24, 22, 21, 0.28))",
+          }}
+        >
+          <path d="M28 36 L22 70 C21.6 72.5 24.8 73.2 25.8 70.8 L35 37 Z" fill="#C4C4C4" />
+          <circle cx="34" cy="21" r="18" fill="#EF3E36" />
+          <ellipse
+            cx="26"
+            cy="14"
+            rx="4.8"
+            ry="2.8"
+            transform="rotate(-32 26 14)"
+            fill="rgba(255, 255, 255, 0.55)"
+          />
+        </svg>
+
+        <div
+          style={{
+            position: "relative",
+            zIndex: 1,
+            display: "inline-flex",
+            alignItems: "center",
+            background: spotlightCfg.bg,
+            border: `1.5px solid ${spotlightCfg.accent}`,
+            borderRadius: 999,
+            padding: is916 ? "10px 22px" : "7px 15px",
+            boxShadow: "0 12px 28px rgba(24, 22, 21, 0.20)",
+          }}
+        >
+          <span
+            style={{
+              fontFamily: SANS_STACK,
+              fontSize: is916 ? 17.5 : 13.5,
+              fontWeight: 800,
+              color: spotlightCfg.primary,
+              letterSpacing: "0.01em",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {spotlightCfg.addressText}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div
+      style={{
+        width: 1080,
+        height: h,
+        position: "relative",
+        fontFamily: SANS_STACK,
+        color: spotlightCfg.primary,
+        background: spotlightCfg.bg,
+        overflow: "hidden",
+        WebkitFontSmoothing: "antialiased",
+      }}
+    >
+      {/* Full-canvas Oslo Map with radial cream spotlight */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          inset: 0,
+          zIndex: 0,
+          pointerEvents: "none",
+          overflow: "hidden",
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={is916 ? "/ad-slides/pure_oslo_map_9_16.png" : "/ad-slides/pure_oslo_map_4_5.png"}
+          alt="Oslo pop-up map"
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            transform: spotlightCfg.mapTransform,
+            transformOrigin: "center center",
+            filter: "saturate(0.98) contrast(1.04)",
+            display: "block",
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: is916 ? spotlightCfg.spotlight916 : spotlightCfg.spotlight45,
+          }}
+        />
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: `linear-gradient(180deg, ${spotlightCfg.topWarmth} 0%, rgba(255, 255, 255, 0) 24%)`,
+          }}
+        />
+      </div>
+
+      <div
+        style={{
+          width: 1080,
+          height: h,
+          position: "relative",
+          zIndex: 10,
+          padding: `${topPad}px ${sidePad}px ${bottomPad}px ${sidePad}px`,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          gap: is916 ? 26 : is11 ? 14 : 20,
+          boxSizing: "border-box",
+        }}
+      >
+        {/* Top Smakr Header (Consistent on Slides 2, 3, 4) */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", width: "100%" }}>
+          <span
+            style={{
+              fontFamily: `${comico.style.fontFamily}, sans-serif`,
+              fontSize: is916 ? 56 : is11 ? 40 : 48,
+              color: "#e84a27",
+              letterSpacing: "0.06em",
+              lineHeight: 1,
+              textShadow: "none",
+              filter: "none",
+            }}
+          >
+            SMAKR
+          </span>
+        </div>
+
+        {/* Freestanding Brand Logo */}
+        {slideNum === 3 ? (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              gap: is916 ? 18 : 12,
+              paddingTop: is916 ? 36 : is11 ? 14 : 22,
+              paddingBottom: is916 ? 16 : 8,
+            }}
+          >
+            <span
+              style={{
+                fontFamily: SANS_STACK,
+                fontSize: is916 ? 96 : is11 ? 64 : 80,
+                fontWeight: 900,
+                fontStyle: "italic",
+                color: "#2E5A3B",
+                letterSpacing: "-0.04em",
+                lineHeight: 0.95,
+              }}
+            >
+              mint.
+            </span>
+            <span
+              style={{
+                fontFamily: SANS_STACK,
+                fontSize: is916 ? 34 : is11 ? 22 : 28,
+                fontWeight: 900,
+                color: "#2E5A3B",
+                letterSpacing: "0.10em",
+              }}
+            >
+              ON WHEELS
+            </span>
+          </div>
+        ) : slideNum === 4 ? (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: is916 ? 18 : 12,
+              paddingTop: is916 ? 36 : is11 ? 14 : 22,
+              paddingBottom: is916 ? 16 : 8,
+            }}
+          >
+            <span
+              style={{
+                fontFamily: 'Georgia, "Times New Roman", serif',
+                fontSize: is916 ? 88 : is11 ? 58 : 74,
+                fontWeight: 700,
+                fontStyle: "italic",
+                color: "#1E2B7B",
+                letterSpacing: "-0.01em",
+                lineHeight: 1,
+                textShadow: "0 4px 0 #FFA6C4",
+              }}
+            >
+              Crantz Cookies
+            </span>
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: is916 ? 28 : 20,
+              paddingTop: is916 ? 36 : is11 ? 14 : 22,
+              paddingBottom: is916 ? 16 : 8,
+            }}
+          >
+            <UWanSamPeekingEyes size={is916 ? 116 : is11 ? 76 : 94} />
+            <div
+              style={{
+                fontFamily: SANS_STACK,
+                fontSize: is916 ? 88 : is11 ? 58 : 72,
+                fontWeight: 900,
+                letterSpacing: "-0.04em",
+                color: "#42170D",
+                lineHeight: 1,
+              }}
+            >
+              U WAN&apos; SAM?
+            </div>
+          </div>
+        )}
+
+        {/* Main Stage: Mirrored on Slide 3 for subtle visual variety */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: isMirrored
+              ? is916
+                ? "1fr 1.05fr"
+                : "1fr 1fr"
+              : is916
+                ? "1.05fr 1fr"
+                : "1fr 1fr",
+            gap: is916 ? 34 : 22,
+            alignItems: "start",
+            marginTop: is916 ? 18 : 8,
+          }}
+        >
+          {isMirrored ? (
+            <>
+              {storyAndPinBlock}
+              {heroPhotoBlock}
+            </>
+          ) : (
+            <>
+              {heroPhotoBlock}
+              {storyAndPinBlock}
+            </>
+          )}
+        </div>
+
+        {/* Floating Quick Facts Values (alternating accent & primary) */}
+        <div
+          style={{
+            width: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: is916 ? "0 8px" : "0 4px",
+            marginTop: is916 ? 10 : 4,
+            marginBottom: is916 ? 6 : 2,
+          }}
+        >
+          {spotlightCfg.facts.map((val, idx) => (
+            <div key={val} style={{ display: "inline-flex", alignItems: "center", gap: 14 }}>
+              <span
+                style={{
+                  fontFamily: 'Impact, "Arial Narrow", sans-serif',
+                  fontSize: is916 ? 20 : is11 ? 14 : 17,
+                  letterSpacing: "0.03em",
+                  color: idx % 2 === 0 ? spotlightCfg.accent : spotlightCfg.primary,
+                  textTransform: "uppercase",
+                }}
+              >
+                {val}
+              </span>
+              {idx < 3 && (
+                <span style={{ color: spotlightCfg.secondaryAccent, fontSize: is916 ? 18 : 14, fontWeight: 900 }}>
+                  •
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* 3 Authentic Pop-Up Photos in one proportionate portrait row at the bottom */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: is916 ? 18 : 12,
+            marginTop: is916 ? 6 : 2,
+            marginBottom: is916 ? 10 : 4,
+          }}
+        >
+          {spotlightCfg.bottomPhotos.map((item, idx) => (
+            <div
+              key={item.src || `thumb-${idx}`}
+              style={{
+                height: is916 ? 310 : is11 ? 165 : 225,
+                borderRadius: 22,
+                overflow: "hidden",
+                boxShadow: "0 12px 28px rgba(24, 22, 21, 0.14)",
+                background: spotlightCfg.primary,
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={item.src}
+                alt={item.alt}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  display: "block",
+                  ...item.style,
+                }}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Bottom Footer */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative" }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: is916 ? 10 : 8 }}>
+            {[1, 2, 3, 4].map((dot) => (
+              <span
+                key={dot}
+                style={{
+                  width: dot === slideNum ? (is916 ? 32 : 22) : (is916 ? 9 : 7),
+                  height: is916 ? 8 : 6,
+                  borderRadius: 999,
+                  background:
+                    dot === slideNum
+                      ? chromePrimaryInk
+                      : chromePrimaryInk === "#3A1F16"
+                        ? "rgba(58, 31, 22, 0.22)"
+                        : chromePrimaryInk === "#2D5A3C"
+                          ? "rgba(45, 90, 60, 0.22)"
+                          : "rgba(30, 43, 123, 0.22)",
+                }}
+              />
+            ))}
+          </div>
+
+          {slideNum === 4 ? (
+            <div
+              style={{
+                background: "#e84a27",
+                color: "#FFFFFF",
+                fontSize: is916 ? 20 : 15,
+                fontWeight: 800,
+                padding: is916 ? "13px 26px" : "9px 18px",
+                borderRadius: 999,
+                boxShadow: "0 10px 24px rgba(232, 74, 39, 0.28)",
+                display: "inline-flex",
+                alignItems: "center",
+                letterSpacing: "0.02em",
+                lineHeight: 1,
+              }}
+            >
+              Check out more on smakr.no ↗
+            </div>
+          ) : (
+            <div
+              style={{
+                background: "rgba(255, 255, 255, 0.95)",
+                boxShadow: "0 8px 22px rgba(24, 22, 21, 0.08)",
+                fontSize: is916 ? 20 : 15,
+                fontWeight: 800,
+                padding: is916 ? "13px 26px" : "9px 18px",
+                borderRadius: 999,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: is916 ? 8 : 6,
+                letterSpacing: "0.02em",
+                lineHeight: 1,
+              }}
+            >
+              <span style={{ color: spotlightCfg.accent, fontWeight: 900 }}>
+                {slideNum === 2 ? "02 / 04" : "03 / 04"}
+              </span>
+              <span style={{ color: chromePrimaryInk, fontWeight: 800 }}>
+                {slideNum === 2 ? "· Next: Mint on Wheels →" : "· Next: Crantz Cookies →"}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StorySlideCanvas({
   slideNum,
   aspect,
@@ -3252,7 +4535,12 @@ export function CarouselStoryDeck() {
 
   const slideRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
-  const activeSlides = presetId === "oslo-snowfall-bowls" ? SNOWFALL_SLIDE_META : SLIDE_META;
+  const activeSlides =
+    presetId === "oslo-snowfall-bowls"
+      ? SNOWFALL_SLIDE_META
+      : presetId === "oslo-popup-radar"
+        ? POPUP_SLIDE_META
+        : SLIDE_META;
   const activePresetLabel = STORY_PRESET_LABELS[presetId];
   const is916 = aspect === "9:16";
   const is11 = aspect === "1:1";
@@ -3281,6 +4569,8 @@ export function CarouselStoryDeck() {
   const renderSlideCanvas = (slideNum: 1 | 2 | 3 | 4 | 5) =>
     presetId === "oslo-snowfall-bowls" ? (
       <EarlySnowSlideCanvas slideNum={slideNum === 2 ? 2 : 1} aspect={aspect} />
+    ) : presetId === "oslo-popup-radar" ? (
+      <PopupRadarSlideCanvas slideNum={slideNum === 2 || slideNum === 3 || slideNum === 4 ? slideNum : 1} aspect={aspect} />
     ) : (
       <StorySlideCanvas slideNum={slideNum} aspect={aspect} />
     );
@@ -3368,6 +4658,19 @@ export function CarouselStoryDeck() {
           >
             <Snowflake className="w-3.5 h-3.5" />
             <span>Preset 2: {STORY_PRESET_LABELS["oslo-snowfall-bowls"]}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => selectPreset("oslo-popup-radar")}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              presetId === "oslo-popup-radar"
+                ? "bg-[#e84a27] text-white shadow-sm"
+                : "bg-white/5 text-zinc-300 hover:bg-white/10"
+            }`}
+          >
+            <Ticket className="w-3.5 h-3.5" />
+            <span>Preset 3: {STORY_PRESET_LABELS["oslo-popup-radar"]}</span>
           </button>
         </div>
 

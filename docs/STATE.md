@@ -3,8 +3,8 @@
 Updated: 2026-11-17
 
 ## Now
-- Task: UI polish pass — Warm Oat top-gap fill when mobile `FeedFilterBar` expands, crisp `font-comico` Warm Oat neighborhood pills & relocated pop-up date below `Pop-up` badge (`MapNeighborhoodDock`), extended sheet hero fade + shallower sticky scrim (`VenueBottomSheet`), `[touch-action:pan-x_pan-y]` scroll unlock (`VenueDishesGrid`, `VenuePhotoStrip`), & venue names on filtered pop-up feed cards (`FoodPostCard`, `HomeView`).
-- Status: Ready for verification (`npx tsc --noEmit`).
+- Task: Removed prices from Mint & Crantz stories; verified @uwansamofficial, @mintonwheeels, & @crantzcookies via Apify; fixed @mintonwheeels handle in popupScraper.ts.
+- Status: `npx tsc --noEmit` & `npm run build` passed cleanly; ready to push.
 
 ## Next (max 3)
 1. Preview and export the 2-slide Early Snowfall `@3x` PNG assets in `/ad-reel`.

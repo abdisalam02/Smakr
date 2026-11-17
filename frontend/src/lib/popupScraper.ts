@@ -32,9 +32,9 @@ export const POPUP_WATCHLIST: PopupWatchTarget[] = [
     venueMatch: { name: "u wan sum", instagram: "uwansamofficial", neighborhood: "sentrum" },
   },
   {
-    handle: "mintonwheels",
+    handle: "mintonwheeels",
     name: "Mint on Wheels",
-    venueMatch: { name: "mint on wheels", instagram: "mintonwheels" },
+    venueMatch: { name: "mint on wheels", instagram: "mintonwheeels" },
   },
   {
     handle: "crantzcookies",
