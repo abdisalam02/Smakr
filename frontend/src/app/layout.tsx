@@ -3,16 +3,11 @@ import "./globals.css";
 import { Plus_Jakarta_Sans, DM_Sans, Space_Grotesk, Geist } from "next/font/google";
 import { comico } from "@/lib/fonts";
 import { Header } from "@/components/ui/Header";
-import { ThemeStudioModal } from "@/components/ui/ThemeStudioModal";
 import { MascotConfigHydrator } from "@/components/avatar/MascotConfigHydrator";
 import { AppStateHydrator } from "@/components/state/AppStateHydrator";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { fetchCurrentUserServer } from "@/lib/supabase/serverData";
-import { UserOnboardingModal } from "@/components/auth/UserOnboardingModal";
-import { AuthModal } from "@/components/auth/AuthModal";
-import { BetaFeedbackDrawer } from "@/components/feedback/BetaFeedbackDrawer";
-import { CreateFoodPostModal } from "@/components/food/CreateFoodPostModal";
-import { AdminQuickEditModal } from "@/components/admin/AdminQuickEditModal";
+import { GlobalModalsHost } from "@/components/ui/GlobalModalsHost";
 import { ToastBanner } from "@/components/ui/ToastBanner";
 import { AutumnLeavesBurst } from "@/components/effects/AutumnLeavesBurst";
 
@@ -114,14 +109,9 @@ export default async function RootLayout({
           <main className="flex-1 flex flex-col relative overflow-x-hidden w-full max-w-[100vw]">
             {children}
           </main>
-          <ThemeStudioModal />
           <MascotConfigHydrator />
           <AppStateHydrator />
-          <UserOnboardingModal />
-          <AuthModal />
-          <BetaFeedbackDrawer />
-          <CreateFoodPostModal />
-          <AdminQuickEditModal />
+          <GlobalModalsHost />
           <ToastBanner />
         </AuthProvider>
       </body>

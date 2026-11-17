@@ -85,6 +85,15 @@ let hasPlayedBootThisLoad = false;
 
 export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   const [showBoot, setShowBoot] = useState(() => !hasPlayedBootThisLoad);
+  const [mapMountReady, setMapMountReady] = useState(() => hasPlayedBootThisLoad);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+
+  useEffect(() => {
+    if (mapMountReady) return;
+    const fallbackTimer = window.setTimeout(() => setMapMountReady(true), 150);
+    return () => window.clearTimeout(fallbackTimer);
+  }, [mapMountReady]);
+
   // Seed the store from the server-prefetched payload in a layout effect: it
   // runs once, before the browser paints the hydrated tree, so the dish feed /
   // map pins appear on the first painted frame with NO client fetch and no
@@ -111,10 +120,9 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
   // Activate real-time stream
   useLiveVibeSync();
 
-  // Only fall back to a browser fetch when the server had nothing to send
-  // (e.g. a transient DB hiccup). With SSR data present this is skipped
-  // entirely, eliminating the client-side waterfall.
-  useSyncAppData(!hasServerData);
+  // Reconcile non-blockingly in the background after boot and on tab resume/bfcache,
+  // so SSR warm edge hits never lock out fresh Supabase edits.
+  useSyncAppData(hasServerData);
 
   // Only ONE MapLibre instance should mount. The desktop and mobile layouts are
   // both in the React tree (CSS just hides one), so rendering a map in each
@@ -569,6 +577,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                   post={post}
                   index={index}
                   compact
+                  showSpotName
                   linkedVenue={venueById.get(post.spot_id) ?? null}
                   priority={isDesktopView && index === 0}
                 />
@@ -965,9 +974,11 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
       {showBoot && (
         <PeepsBootScreen
           colorMode="colorized"
-          crowdCount={90}
+          crowdCount={34}
+          onAtlasReady={() => setMapMountReady(true)}
           onComplete={() => {
             hasPlayedBootThisLoad = true;
+            setMapMountReady(true);
             setShowBoot(false);
           }}
         />
@@ -1033,8 +1044,8 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                 className="flex-1 overflow-y-auto px-3.5 py-2.5 space-y-2.5 no-scrollbar pb-36"
               >
                 {/* Pop-ups Feed Panel */}
-                <div className={feedMode === "popups" ? "block" : "hidden"}>
-                  {popupVenues.length === 0 ? (
+                {feedMode === "popups" && (
+                  popupVenues.length === 0 ? (
                     isHydratingData ? (
                       <div className="grid grid-cols-2 gap-3">
                         <div className="col-span-full"><PopupEventCardSkeleton /></div>
@@ -1057,17 +1068,15 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                         </div>
                       ))}
                     </div>
-                  )}
-                </div>
+                  )
+                )}
 
                 {/* Dishes Feed Panel (Two-Frame Progressive Mount + 120fps Cascade) */}
-                <div className={feedMode === "food" ? "block" : "hidden"}>
-                  {desktopDishesFeed}
-                </div>
+                {feedMode === "food" && desktopDishesFeed}
 
                 {/* Spots Feed Panel */}
-                <div className={feedMode === "places" ? "block" : "hidden"}>
-                  {venues.length === 0 && isHydratingData ? (
+                {feedMode === "places" && (
+                  venues.length === 0 && isHydratingData ? (
                     <div className="grid grid-cols-2 gap-3">
                       {Array.from({ length: 4 }).map((_, i) => (
                         <FoodSpotCardSkeleton key={`spot-skeleton-${i}`} />
@@ -1105,8 +1114,8 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                         );
                       })}
                     </div>
-                  )}
-                </div>
+                  )
+                )}
               </div>
 
               {/* Floating Slider Toggle at bottom of feed */}
@@ -1126,7 +1135,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
       {/* ========================================================================= */}
       {/* SINGLE PERSISTENT MAP INSTANCE                                            */}
       {/* Full-bleed background on mobile; right split pane on desktop.            */}
-      {/* Initialized once — never recreated on breakpoint changes or layout flips. */}
+      {/* Deferred until PeepsBootScreen starts dismissing so WebGL doesn't stall boot. */}
       {/* ========================================================================= */}
       <div
         className={`
@@ -1144,7 +1153,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
           relative
         `}
       >
-        <MapRadarView />
+        {mapMountReady && <MapRadarView />}
 
         {/* Bottom-of-Map Neighborhood Dock + Spot Cards */}
         <div
@@ -1178,6 +1187,14 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
             className="pointer-events-none absolute inset-x-0 top-0 h-[118px] z-[15] bg-gradient-to-b from-[#FAF7F2]/85 via-[#FAF7F2]/55 to-transparent dark:from-[#181615]/85 dark:via-[#181615]/55 backdrop-blur-[4px] [mask-image:linear-gradient(to_bottom,black_48%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_48%,transparent_100%)] transition-opacity duration-150"
           />
 
+          {/* Warm Oat fill behind logo/Sign In gap ONLY while filter dropdown is expanded */}
+          <div
+            aria-hidden="true"
+            className={`pointer-events-none absolute inset-x-0 top-0 h-[110px] z-[16] bg-[#FAF7F2] dark:bg-[#181615] transition-opacity duration-150 ${
+              isMobileFilterOpen && !isVenueDetailModalOpen ? "opacity-100" : "opacity-0"
+            }`}
+          />
+
           {/* Floating filter bar + Dishes/Spots toggle under the SMAKR header. */}
           <div
             ref={mobileFilterWrapRef}
@@ -1188,7 +1205,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
             {isHydratingData && foodPosts.length === 0 ? (
               <FeedFilterBarSkeleton />
             ) : (
-              <FeedFilterBar compact />
+              <FeedFilterBar compact onExpandedChange={setIsMobileFilterOpen} />
             )}
           </div>
 
@@ -1207,8 +1224,8 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
             className="flex-1 min-h-0 overflow-y-auto px-3 pt-[122px] pb-32 space-y-2.5 no-scrollbar overscroll-contain"
           >
             {/* 1. Mobile Pop-ups Panel */}
-            <div className={feedMode === "popups" ? "block" : "hidden"}>
-              {popupVenues.length === 0 ? (
+            {feedMode === "popups" && (
+              popupVenues.length === 0 ? (
                 isHydratingData ? (
                   <div className="grid grid-cols-2 gap-3">
                     <div className="col-span-full"><PopupEventCardSkeleton /></div>
@@ -1231,17 +1248,15 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
+              )
+            )}
 
             {/* 2. Mobile Dishes Feed Panel (Two-Frame Progressive Mount + 120fps Cascade) */}
-            <div className={feedMode === "food" ? "block" : "hidden"}>
-              {mobileDishesFeed}
-            </div>
+            {feedMode === "food" && mobileDishesFeed}
 
             {/* 3. Mobile Spots Feed Panel */}
-            <div className={feedMode === "places" ? "block" : "hidden"}>
-              {venues.length === 0 && isHydratingData ? (
+            {feedMode === "places" && (
+              venues.length === 0 && isHydratingData ? (
                 <div className="grid grid-cols-2 gap-3">
                   {Array.from({ length: 3 }).map((_, i) => (
                     <FoodSpotCardSkeleton key={`m-spot-skeleton-${i}`} />
@@ -1288,8 +1303,8 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
                     );
                   })}
                 </div>
-              )}
-            </div>
+              )
+            )}
           </div>
         </div>
       )}

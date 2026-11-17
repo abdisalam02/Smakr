@@ -25,18 +25,35 @@ export function PopupEventCard({
   const setIsVenueDetailModalOpen = useCityPulseStore((s) => s.setIsVenueDetailModalOpen);
   const savedPostIds = useCityPulseStore((s) => s.savedPostIds);
   const toggleSavePost = useCityPulseStore((s) => s.toggleSavePost);
+  const matchedPost = useCityPulseStore(
+    React.useCallback(
+      (s) =>
+        post
+          ? null
+          : s.foodPosts.find(
+              (p) =>
+                p.spot_id === venue.id &&
+                Boolean(p.image_url) &&
+                !p.is_archived &&
+                p.is_published !== false
+            ) ?? null,
+      [post, venue.id]
+    )
+  );
 
   const popupStatus = getPopupStatus(venue);
   const popupMeta = getPopupMeta(venue);
 
   const title = venue.name || "Oslo Pop-Up";
 
+  const activeDish = post ?? matchedPost;
+  const legacyCover =
+    !venue.cover_image_url || venue.cover_image_url.includes("192446b9a93be33d7cbe");
   const displayImage =
-    venue.cover_image_url ||
-    post?.image_url ||
+    (legacyCover ? activeDish?.image_url || venue.cover_image_url : venue.cover_image_url || activeDish?.image_url) ||
     "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=1200&q=80";
 
-  const rawCategory = venue.food_category || post?.category || "pop_up";
+  const rawCategory = venue.food_category || activeDish?.category || "pop_up";
   const displayCategory =
     rawCategory.charAt(0).toUpperCase() + rawCategory.slice(1).replace(/_/g, " ");
 
@@ -46,12 +63,17 @@ export function PopupEventCard({
   const isUpcoming = popupLifecycle.state === "upcoming";
   const isActive = popupLifecycle.state === "live";
 
-  const postId = post?.id || `popup_post_${venue.id}`;
+  const postId = activeDish?.id || `popup_post_${venue.id}`;
   const isSaved = savedPostIds ? savedPostIds.has(postId) : false;
 
   const handleOpenDetails = () => {
+    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+      navigator.vibrate(8);
+    }
     selectVenueById(venue.id);
-    setIsVenueDetailModalOpen(true);
+    window.setTimeout(() => {
+      setIsVenueDetailModalOpen(true);
+    }, 45);
   };
 
   const handleToggleBookmark = (e: React.MouseEvent) => {
@@ -82,7 +104,7 @@ export function PopupEventCard({
         priority={priority}
         unoptimized={displayImage.startsWith("/api/places/photos")}
         className="object-cover transition-transform duration-700 group-hover:scale-105 pointer-events-none"
-        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+        sizes="(max-width: 640px) 62vw, 280px"
       />
 
       {/* Dark Vignette & Gradient Overlay (Crisp bottom readability) */}
@@ -171,17 +193,21 @@ export function PopupEventCard({
         {/* Honey Glazed Chicken Style White Rounded Pill CTA */}
         <button
           type="button"
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
             handleOpenDetails();
           }}
-          className={`w-full ${compact ? "py-2 text-[11px]" : "py-2 sm:py-2.5 text-xs"} rounded-full font-bold tracking-wide flex items-center justify-center gap-1.5 shadow-md transition-transform active:scale-[0.98] cursor-pointer ${
+          className={`group/btn touch-manipulation w-full ${compact ? "py-2 text-[11px]" : "py-2 sm:py-2.5 text-xs"} rounded-full font-bold tracking-wide flex items-center justify-center gap-1.5 shadow-md transition-all duration-150 ease-out active:scale-[0.94] active:brightness-90 cursor-pointer ${
             isDormant
               ? "bg-[#FAF7F2]/95 hover:bg-white text-[#181615]"
               : "bg-white hover:bg-stone-100 text-[#181615]"
           }`}
         >
           <span>{isDormant ? "View Pop-Up Residency" : compact ? "View Details" : "View Pop-Up Details"}</span>
+          <span className="inline-block text-[#E84A27] transition-transform duration-150 group-active/btn:translate-x-0.5 group-active/btn:-translate-y-0.5">
+            ↗
+          </span>
         </button>
       </div>
     </article>

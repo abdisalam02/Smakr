@@ -24,6 +24,7 @@ if (typeof window !== "undefined") {
 
 export interface PeepsBootScreenProps {
   onComplete?: () => void;
+  onAtlasReady?: () => void;
   persistent?: boolean;
   crowdCount?: number;
   speedMultiplier?: number;
@@ -70,11 +71,12 @@ function peepHeightFor(stageW: number): number {
   return Math.round(PEEP_HEIGHT_MOBILE + t * (PEEP_HEIGHT_DESKTOP - PEEP_HEIGHT_MOBILE));
 }
 
-/** Mobile keeps ~58% of the desktop pool so 390px screens stay packed wall-to-wall. */
+/** Mobile keeps 20 busts for 60fps boot performance & clean silhouette density; desktop scales up to baseCount. */
 function crowdCountFor(baseCount: number, stageW: number): number {
+  if (stageW < 640) return Math.min(baseCount, 20);
   if (stageW >= 1180) return baseCount;
-  const t = Math.max(0.58, Math.min(1, 0.58 + ((stageW - 390) / (1180 - 390)) * 0.42));
-  return Math.max(16, Math.round(baseCount * t));
+  const t = (stageW - 640) / (1180 - 640);
+  return Math.max(20, Math.round(20 + t * (baseCount - 20)));
 }
 
 function xDurationFor(stageW: number, peepWidth: number): number {
@@ -120,8 +122,9 @@ function resetPeep(peep: CrowdMember, stageW: number, stageH: number) {
 
 export function PeepsBootScreen({
   onComplete,
+  onAtlasReady,
   persistent = false,
-  crowdCount = 90,
+  crowdCount = 34,
   speedMultiplier = 1.0,
   forceSeed = 1,
   showAtlasInspector = false,
@@ -137,6 +140,7 @@ export function PeepsBootScreen({
   const speedRef = useRef(speedMultiplier);
   const persistentRef = useRef(persistent);
   const onCompleteRef = useRef(onComplete);
+  const onAtlasReadyRef = useRef(onAtlasReady);
   const dismissingRef = useRef(false);
 
   const [atlasReady, setAtlasReady] = useState(false);
@@ -152,17 +156,30 @@ export function PeepsBootScreen({
   speedRef.current = speedMultiplier;
   persistentRef.current = persistent;
   onCompleteRef.current = onComplete;
+  onAtlasReadyRef.current = onAtlasReady;
 
-  // ── 1. Slice + colorize the official 105-cell sheet (starts walking in ~50ms) ──
+  // ── 1. Pre-compute exact deck and colorize its cells upfront (0 mid-walk teleporting) ──
+  const precomputedDeck = React.useMemo(() => {
+    const approxW =
+      typeof window !== "undefined" ? window.innerWidth : mobilePreview ? 390 : 1280;
+    const targetCount = Math.min(Math.max(crowdCountFor(crowdCount, approxW), 1), SHEET_COUNT);
+    return buildSpriteDeck(forceSeed, targetCount);
+  }, [crowdCount, forceSeed, mobilePreview]);
+
   useEffect(() => {
     let active = true;
     setAtlasBuilding(true);
-    buildPeepsAtlas(colorMode, (initialAtlas) => {
-      if (!active) return;
-      atlasMetaRef.current = initialAtlas;
-      atlasCanvasRef.current = initialAtlas.canvas;
-      setAtlasReady(true);
-    })
+    buildPeepsAtlas(
+      colorMode,
+      (initialAtlas) => {
+        if (!active) return;
+        atlasMetaRef.current = initialAtlas;
+        atlasCanvasRef.current = initialAtlas.canvas;
+        setAtlasReady(true);
+        onAtlasReadyRef.current?.();
+      },
+      showAtlasInspector ? undefined : precomputedDeck
+    )
       .then((atlas) => {
         if (!active) return;
         atlasMetaRef.current = atlas;
@@ -170,15 +187,19 @@ export function PeepsBootScreen({
         setAtlasVersion((v) => v + 1);
         setAtlasBuilding(false);
         setAtlasReady(true);
+        onAtlasReadyRef.current?.();
       })
       .catch((err) => {
         console.error("[PeepsBootScreen] atlas build failed", err);
-        if (active) setAtlasBuilding(false);
+        if (active) {
+          setAtlasBuilding(false);
+          onAtlasReadyRef.current?.();
+        }
       });
     return () => {
       active = false;
     };
-  }, [colorMode]);
+  }, [colorMode, precomputedDeck, showAtlasInspector]);
 
   // ── 2. Half-scale data URL so the inspector can CSS-crop every sprite ─────
   useEffect(() => {
@@ -217,9 +238,11 @@ export function PeepsBootScreen({
     const stageH = Math.round(rect?.height || window.innerHeight);
     stageRef.current = { w: stageW, h: stageH };
 
-    // Mobile scales down pool slightly (~58%) while staying dense wall-to-wall.
     const count = Math.min(Math.max(crowdCountFor(crowdCount, stageW), 1), SHEET_COUNT);
-    const spawnDeck = buildSpriteDeck(forceSeed, count);
+    const spawnDeck =
+      precomputedDeck.length >= count
+        ? precomputedDeck.slice(0, count)
+        : buildSpriteDeck(forceSeed, count);
     const members: CrowdMember[] = [];
     for (let i = 0; i < count; i++) {
       const peep: CrowdMember = {
@@ -250,12 +273,11 @@ export function PeepsBootScreen({
     setDeck(spawnDeck);
     dismissingRef.current = false;
     setDismissing(false);
-  }, [atlasReady, crowdCount, forceSeed]);
+  }, [atlasReady, crowdCount, forceSeed, precomputedDeck]);
 
-  // ── 4. Staggered Smakr logo popup — fires right after peeps begin walking ─
+  // ── 4. Reveal staggered subtitle once crowd atlas is ready ─
   useEffect(() => {
     if (!atlasReady) return;
-    setShowLogo(true);
     setShowSubline(false);
     const tSub = window.setTimeout(() => setShowSubline(true), 220);
     return () => {
@@ -344,7 +366,6 @@ export function PeepsBootScreen({
         const speedMult = speedRef.current;
         const members = crowdRef.current;
         const readyCells = atlasMeta.readyCells;
-        const readyList = atlasMeta.readyList;
         let needsSort = false;
 
         for (let i = 0; i < members.length; i++) {
@@ -366,10 +387,9 @@ export function PeepsBootScreen({
           const swayAngle = Math.sin(phase) * SWAY_RADIANS * peep.scaleX;
           const y = peep.anchorY - bounce;
 
-          // Use colorized starter sprite until this member's full sprite streams in
-          const activeSprite = readyCells.has(peep.spriteIndex)
-            ? peep.spriteIndex
-            : readyList[peep.id % readyList.length]!;
+          // Permanently bind each peep to its assigned sprite so it never flickers or teleports mid-stride
+          const activeSprite = peep.spriteIndex;
+          if (!readyCells.has(activeSprite)) continue;
 
           const col = activeSprite % SHEET_COLS;
           const row = (activeSprite / SHEET_COLS) | 0;
@@ -500,7 +520,11 @@ export function PeepsBootScreen({
       <canvas
         ref={canvasRef}
         className={`w-full h-full block touch-none pointer-events-none transition-all duration-[400ms] ease-in will-change-[opacity,transform] ${
-          dismissing ? "opacity-0 translate-y-20" : "opacity-100 translate-y-0"
+          dismissing
+            ? "opacity-0 translate-y-20"
+            : atlasReady
+            ? "opacity-100 translate-y-0"
+            : "opacity-0 translate-y-3"
         }`}
       />
 

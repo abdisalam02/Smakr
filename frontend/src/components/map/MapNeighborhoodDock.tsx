@@ -105,11 +105,18 @@ const DockCarouselCard = React.memo(function DockCarouselCard({
   const bottomAccentText = isPopup && popupLifecycle
     ? popupLifecycle.shortDateLabel
     : `✦ ${signature}`;
-  const thumbSources = [
-    venue.cover_image_url,
-    (venue as VenueWithDishes).dishes?.[0]?.image_url,
-    fallbackPhoto,
-  ];
+  const hasLegacyCover = Boolean(venue.cover_image_url?.includes("192446b9a93be33d7cbe"));
+  const thumbSources = isPopup || hasLegacyCover
+    ? [
+        fallbackPhoto,
+        (venue as VenueWithDishes).dishes?.[0]?.image_url,
+        venue.cover_image_url,
+      ]
+    : [
+        venue.cover_image_url,
+        (venue as VenueWithDishes).dishes?.[0]?.image_url,
+        fallbackPhoto,
+      ];
 
   return (
     <div
@@ -277,11 +284,20 @@ const SpotlightCard = React.memo(function SpotlightCard({
   const live = getVenueLiveOpenStatus(venue);
   // Keep rating consistent with DockCarouselCard fallback ("4.8")
   const rating = venue.google_rating != null ? venue.google_rating.toFixed(1) : "4.8";
-  const imageSources = [
-    venue.cover_image_url,
-    (venue as VenueWithDishes).dishes?.[0]?.image_url,
-    fallbackPhoto,
-  ];
+  const hasLegacyCover = Boolean(venue.cover_image_url?.includes("192446b9a93be33d7cbe"));
+  const imageSources =
+    isPopup || hasLegacyCover
+      ? [
+          fallbackPhoto,
+          matchingPost?.image_url,
+          (venue as VenueWithDishes).dishes?.[0]?.image_url,
+          venue.cover_image_url,
+        ]
+      : [
+          venue.cover_image_url,
+          (venue as VenueWithDishes).dishes?.[0]?.image_url,
+          fallbackPhoto,
+        ];
   const gallery = useVenueHeroGallery(venue, venue.cover_image_url, isActive);
   const activeHeroImage =
     isActive && gallery.activePhotoUrl ? gallery.activePhotoUrl : null;
@@ -482,30 +498,47 @@ const SpotlightCard = React.memo(function SpotlightCard({
         (!isActive && isNeighbor) || (isActive && cardOpen) ? "cursor-pointer" : ""
       }`}
     >
-      {/* Top pointer caret pointing straight up toward the focused map food pin (hidden for Weekly Pick so perched mascot owns top edge) */}
-      <svg
-        data-slot-arrow="true"
-        data-weekly={isWeeklyPick ? "true" : "false"}
-        aria-hidden="true"
-        width="22"
-        height="11"
-        viewBox="0 0 22 11"
-        style={{
-          left: "50%",
-          top: "-9.5px",
-          transform: "translate3d(-50%, 0, 0)",
-          opacity: isActive && cardOpen && !isWeeklyPick ? 1 : 0,
-        }}
-        className="pointer-events-none absolute z-20 drop-shadow-[0_-2px_5px_rgba(0,0,0,0.28)]"
-      >
-        <path
-          d="M 2 10.5 L 9.8 2.1 Q 11 0.8 12.2 2.1 L 20 10.5 Z"
-          fill={isPopup ? "#FFFFFF" : "#181615"}
-          stroke={isPopup ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.28)"}
-          strokeWidth="1.25"
-          strokeLinejoin="round"
-        />
-      </svg>
+      {/* Top pointer caret matched cleanly to card border & top edge vignette */}
+      {(() => {
+        const isHotPopup =
+          isPopup &&
+          (popupLifecycle?.state === "live" || popupLifecycle?.state === "upcoming");
+        const arrowFill = isHotPopup
+          ? "#E84A27"
+          : isPopup
+          ? "#FAF7F2"
+          : "#181615";
+        const arrowStroke = isHotPopup
+          ? "#E84A27"
+          : isPopup
+          ? "rgba(250,247,242,0.95)"
+          : "rgba(255,255,255,0.24)";
+        return (
+          <svg
+            data-slot-arrow="true"
+            data-weekly={isWeeklyPick ? "true" : "false"}
+            aria-hidden="true"
+            width="22"
+            height="11"
+            viewBox="0 0 22 11"
+            style={{
+              left: "50%",
+              top: "-8.5px",
+              transform: "translate3d(-50%, 0, 0)",
+              opacity: isActive && cardOpen && !isWeeklyPick ? 1 : 0,
+            }}
+            className="pointer-events-none absolute z-20 drop-shadow-[0_-2px_5px_rgba(0,0,0,0.24)]"
+          >
+            <path
+              d="M 2 10.5 L 9.8 2.1 Q 11 0.8 12.2 2.1 L 20 10.5 Z"
+              fill={arrowFill}
+              stroke={arrowStroke}
+              strokeWidth="1.25"
+              strokeLinejoin="round"
+            />
+          </svg>
+        );
+      })()}
 
       <div
         style={{ contain: "layout paint" }}
@@ -524,6 +557,18 @@ const SpotlightCard = React.memo(function SpotlightCard({
           <VenueThumb sources={imageSources} alt={venue.name || "Venue"} eager />
         </div>
 
+        {/* Top edge vignette for regular spots so the dark pointer tip blends seamlessly with bright top photos */}
+        {!isPopup && (
+          <div
+            aria-hidden="true"
+            style={{
+              background:
+                "linear-gradient(to bottom, rgba(24,22,21,0.82) 0%, rgba(24,22,21,0.28) 55%, rgba(24,22,21,0) 100%)",
+            }}
+            className="absolute inset-x-0 top-0 h-8 pointer-events-none z-[1]"
+          />
+        )}
+
         {/* Soft dark hue at bottom so white text needs no boxes */}
         <div
           style={{
@@ -541,40 +586,40 @@ const SpotlightCard = React.memo(function SpotlightCard({
           <button
             type="button"
             data-slot-close="true"
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
               onDismiss();
             }}
             aria-label="Close venue card"
-            className="w-7 h-7 flex items-center justify-center text-white/90 hover:text-white drop-shadow-[0_1px_6px_rgba(0,0,0,0.85)] text-[15px] font-bold active:scale-90 transition-all cursor-pointer"
+            className="w-7 h-7 flex items-center justify-center text-white/90 hover:text-white drop-shadow-[0_1px_6px_rgba(0,0,0,0.85)] text-[15px] font-bold active:scale-90 transition-all cursor-pointer touch-manipulation"
           >
             ✕
           </button>
         </div>
 
-        {/* Bottom dark hue: date line + title + Pop-up tag + address inline with white Details ↗ */}
+        {/* Bottom dark hue: title + Pop-up tag + Last pop-up date + address inline with white Details ↗ */}
         <div className="absolute inset-x-0 bottom-0 z-10 px-4 pb-3.5 pt-2 flex flex-col justify-end gap-1">
-          {isPopup && (
-            <div
-              data-slot-story="true"
-              className="w-full border-t border-dashed border-white/25 pt-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-white/85"
-            >
-              <Calendar className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
-              <span className="truncate">
-                {popupLifecycle?.shortDateLabel || "Oslo Pop-Up"}
-              </span>
-            </div>
-          )}
-
           <div data-slot-title="true" className="will-change-transform">
             <h4 className="font-comico font-bold tracking-wide text-[18px] sm:text-[19px] leading-snug text-white drop-shadow-xs line-clamp-1">
               {venue.name}
             </h4>
             {isPopup && (
-              <p className="inline-flex items-center gap-1 text-[11px] font-bold text-white/90 mt-0.5">
-                <SmakrFoodIcon name="popup" className="w-3.5 h-3.5 shrink-0" />
-                <span>Pop-up</span>
-              </p>
+              <>
+                <p className="inline-flex items-center gap-1 text-[11px] font-bold text-white/90 mt-0.5">
+                  <SmakrFoodIcon name="popup" className="w-3.5 h-3.5 shrink-0" />
+                  <span>Pop-up</span>
+                </p>
+                <div
+                  data-slot-story="true"
+                  className="w-full flex items-center gap-1.5 text-[11px] font-semibold text-white/90 mt-0.5"
+                >
+                  <Calendar className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
+                  <span className="truncate">
+                    {popupLifecycle?.shortDateLabel || "Oslo Pop-Up"}
+                  </span>
+                </div>
+              </>
             )}
           </div>
 
@@ -604,14 +649,17 @@ const SpotlightCard = React.memo(function SpotlightCard({
 
             <button
               type="button"
+              onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation();
                 onOpenDetails();
               }}
-              className="shrink-0 h-8 px-4 rounded-full bg-white hover:bg-white/90 text-[#181615] font-comico text-[11px] flex items-center justify-center gap-1 shadow-sm active:scale-95 cursor-pointer whitespace-nowrap"
+              className="group/btn touch-manipulation shrink-0 h-8 px-4 rounded-full bg-white hover:bg-white/95 text-[#181615] font-comico text-[11px] flex items-center justify-center gap-1 shadow-sm transition-all duration-150 ease-out active:scale-[0.94] active:brightness-90 cursor-pointer whitespace-nowrap"
             >
               <span>Details</span>
-              <span>↗</span>
+              <span className="inline-block transition-transform duration-150 group-active/btn:translate-x-0.5 group-active/btn:-translate-y-0.5">
+                ↗
+              </span>
             </button>
           </div>
         </div>
@@ -1275,10 +1323,15 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
   // "Details" opens the full venue bottom sheet with its spring pop-up from the bottom.
   const handleOpenFullDetails = useCallback(() => {
     if (!activeSpotlight) return;
+    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+      navigator.vibrate(8);
+    }
     (window as unknown as { __smakrMap?: { stop?: () => void } }).__smakrMap?.stop?.();
     endInstantVenueSheet();
     selectVenueById(activeSpotlight.id);
-    setIsVenueDetailModalOpen(true);
+    window.setTimeout(() => {
+      setIsVenueDetailModalOpen(true);
+    }, 45);
   }, [activeSpotlight, selectVenueById, setIsVenueDetailModalOpen]);
 
   // Handle clicking a neighborhood pill: prioritize neighborhood cards first + camera animation + dismiss spotlight
@@ -1932,10 +1985,10 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
               className={`h-8 px-3.5 rounded-full font-comico text-[11px] whitespace-nowrap transition-all select-none shrink-0 cursor-pointer border ${
                 activeHoodId === allOsloHood.id
                   ? "bg-[#E84A27] text-white border-[#E84A27] shadow-md"
-                  : "bg-white/65 backdrop-blur-md text-zinc-800 border-white/40 shadow-sm hover:bg-white/80"
+                  : "bg-[#FAF7F2]/92 backdrop-blur-sm text-[#181615] border-[#181615]/12 shadow-sm hover:bg-[#FAF7F2]"
               }`}
             >
-              <span>{allOsloHood.label}</span>
+              <span className="font-comico font-normal tracking-wide">{allOsloHood.label}</span>
             </button>
 
             <button
@@ -1946,7 +1999,7 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
               className={`h-8 px-2.5 rounded-full font-comico text-[11px] flex items-center justify-center gap-1 transition-all select-none shrink-0 cursor-pointer border ${
                 isFilterDeckOpen || hasActiveFilter
                   ? "bg-[#181615] text-white border-[#181615] shadow-md"
-                  : "bg-white/65 backdrop-blur-md text-zinc-800 border-white/40 shadow-sm hover:bg-white/80"
+                  : "bg-[#FAF7F2]/92 backdrop-blur-sm text-[#181615] border-[#181615]/12 shadow-sm hover:bg-[#FAF7F2]"
               }`}
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -1970,10 +2023,10 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
                   className={`h-8 px-3.5 rounded-full font-comico text-[11px] whitespace-nowrap transition-all select-none shrink-0 cursor-pointer border ${
                     isActive
                       ? "bg-[#E84A27] text-white border-[#E84A27] shadow-md"
-                      : "bg-white/45 backdrop-blur-md text-zinc-800 border-white/40 shadow-sm hover:bg-white/60"
+                      : "bg-[#FAF7F2]/90 backdrop-blur-sm text-[#181615] border-[#181615]/12 shadow-sm hover:bg-[#FAF7F2]"
                   }`}
                 >
-                  <span>{hood.label}</span>
+                  <span className="font-comico font-normal tracking-wide">{hood.label}</span>
                 </button>
               );
             })}

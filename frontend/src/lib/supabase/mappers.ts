@@ -246,8 +246,41 @@ export function parseKitchenLiveStatus(raw: unknown): KitchenLiveStatus | null {
   };
 }
 
+const LEGACY_U_WAN_SUM_HASH = "192446b9a93be33d7cbe.webp";
+const CURATED_EGG_COFFEE_URL =
+  "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/popups/u-wan-sum/egg-coffee-cropped.webp";
+
+function normalizeVenuePhotos(
+  row: VenueRow,
+  rawPlacePhotos?: string[]
+): { coverUrl: string | null; placePhotos: string[] | undefined } {
+  const isUWanSum = /u\s*wan['’]?\s*s[ua]m/i.test(row.name || "");
+  const hasLegacyHash = Boolean(row.image_url?.includes(LEGACY_U_WAN_SUM_HASH));
+  let coverUrl = row.image_url ?? null;
+  if (hasLegacyHash || (isUWanSum && (!coverUrl || coverUrl.includes("192446b9a93be33d7cbe")))) {
+    coverUrl = CURATED_EGG_COFFEE_URL;
+  }
+
+  if (!rawPlacePhotos || rawPlacePhotos.length === 0) {
+    return { coverUrl, placePhotos: isUWanSum ? [CURATED_EGG_COFFEE_URL] : undefined };
+  }
+
+  const cleaned = rawPlacePhotos.filter((u) => !u.includes(LEGACY_U_WAN_SUM_HASH));
+  if (isUWanSum || hasLegacyHash) {
+    const deduped = [CURATED_EGG_COFFEE_URL, ...cleaned.filter((u) => u !== CURATED_EGG_COFFEE_URL)];
+    return { coverUrl, placePhotos: deduped };
+  }
+  return { coverUrl, placePhotos: rawPlacePhotos };
+}
+
 export function mapVenueRow(row: VenueRow): Venue {
   const signals = (row.vibe_signals ?? {}) as Record<string, unknown>;
+  const rawPlacePhotos = Array.isArray(signals.place_photos)
+    ? (signals.place_photos as unknown[]).filter(
+        (u): u is string => typeof u === "string" && u.trim().length > 0
+      )
+    : undefined;
+  const { coverUrl, placePhotos } = normalizeVenuePhotos(row, rawPlacePhotos);
   return {
     id: row.id,
     name: row.name,
@@ -276,12 +309,8 @@ export function mapVenueRow(row: VenueRow): Venue {
       typeof row.google_reviews_count === "number" ? row.google_reviews_count : null,
     curated_reviews: mapReviews(row.curated_reviews),
     opening_hours_json: (row.opening_hours as Record<string, string> | null) ?? null,
-    cover_image_url: row.image_url ?? null,
-    place_photos: Array.isArray(signals.place_photos)
-      ? (signals.place_photos as unknown[]).filter(
-          (u): u is string => typeof u === "string" && u.trim().length > 0
-        )
-      : undefined,
+    cover_image_url: coverUrl,
+    place_photos: placePhotos,
     has_wifi: false,
     has_outlets: false,
     silent_zone: false,
@@ -308,7 +337,7 @@ export function mapVenueRow(row: VenueRow): Venue {
         ? signals.google_maps_uri
         : null),
     phone_number: row.phone_number || (signals.phone_number as string) || null,
-    vibe_signals: signals,
+    vibe_signals: placePhotos ? { ...signals, place_photos: placePhotos } : signals,
     kitchen_status: parseKitchenLiveStatus(signals.kitchen_status),
     popup_meta:
       signals.popup_meta && typeof signals.popup_meta === "object" && !Array.isArray(signals.popup_meta)

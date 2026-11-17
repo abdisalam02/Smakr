@@ -1137,16 +1137,36 @@ function colorizeSingleCell(
 }
 
 /**
- * Slice all 105 cells out of the sheet, colorize them, and compose one
- * offscreen atlas canvas. Colorizes a diverse 21-sprite starter batch first
- * so the crowd can start walking immediately (~50ms), then streams the
- * remaining 84 cells in the background without stalling rAF.
+ * Colorize the requested `requiredCells` (or a starter subset if omitted) upfront
+ * so every initial crowd member has its exact sprite baked before animation starts,
+ * then lazily warm any remaining atlas cells during idle gaps.
  */
 export async function buildPeepsAtlas(
   mode: PeepColorMode,
-  onInitialReady?: (atlas: PeepsAtlas) => void
+  onInitialReady?: (atlas: PeepsAtlas) => void,
+  requiredCells?: number[]
 ): Promise<PeepsAtlas> {
   if (atlasCache.current && atlasCache.current.mode === mode) {
+    // Ensure any newly requested indices (e.g. a larger desktop crowd) are colorized too.
+    if (requiredCells && requiredCells.length > 0) {
+      const ctxCached = atlasCache.current.canvas.getContext("2d", { willReadFrequently: true });
+      if (ctxCached) {
+        for (const rawIdx of requiredCells) {
+          const idx = ((rawIdx % SHEET_COUNT) + SHEET_COUNT) % SHEET_COUNT;
+          if (!atlasCache.current.readyCells.has(idx)) {
+            colorizeSingleCell(
+              ctxCached,
+              atlasCache.current.cellW,
+              atlasCache.current.cellH,
+              idx,
+              mode
+            );
+            atlasCache.current.readyCells.add(idx);
+            atlasCache.current.readyList.push(idx);
+          }
+        }
+      }
+    }
     onInitialReady?.(atlasCache.current);
     return atlasCache.current;
   }
@@ -1168,8 +1188,23 @@ export async function buildPeepsAtlas(
   const readyList: number[] = [];
   const atlas: PeepsAtlas = { canvas, mode, cellW, cellH, readyCells, readyList };
 
-  // Starter batch: 12 diverse sprites spread every 9th cell across the sheet
-  // so main-thread boot work stays below ~1 frame while the map initializes.
+  if (requiredCells && requiredCells.length > 0) {
+    // Colorize ONLY the exact cells required by the active crowd deck upfront
+    // so zero characters flicker or teleport mid-walk.
+    const uniqueTargets = Array.from(
+      new Set(requiredCells.map((n) => ((n % SHEET_COUNT) + SHEET_COUNT) % SHEET_COUNT))
+    );
+    for (const idx of uniqueTargets) {
+      colorizeSingleCell(ctx, cellW, cellH, idx, mode);
+      readyCells.add(idx);
+      readyList.push(idx);
+    }
+    onInitialReady?.(atlas);
+    atlasCache.current = atlas;
+    return atlas;
+  }
+
+  // Fallback (e.g. Atlas Inspector without explicit requiredCells): build starter + background stream
   for (let i = 0; i < SHEET_COUNT; i += 9) {
     colorizeSingleCell(ctx, cellW, cellH, i, mode);
     readyCells.add(i);
@@ -1177,7 +1212,6 @@ export async function buildPeepsAtlas(
   }
   onInitialReady?.(atlas);
 
-  // Stream the remaining cells in tiny 4-sprite idle chunks between animation frames.
   const yieldFrame = () =>
     new Promise<void>((resolve) =>
       typeof requestAnimationFrame === "function"

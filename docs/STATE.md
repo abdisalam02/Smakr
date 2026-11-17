@@ -1,10 +1,10 @@
 # STATE.md — CityPulse / Smakr (read first, keep <= 30 lines)
 
-Updated: 2026-11-16
+Updated: 2026-11-17
 
 ## Now
-- Task: Cropped & uploaded new `U WAN SUM` `Egg coffee` image (`egg-coffee-cropped.webp`), replaced the DB post (`52ebca64`), and polished filter dropdown fade, spotlight pop-up card, & sheet touch sensitivity.
-- Status: Complete — verified live on `localhost:3001` (`egg-coffee-cropped.webp` + `U WAN SUM` in `Pop-Up Dishes`); `npx tsc --noEmit` clean.
+- Task: UI polish pass — Warm Oat top-gap fill when mobile `FeedFilterBar` expands, crisp `font-comico` Warm Oat neighborhood pills & relocated pop-up date below `Pop-up` badge (`MapNeighborhoodDock`), extended sheet hero fade + shallower sticky scrim (`VenueBottomSheet`), `[touch-action:pan-x_pan-y]` scroll unlock (`VenueDishesGrid`, `VenuePhotoStrip`), & venue names on filtered pop-up feed cards (`FoodPostCard`, `HomeView`).
+- Status: Ready for verification (`npx tsc --noEmit`).
 
 ## Next (max 3)
 1. Preview and export the 2-slide Early Snowfall `@3x` PNG assets in `/ad-reel`.

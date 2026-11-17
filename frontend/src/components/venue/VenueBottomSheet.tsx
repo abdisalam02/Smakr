@@ -562,9 +562,9 @@ export function VenueBottomSheet() {
                   style={{
                     opacity: navScrimOpacity,
                     background:
-                      "linear-gradient(to bottom, #181615 0%, rgba(24,22,21,0.98) 76%, rgba(24,22,21,0.75) 88%, rgba(24,22,21,0) 100%)",
+                      "linear-gradient(to bottom, #181615 0%, rgba(24,22,21,0.92) 52%, rgba(24,22,21,0.38) 76%, rgba(24,22,21,0) 100%)",
                   }}
-                  className="absolute top-0 inset-x-0 h-[136px] sm:h-[140px] pointer-events-none rounded-t-3xl"
+                  className="absolute top-0 inset-x-0 h-[104px] sm:h-[108px] pointer-events-none rounded-t-3xl"
                 />
 
                 <motion.div
@@ -717,9 +717,9 @@ export function VenueBottomSheet() {
                       style={{
                         marginTop: 0,
                         background:
-                          "linear-gradient(to bottom, rgba(24,22,21,0) 0%, rgba(24,22,21,0.52) 24%, rgba(24,22,21,1) 48%, rgba(24,22,21,1) 56%, rgba(24,22,21,0.52) 74%, rgba(24,22,21,0.14) 89%, rgba(24,22,21,0) 100%)",
+                          "linear-gradient(to bottom, rgba(24,22,21,0) 0%, rgba(24,22,21,0.48) 20%, rgba(24,22,21,0.96) 40%, rgba(24,22,21,0.92) 48%, rgba(24,22,21,0.58) 62%, rgba(24,22,21,0.26) 76%, rgba(24,22,21,0.08) 89%, rgba(24,22,21,0) 100%)",
                       }}
-                      className="pointer-events-none absolute -top-40 inset-x-0 h-[310px] dark:hidden"
+                      className="pointer-events-none absolute -top-40 inset-x-0 h-[390px] dark:hidden"
                     />
 
                     {/* Google-style Horizontal Bento Gallery right under resting title & address */}
@@ -918,9 +918,9 @@ export function VenueBottomSheet() {
                       style={{
                         marginTop: 0,
                         background:
-                          "linear-gradient(to bottom, rgba(24,22,21,0) 0%, rgba(24,22,21,0.52) 24%, rgba(24,22,21,1) 48%, rgba(24,22,21,1) 56%, rgba(24,22,21,0.52) 74%, rgba(24,22,21,0.14) 89%, rgba(24,22,21,0) 100%)",
+                          "linear-gradient(to bottom, rgba(24,22,21,0) 0%, rgba(24,22,21,0.48) 20%, rgba(24,22,21,0.96) 40%, rgba(24,22,21,0.92) 48%, rgba(24,22,21,0.58) 62%, rgba(24,22,21,0.26) 76%, rgba(24,22,21,0.08) 89%, rgba(24,22,21,0) 100%)",
                       }}
-                      className="pointer-events-none absolute -top-40 inset-x-0 h-[310px] dark:hidden"
+                      className="pointer-events-none absolute -top-40 inset-x-0 h-[390px] dark:hidden"
                     />
 
                     {/* Food Truck schedule callout */}

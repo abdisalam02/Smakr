@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useRef } from "react";
 import { Utensils, Compass, Plus } from "lucide-react";
 import { motion } from "motion/react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
@@ -27,9 +27,17 @@ export function FoodViewSlider({
   const isMapActive = viewMode === "map";
   const isFeedActive = !isMapActive;
 
-  const handleSelectFeed = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+  const handledPointerRef = useRef(false);
+
+  const haltFeedMomentum = () => {
+    if (typeof document === "undefined") return;
+    document.querySelectorAll<HTMLElement>("[data-feed-scroll]").forEach((el) => {
+      el.scrollTop = el.scrollTop;
+    });
+  };
+
+  const handleSelectFeed = () => {
     setViewMode("split");
     setFeedMode("food");
     if (mobileSheet === "peek") {
@@ -37,21 +45,60 @@ export function FoodViewSlider({
     }
   };
 
-  const handleSelectMap = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
+  const handleSelectMap = () => {
     setViewMode("map");
     setMobileSheet("peek");
   };
 
+  const makeTapHandlers = (action: () => void) => ({
+    onPointerDown: (e: React.PointerEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      if (e.pointerType === "mouse") return;
+      pointerStartRef.current = { x: e.clientX, y: e.clientY };
+      handledPointerRef.current = false;
+      haltFeedMomentum();
+    },
+    onPointerUp: (e: React.PointerEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      if (e.pointerType === "mouse") return;
+      const start = pointerStartRef.current;
+      pointerStartRef.current = null;
+      if (!start) return;
+      if (Math.hypot(e.clientX - start.x, e.clientY - start.y) < 12) {
+        handledPointerRef.current = true;
+        if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+          navigator.vibrate(8);
+        }
+        action();
+        window.setTimeout(() => {
+          handledPointerRef.current = false;
+        }, 350);
+      }
+    },
+    onPointerCancel: () => {
+      pointerStartRef.current = null;
+      handledPointerRef.current = false;
+    },
+    onClick: (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      e.preventDefault();
+      if (handledPointerRef.current) {
+        handledPointerRef.current = false;
+        return;
+      }
+      if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+        navigator.vibrate(8);
+      }
+      action();
+    },
+  });
+
   return (
     <nav
       aria-label="Feed and Map navigation"
+      data-bottom-dock="true"
       onClick={(e) => e.stopPropagation()}
-      onPointerDown={(e) => e.stopPropagation()}
-      onTouchStart={(e) => e.stopPropagation()}
-      onTouchEnd={(e) => e.stopPropagation()}
-      className={`pointer-events-auto select-none bg-[#FAF7F2]/80 dark:bg-[#181615]/85 backdrop-blur-md border border-[#181615]/[0.08] dark:border-white/15 shadow-lg rounded-full h-11 px-1.5 py-1 flex items-center gap-1.5 ${className}`}
+      className={`pointer-events-auto select-none bg-[#FAF7F2] dark:bg-[#181615] border border-[#E4D9C8] dark:border-white/15 shadow-lg rounded-full h-11 px-1.5 py-1 flex items-center gap-1.5 ${className}`}
       style={{
         WebkitTouchCallout: "none",
         WebkitUserSelect: "none",
@@ -62,10 +109,10 @@ export function FoodViewSlider({
       {/* 1. Feed Tab — expanding accordion pill */}
       <button
         type="button"
-        onClick={handleSelectFeed}
+        {...makeTapHandlers(handleSelectFeed)}
         aria-label="View Food Feed"
         aria-pressed={isFeedActive}
-        className={`relative z-10 flex items-center justify-center rounded-full text-[12px] font-comico font-normal cursor-pointer outline-none border-0 select-none transition-all duration-200 active:scale-95 h-8 ${
+        className={`relative z-10 flex items-center justify-center rounded-full text-[12px] font-comico font-normal cursor-pointer outline-none border-0 select-none transition-[transform,color,background-color] duration-150 ease-out active:scale-[0.93] touch-manipulation h-8 ${
           isFeedActive
             ? "text-white px-2.5"
             : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white px-2"
@@ -100,14 +147,10 @@ export function FoodViewSlider({
       {/* Prominent Add (+) Button */}
       <button
         type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          openCreateDish();
-        }}
+        {...makeTapHandlers(openCreateDish)}
         title="Log a Dish"
         aria-label="Log a Dish"
-        className="relative z-20 w-8 h-8 rounded-full bg-[#181615] dark:bg-white text-white dark:text-[#181615] flex items-center justify-center shadow-md cursor-pointer shrink-0 outline-none border-0 transition-transform duration-75 active:scale-90 hover:scale-105"
+        className="relative z-20 w-8 h-8 rounded-full bg-[#181615] dark:bg-white text-white dark:text-[#181615] flex items-center justify-center shadow-md cursor-pointer shrink-0 outline-none border-0 transition-transform duration-150 ease-out active:scale-90 hover:scale-105 touch-manipulation"
       >
         <Plus className="w-3.5 h-3.5 stroke-[2.4] pointer-events-none" />
       </button>
@@ -115,10 +158,10 @@ export function FoodViewSlider({
       {/* 2. Map Tab — expanding accordion pill */}
       <button
         type="button"
-        onClick={handleSelectMap}
+        {...makeTapHandlers(handleSelectMap)}
         aria-label="View Map Radar"
         aria-pressed={isMapActive}
-        className={`relative z-10 flex items-center justify-center rounded-full text-[12px] font-comico font-normal cursor-pointer outline-none border-0 select-none transition-all duration-200 active:scale-95 h-8 ${
+        className={`relative z-10 flex items-center justify-center rounded-full text-[12px] font-comico font-normal cursor-pointer outline-none border-0 select-none transition-[transform,color,background-color] duration-150 ease-out active:scale-[0.93] touch-manipulation h-8 ${
           isMapActive
             ? "text-white px-2.5"
             : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white px-2"

@@ -34,7 +34,7 @@ export function VenueDishesGrid({
 
       <div
         data-horizontal-carousel="true"
-        className="flex gap-3 overflow-x-auto snap-x snap-mandatory no-scrollbar -mx-4 px-4 pb-1 touch-pan-x"
+        className="flex gap-3 overflow-x-auto snap-x snap-mandatory no-scrollbar -mx-4 px-4 pb-1 [touch-action:pan-x_pan-y]"
       >
         {dishes.map((dish) => {
           const isSaved = savedPostIds.has(dish.id);

@@ -451,9 +451,7 @@ function createAquarellePinElement(
         bottom: -9px;
         left: 50%;
         transform: translateX(-50%);
-        background: rgba(232, 74, 39, 0.76);
-        backdrop-filter: blur(6px);
-        -webkit-backdrop-filter: blur(6px);
+        background: rgba(232, 74, 39, 0.94);
         color: #FAF7F2;
         font-family: var(--font-comico, sans-serif);
         font-size: 8px;
@@ -463,7 +461,7 @@ function createAquarellePinElement(
         padding: 2.5px 6px;
         border-radius: 9999px;
         border: none;
-        box-shadow: 0 2px 8px rgba(232, 74, 39, 0.32);
+        box-shadow: 0 2px 6px rgba(24, 22, 21, 0.22);
         white-space: nowrap;
         pointer-events: none;
         z-index: 10;
@@ -506,7 +504,7 @@ function createAquarellePinElement(
         padding: 0;
         flex-shrink: 0;
         overflow: visible !important;
-        filter: drop-shadow(0 3px 6px rgba(24, 22, 21, 0.22));
+        filter: drop-shadow(0 2px 4px rgba(24, 22, 21, 0.2));
         transition: width 150ms ease, height 150ms ease;
       ">
         ${pinGlyph}
@@ -1430,13 +1428,8 @@ export function MapRadarView() {
       }
     });
 
-    // After a large pan / pitch, force a repaint so no canvas region is left
-    // blank. IMPORTANT: never call `map.resize()` here — resize re-enters
-    // `moveend`, which recurses/loops and can leave the canvas half-rendered.
-    map.on("moveend", () => {
-      // If a card is open and the user has panned/zoomed the map away from the
-      // pin's landing spot, dismiss it — the fixed card would no longer line up
-      // with its icon.
+    const checkSpotlightDriftDismiss = (requireUserEvent: boolean, ev?: { originalEvent?: unknown }) => {
+      if (requireUserEvent && (!ev?.originalEvent || isProgrammaticFlightRef.current)) return;
       const moveState = useCityPulseStore.getState();
       if (
         moveState.viewMode === "map" &&
@@ -1454,12 +1447,34 @@ export function MapRadarView() {
             v.id === moveState.weeklyPick.venue_id ? WEEKLY_PICK_PIN_GAP : SELECTION_PIN_GAP;
           const targetY = cardTop - pinGap;
           const drift = Math.hypot(p.x - targetX, p.y - targetY);
-          if (drift > 90) {
+          if (drift > 36) {
             moveState.setSelectedVenue(null);
             moveState.setBottomSheetOpen(false);
           }
         }
       }
+    };
+
+    const clearFlightLockOnUserGesture = (e: { originalEvent?: unknown }) => {
+      if (!e?.originalEvent) return;
+      selectionFlightUntilRef.current = 0;
+      isProgrammaticFlightRef.current = false;
+    };
+    map.on("dragstart", clearFlightLockOnUserGesture);
+    map.on("touchstart", clearFlightLockOnUserGesture);
+
+    map.on("move", (e) => {
+      checkSpotlightDriftDismiss(true, e);
+    });
+
+    // After a large pan / pitch, force a repaint so no canvas region is left
+    // blank. IMPORTANT: never call `map.resize()` here — resize re-enters
+    // `moveend`, which recurses/loops and can leave the canvas half-rendered.
+    map.on("moveend", () => {
+      // If a card is open and the user has panned/zoomed the map away from the
+      // pin's landing spot, dismiss it — the fixed card would no longer line up
+      // with its icon.
+      checkSpotlightDriftDismiss(false);
 
       map.triggerRepaint();
       renderWeeklyMarker();

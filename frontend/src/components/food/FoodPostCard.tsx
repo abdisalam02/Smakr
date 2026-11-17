@@ -42,6 +42,8 @@ interface FoodPostCardProps {
   compact?: boolean;
   /** Fill a fixed-height swimlane wrapper instead of using the aspect ratio. */
   fillHeight?: boolean;
+  /** Show spot_name even on pop-up cards (used in filtered views outside the Pop-Up Dishes swimlane). */
+  showSpotName?: boolean;
 }
 
 /**
@@ -57,6 +59,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
   index,
   compact = false,
   fillHeight = false,
+  showSpotName = false,
 }: FoodPostCardProps) {
   // Atomic selectors: each returns a stable primitive / reference, so only the
   // cards whose own state changed re-render.
@@ -521,7 +524,11 @@ export const FoodPostCard = React.memo(function FoodPostCard({
               setImgReady(true);
             }}
             className="object-cover w-full opacity-100 text-transparent transition-transform duration-700 ease-out group-hover:scale-105"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 600px"
+            sizes={
+              isGridMode || fillHeight
+                ? "(max-width: 640px) 46vw, (max-width: 1024px) 30vw, 260px"
+                : "(max-width: 640px) 92vw, 420px"
+            }
           />
         )}
 
@@ -542,7 +549,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
             {/* Pop-up Icon + Spot Type (What they serve) in Top-Left */}
             {isPopup && (
               <span
-                className="px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1.5 bg-black/45 backdrop-blur-md text-white border border-white/20 text-[10.5px] font-bold whitespace-nowrap"
+                className="px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1.5 bg-[#181615]/90 text-white border border-white/20 text-[10.5px] font-bold whitespace-nowrap"
                 title="Pop-Up"
               >
                 <SmakrFoodIcon name="popup" className="w-3.5 h-3.5 shrink-0" />
@@ -688,17 +695,17 @@ export const FoodPostCard = React.memo(function FoodPostCard({
             {post.dish_name}
           </h3>
 
-          {/* Location row: Pop-ups show MapPin + neighborhood (spot name sits outside below the card) */}
+          {/* Location row: Pop-ups show MapPin + neighborhood (spot name sits outside below the card unless showSpotName) */}
           <div className={`${isGridMode ? "text-[11.5px]" : "text-[13.5px]"} font-semibold text-white/95 drop-shadow-xs mt-1 flex items-center gap-1.5 flex-wrap`}>
             <MapPin className={`${isGridMode ? "w-3.5 h-3.5" : "w-[15px] h-[15px]"} text-[#e84a27] shrink-0`} />
-            {!isPopup && (
+            {(!isPopup || showSpotName) && (
               <span className="font-semibold text-white truncate max-w-[175px] sm:max-w-none">
                 {post.spot_name}
               </span>
             )}
             {!isGridMode && (
               <>
-                {!isPopup && <span className="text-zinc-400">·</span>}
+                {(!isPopup || showSpotName) && <span className="text-zinc-400">·</span>}
                 <span>{hasConfirmedLocation ? locationInfo.neighborhood : "Location TBA"}</span>
               </>
             )}
@@ -774,28 +781,34 @@ export const FoodPostCard = React.memo(function FoodPostCard({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
+                      if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+                        navigator.vibrate(8);
+                      }
                       handleOpenDetails();
                     }}
-                    className="relative before:absolute before:-inset-2 before:content-[''] touch-manipulation h-8 px-3.5 text-xs rounded-full bg-[#FAF7F2] hover:bg-white text-[#181615] border border-[#181615]/15 shadow-sm active:scale-95 transition-transform duration-100 font-bold flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap"
+                    className="group/btn relative before:absolute before:-inset-2 before:content-[''] touch-manipulation h-8 px-3.5 text-xs rounded-full bg-[#FAF7F2] hover:bg-white text-[#181615] border border-[#181615]/15 shadow-sm active:scale-[0.94] active:brightness-90 transition-all duration-150 ease-out font-bold flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap"
                     title="View drop details"
                     aria-label="View drop details"
                   >
                     <span className="font-comico font-bold tracking-tight text-[#181615]">Details</span>
-                    <ArrowUpRight className="w-3 h-3 stroke-[2.8] text-[#E84A27]" />
+                    <ArrowUpRight className="w-3 h-3 stroke-[2.8] text-[#E84A27] transition-transform duration-150 group-active/btn:translate-x-0.5 group-active/btn:-translate-y-0.5" />
                   </button>
                 ) : hasConfirmedLocation ? (
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
+                      if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+                        navigator.vibrate(8);
+                      }
                       handleFlyToRadar(e);
                     }}
-                    className="relative before:absolute before:-inset-2 before:content-[''] touch-manipulation h-9 px-3.5 text-xs rounded-full bg-[#FAF7F2] hover:bg-white text-[#181615] border border-[#181615]/15 shadow-sm active:scale-95 transition-transform duration-100 font-bold flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap"
+                    className="group/btn relative before:absolute before:-inset-2 before:content-[''] touch-manipulation h-9 px-3.5 text-xs rounded-full bg-[#FAF7F2] hover:bg-white text-[#181615] border border-[#181615]/15 shadow-sm active:scale-[0.94] active:brightness-90 transition-all duration-150 ease-out font-bold flex items-center gap-1 cursor-pointer shrink-0 whitespace-nowrap"
                     title="Locate on map"
                     aria-label="Locate on map"
                   >
                     <span className="font-comico font-bold tracking-tight text-[#181615]">Map</span>
-                    <ArrowUpRight className="w-3 h-3 stroke-[2.8] text-[#E84A27]" />
+                    <ArrowUpRight className="w-3 h-3 stroke-[2.8] text-[#E84A27] transition-transform duration-150 group-active/btn:translate-x-0.5 group-active/btn:-translate-y-0.5" />
                   </button>
                 ) : null}
               </div>

@@ -140,11 +140,16 @@ export function UserOnboardingModal() {
     };
 
     if (typeof window !== "undefined") {
+      const win = window as unknown as {
+        openOnboardingPreview?: () => void;
+        __smakrOnboardingPreviewQueued?: boolean;
+      };
       const sp = new URLSearchParams(window.location.search);
-      if (sp.has("onboarding") || sp.has("preview_onboarding")) {
+      if (sp.has("onboarding") || sp.has("preview_onboarding") || win.__smakrOnboardingPreviewQueued) {
+        win.__smakrOnboardingPreviewQueued = false;
         triggerPreview();
       }
-      (window as unknown as { openOnboardingPreview?: () => void }).openOnboardingPreview = triggerPreview;
+      win.openOnboardingPreview = triggerPreview;
     }
   }, [currentUser]);
 

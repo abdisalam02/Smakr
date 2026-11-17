@@ -65,17 +65,25 @@ export function useCollapseOnFeedScroll({
       }
     };
 
+    const isIgnoredTarget = (target: EventTarget | null) => {
+      if (!(target instanceof Element)) return false;
+      if (
+        target.closest('[data-bottom-dock="true"], nav[aria-label="Feed and Map navigation"]')
+      ) {
+        return true;
+      }
+      return Boolean(ignoreSelector && target.closest(ignoreSelector));
+    };
+
     const handleScroll = (e: Event) => {
-      const target = e.target;
-      if (ignoreSelector && target instanceof Element && target.closest(ignoreSelector)) {
+      if (isIgnoredTarget(e.target)) {
         return;
       }
       checkCollapse();
     };
 
     const handleTouchStart = (e: TouchEvent) => {
-      const target = e.target;
-      if (ignoreSelector && target instanceof Element && target.closest(ignoreSelector)) {
+      if (isIgnoredTarget(e.target)) {
         touchStartYRef.current = null;
         return;
       }
@@ -86,13 +94,12 @@ export function useCollapseOnFeedScroll({
 
     const handleTouchMove = (e: TouchEvent) => {
       if (!isArmed || touchStartYRef.current === null) return;
-      const target = e.target;
-      if (ignoreSelector && target instanceof Element && target.closest(ignoreSelector)) {
+      if (isIgnoredTarget(e.target)) {
         return;
       }
       if (e.touches.length > 0) {
         const delta = Math.abs(e.touches[0].clientY - touchStartYRef.current);
-        if (delta > threshold) {
+        if (delta > Math.max(threshold, 12)) {
           onCollapseRef.current?.();
         }
       }

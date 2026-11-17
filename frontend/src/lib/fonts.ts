@@ -4,4 +4,5 @@ export const comico = localFont({
   src: "../fonts/Comico-Regular.otf",
   variable: "--font-comico",
   display: "swap",
+  preload: true,
 });

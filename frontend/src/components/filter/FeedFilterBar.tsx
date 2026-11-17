@@ -27,12 +27,17 @@ import {
 
 interface FeedFilterBarProps {
   compact?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
 }
 
-export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
+export function FeedFilterBar({ compact = false, onExpandedChange }: FeedFilterBarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSpotTypeOpen, setIsSpotTypeOpen] = useState(false);
   const [isCuisinesOpen, setIsCuisinesOpen] = useState(false);
+
+  useEffect(() => {
+    onExpandedChange?.(isExpanded);
+  }, [isExpanded, onExpandedChange]);
 
   // Auto-collapse drawer on feed scroll anywhere
   useCollapseOnFeedScroll({
@@ -234,8 +239,8 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
       if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 6) {
         return;
       }
-      // Lock into vertical sheet drag as soon as vertical movement exceeds 5px
-      if (Math.abs(dy) > 5 && Math.abs(dy) > Math.abs(dx)) {
+      // Lock into vertical sheet drag only after deliberate 12px movement so tap jitter never suppresses clicks
+      if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) {
         isVerticalDragRef.current = true;
       }
     }
@@ -633,7 +638,11 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
   return (
     <div
       data-filter-bar
-      className={`w-full max-w-full min-w-0 bg-transparent ${
+      className={`w-full max-w-full min-w-0 transition-colors duration-150 ${
+        compact && isExpanded
+          ? "bg-[#FAF7F2] dark:bg-[#181615]"
+          : "bg-transparent"
+      } ${
         compact ? "" : "border-b border-black/[0.06] dark:border-white/[0.08]"
       }`}
     >
@@ -849,8 +858,9 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                 e.preventDefault();
               }
             }}
-            className="w-full rounded-b-2xl bg-gradient-to-b from-[#FAF7F2]/25 via-[#FAF7F2]/88 to-[#FAF7F2]/78 dark:from-[#181615]/25 dark:via-[#181615]/88 dark:to-[#181615]/78 backdrop-blur-xl shadow-[0_18px_36px_-10px_rgba(24,22,21,0.12)] px-3.5 pt-2.5 pb-2.5 space-y-2.5 select-none touch-pan-x cursor-grab active:cursor-grabbing"
+            className="w-full rounded-none bg-transparent border-none shadow-none select-none touch-pan-x cursor-grab active:cursor-grabbing"
           >
+              <div className="bg-[#FAF7F2] dark:bg-[#181615] px-3.5 pt-2.5 pb-2 space-y-2.5">
                 {/* Header: Compact Row (Categories + active on left, Reset on right) */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -1196,8 +1206,13 @@ export function FeedFilterBar({ compact = false }: FeedFilterBarProps) {
                   <div className="w-10 h-1.5 rounded-full bg-stone-300/90 dark:bg-stone-600/90 hover:bg-[#E84A27] transition-colors" />
                 </div>
               </div>
+              <div
+                aria-hidden="true"
+                className="h-7 w-full pointer-events-none bg-gradient-to-b from-[#FAF7F2] via-[#FAF7F2]/75 to-transparent dark:from-[#181615] dark:via-[#181615]/75 dark:to-transparent"
+              />
             </div>
           </div>
         </div>
-      );
-    }
+      </div>
+    );
+  }
