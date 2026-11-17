@@ -2244,7 +2244,7 @@ function PopupRadarSlideCanvas({
                 />
               </div>
 
-              <div style={{ textAlign: "left", maxWidth: 540 }}>
+              <div style={{ textAlign: "left", flex: 1, minWidth: 0 }}>
                 <div
                   style={{
                     fontFamily: SANS_STACK,
@@ -2266,13 +2266,14 @@ function PopupRadarSlideCanvas({
                     background: "#FDECE7",
                     color: "#181615",
                     borderRadius: 999,
-                    padding: is916 ? "11px 24px" : "8px 18px",
-                    fontSize: is916 ? 24 : is11 ? 18 : 21,
+                    padding: is916 ? "10px 20px" : "7px 15px",
+                    fontSize: is916 ? 19.5 : is11 ? 15 : 17.5,
                     fontWeight: 900,
-                    letterSpacing: "0.10em",
+                    letterSpacing: "0.08em",
                     textTransform: "uppercase",
                     marginTop: is916 ? 16 : 10,
                     lineHeight: 1,
+                    whiteSpace: "nowrap",
                   }}
                 >
                   + HERE FOR THE WEEKEND · GONE BY MONDAY
@@ -3191,15 +3192,9 @@ function PopupRadarSlideCanvas({
           {slideNum === 4 ? (
             <div
               style={{
-                background: "#e84a27",
-                color: "#FFFFFF",
-                fontSize: is916 ? 20 : 15,
-                fontWeight: 800,
-                padding: is916 ? "13px 26px" : "9px 18px",
-                borderRadius: 999,
-                boxShadow: "0 10px 24px rgba(232, 74, 39, 0.28)",
-                display: "inline-flex",
-                alignItems: "center",
+                color: "#e84a27",
+                fontSize: is916 ? 22 : 18,
+                fontWeight: 900,
                 letterSpacing: "0.02em",
                 lineHeight: 1,
               }}
