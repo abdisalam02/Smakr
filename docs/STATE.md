@@ -3,8 +3,8 @@
 Updated: 2026-11-17
 
 ## Now
-- Task: Removed prices from Mint & Crantz stories; verified @uwansamofficial, @mintonwheeels, & @crantzcookies via Apify; fixed @mintonwheeels handle in popupScraper.ts.
-- Status: `npx tsc --noEmit` & `npm run build` passed cleanly; ready to push.
+- Task: Added bundled Google Font `Anton` for mobile parity (replacing Windows-only Impact) & scaled up Slide 01–04 kicker, subtext, drop line, & 4-tag bar for phone legibility.
+- Status: Verifying `npx tsc --noEmit`.
 
 ## Next (max 3)
 1. Preview and export the 2-slide Early Snowfall `@3x` PNG assets in `/ad-reel`.

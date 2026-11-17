@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Plus_Jakarta_Sans, DM_Sans, Space_Grotesk, Geist } from "next/font/google";
-import { comico } from "@/lib/fonts";
+import { comico, anton } from "@/lib/fonts";
 import { Header } from "@/components/ui/Header";
 import { MascotConfigHydrator } from "@/components/avatar/MascotConfigHydrator";
 import { AppStateHydrator } from "@/components/state/AppStateHydrator";
@@ -83,7 +83,7 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${comico.variable} ${plusJakarta.variable} ${dmSans.variable} ${spaceGrotesk.variable} ${geist.variable}`}
+      className={`${comico.variable} ${anton.variable} ${plusJakarta.variable} ${dmSans.variable} ${spaceGrotesk.variable} ${geist.variable}`}
       suppressHydrationWarning
     >
       <head>

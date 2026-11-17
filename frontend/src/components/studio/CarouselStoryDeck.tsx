@@ -3,7 +3,7 @@
 import React, { useCallback, useRef, useState } from "react";
 import { toBlob } from "html-to-image";
 import { Download, Loader2, Maximize2, Snowflake, Sparkles, Ticket, X } from "lucide-react";
-import { comico } from "@/lib/fonts";
+import { comico, anton } from "@/lib/fonts";
 import { SmakrMascotRig } from "@/components/studio/SmakrMascotRig";
 import { OFFICIAL_SMAKR_MASCOT_CONFIG } from "@/lib/officialSmakrMascot";
 
@@ -2266,12 +2266,12 @@ function PopupRadarSlideCanvas({
                     background: "#FDECE7",
                     color: "#181615",
                     borderRadius: 999,
-                    padding: is916 ? "8px 20px" : "6px 14px",
-                    fontSize: is916 ? 18 : 13,
-                    fontWeight: 800,
-                    letterSpacing: "0.14em",
+                    padding: is916 ? "11px 24px" : "8px 18px",
+                    fontSize: is916 ? 24 : is11 ? 18 : 21,
+                    fontWeight: 900,
+                    letterSpacing: "0.10em",
                     textTransform: "uppercase",
-                    marginTop: is916 ? 14 : 8,
+                    marginTop: is916 ? 16 : 10,
                     lineHeight: 1,
                   }}
                 >
@@ -2609,11 +2609,11 @@ function PopupRadarSlideCanvas({
           >
             <div
               style={{
-                fontSize: is916 ? 21 : is11 ? 15.5 : 18,
-                fontWeight: 600,
-                lineHeight: 1.34,
-                color: "#57534E",
-                maxWidth: 620,
+                fontSize: is916 ? 29 : is11 ? 21 : 25,
+                fontWeight: 700,
+                lineHeight: 1.32,
+                color: "#3F3A36",
+                maxWidth: 820,
               }}
             >
               Phin-dripped egg coffee, Kyoto matcha on wheels, and molten NYC cookies. Here is where they drop next.
@@ -2645,8 +2645,8 @@ function PopupRadarSlideCanvas({
             <div
               style={{
                 color: "#e84a27",
-                fontSize: is916 ? 16 : 14,
-                fontWeight: 800,
+                fontSize: is916 ? 22 : 18,
+                fontWeight: 900,
                 letterSpacing: "0.02em",
               }}
             >
@@ -2787,10 +2787,10 @@ function PopupRadarSlideCanvas({
       <div>
         <div
           style={{
-            fontFamily: 'Impact, "Arial Black", sans-serif',
-            fontSize: is916 ? 52 : is11 ? 34 : 42,
-            fontWeight: 900,
-            letterSpacing: "0.02em",
+            fontFamily: `${anton.style.fontFamily}, Impact, "Arial Black", sans-serif`,
+            fontSize: is916 ? 56 : is11 ? 38 : 46,
+            fontWeight: 400,
+            letterSpacing: "0.03em",
             color: spotlightCfg.accent,
             textTransform: "uppercase",
             lineHeight: 0.95,
@@ -2803,7 +2803,7 @@ function PopupRadarSlideCanvas({
           style={{
             marginTop: is916 ? 24 : 14,
             fontFamily: `${comico.style.fontFamily}, sans-serif`,
-            fontSize: is916 ? 25 : is11 ? 16 : 20,
+            fontSize: is916 ? 26 : is11 ? 17 : 21,
             lineHeight: 1.38,
             color: spotlightCfg.primary,
             letterSpacing: "0.01em",
@@ -2815,8 +2815,9 @@ function PopupRadarSlideCanvas({
         <div
           style={{
             marginTop: is916 ? 22 : 12,
-            fontFamily: 'Impact, "Arial Narrow", sans-serif',
-            fontSize: is916 ? 26 : is11 ? 18 : 22,
+            fontFamily: `${anton.style.fontFamily}, Impact, "Arial Narrow", sans-serif`,
+            fontSize: is916 ? 28 : is11 ? 20 : 24,
+            fontWeight: 400,
             letterSpacing: "0.04em",
             color: spotlightCfg.accent,
             textTransform: "uppercase",
@@ -3108,9 +3109,10 @@ function PopupRadarSlideCanvas({
             <div key={val} style={{ display: "inline-flex", alignItems: "center", gap: 14 }}>
               <span
                 style={{
-                  fontFamily: 'Impact, "Arial Narrow", sans-serif',
-                  fontSize: is916 ? 20 : is11 ? 14 : 17,
-                  letterSpacing: "0.03em",
+                  fontFamily: `${anton.style.fontFamily}, Impact, "Arial Narrow", sans-serif`,
+                  fontSize: is916 ? 25 : is11 ? 18 : 21,
+                  fontWeight: 400,
+                  letterSpacing: "0.04em",
                   color: idx % 2 === 0 ? spotlightCfg.accent : spotlightCfg.primary,
                   textTransform: "uppercase",
                 }}
@@ -3118,7 +3120,7 @@ function PopupRadarSlideCanvas({
                 {val}
               </span>
               {idx < 3 && (
-                <span style={{ color: spotlightCfg.secondaryAccent, fontSize: is916 ? 18 : 14, fontWeight: 900 }}>
+                <span style={{ color: spotlightCfg.secondaryAccent, fontSize: is916 ? 20 : 15, fontWeight: 900 }}>
                   •
                 </span>
               )}
