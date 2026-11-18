@@ -29,7 +29,7 @@ import { FoodPost, Neighborhood, Venue } from "@/types";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { useVenueDetail } from "@/hooks/useVenueDetail";
 import { DietaryBadge } from "@/components/ui/DietaryBadge";
-import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
+import { FOOD_CATEGORIES } from "@/lib/foodCategories";
 import { DishDetailPopup } from "@/components/food/DishDetailPopup";
 import {
   getPopupStatus,
@@ -55,6 +55,16 @@ const NEIGHBORHOOD_LABELS: Record<Neighborhood, string> = {
   sentrum: "Sentrum",
   frogner: "Frogner",
   kampen: "Kampen",
+  bjorvika: "Bjørvika",
+  st_hanshaugen: "St. Hanshaugen",
+  majorstuen: "Majorstuen",
+  vulkan: "Vulkan",
+  fredensborg: "Fredensborg",
+  bislett: "Bislett",
+  sorenga: "Sørenga",
+  lillestrom: "Lillestrøm",
+  gamlebyen: "Gamlebyen",
+  hasle: "Hasle",
 };
 
 const VIBE_LABELS: Record<string, string> = {

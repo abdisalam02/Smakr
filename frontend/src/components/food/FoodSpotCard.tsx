@@ -254,8 +254,8 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
           </div>
         )}
 
-        {/* Live Status Pill top-right of photo in 2x grid mode */}
-        {isGridMode && (
+        {/* Live Status Pill top-right of photo in 2x grid mode (omit if hours unknown) */}
+        {isGridMode && liveOpenStatus.isOpen !== null && (
           <div className="absolute top-2 right-2 z-[3]">
             {liveOpenStatus.isOpen ? (
               <span className="bg-[#181615]/90 text-emerald-300 border border-white/15 px-2 py-0.5 rounded-full text-[9.5px] font-bold inline-flex items-center gap-1">
@@ -329,15 +329,19 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
                     <span>Drop Radar</span>
                   </span>
                 </>
-              ) : liveOpenStatus.isOpen ? (
+              ) : liveOpenStatus.isOpen === true ? (
                 <span className="bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold inline-flex items-center gap-1 shadow-2xs">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   <span className="truncate max-w-[70px] sm:max-w-none">{liveOpenStatus.badgeText}</span>
                 </span>
-              ) : (
+              ) : liveOpenStatus.isOpen === false ? (
                 <span className="bg-stone-500/10 text-stone-600 dark:text-stone-400 border border-stone-500/20 px-2.5 py-0.5 rounded-full text-[10.5px] font-medium inline-flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-stone-400" />
                   <span className="truncate max-w-[70px] sm:max-w-none">{liveOpenStatus.badgeText}</span>
+                </span>
+              ) : (
+                <span className="bg-stone-500/10 text-stone-600 dark:text-stone-400 border border-stone-500/20 px-2.5 py-0.5 rounded-full text-[10.5px] font-medium inline-flex items-center gap-1">
+                  <span className="truncate max-w-[110px] sm:max-w-none">{liveOpenStatus.label}</span>
                 </span>
               )}
             </div>

@@ -19,10 +19,12 @@ import { SmakrSIcon } from "@/components/ui/SmakrSIcon";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 const GOOGLE_DISABLED_MESSAGE =
-  "Google sign-in isn't switched on yet. Enable the Google provider in Supabase (Authentication → Providers), or use email sign-in for the beta.";
+  "Google sign-in is temporarily unavailable right now. Please sign in with your email or magic link below.";
 
 type AuthTab = "signin" | "signup" | "reset";
-type BusyState = null | "google" | "signin" | "signup" | "reset";
+type BusyState = null | "google" | "signin" | "signup" | "reset" | "magiclink";
+
+const IN_APP_WEBVIEW_RE = /Instagram|Musical_ly|BytedanceWebview|TikTok|FBAN|FBAV|Snapchat/i;
 
 /** Official multi-colour Google "G" vector. */
 function GoogleIcon({ className }: { className?: string }) {
@@ -90,6 +92,13 @@ export function AuthModal() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [signupConfirmedEmail, setSignupConfirmedEmail] = useState<string | null>(null);
+  const [isInAppBrowser, setIsInAppBrowser] = useState(false);
+
+  useEffect(() => {
+    if (typeof navigator !== "undefined") {
+      setIsInAppBrowser(IN_APP_WEBVIEW_RE.test(navigator.userAgent || ""));
+    }
+  }, []);
 
   // Clear stale messages each time the modal is (re)opened.
   useEffect(() => {
@@ -168,8 +177,32 @@ export function AuthModal() {
       setError(friendlyAuthError(error.message));
       return;
     }
-    setIsAuthModalOpen(false);
-    showToast("Welcome back!");
+    if (!error) {
+      setIsAuthModalOpen(false);
+      showToast("Welcome back!");
+    }
+  };
+
+  const handleMagicLink = async () => {
+    setError(null);
+    setNotice(null);
+    if (!guard()) return;
+    const cleanEmail = email.trim();
+    if (!cleanEmail) {
+      setError("Enter your email address to receive a one-tap sign-in link.");
+      return;
+    }
+    setBusy("magiclink");
+    const { error } = await supabase!.auth.signInWithOtp({
+      email: cleanEmail,
+      options: { emailRedirectTo: callbackUrl },
+    });
+    setBusy(null);
+    if (error) {
+      setError(friendlyAuthError(error.message));
+      return;
+    }
+    setNotice(`Magic sign-in link sent to ${cleanEmail}. Check your inbox to sign in.`);
   };
 
   const handleForgotPassword = async () => {
@@ -413,29 +446,35 @@ export function AuthModal() {
               )}
 
               {tab !== "reset" && (
-                <>
-                  {/* Google */}
-                  <button
-                    onClick={handleGoogle}
-                    disabled={busy !== null}
-                    className="w-full flex items-center justify-center gap-2.5 p-3 rounded-2xl bg-white hover:bg-zinc-50 disabled:opacity-60 text-zinc-800 font-semibold text-xs border border-zinc-200 shadow-xs transition-all active:scale-[0.98]"
-                  >
-                    {busy === "google" ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <GoogleIcon className="w-4 h-4" />
-                    )}
-                    <span>Continue with Google</span>
-                  </button>
-
-                  <div className="flex items-center gap-3">
-                    <span className="h-px flex-1 bg-zinc-200" />
-                    <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
-                      or email
-                    </span>
-                    <span className="h-px flex-1 bg-zinc-200" />
+                isInAppBrowser ? (
+                  <div className="rounded-2xl bg-[#F2EDE4] border border-[#181615]/10 px-3.5 py-2.5 text-[11px] leading-relaxed text-[#181615]/80 text-center">
+                    Continue with email below, or open <span className="font-semibold">smakr.no</span> in Safari/Chrome for Google sign-in.
                   </div>
-                </>
+                ) : (
+                  <>
+                    {/* Google */}
+                    <button
+                      onClick={handleGoogle}
+                      disabled={busy !== null}
+                      className="w-full flex items-center justify-center gap-2.5 p-3 rounded-2xl bg-white hover:bg-zinc-50 disabled:opacity-60 text-zinc-800 font-semibold text-xs border border-zinc-200 shadow-xs transition-all active:scale-[0.98]"
+                    >
+                      {busy === "google" ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <GoogleIcon className="w-4 h-4" />
+                      )}
+                      <span>Continue with Google</span>
+                    </button>
+
+                    <div className="flex items-center gap-3">
+                      <span className="h-px flex-1 bg-zinc-200" />
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
+                        or email
+                      </span>
+                      <span className="h-px flex-1 bg-zinc-200" />
+                    </div>
+                  </>
+                )
               )}
 
               {/* Feedback banners */}
@@ -527,6 +566,19 @@ export function AuthModal() {
                     ) : (
                       <span>Sign In →</span>
                     )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleMagicLink}
+                    disabled={busy !== null}
+                    className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-2xl bg-white hover:bg-zinc-50 disabled:opacity-60 text-[#181615] font-semibold text-xs border border-[#181615]/12 shadow-2xs transition-all active:scale-[0.98]"
+                  >
+                    {busy === "magiclink" ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#e84a27]" />
+                    ) : (
+                      <Mail className="w-3.5 h-3.5 text-[#e84a27]" />
+                    )}
+                    <span>Send Magic Link (no password)</span>
                   </button>
                   <button
                     type="button"

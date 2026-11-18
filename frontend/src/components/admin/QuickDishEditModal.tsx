@@ -141,6 +141,7 @@ export function QuickDishEditModal({
   // Direct File Upload & Clipboard Paste state
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -328,6 +329,7 @@ export function QuickDishEditModal({
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
+    setSaveError(null);
     try {
       const parsedPrice = priceNok === "" ? null : Number(priceNok);
       const parsedTags = tasteTagsStr
@@ -345,8 +347,9 @@ export function QuickDishEditModal({
         is_verified_food_photo: isVerified && !imgError,
       });
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Save error:", err);
+      setSaveError(err?.message || "Failed to save dish changes. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -1227,6 +1230,12 @@ export function QuickDishEditModal({
                   </span>
                 </div>
               </label>
+            </div>
+          )}
+
+          {saveError && (
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs font-bold text-red-700">
+              {saveError}
             </div>
           )}
 

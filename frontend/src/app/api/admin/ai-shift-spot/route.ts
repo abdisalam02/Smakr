@@ -5,16 +5,12 @@ import path from "path";
 import { PLACES_API_BASE } from "@/lib/places/google";
 import type { StagedCandidateSpot } from "@/app/api/admin/seeding-lab/route";
 import { requireAdmin } from "@/app/api/admin/_auth";
+import {
+  readStagedCandidates,
+  writeStagedCandidates,
+} from "@/lib/admin/stagedCandidatesStore";
 
 export const runtime = "nodejs";
-
-function getStagedFilePath(): string {
-  const p1 = path.join(process.cwd(), "curation", "staged_candidates.json");
-  if (fs.existsSync(p1)) return p1;
-  const p2 = path.join(process.cwd(), "frontend", "curation", "staged_candidates.json");
-  if (fs.existsSync(p2)) return p2;
-  return p1;
-}
 
 function resolveGeminiApiKey(): string {
   const fromEnv =
@@ -409,12 +405,10 @@ export async function POST(req: NextRequest) {
       proposal?: AiShiftSpotProposal;
     };
 
-    const filePath = getStagedFilePath();
-    if (!fs.existsSync(filePath)) {
-      return NextResponse.json({ error: "Staged candidates file not found" }, { status: 404 });
+    const candidates = await readStagedCandidates(auth.adminClient);
+    if (candidates.length === 0) {
+      return NextResponse.json({ error: "Staged candidates not found" }, { status: 404 });
     }
-
-    const candidates: StagedCandidateSpot[] = JSON.parse(fs.readFileSync(filePath, "utf8"));
     const spotIdx = candidates.findIndex((s) => s.id === spotId);
     if (spotIdx === -1) {
       return NextResponse.json({ error: `Candidate spot "${spotId}" not found.` }, { status: 404 });
@@ -564,7 +558,7 @@ export async function POST(req: NextRequest) {
     }
 
     candidates[spotIdx] = updatedSpot;
-    fs.writeFileSync(filePath, JSON.stringify(candidates, null, 2), "utf8");
+    await writeStagedCandidates(auth.adminClient, candidates);
 
     // 2. Sync to Supabase (`venues` + `food_posts`) if Supabase admin client is available
     const supabase = auth.adminClient;

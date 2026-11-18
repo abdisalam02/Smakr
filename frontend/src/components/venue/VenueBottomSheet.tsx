@@ -23,7 +23,7 @@ import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { isInstantVenueSheet, getVenueMorphImage } from "@/lib/venueMorph";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "motion/react";
 import { useVenueDetail } from "@/hooks/useVenueDetail";
-import { formatDistance } from "@/lib/math";
+import { formatDistance, formatWalkMinutes, getDistanceInMeters } from "@/lib/math";
 import { FoodPost, ReviewItem } from "@/types";
 import { DishDetailPopup } from "@/components/food/DishDetailPopup";
 import {
@@ -31,6 +31,8 @@ import {
   getPopupMeta,
   isPopupVenue,
   resolvePopupLifecycle,
+  getPopupUpcomingDropDate,
+  downloadPopupCalendarIcs,
 } from "@/lib/popupUtils";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import { formatOsloLocation, formatVenueLocationLine } from "@/lib/location";
@@ -171,10 +173,38 @@ export function VenueBottomSheet() {
   const [isStoryExpanded, setIsStoryExpanded] = useState(false);
   const [showAllHours, setShowAllHours] = useState(false);
   const openStatus = getVenueLiveOpenStatus(selectedVenue);
+  const userLocation = useCityPulseStore((state) => state.userLocation);
+  const realDistanceMeters = useMemo(() => {
+    if (!userLocation || !selectedVenue) return null;
+    if (
+      typeof selectedVenue.latitude !== "number" ||
+      typeof selectedVenue.longitude !== "number" ||
+      selectedVenue.latitude === 0
+    ) {
+      return null;
+    }
+    return getDistanceInMeters(
+      userLocation.lat,
+      userLocation.lon,
+      selectedVenue.latitude,
+      selectedVenue.longitude
+    );
+  }, [userLocation, selectedVenue]);
+  const walkTimeText = formatWalkMinutes(realDistanceMeters);
 
   const isPopup = isPopupVenue(selectedVenue);
   const popupMeta = selectedVenue ? getPopupMeta(selectedVenue) : null;
   const popupLifecycle = isPopup && selectedVenue ? resolvePopupLifecycle(selectedVenue) : null;
+  const upcomingDropDate = useMemo(
+    () => (isPopup && selectedVenue ? getPopupUpcomingDropDate(selectedVenue) : null),
+    [isPopup, selectedVenue]
+  );
+  const handleAddToCalendar = () => {
+    if (!selectedVenue) return;
+    if (downloadPopupCalendarIcs(selectedVenue)) {
+      showToast("Drop added to calendar download (.ics)");
+    }
+  };
   const isDormant =
     popupLifecycle?.state === "tba" || popupLifecycle?.state === "passed";
   const popupHostVenue =
@@ -192,21 +222,20 @@ export function VenueBottomSheet() {
   const popupContact = popupMeta?.ticket_url || selectedVenue?.website_uri || null;
 
   const [hasReactedPopup, setHasReactedPopup] = useState(false);
-  const [popupReactionCount, setPopupReactionCount] = useState(12);
+  const [popupReactionCount, setPopupReactionCount] = useState(0);
 
   useEffect(() => {
     if (!selectedVenue) return;
-    if (popupMeta?.bring_back_count && popupMeta.bring_back_count > 0) {
-      setPopupReactionCount(popupMeta.bring_back_count);
-    } else {
-      const hash = selectedVenue.id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
-      setPopupReactionCount(isDormant ? (hash % 35) + 14 : (hash % 25) + 11);
-    }
+    setPopupReactionCount(
+      popupMeta?.bring_back_count && popupMeta.bring_back_count > 0
+        ? popupMeta.bring_back_count
+        : 0
+    );
     try {
       const saved = localStorage.getItem(`smakr_reaction_${selectedVenue.id}`);
       setHasReactedPopup(saved === "true");
     } catch {}
-  }, [selectedVenue?.id, isDormant, popupMeta?.bring_back_count]);
+  }, [selectedVenue?.id, popupMeta?.bring_back_count]);
 
   const handlePopupReaction = async () => {
     if (!selectedVenue || hasReactedPopup) return;
@@ -221,7 +250,7 @@ export function VenueBottomSheet() {
     } catch {}
   };
 
-  // Reviews: curated venue reviews, diner quotes, or post reviews
+  // Reviews: curated venue reviews, diner quotes, or post reviews (never fabricated)
   const reviews = useMemo<ReviewItem[]>(() => {
     if (!selectedVenue) return [];
     const fromVenue = selectedVenue.curated_reviews ?? [];
@@ -245,26 +274,6 @@ export function VenueBottomSheet() {
         seen.add(q.id);
         out.push(q);
       }
-    }
-    if (out.length === 0) {
-      out.push(
-        {
-          id: `default-1-${selectedVenue.id}`,
-          author_name: "Lars K.",
-          author_photo: null,
-          rating: 5,
-          text: "Incredible flavors, warm atmosphere, and authentic craft. One of the top spots in Oslo.",
-          relative_time: "3 days ago",
-        },
-        {
-          id: `default-2-${selectedVenue.id}`,
-          author_name: "Ingrid M.",
-          author_photo: null,
-          rating: 5,
-          text: "Consistently delicious. A true local neighborhood gem that never disappoints.",
-          relative_time: "1 week ago",
-        }
-      );
     }
     return out;
   }, [selectedVenue, venuePosts]);
@@ -524,10 +533,15 @@ export function VenueBottomSheet() {
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-                        className="absolute inset-0"
+                        className="absolute inset-0 bg-[#ECE6DA]"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
+                          ref={(el) => {
+                            if (el?.complete && el.naturalWidth > 0 && !heroImgReady) {
+                              setHeroImgReady(true);
+                            }
+                          }}
                           src={
                             morphImageRef.current && activeHeroSrc === morphImageRef.current
                               ? morphImageRef.current
@@ -537,7 +551,10 @@ export function VenueBottomSheet() {
                           loading="eager"
                           decoding="async"
                           fetchPriority="high"
-                          className="absolute inset-0 w-full h-full object-cover object-center"
+                          onLoad={() => setHeroImgReady(true)}
+                          className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-200 ${
+                            heroImgReady ? "opacity-100" : "opacity-0"
+                          }`}
                         />
                       </motion.div>
                     </AnimatePresence>
@@ -624,14 +641,30 @@ export function VenueBottomSheet() {
                         ) : (
                           <span
                             className={`px-2 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1 border shadow-xs ${
-                              openStatus.isOpen
+                              openStatus.isOpen === true
                                 ? "bg-emerald-950/90 text-emerald-300 border-emerald-500/35"
-                                : "bg-red-950/90 text-red-300 border-red-500/35"
+                                : openStatus.isOpen === false
+                                ? "bg-red-950/90 text-red-300 border-red-500/35"
+                                : "bg-zinc-900/85 text-zinc-200 border-white/20"
                             }`}
                           >
-                            <span className={`w-1.5 h-1.5 rounded-full ${openStatus.isOpen ? "bg-emerald-400" : "bg-red-400"}`} />
-                            <span>{openStatus.isOpen ? "Open" : "Closed"}</span>
-                            {openStatus.detailText && (
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                openStatus.isOpen === true
+                                  ? "bg-emerald-400"
+                                  : openStatus.isOpen === false
+                                  ? "bg-red-400"
+                                  : "bg-zinc-400"
+                              }`}
+                            />
+                            <span>
+                              {openStatus.isOpen === true
+                                ? "Open"
+                                : openStatus.isOpen === false
+                                ? "Closed"
+                                : openStatus.label}
+                            </span>
+                            {openStatus.detailText && openStatus.isOpen !== null && (
                               <span className="opacity-80 font-normal">· {openStatus.detailText}</span>
                             )}
                           </span>
@@ -649,11 +682,16 @@ export function VenueBottomSheet() {
                       >
                         {selectedVenue.name}
                       </h3>
-                      <p className="text-xs sm:text-[13px] text-[#FAF7F2]/85 font-medium flex items-center gap-1 truncate max-w-full">
+                      <p className="text-xs sm:text-[13px] text-[#FAF7F2]/85 font-medium flex items-center gap-1.5 truncate max-w-full">
                         <MapPin className="w-3.5 h-3.5 text-[#e84a27] shrink-0" />
                         <span className="truncate">
                           {formatVenueLocationLine(selectedVenue)}
                         </span>
+                        {walkTimeText && !isDormant && (
+                          <span className="shrink-0 font-mono text-[11px] font-semibold text-emerald-300">
+                            · {walkTimeText}
+                          </span>
+                        )}
                       </p>
                     </motion.div>
 
@@ -800,9 +838,9 @@ export function VenueBottomSheet() {
                         ) : null}
                       </div>
 
-                      {/* Floating Instagram @handle (borderless) + optional active RSVP pill */}
-                      {(popupMeta?.instagram_url || (popupMeta?.ticket_url && !isDormant)) && (
-                        <div className="flex items-center justify-between gap-3 flex-wrap">
+                      {/* Floating Instagram @handle + zero-login Calendar Drop + optional RSVP pill */}
+                      {(popupMeta?.instagram_url || upcomingDropDate || (popupMeta?.ticket_url && !isDormant)) && (
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
                           {popupMeta?.instagram_url && (
                             <a
                               href={popupMeta.instagram_url}
@@ -814,20 +852,32 @@ export function VenueBottomSheet() {
                               <span className="font-comico tracking-wide underline-offset-4 group-hover:underline">
                                 {instagramHandle ? `@${instagramHandle}` : "Instagram"}
                               </span>
-                              <ExternalLink className="w-3 h-3 text-[#181615]/45 dark:text-white/45 shrink-0" />
+                              <ExternalLink className="w-3 h-3 opacity-50 shrink-0" />
                             </a>
                           )}
-                          {popupMeta?.ticket_url && !isDormant && (
-                            <a
-                              href={popupMeta.ticket_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="py-1.5 px-3.5 rounded-full bg-[#E84A27] hover:bg-[#D43D1C] text-white font-bold text-[11px] inline-flex items-center gap-1.5 shadow-xs"
-                            >
-                              <span>RSVP / Drop Tickets</span>
-                              <ExternalLink className="w-3 h-3" />
-                            </a>
-                          )}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {upcomingDropDate && (
+                              <button
+                                type="button"
+                                onClick={handleAddToCalendar}
+                                className="py-1.5 px-3 rounded-full bg-[#181615] hover:bg-[#2a2725] dark:bg-white/15 dark:hover:bg-white/20 text-[#FAF7F2] font-bold text-[11px] inline-flex items-center gap-1.5 shadow-xs active:scale-[0.97] transition-all cursor-pointer"
+                              >
+                                <Calendar className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
+                                <span>Add Drop to Calendar</span>
+                              </button>
+                            )}
+                            {popupMeta?.ticket_url && !isDormant && (
+                              <a
+                                href={popupMeta.ticket_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="py-1.5 px-3.5 rounded-full bg-[#E84A27] hover:bg-[#D43D1C] text-white font-bold text-[11px] inline-flex items-center gap-1.5 shadow-xs"
+                              >
+                                <span>RSVP / Drop Tickets</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -880,7 +930,10 @@ export function VenueBottomSheet() {
                         }`}
                       >
                         <Flame className={`w-3.5 h-3.5 ${hasReactedPopup ? "fill-white" : "text-[#E84A27]"}`} />
-                        <span>{isDormant ? "Bring Back" : "Going"} · {popupReactionCount}</span>
+                        <span>
+                          {isDormant ? "Bring Back" : "Going"}
+                          {popupReactionCount > 0 ? ` · ${popupReactionCount}` : ""}
+                        </span>
                       </button>
                     </div>
 
@@ -1044,35 +1097,56 @@ export function VenueBottomSheet() {
                         <span className="capitalize font-medium text-[#181615]/70 dark:text-zinc-300">
                           {selectedVenue.neighborhood || selectedVenue.city || "Sentrum"}
                         </span>
+                        {walkTimeText && (
+                          <>
+                            <span className="text-[#181615]/25 dark:text-white/25">·</span>
+                            <span className="font-mono text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+                              {walkTimeText}
+                            </span>
+                          </>
+                        )}
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => setShowAllHours((v) => !v)}
-                        className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity"
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                            openStatus.isOpen ? "bg-emerald-500" : "bg-red-500"
-                          }`}
-                        />
-                        <span
-                          className={
-                            openStatus.isOpen
-                              ? "text-emerald-700 dark:text-emerald-400"
-                              : "text-red-700 dark:text-red-400"
-                          }
+                      {openStatus.isOpen !== null ? (
+                        <button
+                          type="button"
+                          onClick={() => setShowAllHours((v) => !v)}
+                          className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity"
                         >
-                          {openStatus.isOpen ? "Open" : "Closed"}
-                          {openStatus.detailText ? ` · ${openStatus.detailText}` : ""}
-                        </span>
-                        <span className="text-[10px] text-[#181615]/45 dark:text-zinc-400 font-medium">
-                          · {showAllHours ? "Hide hours ▴" : "Hours ▾"}
-                        </span>
-                      </button>
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                              openStatus.isOpen ? "bg-emerald-500" : "bg-red-500"
+                            }`}
+                          />
+                          <span
+                            className={
+                              openStatus.isOpen
+                                ? "text-emerald-700 dark:text-emerald-400"
+                                : "text-red-700 dark:text-red-400"
+                            }
+                          >
+                            {openStatus.isOpen ? "Open" : "Closed"}
+                            {openStatus.detailText ? ` · ${openStatus.detailText}` : ""}
+                          </span>
+                          <span className="text-[10px] text-[#181615]/45 dark:text-zinc-400 font-medium">
+                            · {showAllHours ? "Hide hours ▴" : "Hours ▾"}
+                          </span>
+                        </button>
+                      ) : (
+                        <a
+                          href={googleMapsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center gap-1.5 text-xs font-medium text-[#181615]/65 dark:text-zinc-400 hover:text-[#e84a27] transition-colors"
+                        >
+                          <Clock className="w-3.5 h-3.5 text-[#181615]/45 dark:text-zinc-400 shrink-0" />
+                          <span>{openStatus.label}</span>
+                          <ExternalLink className="w-3 h-3 opacity-60 shrink-0" />
+                        </a>
+                      )}
                     </div>
 
-                    {showAllHours && (
+                    {showAllHours && openStatus.isOpen !== null && (
                       <div className="pl-1 pr-1 pb-1 space-y-1 text-[11px] text-[#181615]/70 dark:text-zinc-400">
                         {selectedVenue.opening_hours_json &&
                         Object.keys(selectedVenue.opening_hours_json).length > 0 ? (
@@ -1082,15 +1156,11 @@ export function VenueBottomSheet() {
                               <span className="tabular-nums font-mono text-[10.5px]">{hours}</span>
                             </div>
                           ))
-                        ) : (
+                        ) : selectedVenue.spot_type === "food_truck" && selectedVenue.location_schedule ? (
                           <p className="text-[11px] text-[#181615]/60 dark:text-zinc-400">
-                            {selectedVenue.spot_type === "food_truck"
-                              ? selectedVenue.location_schedule || "Operating schedule varies by day."
-                              : selectedVenue.food_category === "coffee" || selectedVenue.food_category === "bakery"
-                              ? "Daily 07:30 – 18:00 (approximate Oslo bakery hours)"
-                              : "Daily 11:30 – 22:30 (approximate Oslo restaurant hours)"}
+                            {selectedVenue.location_schedule}
                           </p>
-                        )}
+                        ) : null}
                       </div>
                     )}
                   </div>
@@ -1103,61 +1173,71 @@ export function VenueBottomSheet() {
                     onSelectDish={setSelectedDish}
                   />
 
-                  {/* Verified Diner Reviews — Clean Editorial Hairline List */}
+                  {/* Verified Diner Reviews — Honest Empty Prompt when 0 reviews */}
                   <div className="space-y-2 pt-2 border-t border-[#181615]/8 dark:border-white/10">
                     <div className="flex items-center justify-between pt-1">
                       <h4 className="font-comico font-normal text-[17px] tracking-tight uppercase text-[#181615] dark:text-white">
                         Reviews
                       </h4>
-                      <span className="text-[11px] font-medium text-[#181615]/50 dark:text-zinc-400 tabular-nums">
-                        {reviews.length} verified
-                      </span>
+                      {reviews.length > 0 && (
+                        <span className="text-[11px] font-medium text-[#181615]/50 dark:text-zinc-400 tabular-nums">
+                          {reviews.length} verified
+                        </span>
+                      )}
                     </div>
 
-                    <div className="divide-y divide-[#181615]/8 dark:divide-white/10">
-                      {displayedReviews.map((rev) => (
-                        <div key={rev.id} className="py-3 first:pt-1.5 space-y-1.5">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <div className="w-6 h-6 rounded-full bg-[#EFE9DF] dark:bg-zinc-800 flex items-center justify-center font-bold text-[10px] text-[#181615] dark:text-zinc-200 uppercase overflow-hidden shrink-0">
-                                {rev.author_photo ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img
-                                    src={rev.author_photo}
-                                    alt={rev.author_name}
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  rev.author_name[0]
-                                )}
-                              </div>
-                              <div className="min-w-0 flex items-baseline gap-1.5">
-                                <span className="font-semibold text-xs text-[#181615] dark:text-white truncate">
-                                  {rev.author_name}
+                    {reviews.length === 0 ? (
+                      <p className="py-3 text-xs text-[#181615]/60 dark:text-zinc-400">
+                        Be the first Oslo local to drop a taste note.
+                      </p>
+                    ) : (
+                      <>
+                        <div className="divide-y divide-[#181615]/8 dark:divide-white/10">
+                          {displayedReviews.map((rev) => (
+                            <div key={rev.id} className="py-3 first:pt-1.5 space-y-1.5">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <div className="w-6 h-6 rounded-full bg-[#EFE9DF] dark:bg-zinc-800 flex items-center justify-center font-bold text-[10px] text-[#181615] dark:text-zinc-200 uppercase overflow-hidden shrink-0">
+                                    {rev.author_photo ? (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img
+                                        src={rev.author_photo}
+                                        alt={rev.author_name}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    ) : (
+                                      rev.author_name[0]
+                                    )}
+                                  </div>
+                                  <div className="min-w-0 flex items-baseline gap-1.5">
+                                    <span className="font-semibold text-xs text-[#181615] dark:text-white truncate">
+                                      {rev.author_name}
+                                    </span>
+                                    <span className="text-[10.5px] text-[#181615]/45 dark:text-zinc-500 shrink-0">
+                                      {rev.relative_time}
+                                    </span>
+                                  </div>
+                                </div>
+                                <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-[#181615] dark:text-zinc-200 shrink-0 tabular-nums">
+                                  <Star className="w-3 h-3 fill-[#F5B301] text-[#F5B301]" />
+                                  <span>{Math.min(5, Math.max(1, rev.rating)).toFixed(1)}</span>
                                 </span>
-                                <span className="text-[10.5px] text-[#181615]/45 dark:text-zinc-500 shrink-0">
-                                  {rev.relative_time}
-                                </span>
                               </div>
+                              <ExpandableReviewText text={rev.text} />
                             </div>
-                            <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-[#181615] dark:text-zinc-200 shrink-0 tabular-nums">
-                              <Star className="w-3 h-3 fill-[#F5B301] text-[#F5B301]" />
-                              <span>{Math.min(5, Math.max(1, rev.rating)).toFixed(1)}</span>
-                            </span>
-                          </div>
-                          <ExpandableReviewText text={rev.text} />
+                          ))}
                         </div>
-                      ))}
-                    </div>
 
-                    {reviews.length > 2 && (
-                      <button
-                        type="button"
-                        onClick={() => setShowAllReviews(!showAllReviews)}
-                        className="w-full py-2 rounded-full bg-[#EFE9DF] hover:bg-[#E6DEC9] dark:bg-white/10 dark:hover:bg-white/15 text-[#181615] dark:text-zinc-200 font-semibold text-xs transition-colors flex items-center justify-center cursor-pointer"
-                      >
-                        <span>{showAllReviews ? "Show fewer reviews" : `Show all ${reviews.length} reviews`}</span>
-                      </button>
+                        {reviews.length > 2 && (
+                          <button
+                            type="button"
+                            onClick={() => setShowAllReviews(!showAllReviews)}
+                            className="w-full py-2 rounded-full bg-[#EFE9DF] hover:bg-[#E6DEC9] dark:bg-white/10 dark:hover:bg-white/15 text-[#181615] dark:text-zinc-200 font-semibold text-xs transition-colors flex items-center justify-center cursor-pointer"
+                          >
+                            <span>{showAllReviews ? "Show fewer reviews" : `Show all ${reviews.length} reviews`}</span>
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
 

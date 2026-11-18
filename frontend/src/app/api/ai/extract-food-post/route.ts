@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/app/api/admin/_auth";
 
 export const runtime = "nodejs";
 
@@ -200,6 +201,9 @@ function localCulinaryNlpExtract(rawTitle: string, authorName: string, thumbnail
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth.response;
+
   try {
     const body = await req.json();
     const { url, rawText } = body;

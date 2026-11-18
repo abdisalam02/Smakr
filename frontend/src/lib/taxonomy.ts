@@ -524,7 +524,7 @@ export function resolveVenueDisplayBadge(venue?: Partial<Venue> | null): VenueDi
   if (nameLower.includes("crave")) {
     return { mainTag: "PANCAKES", pinIcon: "pancakes", filterTags: ["dessert", "pancakes", "toast", "sweet"] };
   }
-  if (nameLower.includes("u wan sum")) {
+  if (/u\s*wan['’]?\s*s[ua]m/i.test(nameLower)) {
     return { flag: "🇻🇳", mainTag: "VIET COFFEE", pinIcon: "viet_coffee", filterTags: ["popup", "coffee", "viet_coffee", "drinks"] };
   }
   if (nameLower.includes("crantz")) {

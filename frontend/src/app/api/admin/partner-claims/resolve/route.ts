@@ -368,6 +368,15 @@ export async function POST(req: NextRequest) {
         .eq("id", claimId);
     }
 
+    try {
+      const { revalidatePath, revalidateTag } = await import("next/cache");
+      revalidateTag("venues");
+      revalidateTag("food_posts");
+      revalidatePath("/");
+    } catch {
+      // Non-fatal in edge/test contexts
+    }
+
     // 4. Generate Mailto link
     const host = req.headers.get("host") || "smakr.no";
     const protocol = host.includes("localhost") ? "http" : "https";

@@ -421,7 +421,7 @@ body, input, textarea, button, select, p, span, h1, h2, h3, h4, h5, h6, a, div {
   left: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
-  will-change: transform !important;
+  /* Transform-only compositing: avoid 35+ permanent filtered GPU surfaces */
   backface-visibility: hidden !important;
   pointer-events: auto !important;
   cursor: pointer !important;

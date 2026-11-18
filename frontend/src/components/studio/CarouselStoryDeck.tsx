@@ -8,10 +8,11 @@ import { SmakrMascotRig } from "@/components/studio/SmakrMascotRig";
 import { OFFICIAL_SMAKR_MASCOT_CONFIG } from "@/lib/officialSmakrMascot";
 
 export type StoryPresetId = "how-smakr-works" | "oslo-snowfall-bowls" | "oslo-popup-radar";
-export type StoryAspectId = "1:1" | "4:5" | "9:16";
+export type StoryAspectId = "1:1" | "4:5" | "3:4" | "9:16";
 
 function getStoryNativeHeight(aspect: StoryAspectId): number {
   if (aspect === "9:16") return 1920;
+  if (aspect === "3:4") return 1440;
   if (aspect === "1:1") return 1080;
   return 1350;
 }
@@ -1748,10 +1749,11 @@ function EarlySnowSlideCanvas({
   aspect: StoryAspectId;
 }) {
   const is916 = aspect === "9:16";
+  const is34 = aspect === "3:4";
   const is11 = aspect === "1:1";
   const h = getStoryNativeHeight(aspect);
-  const topPad = is916 ? 96 : is11 ? 38 : 52;
-  const bottomPad = slideNum === 1 ? (is916 ? 92 : is11 ? 26 : 44) : is916 ? 64 : is11 ? 24 : 40;
+  const topPad = is916 ? 96 : is11 ? 38 : is34 ? 62 : 52;
+  const bottomPad = slideNum === 1 ? (is916 ? 92 : is11 ? 26 : is34 ? 52 : 44) : is916 ? 64 : is11 ? 24 : is34 ? 46 : 40;
   const sidePad = 56;
 
   return (
@@ -2138,14 +2140,15 @@ function PopupRadarSlideCanvas({
   aspect: StoryAspectId;
 }) {
   const is916 = aspect === "9:16";
+  const is34 = aspect === "3:4";
   const is11 = aspect === "1:1";
   const h = getStoryNativeHeight(aspect);
   const sidePad = 52;
 
   if (slideNum === 1) {
-    const topPad = is916 ? 84 : is11 ? 34 : 50;
-    const bottomPad = is916 ? 56 : is11 ? 24 : 38;
-    const fanScale = is916 ? 1.02 : is11 ? 0.78 : 0.94;
+    const topPad = is916 ? 84 : is11 ? 34 : is34 ? 62 : 50;
+    const bottomPad = is916 ? 56 : is11 ? 24 : is34 ? 44 : 38;
+    const fanScale = is916 ? 1.02 : is11 ? 0.78 : is34 ? 0.96 : 0.94;
 
     return (
       <div
@@ -2206,6 +2209,16 @@ function PopupRadarSlideCanvas({
               >
                 SMAKR
               </span>
+              <div
+                aria-hidden="true"
+                style={{
+                  width: 112,
+                  height: 3.5,
+                  borderRadius: 999,
+                  background: "rgba(232, 74, 39, 0.56)",
+                  marginTop: is916 ? 14 : 10,
+                }}
+              />
             </div>
 
             <div
@@ -2630,15 +2643,15 @@ function PopupRadarSlideCanvas({
               justifyContent: "space-between",
             }}
           >
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: is916 ? 10 : 8 }}>
               {[1, 2, 3, 4].map((dot) => (
                 <span
                   key={dot}
                   style={{
-                    width: dot === 1 ? 26 : 7,
-                    height: 6,
+                    width: dot === 1 ? (is916 ? 32 : 24) : (is916 ? 9 : 7),
+                    height: is916 ? 8 : 6,
                     borderRadius: 999,
-                    background: dot === 1 ? "#e84a27" : "rgba(24, 22, 21, 0.24)",
+                    background: dot === 1 ? "#e84a27" : "rgba(232, 74, 39, 0.28)",
                   }}
                 />
               ))}
@@ -2660,9 +2673,9 @@ function PopupRadarSlideCanvas({
   }
 
   // SLIDES 2, 3, 4: Dedicated Pop-Up Spotlights (U WAN' SAM?, Mint on Wheels, Crantz Cookies)
-  const topPad = is916 ? 76 : is11 ? 30 : 44;
-  const bottomPad = is916 ? 54 : is11 ? 24 : 36;
-  const cardH = is916 ? 880 : is11 ? 460 : 640;
+  const topPad = is916 ? 76 : is11 ? 30 : is34 ? 54 : 44;
+  const bottomPad = is916 ? 54 : is11 ? 24 : is34 ? 42 : 36;
+  const cardH = is916 ? 880 : is11 ? 460 : is34 ? 690 : 640;
 
   const isMirrored = slideNum === 3;
   const spotlightCfg =
@@ -2709,7 +2722,7 @@ function PopupRadarSlideCanvas({
             mapTransform: is916 ? "scale(1.42) translate(6%, -8%)" : "scale(1.38) translate(6%, -8%)",
             storyText:
               "STARTED IN OSLO BY SISTERS FELICIA AND ADELE AFTER TESTING 100+ DOUGH RECIPES INSPIRED BY LONDON'S ICONIC BAKERIES. FAMOUS FOR CHUNKY NYC-STYLE COOKIES STUFFED WITH MOLTEN BISCOFF ('THE GOLDEN ONE'), KINDER DREAM, AND FLAKY SEA SALT DARK CHOCOLATE.",
-            nextDropText: "🎟️ NEXT OSLO DROP LOADING · BJØRVIKA & VULKAN",
+            nextDropText: "🎟️ NEXT OSLO DROP LOADING",
             addressText: "Dronning Eufemias gate 22 · Bjørvika",
             facts: ["NYC THICK-BAKED", "MOLTEN CENTERS", "WEEKEND DROPS", "@CRANTZCOOKIES"],
             heroSrc: "/ad-slides/crantz_cookies_popup.webp",
@@ -2728,9 +2741,9 @@ function PopupRadarSlideCanvas({
             secondaryAccent: "#1D4ED8",
             topWarmth: "rgba(66, 23, 13, 0.14)",
             spotlight916:
-              "radial-gradient(ellipse 32% 16% at 74% 51%, rgba(245, 239, 224, 0) 0%, rgba(245, 239, 224, 0.78) 58%, rgba(245, 239, 224, 0.98) 100%)",
+              "radial-gradient(ellipse 30% 9% at 74% 46.5%, rgba(245, 239, 224, 0.96) 0%, rgba(245, 239, 224, 0.78) 52%, rgba(245, 239, 224, 0) 100%), radial-gradient(ellipse 30% 12% at 74% 55.5%, rgba(245, 239, 224, 0) 0%, rgba(245, 239, 224, 0.78) 58%, rgba(245, 239, 224, 0.98) 100%)",
             spotlight45:
-              "radial-gradient(ellipse 34% 20% at 74% 50%, rgba(245, 239, 224, 0) 0%, rgba(245, 239, 224, 0.78) 58%, rgba(245, 239, 224, 0.98) 100%)",
+              "radial-gradient(ellipse 32% 11% at 74% 46%, rgba(245, 239, 224, 0.96) 0%, rgba(245, 239, 224, 0.78) 52%, rgba(245, 239, 224, 0) 100%), radial-gradient(ellipse 32% 15% at 74% 54.5%, rgba(245, 239, 224, 0) 0%, rgba(245, 239, 224, 0.78) 58%, rgba(245, 239, 224, 0.98) 100%)",
             mapTransform: is916 ? "scale(1.42) translate(14%, 2%)" : "scale(1.38) translate(14%, 2%)",
             storyText:
               "Born after a trip to Vietnam and rooted in Cairo hospitality, founder Amira Nasr El Din built U WAN' SAM? around one simple question: “You want some?” Expect slow-dripped Vietnamese Robusta phin coffee, creamy egg & coconut foam cups, and iced hibiscus at their roaming Oslo pop-ups.",
@@ -2746,13 +2759,6 @@ function PopupRadarSlideCanvas({
             ],
             nextLabel: "02 / 04 · Next: Mint on Wheels →",
           };
-
-  const chromePrimaryInk =
-    slideNum === 2
-      ? "#3A1F16"
-      : slideNum === 3
-        ? "#2D5A3C"
-        : "#1E2B7B";
 
   const heroPhotoBlock = (
     <div
@@ -2963,19 +2969,31 @@ function PopupRadarSlideCanvas({
       >
         {/* Top Smakr Header (Consistent on Slides 2, 3, 4) */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", width: "100%" }}>
-          <span
-            style={{
-              fontFamily: `${comico.style.fontFamily}, sans-serif`,
-              fontSize: is916 ? 56 : is11 ? 40 : 48,
-              color: "#e84a27",
-              letterSpacing: "0.06em",
-              lineHeight: 1,
-              textShadow: "none",
-              filter: "none",
-            }}
-          >
-            SMAKR
-          </span>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <span
+              style={{
+                fontFamily: `${comico.style.fontFamily}, sans-serif`,
+                fontSize: is916 ? 56 : is11 ? 40 : 48,
+                color: "#e84a27",
+                letterSpacing: "0.06em",
+                lineHeight: 1,
+                textShadow: "none",
+                filter: "none",
+              }}
+            >
+              SMAKR
+            </span>
+            <div
+              aria-hidden="true"
+              style={{
+                width: 112,
+                height: 3.5,
+                borderRadius: 999,
+                background: "rgba(232, 74, 39, 0.56)",
+                marginTop: is916 ? 14 : 10,
+              }}
+            />
+          </div>
         </div>
 
         {/* Freestanding Brand Logo */}
@@ -3173,58 +3191,30 @@ function PopupRadarSlideCanvas({
               <span
                 key={dot}
                 style={{
-                  width: dot === slideNum ? (is916 ? 32 : 22) : (is916 ? 9 : 7),
+                  width: dot === slideNum ? (is916 ? 32 : 24) : (is916 ? 9 : 7),
                   height: is916 ? 8 : 6,
                   borderRadius: 999,
-                  background:
-                    dot === slideNum
-                      ? chromePrimaryInk
-                      : chromePrimaryInk === "#3A1F16"
-                        ? "rgba(58, 31, 22, 0.22)"
-                        : chromePrimaryInk === "#2D5A3C"
-                          ? "rgba(45, 90, 60, 0.22)"
-                          : "rgba(30, 43, 123, 0.22)",
+                  background: dot === slideNum ? "#e84a27" : "rgba(232, 74, 39, 0.28)",
                 }}
               />
             ))}
           </div>
 
-          {slideNum === 4 ? (
-            <div
-              style={{
-                color: "#e84a27",
-                fontSize: is916 ? 22 : 18,
-                fontWeight: 900,
-                letterSpacing: "0.02em",
-                lineHeight: 1,
-              }}
-            >
-              Check out more on smakr.no ↗
-            </div>
-          ) : (
-            <div
-              style={{
-                background: "rgba(255, 255, 255, 0.95)",
-                boxShadow: "0 8px 22px rgba(24, 22, 21, 0.08)",
-                fontSize: is916 ? 20 : 15,
-                fontWeight: 800,
-                padding: is916 ? "13px 26px" : "9px 18px",
-                borderRadius: 999,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: is916 ? 8 : 6,
-                letterSpacing: "0.02em",
-                lineHeight: 1,
-              }}
-            >
-              <span style={{ color: spotlightCfg.accent, fontWeight: 900 }}>
-                {slideNum === 2 ? "02 / 04" : "03 / 04"}
-              </span>
-              <span style={{ color: chromePrimaryInk, fontWeight: 800 }}>
-                {slideNum === 2 ? "· Next: Mint on Wheels →" : "· Next: Crantz Cookies →"}
-              </span>
-            </div>
-          )}
+          <div
+            style={{
+              color: "#e84a27",
+              fontSize: is916 ? 22 : 18,
+              fontWeight: 900,
+              letterSpacing: "0.02em",
+              lineHeight: 1,
+            }}
+          >
+            {slideNum === 4
+              ? "Check out more on smakr.no ↗"
+              : slideNum === 2
+                ? "02 / 04 · Next: Mint on Wheels →"
+                : "03 / 04 · Next: Crantz Cookies →"}
+          </div>
         </div>
       </div>
     </div>
@@ -3239,10 +3229,11 @@ function StorySlideCanvas({
   aspect: StoryAspectId;
 }) {
   const is916 = aspect === "9:16";
+  const is34 = aspect === "3:4";
   const is11 = aspect === "1:1";
   const h = getStoryNativeHeight(aspect);
-  const topPad = is916 ? 94 : is11 ? 36 : 50;
-  const bottomPad = is916 ? 64 : is11 ? 24 : 40;
+  const topPad = is916 ? 94 : is11 ? 36 : is34 ? 60 : 50;
+  const bottomPad = is916 ? 64 : is11 ? 24 : is34 ? 46 : 40;
   const sidePad = 56;
 
   return (
@@ -4691,6 +4682,15 @@ export function CarouselStoryDeck() {
               }`}
             >
               4:5 (1080×1350)
+            </button>
+            <button
+              type="button"
+              onClick={() => setAspect("3:4")}
+              className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                aspect === "3:4" ? "bg-white text-stone-900" : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              3:4 (1080×1440 · IG)
             </button>
             <button
               type="button"

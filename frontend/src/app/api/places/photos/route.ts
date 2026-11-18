@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireAuthenticatedUser, checkIpRateLimit } from "@/app/api/_authHelpers";
 import { curatedPhotoFor } from "@/lib/places/curatedPhotos";
 import { ingestGooglePhotoToSupabase } from "@/lib/storage/ingestGooglePhoto";
 
@@ -9,17 +10,19 @@ export const dynamic = "force-dynamic";
  *
  * GET /api/places/photos?ref=<photoResourceName>&category=ramen&i=0&w=600
  *
- * - When requested with w >= 600 (feed cards and full displays), ingests the photo
- *   into Supabase Storage once and responds with a permanent 301 redirect to the
- *   Supabase Storage CDN URL.
- * - When requested with w < 600 (VisualPhotoSwitcher thumbnails), caches preview
- *   responses with max-age=31536000 so thumbnails are never re-fetched twice.
- * - Missing keys or mock refs redirect to curated category food photography.
+ * Requires an authenticated Supabase session + per-IP rate limiting so
+ * anonymous bots cannot drain Google Places quota or storage.
  */
 
 const KEY = process.env.GOOGLE_PLACES_API_KEY;
 
 export async function GET(request: Request) {
+  const auth = await requireAuthenticatedUser();
+  if (!auth.ok) return auth.response;
+
+  const rate = checkIpRateLimit(request, "places-photos", 40, 60_000);
+  if (!rate.ok) return rate.response;
+
   const { searchParams } = new URL(request.url);
   const ref = searchParams.get("ref") || "";
   const category = searchParams.get("category");

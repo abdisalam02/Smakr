@@ -42,6 +42,7 @@ function VenueThumb({
   );
   const [index, setIndex] = useState(0);
   const [exhausted, setExhausted] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   if (chain.length === 0 || exhausted) {
     return (
@@ -56,19 +57,27 @@ function VenueThumb({
   const src = chain[Math.min(index, chain.length - 1)];
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={src}
-      alt={alt}
-      data-parallax-img="true"
-      style={{ transform: "translateX(0px) scale(1.12)" }}
-      className="w-full h-full object-cover pointer-events-none will-change-transform"
-      loading={eager ? "eager" : "lazy"}
-      onError={() => {
-        if (index + 1 < chain.length) setIndex(index + 1);
-        else setExhausted(true);
-      }}
-    />
+    <div className="w-full h-full bg-[#ECE6DA]">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        ref={(el) => {
+          if (el?.complete && el.naturalWidth > 0 && !loaded) setLoaded(true);
+        }}
+        src={src}
+        alt={alt}
+        data-parallax-img="true"
+        style={{ transform: "translateX(0px) scale(1.12)" }}
+        className={`w-full h-full object-cover pointer-events-none will-change-transform transition-opacity duration-200 ${
+          loaded ? "opacity-100" : "opacity-0"
+        }`}
+        loading={eager ? "eager" : "lazy"}
+        onLoad={() => setLoaded(true)}
+        onError={() => {
+          if (index + 1 < chain.length) setIndex(index + 1);
+          else setExhausted(true);
+        }}
+      />
+    </div>
   );
 }
 
@@ -527,7 +536,9 @@ const SpotlightCard = React.memo(function SpotlightCard({
               transform: "translate3d(-50%, 0, 0)",
               opacity: isActive && cardOpen && !isWeeklyPick ? 1 : 0,
             }}
-            className="pointer-events-none absolute z-20 drop-shadow-[0_-2px_5px_rgba(0,0,0,0.24)]"
+            className={`pointer-events-none absolute z-20 ${
+              isActive ? "drop-shadow-[0_-2px_5px_rgba(0,0,0,0.24)]" : ""
+            }`}
           >
             <path
               d="M 2 10.5 L 9.8 2.1 Q 11 0.8 12.2 2.1 L 20 10.5 Z"
@@ -545,11 +556,19 @@ const SpotlightCard = React.memo(function SpotlightCard({
         className={`relative w-full h-full overflow-hidden rounded-[26px] bg-[#121110] ${
           isPopup
             ? popupLifecycle?.state === "live" || popupLifecycle?.state === "upcoming"
-              ? "border-2 border-[#E84A27]/90 ring-2 ring-[#E84A27]/25 shadow-[0_22px_54px_rgba(232,74,39,0.28)]"
-              : "border-2 border-[#FAF7F2]/85 ring-1 ring-white/25 shadow-[0_20px_50px_rgba(0,0,0,0.45)]"
+              ? `border-2 border-[#E84A27]/90 ring-2 ring-[#E84A27]/25 ${
+                  isActive ? "shadow-[0_22px_54px_rgba(232,74,39,0.28)]" : "shadow-md"
+                }`
+              : `border-2 border-[#FAF7F2]/85 ring-1 ring-white/25 ${
+                  isActive ? "shadow-[0_20px_50px_rgba(0,0,0,0.45)]" : "shadow-md"
+                }`
             : isWeeklyPick
-            ? "border border-[#E84A27]/60 ring-1 ring-[#E84A27]/35 shadow-[0_20px_50px_rgba(0,0,0,0.42)]"
-            : "border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.42)]"
+            ? `border border-[#E84A27]/60 ring-1 ring-[#E84A27]/35 ${
+                isActive ? "shadow-[0_20px_50px_rgba(0,0,0,0.42)]" : "shadow-md"
+              }`
+            : `border border-white/15 ${
+                isActive ? "shadow-[0_20px_50px_rgba(0,0,0,0.42)]" : "shadow-md"
+              }`
         }`}
       >
         {/* Full-bleed venue photo */}
@@ -592,7 +611,7 @@ const SpotlightCard = React.memo(function SpotlightCard({
               onDismiss();
             }}
             aria-label="Close venue card"
-            className="w-7 h-7 flex items-center justify-center text-white/90 hover:text-white drop-shadow-[0_1px_6px_rgba(0,0,0,0.85)] text-[15px] font-bold active:scale-90 transition-all cursor-pointer touch-manipulation"
+            className="w-7 h-7 flex items-center justify-center text-white/90 hover:text-white drop-shadow-[0_1px_6px_rgba(0,0,0,0.85)] text-[15px] font-bold active:scale-90 transition-[transform,opacity] cursor-pointer touch-manipulation"
           >
             ✕
           </button>
@@ -636,12 +655,27 @@ const SpotlightCard = React.memo(function SpotlightCard({
                 <p className="text-[11px] font-bold flex items-center gap-1.5 truncate">
                   <span
                     className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${
-                      live?.isOpen ? "bg-emerald-400" : "bg-red-400"
+                      live?.isOpen === true
+                        ? "bg-emerald-400"
+                        : live?.isOpen === false
+                        ? "bg-red-400"
+                        : "bg-zinc-400"
                     }`}
                   />
-                  <span className={live?.isOpen ? "text-emerald-400" : "text-red-400"}>
-                    {live?.isOpen ? "Open" : "Closed"}
-                    {live?.detailText ? ` · ${live.detailText}` : ""}
+                  <span
+                    className={
+                      live?.isOpen === true
+                        ? "text-emerald-400"
+                        : live?.isOpen === false
+                        ? "text-red-400"
+                        : "text-white/75 font-medium"
+                    }
+                  >
+                    {live?.isOpen === true
+                      ? `Open${live.detailText ? ` · ${live.detailText}` : ""}`
+                      : live?.isOpen === false
+                      ? `Closed${live.detailText ? ` · ${live.detailText}` : ""}`
+                      : live?.label || "Hours on Google Maps"}
                   </span>
                 </p>
               )}
@@ -845,9 +879,19 @@ const FLAG_ISO_MAP: Record<string, string> = {
   "🇵🇰": "pk",
 };
 
-export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean }) {
-  const venues = useCityPulseStore((state) => state.venues);
-  const foodPosts = useCityPulseStore((state) => state.foodPosts);
+export const MapNeighborhoodDock = React.memo(function MapNeighborhoodDock({
+  isDesktop = false,
+  initialVenues = [],
+  initialFoodPosts = [],
+}: {
+  isDesktop?: boolean;
+  initialVenues?: Venue[];
+  initialFoodPosts?: FoodPost[];
+}) {
+  const storeVenues = useCityPulseStore((state) => state.venues);
+  const storeFoodPosts = useCityPulseStore((state) => state.foodPosts);
+  const venues = storeVenues.length > 0 ? storeVenues : initialVenues;
+  const foodPosts = storeFoodPosts.length > 0 ? storeFoodPosts : initialFoodPosts;
   const selectedVenue = useCityPulseStore((state) => state.selectedVenue);
   const setSelectedVenue = useCityPulseStore((state) => state.setSelectedVenue);
   const selectVenueById = useCityPulseStore((state) => state.selectVenueById);
@@ -1078,7 +1122,7 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
 
       if (openNow) {
         const live = getVenueLiveOpenStatus(v);
-        if (!live.isOpen) return false;
+        if (live.isOpen !== true) return false;
       }
 
       return true;
@@ -1230,11 +1274,15 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
 
   // Parallax & 3D Focal-Scale Carousel Physics (60fps requestAnimationFrame throttled)
   const rafRef = useRef<number | null>(null);
+  const carouselRectRef = useRef({ left: 0, width: 390 });
+  const stageWidthRef = useRef(330);
 
-  // Cache layout metrics once (no per-frame getBoundingClientRect per card).
+  // Cache layout metrics once (no per-frame getBoundingClientRect per scroll frame).
   const measureCarouselMetrics = useCallback(() => {
     const container = carouselRef.current;
     if (!container) return;
+    const rect = container.getBoundingClientRect();
+    carouselRectRef.current = { left: rect.left, width: Math.max(rect.width, 320) };
     carouselPadLeftRef.current =
       parseFloat(window.getComputedStyle(container).paddingLeft || "0") || 0;
     const next: typeof cardMetricsRef.current = [];
@@ -1256,11 +1304,10 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
     const metrics = cardMetricsRef.current;
     if (metrics.length === 0) return;
 
-    const rect = container.getBoundingClientRect();
-    const viewportCenter = rect.left + rect.width / 2;
-    const viewportWidth = Math.max(rect.width, 320);
+    const { left: rectLeft, width: viewportWidth } = carouselRectRef.current;
+    const viewportCenter = rectLeft + viewportWidth / 2;
     const scrollLeft = container.scrollLeft;
-    const contentLeft = rect.left + carouselPadLeftRef.current;
+    const contentLeft = rectLeft + carouselPadLeftRef.current;
 
     for (const m of metrics) {
       const cardCenter = contentLeft + m.offsetLeft - scrollLeft + m.width / 2;
@@ -1451,8 +1498,23 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
   const spotlightSlotsRef = useRef(spotlightSlots);
   spotlightSlotsRef.current = spotlightSlots;
 
+  // Cache spotlight stage width via ResizeObserver so applyStageFrame never reads offsetWidth per frame
+  useEffect(() => {
+    const el = spotlightStageRef.current;
+    if (!el) return;
+    const syncWidth = () => {
+      const w = el.offsetWidth;
+      if (w > 0) stageWidthRef.current = w;
+    };
+    syncWidth();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(syncWidth);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [cardVisible]);
+
   const getStageMetrics = useCallback(() => {
-    const stageW = spotlightStageRef.current?.offsetWidth || 330;
+    const stageW = stageWidthRef.current || 330;
     const sideW = Math.min(260, Math.round(stageW * 0.8));
     const compactScale = sideW / stageW;
     const compactUnscaledH = 118 / compactScale;
@@ -1645,6 +1707,10 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
 
       dragCleanupRef.current?.();
 
+      // Refresh cached stage width once before drag begins (zero offsetWidth reads during rAF)
+      const stageWNow = spotlightStageRef.current?.offsetWidth;
+      if (stageWNow && stageWNow > 0) stageWidthRef.current = stageWNow;
+
       const startX = e.clientX;
       const startY = e.clientY;
       const baseU = coverStateRef.current.u;
@@ -1815,7 +1881,9 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
     const popupCount = visibleVenues.filter(
       (v) => v.spot_type === "popup" || resolveEntityTaxonomy(v).spotKind === "popup"
     ).length;
-    const openCount = visibleVenues.filter((v) => getVenueLiveOpenStatus(v).isOpen).length;
+    const openCount = visibleVenues.filter(
+      (v) => getVenueLiveOpenStatus(v).isOpen === true
+    ).length;
 
     const options: Array<{
       id: string;
@@ -1900,7 +1968,7 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
           const visible = venues.filter((v) => isVisibleInFeed(v));
           let matching = visible;
           if (opt.kind === "open") {
-            matching = visible.filter((v) => getVenueLiveOpenStatus(v).isOpen);
+            matching = visible.filter((v) => getVenueLiveOpenStatus(v).isOpen === true);
           } else if (opt.kind === "popup") {
             matching = visible.filter(
               (v) => v.spot_type === "popup" || resolveEntityTaxonomy(v).spotKind === "popup"
@@ -2212,4 +2280,4 @@ export function MapNeighborhoodDock({ isDesktop = false }: { isDesktop?: boolean
         )}
       </div>
   );
-}
+});

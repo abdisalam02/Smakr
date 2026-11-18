@@ -1,25 +1,60 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import {
-  COLOR_MODE_OPTIONS,
-  PEEP_ASPECT,
-  SHEET_CELL_H,
-  SHEET_CELL_W,
-  SHEET_COLS,
-  SHEET_COUNT,
-  SHEET_ROWS,
-  SPRITE_INSET,
-  buildPeepsAtlas,
-  buildSpriteDeck,
-  loadPeepsSheet,
-  spriteBackgroundStyle,
-  type PeepColorMode,
-  type PeepsAtlas,
-} from "@/lib/bustCrowdPeep";
+import type { PeepColorMode, PeepsAtlas } from "@/lib/bustCrowdPeep";
 
-if (typeof window !== "undefined") {
-  void loadPeepsSheet();
+const SHEET_COLS = 15;
+const SHEET_ROWS = 7;
+const SHEET_COUNT = SHEET_COLS * SHEET_ROWS;
+const SHEET_CELL_W = 240;
+const SHEET_CELL_H = 324;
+const PEEP_ASPECT = SHEET_CELL_W / SHEET_CELL_H;
+const SPRITE_INSET = 2;
+
+const COLOR_MODE_LABELS: Record<PeepColorMode, string> = {
+  "ink-paper": "Ink + Paper",
+  colorized: "Colorized",
+  "duotone-accent": "Duotone Accent",
+};
+
+function spriteBackgroundStyle(atlasUrl: string, spriteIdx: number): React.CSSProperties {
+  const col = spriteIdx % SHEET_COLS;
+  const row = Math.floor(spriteIdx / SHEET_COLS);
+  return {
+    backgroundImage: `url(${atlasUrl})`,
+    backgroundRepeat: "no-repeat",
+    backgroundSize: `${SHEET_COLS * 100}% ${SHEET_ROWS * 100}%`,
+    backgroundPosition: `${(col / (SHEET_COLS - 1)) * 100}% ${(row / (SHEET_ROWS - 1)) * 100}%`,
+  };
+}
+
+const BAKED_ATLAS_SRC = "/boot/peeps-atlas-baked.webp";
+const BAKED_ATLAS_COLS = 7;
+const BAKED_ATLAS_ROWS = 4;
+const BAKED_ATLAS_COUNT = 28;
+
+let bakedImgPromise: Promise<HTMLImageElement> | null = null;
+function loadBakedAtlasImage(): Promise<HTMLImageElement> {
+  if (!bakedImgPromise) {
+    bakedImgPromise = new Promise((resolve, reject) => {
+      const img = new Image();
+      img.decoding = "async";
+      img.onload = async () => {
+        try {
+          if (typeof img.decode === "function") await img.decode();
+        } catch {
+          // Image is already loaded even if decode rejects
+        }
+        resolve(img);
+      };
+      img.onerror = () => {
+        bakedImgPromise = null;
+        reject(new Error(`Failed to load baked boot atlas: ${BAKED_ATLAS_SRC}`));
+      };
+      img.src = BAKED_ATLAS_SRC;
+    });
+  }
+  return bakedImgPromise;
 }
 
 export interface PeepsBootScreenProps {
@@ -71,12 +106,12 @@ function peepHeightFor(stageW: number): number {
   return Math.round(PEEP_HEIGHT_MOBILE + t * (PEEP_HEIGHT_DESKTOP - PEEP_HEIGHT_MOBILE));
 }
 
-/** Mobile keeps 20 busts for 60fps boot performance & clean silhouette density; desktop scales up to baseCount. */
+/** Mobile keeps 18 busts for 60fps boot performance & clean silhouette density; desktop scales up to baseCount. */
 function crowdCountFor(baseCount: number, stageW: number): number {
-  if (stageW < 640) return Math.min(baseCount, 20);
+  if (stageW < 640) return Math.min(baseCount, 18);
   if (stageW >= 1180) return baseCount;
   const t = (stageW - 640) / (1180 - 640);
-  return Math.max(20, Math.round(20 + t * (baseCount - 20)));
+  return Math.max(18, Math.round(18 + t * (baseCount - 18)));
 }
 
 function xDurationFor(stageW: number, peepWidth: number): number {
@@ -124,7 +159,7 @@ export function PeepsBootScreen({
   onComplete,
   onAtlasReady,
   persistent = false,
-  crowdCount = 34,
+  crowdCount = 28,
   speedMultiplier = 1.0,
   forceSeed = 1,
   showAtlasInspector = false,
@@ -134,6 +169,7 @@ export function PeepsBootScreen({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const atlasCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const atlasMetaRef = useRef<PeepsAtlas | null>(null);
+  const bakedImgRef = useRef<HTMLImageElement | null>(null);
   const crowdRef = useRef<CrowdMember[]>([]);
   const stageRef = useRef({ w: 0, h: 0 });
   // Live control values read inside the loop without tearing down rAF.
@@ -143,11 +179,13 @@ export function PeepsBootScreen({
   const onAtlasReadyRef = useRef(onAtlasReady);
   const dismissingRef = useRef(false);
 
+  const useBakedAtlas = colorMode === "colorized" && !showAtlasInspector && !persistent;
+
   const [atlasReady, setAtlasReady] = useState(false);
   const [atlasBuilding, setAtlasBuilding] = useState(true);
   const [atlasVersion, setAtlasVersion] = useState(0);
   const [atlasUrl, setAtlasUrl] = useState<string | null>(null);
-  const [showLogo, setShowLogo] = useState(true);
+  const [showLogo, setShowLogo] = useState(!useBakedAtlas);
   const [showSubline, setShowSubline] = useState(false);
   const [deck, setDeck] = useState<number[]>([]);
   const [dismissing, setDismissing] = useState(false);
@@ -158,48 +196,90 @@ export function PeepsBootScreen({
   onCompleteRef.current = onComplete;
   onAtlasReadyRef.current = onAtlasReady;
 
-  // ── 1. Pre-compute exact deck and colorize its cells upfront (0 mid-walk teleporting) ──
+  // ── 1. Pre-compute exact deck and load pre-baked WebP atlas (0ms flood-fill) or lazy lab atlas ──
   const precomputedDeck = React.useMemo(() => {
     const approxW =
       typeof window !== "undefined" ? window.innerWidth : mobilePreview ? 390 : 1280;
-    const targetCount = Math.min(Math.max(crowdCountFor(crowdCount, approxW), 1), SHEET_COUNT);
-    return buildSpriteDeck(forceSeed, targetCount);
-  }, [crowdCount, forceSeed, mobilePreview]);
+    const maxCells = useBakedAtlas ? BAKED_ATLAS_COUNT : SHEET_COUNT;
+    const targetCount = Math.min(Math.max(crowdCountFor(crowdCount, approxW), 1), maxCells);
+    // Deterministic permutation of sprite indices (zero dependency on bustCrowdPeep.ts)
+    const indices = Array.from({ length: maxCells }, (_, i) => i);
+    let s = (forceSeed * 1664525 + 1013904223) >>> 0;
+    for (let i = indices.length - 1; i > 0; i--) {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      const j = s % (i + 1);
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+    return indices.slice(0, targetCount);
+  }, [crowdCount, forceSeed, mobilePreview, useBakedAtlas]);
 
   useEffect(() => {
     let active = true;
     setAtlasBuilding(true);
-    buildPeepsAtlas(
-      colorMode,
-      (initialAtlas) => {
+
+    const loadDynamicAtlas = async () => {
+      try {
+        const mod = await import("@/lib/bustCrowdPeep");
         if (!active) return;
-        atlasMetaRef.current = initialAtlas;
-        atlasCanvasRef.current = initialAtlas.canvas;
-        setAtlasReady(true);
-        onAtlasReadyRef.current?.();
-      },
-      showAtlasInspector ? undefined : precomputedDeck
-    )
-      .then((atlas) => {
+        const deckArg = showAtlasInspector
+          ? undefined
+          : mod.buildSpriteDeck(forceSeed, precomputedDeck.length);
+        const atlas = await mod.buildPeepsAtlas(
+          colorMode,
+          (initialAtlas) => {
+            if (!active) return;
+            atlasMetaRef.current = initialAtlas;
+            atlasCanvasRef.current = initialAtlas.canvas;
+            setAtlasReady(true);
+            setShowLogo(true);
+            onAtlasReadyRef.current?.();
+          },
+          deckArg
+        );
         if (!active) return;
         atlasMetaRef.current = atlas;
         atlasCanvasRef.current = atlas.canvas;
         setAtlasVersion((v) => v + 1);
         setAtlasBuilding(false);
         setAtlasReady(true);
+        setShowLogo(true);
         onAtlasReadyRef.current?.();
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error("[PeepsBootScreen] atlas build failed", err);
         if (active) {
           setAtlasBuilding(false);
+          setShowLogo(true);
           onAtlasReadyRef.current?.();
+          if (!persistentRef.current) onCompleteRef.current?.();
         }
-      });
+      }
+    };
+
+    if (useBakedAtlas) {
+      loadBakedAtlasImage()
+        .then((img) => {
+          if (!active) return;
+          bakedImgRef.current = img;
+          setAtlasBuilding(false);
+          setAtlasReady(true);
+          setShowLogo(true);
+          onAtlasReadyRef.current?.();
+        })
+        .catch(() => {
+          bakedImgRef.current = null;
+          void loadDynamicAtlas();
+        });
+      return () => {
+        active = false;
+      };
+    }
+
+    bakedImgRef.current = null;
+    void loadDynamicAtlas();
     return () => {
       active = false;
     };
-  }, [colorMode, precomputedDeck, showAtlasInspector]);
+  }, [colorMode, forceSeed, precomputedDeck, showAtlasInspector, useBakedAtlas]);
 
   // ── 2. Half-scale data URL so the inspector can CSS-crop every sprite ─────
   useEffect(() => {
@@ -238,16 +318,17 @@ export function PeepsBootScreen({
     const stageH = Math.round(rect?.height || window.innerHeight);
     stageRef.current = { w: stageW, h: stageH };
 
-    const count = Math.min(Math.max(crowdCountFor(crowdCount, stageW), 1), SHEET_COUNT);
+    const maxCells = useBakedAtlas ? BAKED_ATLAS_COUNT : SHEET_COUNT;
+    const count = Math.min(Math.max(crowdCountFor(crowdCount, stageW), 1), maxCells);
     const spawnDeck =
       precomputedDeck.length >= count
         ? precomputedDeck.slice(0, count)
-        : buildSpriteDeck(forceSeed, count);
+        : Array.from({ length: count }, (_, i) => i % maxCells);
     const members: CrowdMember[] = [];
     for (let i = 0; i < count; i++) {
       const peep: CrowdMember = {
         id: i,
-        spriteIndex: spawnDeck[i] ?? i % SHEET_COUNT,
+        spriteIndex: spawnDeck[i] ?? i % maxCells,
         peepWidth: 0,
         peepHeight: 0,
         startX: 0,
@@ -349,23 +430,30 @@ export function PeepsBootScreen({
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Auto-dismiss (non-persistent production boot): 2.0s after crowd starts
-      if (!persistentRef.current && elapsed >= 2.0 && !dismissingRef.current) {
+      // Auto-dismiss (non-persistent production boot): 0.80s hold + 220ms GPU fade-out (~1.02s total)
+      if (!persistentRef.current && elapsed >= 0.80 && !dismissingRef.current) {
         dismissingRef.current = true;
         setDismissing(true);
-        setTimeout(() => onCompleteRef.current?.(), 420);
+        setTimeout(() => onCompleteRef.current?.(), 230);
       }
 
+      const bakedImg = bakedImgRef.current;
       const atlas = atlasCanvasRef.current;
       const atlasMeta = atlasMetaRef.current;
-      if (atlas && atlasMeta && atlasMeta.readyList.length > 0) {
-        const cellW = atlas.width / SHEET_COLS;
-        const cellH = atlas.height / SHEET_ROWS;
-        const sw = cellW - SPRITE_INSET * 2;
-        const sh = cellH - SPRITE_INSET * 2;
+      const drawSource = bakedImg ?? (atlas && atlasMeta && atlasMeta.readyList.length > 0 ? atlas : null);
+      if (drawSource) {
+        const cols = bakedImg ? BAKED_ATLAS_COLS : SHEET_COLS;
+        const rows = bakedImg ? BAKED_ATLAS_ROWS : SHEET_ROWS;
+        const srcW = bakedImg ? bakedImg.naturalWidth : atlas!.width;
+        const srcH = bakedImg ? bakedImg.naturalHeight : atlas!.height;
+        const cellW = srcW / cols;
+        const cellH = srcH / rows;
+        const inset = bakedImg ? 0 : SPRITE_INSET;
+        const sw = cellW - inset * 2;
+        const sh = cellH - inset * 2;
         const speedMult = speedRef.current;
         const members = crowdRef.current;
-        const readyCells = atlasMeta.readyCells;
+        const readyCells = bakedImg ? null : atlasMeta!.readyCells;
         let needsSort = false;
 
         for (let i = 0; i < members.length; i++) {
@@ -388,13 +476,13 @@ export function PeepsBootScreen({
           const y = peep.anchorY - bounce;
 
           // Permanently bind each peep to its assigned sprite so it never flickers or teleports mid-stride
-          const activeSprite = peep.spriteIndex;
-          if (!readyCells.has(activeSprite)) continue;
+          const activeSprite = bakedImg ? peep.spriteIndex % BAKED_ATLAS_COUNT : peep.spriteIndex;
+          if (readyCells && !readyCells.has(activeSprite)) continue;
 
-          const col = activeSprite % SHEET_COLS;
-          const row = (activeSprite / SHEET_COLS) | 0;
-          const sx = col * cellW + SPRITE_INSET;
-          const sy = row * cellH + SPRITE_INSET;
+          const col = activeSprite % cols;
+          const row = (activeSprite / cols) | 0;
+          const sx = col * cellW + inset;
+          const sy = row * cellH + inset;
 
           // Direct affine transform (skips save/restore stack & per-frame rect objects)
           const cos = Math.cos(swayAngle);
@@ -408,7 +496,7 @@ export function PeepsBootScreen({
             stageDpr * (y + peep.peepHeight)
           );
           ctx.drawImage(
-            atlas,
+            drawSource,
             sx,
             sy,
             sw,
@@ -438,15 +526,19 @@ export function PeepsBootScreen({
     };
   }, [atlasReady]);
 
-  const modeOption = COLOR_MODE_OPTIONS.find((m) => m.value === colorMode) ?? COLOR_MODE_OPTIONS[1]!;
+  const modeLabel = COLOR_MODE_LABELS[colorMode] ?? COLOR_MODE_LABELS.colorized;
 
   return (
     <div
+      style={{
+        background:
+          "radial-gradient(circle at 50% 38%, rgba(250, 247, 242, 0.88) 0%, rgba(250, 247, 242, 0.72) 100%)",
+      }}
       className={`${
         mobilePreview
           ? "absolute left-1/2 top-1/2 h-[760px] max-h-[92dvh] w-[390px] max-w-[94vw] -translate-x-1/2 -translate-y-1/2 rounded-[2.5rem] border-[10px] border-[#181615] shadow-2xl"
           : "fixed inset-0"
-      } z-[100] flex flex-col items-center justify-between bg-[#FAF7F2] select-none overflow-hidden transition-opacity duration-[380ms] ease-out will-change-opacity ${
+      } z-[100] flex flex-col items-center justify-between select-none overflow-hidden transition-opacity duration-[220ms] ease-out will-change-opacity ${
         dismissing ? "opacity-0 pointer-events-none" : "opacity-100"
       }`}
     >
@@ -540,7 +632,7 @@ export function PeepsBootScreen({
                 Open Peeps Crowd Atlas — {deck.length} Peeps
               </h2>
               <p className="text-[10px] font-mono text-[#181615]/60">
-                {SHEET_COUNT} sprites · {SHEET_COLS} × {SHEET_ROWS} sheet · {modeOption.short}
+                {SHEET_COUNT} sprites · {SHEET_COLS} × {SHEET_ROWS} sheet · {modeLabel}
               </p>
             </div>
             <span

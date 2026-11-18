@@ -119,10 +119,8 @@ function getMapStyles() {
 
 // Fixed-position marker builder:
 // Root node MUST be absolute with top:0, left:0 so MapLibre's translate3d() math places it precisely at its GPS point
-const PIN_SHADOW_SELECTED =
-  "drop-shadow(0 4px 10px rgba(232, 74, 39, 0.65)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35))";
-const PIN_SHADOW_DEFAULT =
-  "drop-shadow(0 3px 6px rgba(0, 0, 0, 0.35)) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2))";
+// Single subtle shadow reserved strictly for the 1 currently selected pin (zero filters on 35+ idle markers)
+const PIN_SHADOW_SELECTED = "drop-shadow(0 3px 6px rgba(232, 74, 39, 0.42))";
 
 function getMapMascotDimensions(zoom: number): { width: number; height: number } {
   // Prominently sized mascot bust (~76px x 62px at default zoom 13.5) framing the 50px dish pin
@@ -202,6 +200,8 @@ function applyPinState(root: HTMLElement, isSelected: boolean, currentZoom?: num
     puck.style.overflow = "visible";
   }
   if (iconContainer) {
+    // Reserve a single subtle drop-shadow strictly for the 1 selected pin
+    iconContainer.style.filter = isSelected ? PIN_SHADOW_SELECTED : "none";
     if (isSelected) {
       iconContainer.style.width = `${selectedIconPx}px`;
       iconContainer.style.height = `${selectedIconPx}px`;
@@ -257,9 +257,9 @@ function buildUserAvatarPuckElement(
     "puck-char relative flex items-end justify-center overflow-visible";
   charContainer.style.width = `${initialDims.width}px`;
   charContainer.style.height = `${initialDims.height}px`;
-  // Crisp white die-cut vinyl sticker outline + soft elevation shadow
-  charContainer.style.filter =
-    "drop-shadow(1.5px 0 0 #FFFFFF) drop-shadow(-1.5px 0 0 #FFFFFF) drop-shadow(0 1.5px 0 #FFFFFF) drop-shadow(0 -1.5px 0 #FFFFFF) drop-shadow(0 3px 6px rgba(0, 0, 0, 0.22))";
+  // Clean single elevation shadow instead of 5 chained drop-shadow filter passes
+  charContainer.style.borderRadius = "9999px";
+  charContainer.style.boxShadow = "0 3px 8px rgba(24, 22, 21, 0.22)";
 
   const renderSvgInto = (svgStr: string, _isMascotEngine = false) => {
     const cleaned = svgStr.replace(/<g data-layer="ambience">[\s\S]*?<\/g>/g, "");
@@ -295,7 +295,7 @@ function buildUserAvatarPuckElement(
   // Subtle warm-paper editorial micro-pill
   const badge = document.createElement("div");
   badge.className =
-    "puck-badge -mt-1 relative z-20 bg-[#FAF7F2]/95 backdrop-blur-xs text-[#181615]/85 font-bold text-[7px] tracking-[0.06em] uppercase leading-none px-1 py-0.5 rounded-full shadow-[0_1px_3px_rgba(24,22,21,0.12)] border border-[#181615]/12 whitespace-nowrap flex items-center gap-1 group-hover:scale-105 transition-transform";
+    "puck-badge -mt-1 relative z-20 bg-[#FAF7F2] text-[#181615]/85 font-bold text-[7px] tracking-[0.06em] uppercase leading-none px-1 py-0.5 rounded-full shadow-[0_1px_3px_rgba(24,22,21,0.12)] border border-[#181615]/12 whitespace-nowrap flex items-center gap-1 group-hover:scale-105 transition-transform";
   badge.style.fontFamily = "var(--font-comico), sans-serif";
   badge.innerHTML = `<span style="width:3.5px;height:3.5px;border-radius:9999px;background:#10B981;display:inline-block;"></span><span>You</span>`;
 
@@ -504,7 +504,6 @@ function createAquarellePinElement(
         padding: 0;
         flex-shrink: 0;
         overflow: visible !important;
-        filter: drop-shadow(0 2px 4px rgba(24, 22, 21, 0.2));
         transition: width 150ms ease, height 150ms ease;
       ">
         ${pinGlyph}
@@ -542,9 +541,12 @@ function createAquarellePinElement(
   return root;
 }
 
-export function MapRadarView() {
+export function MapRadarView({ isBooting = false }: { isBooting?: boolean } = {}) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<maplibregl.Map | null>(null);
+  const isBootingRef = useRef(isBooting);
+  isBootingRef.current = isBooting;
+  const containerSizeRef = useRef({ width: 390, height: 844 });
   const markerPoolRef = useRef<
     Map<
       string,
@@ -867,7 +869,7 @@ export function MapRadarView() {
       ) {
         return false;
       }
-      if (currentOpenNow && !venue.open_now) return false;
+      if (currentOpenNow && getVenueLiveOpenStatus(venue).isOpen !== true) return false;
       return true;
     });
 
@@ -1246,7 +1248,6 @@ export function MapRadarView() {
       bustContainer.style.position = "relative";
       bustContainer.style.transformOrigin = placeRight ? "6.13% 51.45%" : "93.87% 51.45%";
       bustContainer.style.willChange = "transform";
-      bustContainer.style.filter = "drop-shadow(0 6px 14px rgba(24, 22, 21, 0.22))";
       bustContainer.innerHTML = `
         <img
           src="/mascot/smakr-pick-pointing.svg"
@@ -1332,20 +1333,52 @@ export function MapRadarView() {
       initialZoom: mapZoom,
     });
 
-    // Attach marker DOM only when the main thread is idle so the MapLibre boot
-    // never competes with hydration/paint for frame budget. Falls back to rAF.
+    // Cache container dimensions so map.on("move") performs zero DOM layout reads
+    const syncContainerSize = () => {
+      const el = mapContainer.current;
+      if (!el) return;
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      if (w > 0 && h > 0) {
+        containerSizeRef.current = { width: w, height: h };
+      }
+    };
+    syncContainerSize();
+    const containerResizeObserver =
+      typeof ResizeObserver !== "undefined" && mapContainer.current
+        ? new ResizeObserver(syncContainerSize)
+        : null;
+    if (containerResizeObserver && mapContainer.current) {
+      containerResizeObserver.observe(mapContainer.current);
+    }
+
+    // Attach marker DOM only when the main thread is idle (and defer ~300ms while
+    // PeepsBootScreen is popping in so MapLibre tiles paint behind the translucent
+    // boot veil while boot rAF stays locked at 60fps).
+    let markerBootTimer: number | null = null;
     const attachMarkers = () => {
       renderMarkers();
       renderWeeklyMarker();
     };
     const scheduleMarkerAttachment = () => {
-      const ric = (
-        window as unknown as {
-          requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
-        }
-      ).requestIdleCallback;
-      if (typeof ric === "function") ric(attachMarkers, { timeout: 400 });
-      else requestAnimationFrame(attachMarkers);
+      const runWhenIdle = () => {
+        const ric = (
+          window as unknown as {
+            requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+          }
+        ).requestIdleCallback;
+        if (typeof ric === "function") ric(attachMarkers, { timeout: 400 });
+        else requestAnimationFrame(attachMarkers);
+      };
+      if (isBootingRef.current) {
+        if (markerBootTimer !== null) window.clearTimeout(markerBootTimer);
+        markerBootTimer = window.setTimeout(() => {
+          markerBootTimer = null;
+          runWhenIdle();
+        }, 300);
+        return;
+      }
+      runWhenIdle();
     };
 
     // Guarded resize: `map.resize()` can synchronously re-enter `moveend`, which
@@ -1357,12 +1390,15 @@ export function MapRadarView() {
       resizing = true;
       try {
         map.resize();
+        syncContainerSize();
       } finally {
         setTimeout(() => {
           resizing = false;
         }, 0);
       }
     };
+
+    map.on("resize", syncContainerSize);
 
     map.on("load", () => {
       isMapReadyRef.current = true;
@@ -1431,6 +1467,8 @@ export function MapRadarView() {
     const checkSpotlightDriftDismiss = (requireUserEvent: boolean, ev?: { originalEvent?: unknown }) => {
       if (requireUserEvent && (!ev?.originalEvent || isProgrammaticFlightRef.current)) return;
       const moveState = useCityPulseStore.getState();
+      // Never auto-dismiss while the full venue detail sheet is open or during a deep-link flight lock
+      if (moveState.isVenueDetailModalOpen || Date.now() < moveState.deepLinkLockUntil) return;
       if (
         moveState.viewMode === "map" &&
         moveState.selectedVenue &&
@@ -1439,8 +1477,7 @@ export function MapRadarView() {
         const v = moveState.selectedVenue;
         if (typeof v.longitude === "number" && typeof v.latitude === "number") {
           const p = map.project([v.longitude, v.latitude]);
-          const w = map.getContainer().clientWidth;
-          const h = map.getContainer().clientHeight;
+          const { width: w, height: h } = containerSizeRef.current;
           const targetX = w / 2;
           const cardTop = h - (SELECTION_CARD_HEIGHT + SELECTION_CARD_BOTTOM_INSET);
           const pinGap =
@@ -1459,6 +1496,7 @@ export function MapRadarView() {
       if (!e?.originalEvent) return;
       selectionFlightUntilRef.current = 0;
       isProgrammaticFlightRef.current = false;
+      useCityPulseStore.getState().setDeepLinkLockUntil(0);
     };
     map.on("dragstart", clearFlightLockOnUserGesture);
     map.on("touchstart", clearFlightLockOnUserGesture);
@@ -1467,17 +1505,16 @@ export function MapRadarView() {
       checkSpotlightDriftDismiss(true, e);
     });
 
-    // After a large pan / pitch, force a repaint so no canvas region is left
-    // blank. IMPORTANT: never call `map.resize()` here — resize re-enters
-    // `moveend`, which recurses/loops and can leave the canvas half-rendered.
     map.on("moveend", () => {
       // If a card is open and the user has panned/zoomed the map away from the
       // pin's landing spot, dismiss it — the fixed card would no longer line up
       // with its icon.
       checkSpotlightDriftDismiss(false);
 
-      map.triggerRepaint();
-      renderWeeklyMarker();
+      const currentPickId = useCityPulseStore.getState().weeklyPick.venue_id;
+      if (!weeklyMarkerRef.current || weeklyPickIdRef.current !== currentPickId) {
+        renderWeeklyMarker();
+      }
       if (process.env.NODE_ENV !== "production") {
         const c = map.getCenter();
         console.info("[locate] camera settled", {
@@ -1509,7 +1546,7 @@ export function MapRadarView() {
           applyPuckZoomScale(
             el,
             mapInstance.current.getZoom(),
-            mapContainer.current?.clientWidth
+            containerSizeRef.current.width
           );
         }
       }
@@ -1521,7 +1558,9 @@ export function MapRadarView() {
 
     return () => {
       window.removeEventListener("resize", handleResize);
+      if (markerBootTimer !== null) window.clearTimeout(markerBootTimer);
       if (flyTimerRef.current) clearTimeout(flyTimerRef.current);
+      containerResizeObserver?.disconnect();
       resizeObserver.disconnect();
       markerPoolRef.current.forEach(({ marker }) => marker.remove());
       markerPoolRef.current.clear();
@@ -1783,18 +1822,29 @@ export function MapRadarView() {
     return unsubscribe;
   }, []);
 
-  // 2.5 Auto-fit map camera ONLY when the user actively changes a map filter pill.
-  // Never fire on mount, and never fire on venue list updates or geolocation fixes.
+  // 2.5 Auto-fit map camera ONLY when the user actively changes a map filter pill,
+  // or on initial map load when landing on a filtered deep link (e.g. ?tab=popups).
   const activeFilterSig = `${mapCategory}|${selectedGroup ?? ""}|${selectedSpotKind ?? ""}|${spotTypeFilter ?? "all"}`;
-  const prevFilterSigRef = useRef<string>(activeFilterSig);
+  const prevFilterSigRef = useRef<string>("all|||all");
   useEffect(() => {
+    if (!isMapReady) return;
     const map = mapInstance.current;
     if (!map) return;
 
     if (prevFilterSigRef.current === activeFilterSig) return;
     prevFilterSigRef.current = activeFilterSig;
 
-    const venues = useCityPulseStore.getState().venues;
+    const storeState = useCityPulseStore.getState();
+    // Skip camera auto-fit when a ?spot= deep link or full venue sheet owns the camera
+    if (
+      storeState.isVenueDetailModalOpen ||
+      Date.now() < storeState.deepLinkLockUntil ||
+      (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("spot"))
+    ) {
+      return;
+    }
+
+    const venues = storeState.venues;
 
     const isDefaultAll =
       mapCategory === "all" &&
@@ -1882,7 +1932,7 @@ export function MapRadarView() {
     } catch (err) {
       console.warn("Map auto-fit failed gracefully:", err);
     }
-  }, [activeFilterSig, mapCategory, selectedGroup, selectedSpotKind, spotTypeFilter]);
+  }, [isMapReady, activeFilterSig, mapCategory, selectedGroup, selectedSpotKind, spotTypeFilter]);
 
   // 3. Switch style safely on theme change
   useEffect(() => {
@@ -2230,9 +2280,27 @@ export function MapRadarView() {
                 </span>
               ` : `
                 <span style="
-                  background: ${openStatus.isOpen ? 'rgba(236, 253, 245, 0.85)' : 'rgba(254, 242, 242, 0.85)'};
-                  color: ${openStatus.isOpen ? '#047857' : '#b91c1c'};
-                  border: 1px solid ${openStatus.isOpen ? '#a7f3d0' : '#fecaca'};
+                  background: ${
+                    openStatus.isOpen === true
+                      ? "rgba(236, 253, 245, 0.85)"
+                      : openStatus.isOpen === false
+                      ? "rgba(254, 242, 242, 0.85)"
+                      : "rgba(244, 244, 245, 0.9)"
+                  };
+                  color: ${
+                    openStatus.isOpen === true
+                      ? "#047857"
+                      : openStatus.isOpen === false
+                      ? "#b91c1c"
+                      : "#52525b"
+                  };
+                  border: 1px solid ${
+                    openStatus.isOpen === true
+                      ? "#a7f3d0"
+                      : openStatus.isOpen === false
+                      ? "#fecaca"
+                      : "#e4e4e7"
+                  };
                   font-size: 9px;
                   font-weight: 700;
                   padding: 1px 6px;
@@ -2241,7 +2309,13 @@ export function MapRadarView() {
                   align-items: center;
                   gap: 3px;
                 ">
-                  <span style="width: 5px; height: 5px; border-radius: 50%; background: ${openStatus.isOpen ? '#10b981' : '#ef4444'};"></span>
+                  <span style="width: 5px; height: 5px; border-radius: 50%; background: ${
+                    openStatus.isOpen === true
+                      ? "#10b981"
+                      : openStatus.isOpen === false
+                      ? "#ef4444"
+                      : "#a1a1aa"
+                  };"></span>
                   ${openStatus.statusText}
                 </span>
               `}
@@ -2398,7 +2472,7 @@ export function MapRadarView() {
       {/* Map Canvas — kept mounted (opacity only) so MapLibre can measure it */}
       <div
         ref={mapContainer}
-        className={`absolute inset-0 w-full h-full ${isMapReady ? "opacity-100" : "opacity-0"}`}
+        className={`absolute inset-0 w-full h-full transition-opacity duration-[250ms] ease-out ${isMapReady ? "opacity-100" : "opacity-0"}`}
         style={{
           width: "100%",
           height: "100%",

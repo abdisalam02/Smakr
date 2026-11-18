@@ -119,7 +119,59 @@ const NEIGHBORHOODS: Neighborhood[] = [
   "sentrum",
   "frogner",
   "kampen",
+  "bjorvika",
+  "st_hanshaugen",
+  "majorstuen",
+  "vulkan",
+  "fredensborg",
+  "bislett",
+  "sorenga",
+  "lillestrom",
+  "gamlebyen",
+  "hasle",
 ];
+
+const NEIGHBORHOOD_ALIASES: Array<[string, Neighborhood]> = [
+  ["bjorvika", "bjorvika"],
+  ["oslobukta", "bjorvika"],
+  ["st_hanshaugen", "st_hanshaugen"],
+  ["sthanshaugen", "st_hanshaugen"],
+  ["hanshaugen", "st_hanshaugen"],
+  ["majorstuen", "majorstuen"],
+  ["majorstua", "majorstuen"],
+  ["gronland", "gronland"],
+  ["grunerlokka", "grunerlokka"],
+  ["lokka", "grunerlokka"],
+  ["frogner", "frogner"],
+  ["toyen", "toyen"],
+  ["torggata", "torggata"],
+  ["youngstorget", "torggata"],
+  ["vulkan", "vulkan"],
+  ["fredensborg", "fredensborg"],
+  ["kampen", "kampen"],
+  ["sentrum", "sentrum"],
+  ["kvadraturen", "sentrum"],
+  ["bislett", "bislett"],
+  ["sorenga", "sorenga"],
+  ["lillestrom", "lillestrom"],
+  ["gamlebyen", "gamlebyen"],
+  ["hasle", "hasle"],
+];
+
+function normalizeNeighborhoodText(raw?: string | null): string {
+  return (raw ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/ø/g, "o")
+    .replace(/å/g, "a")
+    .replace(/æ/g, "ae")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/['’"`]/g, "")
+    .replace(/[\s.\-/]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
 
 export function mapCategory(raw?: string | null): FoodCategory {
   const key = (raw ?? "").toLowerCase().replace(/[^a-z]/g, "");
@@ -159,9 +211,49 @@ function mapDietary(raw?: string[] | null): DietaryTag[] | undefined {
   return mapped.length ? mapped : undefined;
 }
 
-function mapNeighborhood(raw?: string | null): Neighborhood | undefined {
-  const key = (raw ?? "").toLowerCase();
-  return NEIGHBORHOODS.includes(key as Neighborhood) ? (key as Neighborhood) : undefined;
+function resolveNeighborhoodFromText(normalized: string): Neighborhood | null {
+  if (!normalized) return null;
+  if (NEIGHBORHOODS.includes(normalized as Neighborhood)) {
+    return normalized as Neighborhood;
+  }
+  for (const [alias, canonical] of NEIGHBORHOOD_ALIASES) {
+    if (normalized === alias || normalized.includes(alias)) {
+      return canonical;
+    }
+  }
+  return null;
+}
+
+function mapNeighborhood(
+  raw?: string | null,
+  fallbackAddress?: string | null
+): Neighborhood {
+  const normalizedRaw = normalizeNeighborhoodText(raw);
+  const direct = resolveNeighborhoodFromText(normalizedRaw);
+  if (direct && direct !== "all") return direct;
+
+  if (fallbackAddress) {
+    const normalizedAddr = normalizeNeighborhoodText(fallbackAddress);
+    const fromAddr = resolveNeighborhoodFromText(normalizedAddr);
+    if (fromAddr && fromAddr !== "all") return fromAddr;
+
+    const postalMatch = fallbackAddress.match(/\b(\d{4})\b/);
+    if (postalMatch) {
+      const code = parseInt(postalMatch[1], 10);
+      if (code >= 550 && code <= 569) return "grunerlokka";
+      if (code >= 186 && code <= 188) return "gronland";
+      if (code >= 190 && code <= 194) return "bjorvika";
+      if (code >= 170 && code <= 179) return "st_hanshaugen";
+      if (code >= 180 && code <= 185) return "torggata";
+      if (code >= 250 && code <= 269) return "frogner";
+      if (code >= 270 && code <= 369) return "majorstuen";
+      if (code >= 650 && code <= 656) return "toyen";
+      if (code >= 2000 && code <= 2020) return "lillestrom";
+      if (code >= 150 && code <= 169) return "sentrum";
+    }
+  }
+
+  return "sentrum";
 }
 
 function mapPriceLevel(raw?: string | null): "$" | "$$" | "$$$" | undefined {
@@ -323,7 +415,7 @@ export function mapVenueRow(row: VenueRow): Venue {
     created_at: row.created_at ?? null,
     vibe: buildVibe(row),
     distance_meters: null,
-    neighborhood: mapNeighborhood(row.neighborhood),
+    neighborhood: mapNeighborhood(row.neighborhood, row.address),
     dietary_tags: mapDietary(row.dietary_tags),
     open_now: Boolean(row.open_now),
     popup_start_date: row.popup_start_date || (signals.popup_start_date as string) || null,

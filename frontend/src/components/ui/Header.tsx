@@ -228,17 +228,19 @@ export function Header({ initialUser }: { initialUser?: UserProfile | null }) {
                       </button>
                     )}
 
-                    <button
-                      onClick={() => {
-                        setMenuOpen(false);
-                        (window as unknown as { openOnboardingPreview?: () => void }).openOnboardingPreview?.();
-                      }}
-                      role="menuitem"
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-zinc-700 hover:bg-black/5 hover:text-zinc-950 transition-colors text-left"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-[#e84a27]" />
-                      <span>Preview Signup Onboarding</span>
-                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => {
+                          setMenuOpen(false);
+                          (window as unknown as { openOnboardingPreview?: () => void }).openOnboardingPreview?.();
+                        }}
+                        role="menuitem"
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-zinc-700 hover:bg-black/5 hover:text-zinc-950 transition-colors text-left"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-[#e84a27]" />
+                        <span>Preview Signup Onboarding</span>
+                      </button>
+                    )}
 
                     <button
                       onClick={() => {

@@ -103,6 +103,8 @@ interface PulseStoreState {
   bottomSheetOpen: boolean;
   isVenueDetailModalOpen: boolean;
   setIsVenueDetailModalOpen: (open: boolean) => void;
+  deepLinkLockUntil: number;
+  setDeepLinkLockUntil: (untilMs: number) => void;
   wsConnected: boolean;
   lastEvent: LiveRadarEvent | null;
   isLoadingVenues: boolean;
@@ -275,6 +277,7 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
   isCreateBiteModalOpen: false,
   bottomSheetOpen: false,
   isVenueDetailModalOpen: false,
+  deepLinkLockUntil: 0,
   wsConnected: false,
   lastEvent: null,
   isLoadingVenues: false,
@@ -345,6 +348,7 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
 
   setIsBetaFeedbackOpen: (isBetaFeedbackOpen: boolean) => set({ isBetaFeedbackOpen }),
   setIsVenueDetailModalOpen: (isVenueDetailModalOpen: boolean) => set({ isVenueDetailModalOpen }),
+  setDeepLinkLockUntil: (deepLinkLockUntil: number) => set({ deepLinkLockUntil }),
 
   setSelectedAvatar: (selectedAvatar: AvatarOption) => set({ selectedAvatar }),
 
@@ -360,7 +364,19 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
 
   clearToast: () => set({ toastMessage: null }),
 
-  setVenues: (venues) => set({ venues }),
+  setVenues: (venues) =>
+    set((state) => {
+      if (!state.selectedVenue) return { venues };
+      const freshMatch = venues.find((v) => v.id === state.selectedVenue?.id);
+      if (!freshMatch) return { venues };
+      return {
+        venues,
+        selectedVenue: {
+          ...state.selectedVenue,
+          ...freshMatch,
+        },
+      };
+    }),
 
   setFoodPosts: (foodPosts) => set({ foodPosts }),
 
@@ -1032,20 +1048,9 @@ export const useCityPulseStore = create<PulseStoreState>((set, get) => ({
   openCreateDish: () => {
     const { currentUser } = get();
 
-    // 1) Guests see the warm "Become a Smakr Foodie" invite modal first.
+    // Guests see the warm "Become a Smakr Foodie" invite modal first.
     if (!currentUser) {
       set({ isFoodieInviteOpen: true });
-      return;
-    }
-
-    // 2) Not-yet-onboarded foodies finish their 15-second profile first. The
-    //    UserOnboardingModal is always mounted and overlays when this is true.
-    const needsOnboarding =
-      currentUser.onboarding_completed !== true &&
-      !currentUser.is_official &&
-      currentUser.role !== "admin";
-    if (needsOnboarding) {
-      get().showToast("Finish your 15-second profile first ✨");
       return;
     }
 

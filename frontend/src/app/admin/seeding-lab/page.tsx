@@ -132,6 +132,7 @@ export default function SeedingLabPage() {
       }
     } catch (err: any) {
       setNotification({ type: "error", message: err.message || "Could not save changes." });
+      throw err;
     }
   };
 
@@ -167,6 +168,7 @@ export default function SeedingLabPage() {
       }
     } catch (err: any) {
       setNotification({ type: "error", message: err.message || "Could not save dish changes." });
+      throw err;
     }
   };
 

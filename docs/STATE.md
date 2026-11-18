@@ -1,10 +1,10 @@
 # STATE.md — CityPulse / Smakr (read first, keep <= 30 lines)
 
-Updated: 2026-11-17
+Updated: 2026-11-19
 
 ## Now
-- Task: Harvested 3+ easy-to-find dishes across all 42 regular Oslo spots (+53 Wolt w/ photos + 30 verified non-Wolt w/ IG/Google pools) into staged_candidates.json; added 3-Dish Coverage & Workflow UI + Queue tabs + Spot Photo Pool to /admin/seeding-lab.
-- Status: `npx tsc --noEmit` & `npm run test:security` verified; browser UI check paused at admin auth gate on `/admin/seeding-lab`.
+- Task: 60fps boot & interaction pass: translucent Warm Oat boot veil, single logo pop-in, zero-layout-thrash dock swiping & map panning, hoisted Oslo time formatter, and deep-link race resilience.
+- Status: `npx tsc --noEmit` clean, 23/23 security tests pass, dev server running on port 3001.
 
 ## Next (max 3)
 1. Preview and export the 2-slide Early Snowfall `@3x` PNG assets in `/ad-reel`.

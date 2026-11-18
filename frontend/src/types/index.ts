@@ -50,7 +50,17 @@ export type Neighborhood =
   | "gronland"
   | "sentrum"
   | "frogner"
-  | "kampen";
+  | "kampen"
+  | "bjorvika"
+  | "st_hanshaugen"
+  | "majorstuen"
+  | "vulkan"
+  | "fredensborg"
+  | "bislett"
+  | "sorenga"
+  | "lillestrom"
+  | "gamlebyen"
+  | "hasle";
 
 export type AvatarOption = "open_peeps" | "ouch_3d" | "lordicon_barista";
 

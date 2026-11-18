@@ -103,17 +103,26 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 2. Local Fallback Guard: always save copy locally to frontend/public/uploads/seeds/
-    const localDir = getLocalUploadDir();
-    if (!fs.existsSync(localDir)) {
-      fs.mkdirSync(localDir, { recursive: true });
+    // 2. Local Fallback Guard: mirror locally in dev; ignore EROFS on read-only Vercel serverless
+    let localPublicUrl: string | null = null;
+    try {
+      const localDir = getLocalUploadDir();
+      if (!fs.existsSync(localDir)) {
+        fs.mkdirSync(localDir, { recursive: true });
+      }
+      const localFilePath = path.join(localDir, filename);
+      fs.writeFileSync(localFilePath, webpBuffer);
+      localPublicUrl = `/uploads/seeds/${filename}`;
+    } catch (fsErr: any) {
+      if (!supabaseCdnUrl) {
+        throw new Error(
+          `Image upload failed: Supabase Storage rejected upload and local disk is read-only (${fsErr?.message || "EROFS"}).`
+        );
+      }
     }
-    const localFilePath = path.join(localDir, filename);
-    fs.writeFileSync(localFilePath, webpBuffer);
-    const localPublicUrl = `/uploads/seeds/${filename}`;
 
     // Prefer Supabase CDN URL if available; otherwise use reliable local public path
-    const finalUrl = supabaseCdnUrl || localPublicUrl;
+    const finalUrl = supabaseCdnUrl || localPublicUrl!;
 
     return NextResponse.json({
       success: true,

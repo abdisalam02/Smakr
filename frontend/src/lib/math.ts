@@ -28,6 +28,17 @@ export function formatDistance(meters: number | null | undefined): string {
   return `${(meters / 1000).toFixed(1)}km`;
 }
 
+export function formatWalkMinutes(meters: number | null | undefined): string {
+  if (meters === null || meters === undefined || !Number.isFinite(meters) || meters < 0) {
+    return "";
+  }
+  if (meters < 1600) {
+    const mins = Math.max(1, Math.round(meters / 80));
+    return `~${mins} min walk`;
+  }
+  return `${(meters / 1000).toFixed(1)} km`;
+}
+
 export function formatRelativeTime(isoString: string | null | undefined): string {
   if (!isoString) return "No check-ins yet";
   const date = new Date(isoString);

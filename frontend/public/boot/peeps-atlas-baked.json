@@ -1,0 +1,291 @@
+{
+  "src": "/boot/peeps-atlas-baked.webp",
+  "cols": 7,
+  "rows": 4,
+  "cellW": 240,
+  "cellH": 324,
+  "inset": 2,
+  "count": 28,
+  "cells": [
+    {
+      "slot": 0,
+      "spriteIndex": 91,
+      "col": 0,
+      "row": 0,
+      "sx": 2,
+      "sy": 2,
+      "sw": 236,
+      "sh": 320
+    },
+    {
+      "slot": 1,
+      "spriteIndex": 12,
+      "col": 1,
+      "row": 0,
+      "sx": 242,
+      "sy": 2,
+      "sw": 236,
+      "sh": 320
+    },
+    {
+      "slot": 2,
+      "spriteIndex": 39,
+      "col": 2,
+      "row": 0,
+      "sx": 482,
+      "sy": 2,
+      "sw": 236,
+      "sh": 320
+    },
+    {
+      "slot": 3,
+      "spriteIndex": 41,
+      "col": 3,
+      "row": 0,
+      "sx": 722,
+      "sy": 2,
+      "sw": 236,
+      "sh": 320
+    },
+    {
+      "slot": 4,
+      "spriteIndex": 71,
+      "col": 4,
+      "row": 0,
+      "sx": 962,
+      "sy": 2,
+      "sw": 236,
+      "sh": 320
+    },
+    {
+      "slot": 5,
+      "spriteIndex": 92,
+      "col": 5,
+      "row": 0,
+      "sx": 1202,
+      "sy": 2,
+      "sw": 236,
+      "sh": 320
+    },
+    {
+      "slot": 6,
+      "spriteIndex": 2,
+      "col": 6,
+      "row": 0,
+      "sx": 1442,
+      "sy": 2,
+      "sw": 236,
+      "sh": 320
+    },
+    {
+      "slot": 7,
+      "spriteIndex": 35,
+      "col": 0,
+      "row": 1,
+      "sx": 2,
+      "sy": 326,
+      "sw": 236,
+      "sh": 320
+    },
+    {
+      "slot": 8,
+      "spriteIndex": 9,
+      "col": 1,
+      "row": 1,
+      "sx": 242,
+      "sy": 326,
+      "sw": 236,
+      "sh": 320
+    },
+    {
+      "slot": 9,
+      "spriteIndex": 74,
+      "col": 2,
+      "row": 1,
+      "sx": 482,
+      "sy": 326,
+      "sw": 236,
+      "sh": 320
+    },
+    {
+      "slot": 10,
+      "spriteIndex": 40,
+      "col": 3,
+      "row": 1,
+      "sx": 722,
+      "sy": 326,
+      "sw": 236,
+      "sh": 320
+    },
+    {
+      "slot": 11,
+      "spriteIndex": 96,
+      "col": 4,
+      "row": 1,
+      "sx": 962,
+      "sy": 326,
+      "sw": 236,
+      "sh": 320
+    },
+    {
+      "slot": 12,
+      "spriteIndex": 79,
+      "col": 5,
+      "row": 1,
+      "sx": 1202,
+      "sy": 326,
+      "sw": 236,
+      "sh": 320
+    },
+    {
+      "slot": 13,
+      "spriteIndex": 22,
+      "col": 6,
+      "row": 1,
+      "sx": 1442,
+      "sy": 326,
+      "sw": 236,
+      "sh": 320
+    },
+    {
+      "slot": 14,
+      "spriteIndex": 29,
+      "col": 0,
+      "row": 2,
+      "sx": 2,
+      "sy": 650,
+      "sw": 236,
+      "sh": 320
+    },
+    {
+      "slot": 15,
+      "spriteIndex": 16,
+      "col": 1,
+      "row": 2,
+      "sx": 242,
+      "sy": 650,
+      "sw": 236,
+      "sh": 320
+    },
+    {
+      "slot": 16,
+      "spriteIndex": 83,
+      "col": 2,
+      "row": 2,
+      "sx": 482,
+      "sy": 650,
+      "sw": 236,
+      "sh": 320
+    },
+    {
+      "slot": 17,
+      "spriteIndex": 6,
+      "col": 3,
+      "row": 2,
+      "sx": 722,
+      "sy": 650,
+      "sw": 236,
+      "sh": 320
+    },
+    {
+      "slot": 18,
+      "spriteIndex": 8,
+      "col": 4,
+      "row": 2,
+      "sx": 962,
+      "sy": 650,
+      "sw": 236,
+      "sh": 320
+    },
+    {
+      "slot": 19,
+      "spriteIndex": 15,
+      "col": 5,
+      "row": 2,
+      "sx": 1202,
+      "sy": 650,
+      "sw": 236,
+      "sh": 320
+    },
+    {
+      "slot": 20,
+      "spriteIndex": 69,
+      "col": 6,
+      "row": 2,
+      "sx": 1442,
+      "sy": 650,
+      "sw": 236,
+      "sh": 320
+    },
+    {
+      "slot": 21,
+      "spriteIndex": 19,
+      "col": 0,
+      "row": 3,
+      "sx": 2,
+      "sy": 974,
+      "sw": 236,
+      "sh": 320
+    },
+    {
+      "slot": 22,
+      "spriteIndex": 51,
+      "col": 1,
+      "row": 3,
+      "sx": 242,
+      "sy": 974,
+      "sw": 236,
+      "sh": 320
+    },
+    {
+      "slot": 23,
+      "spriteIndex": 89,
+      "col": 2,
+      "row": 3,
+      "sx": 482,
+      "sy": 974,
+      "sw": 236,
+      "sh": 320
+    },
+    {
+      "slot": 24,
+      "spriteIndex": 104,
+      "col": 3,
+      "row": 3,
+      "sx": 722,
+      "sy": 974,
+      "sw": 236,
+      "sh": 320
+    },
+    {
+      "slot": 25,
+      "spriteIndex": 3,
+      "col": 4,
+      "row": 3,
+      "sx": 962,
+      "sy": 974,
+      "sw": 236,
+      "sh": 320
+    },
+    {
+      "slot": 26,
+      "spriteIndex": 17,
+      "col": 5,
+      "row": 3,
+      "sx": 1202,
+      "sy": 974,
+      "sw": 236,
+      "sh": 320
+    },
+    {
+      "slot": 27,
+      "spriteIndex": 56,
+      "col": 6,
+      "row": 3,
+      "sx": 1442,
+      "sy": 974,
+      "sw": 236,
+      "sh": 320
+    }
+  ]
+}

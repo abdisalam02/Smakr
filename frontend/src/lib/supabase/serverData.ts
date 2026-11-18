@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { unstable_noStore as noStore } from "next/cache";
+import { unstable_cache } from "next/cache";
+import { cookies } from "next/headers";
 import {
   DEFAULT_WEEKLY_PICK,
   type FoodPost,
@@ -27,8 +28,8 @@ import {
  * map pins are present on the very first paint instead of appearing after a
  * post-hydration network round-trip.
  *
- * The rows are mapped through the same pure `./mappers` used by the browser
- * data layer, so the shapes are guaranteed identical on both sides.
+ * Uses `unstable_cache` (60s TTL + tag invalidation from `/api/admin/*`) so
+ * SSR resolves in <50ms on warm cache while admin edits reflect immediately.
  */
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -47,99 +48,120 @@ function getServerClient(): SupabaseClient | null {
   }
   cachedClient = createClient(SUPABASE_URL, SUPABASE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
-    global: {
-      // Never let Next.js cache these public-CMS reads — admins expect edits to
-      // appear immediately.
-      fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }),
-    },
   });
   return cachedClient;
 }
 
-/** Live Oslo venues (server prefetch). Always reads live Supabase via `no-store`. */
+const getCachedVenues = unstable_cache(
+  async (): Promise<Venue[]> => {
+    const supabase = getServerClient();
+    if (!supabase) return INITIAL_FOOD_SPOTS;
+    try {
+      const { data, error } = await supabase
+        .from("venues")
+        .select(
+          "id, name, address, latitude, longitude, category, image_url, google_place_id, google_rating, google_reviews_count, price_level, neighborhood, spot_type, vibe_signals, is_official_pick, signature_dishes, description, opening_hours, current_opening_hours_text, website_uri, popup_start_date, popup_end_date, location_schedule, created_at, updated_at"
+        )
+        .order("name", { ascending: true });
+      if (error || !data || data.length === 0) return INITIAL_FOOD_SPOTS;
+      return (data as VenueRow[])
+        .map(mapVenueRow)
+        .filter((v) => Number.isFinite(v.latitude) && Number.isFinite(v.longitude) && v.latitude !== 0);
+    } catch (err) {
+      console.warn("[serverData] fetchVenuesServer failed — returning INITIAL_FOOD_SPOTS:", err);
+      return INITIAL_FOOD_SPOTS;
+    }
+  },
+  ["venues-server-data-v3"],
+  { revalidate: 60, tags: ["venues"] }
+);
+
+/** Live Oslo venues (server prefetch, cached 60s + tag-invalidated on admin writes). */
 export async function fetchVenuesServer(): Promise<Venue[]> {
-  noStore();
-  const supabase = getServerClient();
-  if (!supabase) return INITIAL_FOOD_SPOTS;
-  try {
-    const { data, error } = await supabase
-      .from("venues")
-      .select(
-        "id, name, address, latitude, longitude, category, image_url, google_place_id, google_rating, google_reviews_count, price_level, neighborhood, spot_type, vibe_signals, is_official_pick, signature_dishes, description, opening_hours, current_opening_hours_text, website_uri, popup_start_date, popup_end_date, location_schedule, created_at, updated_at"
-      )
-      .order("name", { ascending: true });
-    if (error || !data || data.length === 0) return INITIAL_FOOD_SPOTS;
-    return (data as VenueRow[])
-      .map(mapVenueRow)
-      .filter((v) => Number.isFinite(v.latitude) && Number.isFinite(v.longitude) && v.latitude !== 0);
-  } catch (err) {
-    console.warn("[serverData] fetchVenuesServer failed — returning INITIAL_FOOD_SPOTS:", err);
-    return INITIAL_FOOD_SPOTS;
-  }
+  return getCachedVenues();
 }
 
-/** Live dish feed (server prefetch). Always reads live Supabase via `no-store`. */
+const getCachedFoodPosts = unstable_cache(
+  async (): Promise<FoodPost[]> => {
+    const supabase = getServerClient();
+    if (!supabase) return INITIAL_FOOD_POSTS;
+    try {
+      const { data, error } = await supabase
+        .from("food_posts")
+        .select(
+          "id, venue_id, author_id, dish_name, dish_image, review_text, price_nok, rating, dietary_tags, taste_tags, is_official_pick, likes_count, saves_count, diner_quotes, created_at, category, drop_badge, item_availability, price_tier, is_published, is_archived, venue:venues!food_posts_venue_id_fkey(id, name, address, neighborhood, latitude, longitude, category, image_url, price_level, google_rating, google_reviews_count, spot_type, vibe_signals, opening_hours, website_uri, current_opening_hours_text, popup_start_date, popup_end_date, location_schedule), author:profiles!food_posts_author_id_fkey(handle, name, avatar_url, is_official)"
+        )
+        .order("created_at", { ascending: false });
+      if (error || !data || data.length === 0) return INITIAL_FOOD_POSTS;
+      return (data as unknown as FoodPostRow[]).map(mapFoodPostRow);
+    } catch (err) {
+      console.warn("[serverData] fetchFoodPostsServer failed — returning INITIAL_FOOD_POSTS:", err);
+      return INITIAL_FOOD_POSTS;
+    }
+  },
+  ["food-posts-server-data-v3"],
+  { revalidate: 60, tags: ["food_posts"] }
+);
+
+/** Live dish feed (server prefetch, cached 60s + tag-invalidated on admin writes). */
 export async function fetchFoodPostsServer(): Promise<FoodPost[]> {
-  noStore();
-  const supabase = getServerClient();
-  if (!supabase) return INITIAL_FOOD_POSTS;
-  try {
-    const { data, error } = await supabase
-      .from("food_posts")
-      .select(
-        "id, venue_id, author_id, dish_name, dish_image, review_text, price_nok, rating, dietary_tags, taste_tags, is_official_pick, likes_count, saves_count, diner_quotes, created_at, category, drop_badge, item_availability, price_tier, is_published, is_archived, venue:venues!food_posts_venue_id_fkey(id, name, address, neighborhood, latitude, longitude, category, image_url, price_level, google_rating, google_reviews_count, spot_type, vibe_signals, opening_hours, website_uri, current_opening_hours_text, popup_start_date, popup_end_date, location_schedule), author:profiles!food_posts_author_id_fkey(handle, name, avatar_url, is_official)"
-      )
-      .order("created_at", { ascending: false });
-    if (error || !data || data.length === 0) return INITIAL_FOOD_POSTS;
-    return (data as unknown as FoodPostRow[]).map(mapFoodPostRow);
-  } catch (err) {
-    console.warn("[serverData] fetchFoodPostsServer failed — returning INITIAL_FOOD_POSTS:", err);
-    return INITIAL_FOOD_POSTS;
-  }
+  return getCachedFoodPosts();
 }
 
-/** Active Weekly Drop (server prefetch). Falls back to the default pick. */
+const getCachedActiveWeeklyDrop = unstable_cache(
+  async (): Promise<WeeklyPick> => {
+    const supabase = getServerClient();
+    if (!supabase) return DEFAULT_WEEKLY_PICK;
+    try {
+      const { data, error } = await supabase
+        .from("weekly_picks")
+        .select("*")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error || !data) return DEFAULT_WEEKLY_PICK;
+      const row = data as WeeklyPickRow;
+      return {
+        id: row.id,
+        venue_id: row.venue_id,
+        dish_name: row.dish_name ?? DEFAULT_WEEKLY_PICK.dish_name,
+        dish_image: row.dish_image ?? DEFAULT_WEEKLY_PICK.dish_image,
+        speech_bubble: row.speech_bubble ?? DEFAULT_WEEKLY_PICK.speech_bubble,
+        coords: [
+          row.longitude ?? DEFAULT_WEEKLY_PICK.coords[0],
+          row.latitude ?? DEFAULT_WEEKLY_PICK.coords[1],
+        ],
+        price_nok: row.price_nok ?? DEFAULT_WEEKLY_PICK.price_nok,
+        week_label: row.week_label ?? DEFAULT_WEEKLY_PICK.week_label,
+        active: Boolean(row.is_active),
+      };
+    } catch (err) {
+      console.warn("[serverData] fetchActiveWeeklyDropServer failed — default pick:", err);
+      return DEFAULT_WEEKLY_PICK;
+    }
+  },
+  ["weekly-drop-server-data-v3"],
+  { revalidate: 60, tags: ["weekly_picks", "weekly_drop"] }
+);
+
+/** Active Weekly Drop (server prefetch, cached 60s + tag-invalidated). */
 export async function fetchActiveWeeklyDropServer(): Promise<WeeklyPick> {
-  noStore();
-  const supabase = getServerClient();
-  if (!supabase) return DEFAULT_WEEKLY_PICK;
-  try {
-    const { data, error } = await supabase
-      .from("weekly_picks")
-      .select("*")
-      .eq("is_active", true)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (error || !data) return DEFAULT_WEEKLY_PICK;
-    const row = data as WeeklyPickRow;
-    return {
-      id: row.id,
-      venue_id: row.venue_id,
-      dish_name: row.dish_name ?? DEFAULT_WEEKLY_PICK.dish_name,
-      dish_image: row.dish_image ?? DEFAULT_WEEKLY_PICK.dish_image,
-      speech_bubble: row.speech_bubble ?? DEFAULT_WEEKLY_PICK.speech_bubble,
-      coords: [
-        row.longitude ?? DEFAULT_WEEKLY_PICK.coords[0],
-        row.latitude ?? DEFAULT_WEEKLY_PICK.coords[1],
-      ],
-      price_nok: row.price_nok ?? DEFAULT_WEEKLY_PICK.price_nok,
-      week_label: row.week_label ?? DEFAULT_WEEKLY_PICK.week_label,
-      active: Boolean(row.is_active),
-    };
-  } catch (err) {
-    console.warn("[serverData] fetchActiveWeeklyDropServer failed — default pick:", err);
-    return DEFAULT_WEEKLY_PICK;
-  }
+  return getCachedActiveWeeklyDrop();
 }
 
 /**
  * SSR session read — the signed-in user + profile, or `null` when logged out.
- * Uses the cookie-aware server client so the first rendered frame (the Header)
- * already knows who is signed in, removing the logged-out flash on hard refresh.
+ * Fast-skips when no Supabase auth cookie is present so anonymous visitors incur 0ms auth latency.
  */
 export async function fetchCurrentUserServer(): Promise<UserProfile | null> {
   try {
+    const cookieStore = await cookies();
+    const hasAuthCookie = cookieStore
+      .getAll()
+      .some((c) => c.name.startsWith("sb-") && c.name.includes("auth-token"));
+    if (!hasAuthCookie) return null;
+
     const supabase = await getSupabaseServerClient();
     if (!supabase) return null;
 

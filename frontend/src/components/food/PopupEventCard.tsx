@@ -15,7 +15,7 @@ export interface PopupEventCardProps {
   compact?: boolean;
 }
 
-export function PopupEventCard({
+export const PopupEventCard = React.memo(function PopupEventCard({
   post,
   venue,
   priority = false,
@@ -41,8 +41,8 @@ export function PopupEventCard({
     )
   );
 
-  const popupStatus = getPopupStatus(venue);
-  const popupMeta = getPopupMeta(venue);
+  const popupStatus = React.useMemo(() => getPopupStatus(venue), [venue]);
+  const popupMeta = React.useMemo(() => getPopupMeta(venue), [venue]);
 
   const title = venue.name || "Oslo Pop-Up";
 
@@ -57,7 +57,7 @@ export function PopupEventCard({
   const displayCategory =
     rawCategory.charAt(0).toUpperCase() + rawCategory.slice(1).replace(/_/g, " ");
 
-  const popupLifecycle = resolvePopupLifecycle(venue);
+  const popupLifecycle = React.useMemo(() => resolvePopupLifecycle(venue), [venue]);
   const isDormant = popupLifecycle.state === "tba";
   const isPassed = popupLifecycle.state === "passed";
   const isUpcoming = popupLifecycle.state === "upcoming";
@@ -65,6 +65,8 @@ export function PopupEventCard({
 
   const postId = activeDish?.id || `popup_post_${venue.id}`;
   const isSaved = savedPostIds ? savedPostIds.has(postId) : false;
+
+  const [imgReady, setImgReady] = React.useState(false);
 
   const handleOpenDetails = () => {
     if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
@@ -88,7 +90,7 @@ export function PopupEventCard({
         compact
           ? "aspect-auto h-full min-h-0 max-h-none rounded-[24px] p-3"
           : "aspect-[16/10] sm:aspect-[16/9] min-h-[230px] max-h-[270px] rounded-[24px] sm:rounded-[28px] p-3.5 sm:p-4"
-      } overflow-hidden bg-[#181615] border transition-all duration-300 cursor-pointer select-none flex flex-col justify-between ${
+      } overflow-hidden bg-[#ECE6DA] border transition-all duration-200 cursor-pointer select-none flex flex-col justify-between ${
         isDormant
           ? "grayscale-[25%] opacity-90 border-black/10 dark:border-white/10 shadow-md"
           : isActive
@@ -103,7 +105,11 @@ export function PopupEventCard({
         fill
         priority={priority}
         unoptimized={displayImage.startsWith("/api/places/photos")}
-        className="object-cover transition-transform duration-700 group-hover:scale-105 pointer-events-none"
+        onLoad={() => setImgReady(true)}
+        onError={() => setImgReady(true)}
+        className={`object-cover transition-[opacity,transform] duration-200 group-hover:scale-105 pointer-events-none ${
+          imgReady ? "opacity-100" : "opacity-0"
+        }`}
         sizes="(max-width: 640px) 62vw, 280px"
       />
 
@@ -115,18 +121,18 @@ export function PopupEventCard({
           ===================================================================== */}
       <div className="relative z-10 flex items-center justify-between gap-2">
         {/* Left: Category / Dietary Badge */}
-        <span className="px-2.5 py-0.5 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md text-white text-[11px] font-semibold tracking-wide border border-white/20 transition-colors shadow-2xs">
+        <span className="px-2.5 py-0.5 rounded-full bg-[#181615]/80 text-white text-[11px] font-semibold tracking-wide border border-white/20 transition-colors shadow-2xs">
           {displayCategory}
         </span>
 
         {/* Right: Status Pill & Bookmark Button */}
         <div className="flex items-center gap-1.5">
           {isDormant ? (
-            <span className="px-2.5 py-0.5 rounded-full bg-stone-900/80 backdrop-blur-md text-stone-300 text-[10px] font-bold border border-white/15 uppercase tracking-wider">
+            <span className="px-2.5 py-0.5 rounded-full bg-[#181615]/85 text-stone-200 text-[10px] font-bold border border-white/15 uppercase tracking-wider">
               Next Drop TBA
             </span>
           ) : isPassed ? (
-            <span className="px-2.5 py-0.5 rounded-full bg-[#FAF7F2]/90 text-[#181615] text-[10px] font-bold uppercase tracking-wider shadow-xs">
+            <span className="px-2.5 py-0.5 rounded-full bg-[#FAF7F2]/95 text-[#181615] text-[10px] font-bold uppercase tracking-wider shadow-xs">
               {popupLifecycle.badgeLabel}
             </span>
           ) : isActive ? (
@@ -145,7 +151,7 @@ export function PopupEventCard({
             type="button"
             onClick={handleToggleBookmark}
             aria-label="Bookmark pop-up"
-            className="p-1.5 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md text-white border border-white/20 transition-all cursor-pointer shadow-2xs active:scale-90"
+            className="p-1.5 rounded-full bg-[#181615]/75 hover:bg-[#181615]/90 text-white border border-white/20 transition-transform cursor-pointer shadow-2xs active:scale-90"
           >
             <Bookmark
               className={`w-3.5 h-3.5 transition-colors ${
@@ -212,4 +218,4 @@ export function PopupEventCard({
       </div>
     </article>
   );
-}
+});

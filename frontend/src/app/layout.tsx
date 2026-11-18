@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { Plus_Jakarta_Sans, DM_Sans, Space_Grotesk, Geist } from "next/font/google";
-import { comico, anton } from "@/lib/fonts";
+import { Plus_Jakarta_Sans } from "next/font/google";
+import { comico } from "@/lib/fonts";
 import { Header } from "@/components/ui/Header";
 import { MascotConfigHydrator } from "@/components/avatar/MascotConfigHydrator";
 import { AppStateHydrator } from "@/components/state/AppStateHydrator";
@@ -9,7 +9,6 @@ import { AuthProvider } from "@/components/auth/AuthProvider";
 import { fetchCurrentUserServer } from "@/lib/supabase/serverData";
 import { GlobalModalsHost } from "@/components/ui/GlobalModalsHost";
 import { ToastBanner } from "@/components/ui/ToastBanner";
-import { AutumnLeavesBurst } from "@/components/effects/AutumnLeavesBurst";
 
 // The root layout reads the auth session (cookies) to SSR the header, so every
 // route is rendered on demand — declare it explicitly to avoid static-generation
@@ -26,24 +25,6 @@ export const viewport: Viewport = {
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-jakarta",
-  display: "swap",
-});
-
-const dmSans = DM_Sans({
-  subsets: ["latin"],
-  variable: "--font-dmsans",
-  display: "swap",
-});
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-space",
-  display: "swap",
-});
-
-const geist = Geist({
-  subsets: ["latin"],
-  variable: "--font-geist",
   display: "swap",
 });
 
@@ -83,15 +64,11 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${comico.variable} ${anton.variable} ${plusJakarta.variable} ${dmSans.variable} ${spaceGrotesk.variable} ${geist.variable}`}
+      data-theme="oat-espresso"
+      className={`${comico.variable} ${plusJakarta.variable}`}
       suppressHydrationWarning
     >
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var m={'electric-orange':'oat-espresso','oslo-minimalist':'oat-espresso','obsidian-slate':'late-night','cyber-midnight':'late-night','midnight-gastro':'late-night','smoked-espresso':'late-night','nordic-linen':'warm-bakery','nordic-bakery':'warm-bakery','nordic-amber':'warm-bakery','copenhagen-clay':'warm-bakery','alabaster-bronze':'warm-bakery','retro-diner':'warm-bakery','bordeaux-chalk':'warm-bakery','seoul-sunset':'warm-bakery','swiss-monolith':'nordic-minimal','oslo-brutalist':'nordic-minimal','oslo-monolith':'nordic-minimal','stockholm-sage':'nordic-minimal','kyoto-matcha':'nordic-minimal','matcha-botanic':'nordic-minimal','bistro-navy':'nordic-minimal','amalfi-coast':'nordic-minimal'};var t=localStorage.getItem('smakr_theme')||'oat-espresso';t=m[t]||t;var v={'oat-espresso':1,'warm-bakery':1,'late-night':1,'nordic-minimal':1};if(!v[t])t='oat-espresso';document.documentElement.setAttribute('data-theme',t);var f=localStorage.getItem('smakr_font')||'modern-sans';document.documentElement.setAttribute('data-font',f);var bf=localStorage.getItem('smakr_body_font')||'syne';document.documentElement.setAttribute('data-body-font',bf);var fm={'jakarta':"'Plus Jakarta Sans', system-ui, sans-serif",'dmsans':"'DM Sans', system-ui, sans-serif",'space':"'Space Grotesk', system-ui, sans-serif",'geist':"var(--font-geist, 'Geist', system-ui, sans-serif)",'outfit':"'Outfit', system-ui, sans-serif",'syne':"'Syne', system-ui, sans-serif",'inter':"'Inter', system-ui, sans-serif",'cormorant':"'Cormorant Garamond', Georgia, serif"};if(fm[bf]){document.documentElement.style.setProperty('--font-body',fm[bf]);document.documentElement.style.setProperty('--font-main',fm[bf]);}}catch(e){}})();`,
-          }}
-        />
         <link rel="preconnect" href="https://api.maptiler.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://api.maptiler.com" />
         {process.env.NEXT_PUBLIC_SUPABASE_URL && (
@@ -103,7 +80,6 @@ export default async function RootLayout({
         )}
       </head>
       <body className="min-h-dvh flex flex-col antialiased selection:bg-[var(--accent)] selection:text-white transition-colors duration-300">
-        <AutumnLeavesBurst />
         <AuthProvider initialUser={initialUser}>
           <Header initialUser={initialUser} />
           <main className="flex-1 flex flex-col relative overflow-x-hidden w-full max-w-[100vw]">

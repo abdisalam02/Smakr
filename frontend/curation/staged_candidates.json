@@ -760,8 +760,8 @@
         "dish_name": "Chicken Butterfly",
         "category": "street_food",
         "price_nok": 248,
-        "dish_image": "https://imageproxy.wolt.com/assets/6964ab9b66118d530372de0b",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/1c22b393f4241c0f6e5886696c6c.webp",
+        "is_verified_food_photo": true,
         "review_text": "Flame-grilled chicken filet. Choose sides and spice-level.",
         "taste_tags": [
           "savory"
@@ -772,8 +772,8 @@
         "dish_name": "8 Wings",
         "category": "street_food",
         "price_nok": 208,
-        "dish_image": "https://imageproxy.wolt.com/assets/6964ab693585ae8fe5fe11d3",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/dish_4ff819abaf388fa8a7a7c46a.webp",
+        "is_verified_food_photo": true,
         "review_text": "Flame-grilled chicken wings. Choose sides and spice-level.",
         "taste_tags": [
           "crispy"
@@ -1001,8 +1001,8 @@
         "dish_name": "Valrhona Chocolate Basque Cheesecake",
         "category": "bakery",
         "price_nok": 85,
-        "dish_image": "",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/dish_0672d7e6c71f224b6ca8aff5.webp",
+        "is_verified_food_photo": true,
         "review_text": "Crustless caramelized Basque cheesecake blended with rich 70% Valrhona dark chocolate.",
         "taste_tags": [
           "creamy",
@@ -1015,8 +1015,8 @@
         "dish_name": "Iced Matcha Latte",
         "category": "matcha",
         "price_nok": 75,
-        "dish_image": "",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/dish_0d6059ad4fc0d26ddd9b1fd7.webp",
+        "is_verified_food_photo": true,
         "review_text": "Whisked green matcha poured chilled over cold milk and ice cubes.",
         "taste_tags": [
           "earthy",
@@ -1914,7 +1914,7 @@
   {
     "id": "mint-on-wheels",
     "name": "Mint on Wheels",
-    "address": "Mike's Corner, Operagata 77d, Oslo",
+    "address": "Operagata 77d, Oslobukta, 0194 Oslo",
     "neighborhood": "bjorvika",
     "latitude": 59.9075,
     "longitude": 10.7582,
@@ -1924,17 +1924,17 @@
     "cover_image_url": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/uploads/mint-on-wheels_cover_1794238920915_a4a368dd.webp",
     "price_level": "$",
     "google_rating": 4.7,
-    "signature_dish": "Double Biscoff",
+    "signature_dish": "Biscoff Butter Matcha",
     "why_curated": "Dedicated artisanal mobile matcha cart bringing single-origin ceremonial green tea from Kyoto straight to Oslo neighborhood squares.",
     "verification_status": "seeded",
     "notes": "Next Drop: Thu Nov 14 at 12:00 at Mike's Corner (Operagata 77d, Bjørvika). Instagram: https://www.instagram.com/mintonwheels/",
-    "instagram_url": "https://www.instagram.com/mintonwheels/",
+    "instagram_url": "https://www.instagram.com/mintonwheeels/",
     "dish_highlights": [
       {
         "id": "mint-on-wheels-dish-1",
-        "dish_name": "Double Biscoff",
+        "dish_name": "Biscoff Butter Matcha",
         "category": "matcha",
-        "price_nok": 75,
+        "price_nok": 99,
         "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/uploads/mint-on-wheels_mint-on-wheels-dish-1_1794239080384_7a5025e0.webp",
         "is_verified_food_photo": true,
         "review_text": "Authentic ceremonial matcha imported directly from Uji, Kyoto, hand-whisked to order on a mobile cart.",
@@ -1945,31 +1945,31 @@
     ],
     "popup_meta": {
       "brand_id": "mint-on-wheels",
-      "residency_status": "next_confirmed",
-      "dates_label": "Nov 14 · 12:00",
-      "daily_hours": "Thu Nov 14 · 12:00 until sold out",
-      "next_drop_date": "2026-11-14T12:00:00",
+      "residency_status": "between_residencies",
+      "dates_label": "Recent drop: Nov 14 · Next TBA",
+      "daily_hours": "Next drop TBA",
+      "next_drop_date": null,
       "portion_cap": "Limited Kyoto Matcha Batches",
       "host_venue_name": "Mike's Corner, Oslobukta",
-      "host_address": "Operagata 77d, 0194 Oslo",
-      "instagram_url": "https://www.instagram.com/mintonwheels",
+      "host_address": "Operagata 77d, Oslobukta, 0194 Oslo",
+      "instagram_url": "https://www.instagram.com/mintonwheeels/",
       "entry_type": "walk_in"
     }
   },
   {
     "id": "u-wan-sum",
-    "name": "U WAN SUM",
-    "address": "Oslo, Norway",
+    "name": "U WAN' SAM?",
+    "address": "Kristian Augusts gate 21, Tullinløkka, 0164 Oslo",
     "neighborhood": "sentrum",
     "latitude": 59.9139,
     "longitude": 10.7522,
     "food_category": "coffee",
     "icon": "coffee",
     "spot_type": "popup",
-    "cover_image_url": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/1be02016-43ec-476a-a9dc-97630b063846/1792596843770.jpg",
+    "cover_image_url": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/popups/u-wan-sum/egg-coffee-cropped.webp",
     "price_level": "$$",
     "google_rating": null,
-    "signature_dish": "Egg coffee",
+    "signature_dish": "Vietnamese Egg Coffee",
     "why_curated": "U WAN SUM is an itinerant specialty beverage pop-up known for hosting limited-edition weekend takeovers across Oslo creative spaces and coffee bars. Their concept reimagines classic Southeast Asian café culture through artisanal Vietnamese iced coffees, layered matcha infusions, and velvety foam toppings. Operating without a permanent storefront, their drops attract devoted queues of design-conscious locals tracking their announcements on Instagram.",
     "verification_status": "seeded",
     "notes": "Drop schedule: Weekend specialty Vietnamese coffee drops. Instagram: https://instagram.com/uwansamofficial",
@@ -1977,10 +1977,10 @@
     "dish_highlights": [
       {
         "id": "u-wan-sum-dish-1",
-        "dish_name": "Egg coffee",
+        "dish_name": "Vietnamese Egg Coffee",
         "category": "coffee",
-        "price_nok": 75,
-        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/1be02016-43ec-476a-a9dc-97630b063846/1792596843770.jpg",
+        "price_nok": 85,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/popups/u-wan-sum/egg-coffee-cropped.webp",
         "is_verified_food_photo": true,
         "review_text": "Dark, bittersweet Vietnamese robusta drip crowned with an impossibly thick, velvety custard foam whipped from egg yolks and sweetened condensed milk.",
         "taste_tags": [
@@ -1991,15 +1991,16 @@
       }
     ],
     "popup_meta": {
-      "brand_id": "brand_1792595245904",
-      "residency_status": "between_residencies",
-      "dates_label": "Dates TBA",
-      "daily_hours": "17:00 – Late",
-      "portion_cap": "80 bowls/night",
-      "host_venue_name": "Location TBA",
-      "host_address": "Oslo, Norway",
-      "instagram_url": "https://instagram.com/uwansamofficial",
-      "entry_type": "walk_in"
+      "brand_id": "u-wan-sam",
+      "residency_status": "next_confirmed",
+      "dates_label": "Sun Nov 22",
+      "daily_hours": "12:00 – til sold out",
+      "portion_cap": "Small-batch phin brew",
+      "host_venue_name": "Kristian Augusts gate 21, Tullinløkka",
+      "host_address": "Kristian Augusts gate 21, Tullinløkka, 0164 Oslo",
+      "instagram_url": "https://www.instagram.com/uwansamofficial/",
+      "entry_type": "walk_in",
+      "next_drop_date": "2026-11-22T12:00:00+01:00"
     }
   },
   {
@@ -2040,8 +2041,8 @@
   {
     "id": "crantz-cookies",
     "name": "Crantz Cookies",
-    "address": "Frogner Pop-Ups / Partner Drops, Oslo",
-    "neighborhood": "frogner",
+    "address": "Dronning Eufemias gate 22, 0191 Oslo",
+    "neighborhood": "bjorvika",
     "latitude": 59.9185,
     "longitude": 10.7225,
     "food_category": "dessert",
@@ -2084,7 +2085,16 @@
           "caramelized"
         ]
       }
-    ]
+    ],
+    "popup_meta": {
+      "brand_id": "crantz-cookies",
+      "residency_status": "between_residencies",
+      "dates_label": "Next Oslo drop loading",
+      "daily_hours": "11:00–16:00",
+      "host_address": "Dronning Eufemias gate 22, 0191 Oslo",
+      "host_venue_name": "Dronning Eufemias gate 22, Bjørvika",
+      "instagram_url": "https://www.instagram.com/crantzcookies/"
+    }
   },
   {
     "id": "tomodomo",
@@ -2706,8 +2716,8 @@
         "dish_name": "Classic Cardamom Bun",
         "category": "bakery",
         "price_nok": 55,
-        "dish_image": "",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/b5129cd1cb2c76f32322f44a69d3.webp",
+        "is_verified_food_photo": true,
         "review_text": "Soft bakery cardamom bun baked daily in Gamlebyen with freshly ground spice.",
         "taste_tags": [
           "cardamom",
@@ -2720,8 +2730,8 @@
         "dish_name": "Pain au Chocolat",
         "category": "bakery",
         "price_nok": 58,
-        "dish_image": "",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/b69546333df1aaae57c558bb0215.webp",
+        "is_verified_food_photo": true,
         "review_text": "Crisp golden pastry wrapped around melted dark chocolate batons.",
         "taste_tags": [
           "chocolate",
@@ -3134,8 +3144,8 @@
         "dish_name": "Lotus Biscoff Cheesecake",
         "category": "dessert",
         "price_nok": 99,
-        "dish_image": "https://imageproxy.wolt.com/assets/6840642b552a32e76bbe9373",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/dish_aba580f1d4674700947cf068.webp",
+        "is_verified_food_photo": true,
         "review_text": "En kremet cheesecake med bunn av Biscoff-kjeks og luftig fyll. Toppet med smeltet Biscoff spread og knuste kjeks rundt kanten for en ekstra.",
         "taste_tags": [
           "cheesy",
@@ -3147,8 +3157,8 @@
         "dish_name": "Classic",
         "category": "dessert",
         "price_nok": 169,
-        "dish_image": "https://imageproxy.wolt.com/assets/67bedb807d14106f01117b05",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/dish_91bcbae4c7b6999a27d73cff.webp",
+        "is_verified_food_photo": true,
         "review_text": "Toppet med kanel-smør-lønnesirup og friske bær. Myke og luftige soufflépannekaker som tilberedes ferske fra bunnen av når du bestiller. Dett.",
         "taste_tags": [
           "dessert",
@@ -3643,7 +3653,7 @@
         "dish_name": "Crispy K-Fried - Wings(10pcs)",
         "category": "k_chicken",
         "price_nok": 229,
-        "dish_image": "https://wolt-menu-images-cdn.wolt.com/menu-images/6297355a650219ad55d4aa30/6c5694ec-e63c-11ec-a672-36f53f207e93_pro_capture_one_0010.jpeg",
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/dish_5d09bb3c54deeeda89dd85a3.webp",
         "is_verified_food_photo": false,
         "review_text": "Double fried crispy chicken wings serve with homemade ground chilli powder on the side.",
         "taste_tags": [
@@ -3656,8 +3666,8 @@
         "dish_name": "Crispy K-Fried - Boneless",
         "category": "k_chicken",
         "price_nok": 239,
-        "dish_image": "https://wolt-menu-images-cdn.wolt.com/menu-images/6297355a650219ad55d4aa30/8d44c804-e63c-11ec-832d-4e6692816db9_pro_capture_one_0016.jpeg",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/dish_d46494b97116982fdaeb3b9d.webp",
+        "is_verified_food_photo": true,
         "review_text": "220g Fresh chicken thighs cut into small pieces. Double fried crispy chicken boneless, serve with homemade ground chilli powder on the side.",
         "taste_tags": [
           "crispy",
@@ -3721,8 +3731,8 @@
         "dish_name": "Iced Hot Chocolate",
         "category": "coffee",
         "price_nok": 75,
-        "dish_image": "",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/b6779b88fd0d1407c5ef144e3b08.webp",
+        "is_verified_food_photo": true,
         "review_text": "Chilled velvety cocoa poured over ice with dark chocolate shavings and cream.",
         "taste_tags": [
           "chocolate",
@@ -3735,8 +3745,8 @@
         "dish_name": "Classic Carrot Cake Slice",
         "category": "bakery",
         "price_nok": 72,
-        "dish_image": "",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/ad2b955abce28537b480e3d2007f.webp",
+        "is_verified_food_photo": true,
         "review_text": "Moist spiced carrot cake topped with smooth cream cheese frosting.",
         "taste_tags": [
           "spiced",
@@ -3876,7 +3886,7 @@
         "id": "em-oi-dish-1",
         "dish_name": "Pho",
         "category": "ramen",
-        "price_nok": 200,
+        "price_nok": 269,
         "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/a039c678421d36468dd9f1259066.webp",
         "is_verified_food_photo": true,
         "review_text": "Silky flat rice noodles bathed in a fragrant, 12-hour star-anise beef bone broth topped with thinly shaved sirloin, scallions, and fresh herbs.",
@@ -4057,8 +4067,8 @@
         "dish_name": "Fatta Moz m / Fisk",
         "category": "rice_bowls",
         "price_nok": 215,
-        "dish_image": "https://imageproxy.wolt.com/assets/67c177075522eb19503dee6a",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/dish_dffeda1b7b3ec588bf6e9fae.webp",
+        "is_verified_food_photo": true,
         "review_text": "Yemeni brød med banan, laks og bukkehornkløver.",
         "taste_tags": [
           "rice_bowls",
@@ -4070,7 +4080,7 @@
         "dish_name": "Sayadia",
         "category": "rice_bowls",
         "price_nok": 225,
-        "dish_image": "https://imageproxy.wolt.com/assets/67c177075522eb19503dee6b",
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/dish_d76c4a63c8a7b60b82997997.webp",
         "is_verified_food_photo": false,
         "review_text": "Stekt laks i krydder med løk og ris laget på en spesiell måte.",
         "taste_tags": [
@@ -4141,8 +4151,8 @@
         "dish_name": "Ceremonial Uji Matcha Latte",
         "category": "matcha",
         "price_nok": 80,
-        "dish_image": "",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/44486f65deef5047fa85591831c9.webp",
+        "is_verified_food_photo": true,
         "review_text": "Bamboo-whisked ceremonial Uji Kyoto matcha balanced with velvety steamed or oat milk.",
         "taste_tags": [
           "ceremonial",
@@ -4155,8 +4165,8 @@
         "dish_name": "Mango Matcha Latte",
         "category": "matcha",
         "price_nok": 85,
-        "dish_image": "",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/3fa66463b599bfcc8e7407900fe2.webp",
+        "is_verified_food_photo": true,
         "review_text": "Layered vibrant mango puree topped with whisked ceremonial matcha and milk.",
         "taste_tags": [
           "fruity",

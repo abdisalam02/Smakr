@@ -512,8 +512,8 @@ export const FoodPostCard = React.memo(function FoodPostCard({
             alt=""
             fill
             unoptimized={post.image_url?.startsWith("/") || post.image_url?.startsWith("data:")}
-            priority={priority || (typeof index === "number" && index < 4)}
-            loading={priority || (typeof index === "number" && index < 6) ? "eager" : "lazy"}
+            priority={priority || (typeof index === "number" && index < 2)}
+            loading={priority || (typeof index === "number" && index < 2) ? "eager" : "lazy"}
             decoding="async"
             onLoad={() => {
               if (post.image_url) LOADED_FEED_IMAGES.add(post.image_url);
@@ -523,7 +523,9 @@ export const FoodPostCard = React.memo(function FoodPostCard({
               setImgError(true);
               setImgReady(true);
             }}
-            className="object-cover w-full opacity-100 text-transparent transition-transform duration-700 ease-out group-hover:scale-105"
+            className={`object-cover w-full text-transparent transition-[opacity,transform] duration-200 ease-out group-hover:scale-105 ${
+              imgReady ? "opacity-100" : "opacity-0"
+            }`}
             sizes={
               isGridMode || fillHeight
                 ? "(max-width: 640px) 46vw, (max-width: 1024px) 30vw, 260px"
@@ -557,8 +559,8 @@ export const FoodPostCard = React.memo(function FoodPostCard({
               </span>
             )}
 
-            {/* Price for non-popups in Top-Left (Pop-ups render price in Top-Right) */}
-            {!isPopup && typeof post.price_nok === "number" && post.price_nok > 0 ? (
+            {/* Price pill whenever price_nok is available (regular & pop-up dishes) */}
+            {typeof post.price_nok === "number" && post.price_nok > 0 ? (
               <span
                 className={`font-comico font-bold tracking-tight bg-[#e84a27] text-white rounded-full shadow-md rotate-[-1deg] whitespace-nowrap ${
                   isGridMode ? "px-2.5 py-1 text-[11px]" : "px-3 py-1 text-xs"

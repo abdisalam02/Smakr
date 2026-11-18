@@ -69,8 +69,8 @@ function parseStartOfDayMs(raw?: string | null): number | null {
 }
 
 /**
- * Fallback parser for freeform `dates_label` strings like "Nov 14 · 12:00 Drop"
- * or "Oct 24 – Oct 27" when explicit ISO columns are not populated yet.
+ * Fallback parser for freeform `dates_label` strings like "Nov 14 · 12:00 Drop",
+ * "Nov 14–15", "Nov 14-15", or "Oct 24 – Nov 2" when explicit ISO columns are absent.
  */
 function parseDatesFromLabel(label?: string | null, referenceYear = new Date().getFullYear()): {
   startMs: number | null;
@@ -78,26 +78,166 @@ function parseDatesFromLabel(label?: string | null, referenceYear = new Date().g
   formattedRange: string | null;
 } {
   if (!label) return { startMs: null, endMs: null, formattedRange: null };
-  const matches = [...label.matchAll(/\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})\b/gi)];
+  const matches = [
+    ...label.matchAll(
+      /\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?!\s*:)(?:\s*(?:[-–—]|to)\s*(\d{1,2})(?!\s*:))?\b/gi
+    ),
+  ];
   if (matches.length === 0) return { startMs: null, endMs: null, formattedRange: null };
 
   const firstMonth = MONTH_INDEX[matches[0][1].toLowerCase()];
   const firstDay = parseInt(matches[0][2], 10);
   const lastMatch = matches[matches.length - 1];
   const lastMonth = MONTH_INDEX[lastMatch[1].toLowerCase()];
-  const lastDay = parseInt(lastMatch[2], 10);
+  const explicitEndDay = lastMatch[3] ? parseInt(lastMatch[3], 10) : NaN;
+  const lastDay =
+    Number.isFinite(explicitEndDay) && explicitEndDay >= 1 && explicitEndDay <= 31
+      ? explicitEndDay
+      : parseInt(lastMatch[2], 10);
   if (firstMonth === undefined || lastMonth === undefined) {
     return { startMs: null, endMs: null, formattedRange: null };
   }
 
+  const endYear = lastMonth < firstMonth ? referenceYear + 1 : referenceYear;
   const startDate = new Date(referenceYear, firstMonth, firstDay, 0, 0, 0, 0);
-  const endDate = new Date(referenceYear, lastMonth, lastDay, 23, 59, 59, 999);
-  const formattedRange =
-    matches.length > 1 && (firstMonth !== lastMonth || firstDay !== lastDay)
-      ? `${formatShortDate(startDate)} – ${formatShortDate(endDate)}`
-      : formatShortDate(endDate);
+  const endDate = new Date(endYear, lastMonth, lastDay, 23, 59, 59, 999);
+  const isRange = firstMonth !== lastMonth || firstDay !== lastDay;
+  const formattedRange = isRange
+    ? `${formatShortDate(startDate)} – ${formatShortDate(endDate)}`
+    : formatShortDate(endDate);
 
   return { startMs: startDate.getTime(), endMs: endDate.getTime(), formattedRange };
+}
+
+/**
+ * Resolves a concrete upcoming drop Date when `popup_meta.next_drop_date`
+ * (or an upcoming `popup_start_date`) points to today or a future date.
+ */
+export function getPopupUpcomingDropDate(
+  venue?: Venue | null,
+  nowMs = Date.now()
+): Date | null {
+  if (!venue || !isPopupVenue(venue)) return null;
+  const meta = getPopupMeta(venue);
+  const lifecycle = resolvePopupLifecycle(venue, nowMs);
+  const raw =
+    meta?.next_drop_date ||
+    (lifecycle.state === "upcoming" ? venue.popup_start_date : null) ||
+    null;
+  if (!raw) return null;
+
+  const trimmed = raw.trim();
+  let parsed: Date;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    const [y, m, d] = trimmed.split("-").map(Number);
+    parsed = new Date(y, m - 1, d, 12, 0, 0, 0);
+  } else {
+    parsed = new Date(trimmed);
+  }
+  if (Number.isNaN(parsed.getTime())) return null;
+
+  // Treat today's scheduled drop as still addable within a 12h grace window.
+  if (parsed.getTime() < nowMs - 12 * 60 * 60 * 1000) return null;
+  return parsed;
+}
+
+function toIcsUtcString(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return (
+    `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}` +
+    `T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`
+  );
+}
+
+function escapeIcsText(val: string): string {
+  return val
+    .replace(/\\/g, "\\\\")
+    .replace(/\r?\n/g, "\\n")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,");
+}
+
+/**
+ * Generates and downloads an RFC 5545 `.ics` calendar file client-side (zero login).
+ */
+export function downloadPopupCalendarIcs(venue: Venue): boolean {
+  if (typeof window === "undefined") return false;
+  const dropDate = getPopupUpcomingDropDate(venue);
+  if (!dropDate) return false;
+
+  const meta = getPopupMeta(venue);
+  const lifecycle = resolvePopupLifecycle(venue);
+  const rawTimeText = meta?.next_drop_date || "";
+  const hasExplicitIsoTime =
+    /T\d{2}:\d{2}/.test(rawTimeText) && !/T00:00(:00)?(\.\d+)?Z?$/.test(rawTimeText);
+
+  let start = new Date(dropDate.getTime());
+  let end = new Date(dropDate.getTime() + 3 * 60 * 60 * 1000);
+
+  if (!hasExplicitIsoTime && lifecycle.hoursDisplay) {
+    const m = lifecycle.hoursDisplay.match(/(\d{1,2})[:.](\d{2})(?:\s*[-–—]\s*(\d{1,2})[:.](\d{2}))?/);
+    if (m) {
+      start = new Date(dropDate.getFullYear(), dropDate.getMonth(), dropDate.getDate(), Number(m[1]), Number(m[2]), 0);
+      if (m[3]) {
+        end = new Date(dropDate.getFullYear(), dropDate.getMonth(), dropDate.getDate(), Number(m[3]), Number(m[4] || "0"), 0);
+        if (end.getTime() <= start.getTime()) {
+          end = new Date(end.getTime() + 24 * 60 * 60 * 1000);
+        }
+      } else {
+        end = new Date(start.getTime() + 3 * 60 * 60 * 1000);
+      }
+    }
+  }
+
+  const hostName =
+    meta?.host_venue_name && !/tba|host/i.test(meta.host_venue_name)
+      ? meta.host_venue_name
+      : null;
+  const locationParts = [hostName, meta?.host_address || venue.address || "Oslo, Norway"].filter(Boolean);
+  const spotUrl = `https://smakr.no/?spot=${encodeURIComponent(venue.id)}`;
+  const description = [
+    venue.description || `${venue.name} pop-up drop in Oslo.`,
+    lifecycle.hoursDisplay ? `Hours: ${lifecycle.hoursDisplay}` : null,
+    `Details: ${spotUrl}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Smakr//Oslo Pop-Up Radar//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    `UID:${venue.id}-${start.getTime()}@smakr.no`,
+    `DTSTAMP:${toIcsUtcString(new Date())}`,
+    `DTSTART:${toIcsUtcString(start)}`,
+    `DTEND:${toIcsUtcString(end)}`,
+    `SUMMARY:${escapeIcsText(`${venue.name} Pop-Up Drop`)}`,
+    `LOCATION:${escapeIcsText(locationParts.join(", "))}`,
+    `DESCRIPTION:${escapeIcsText(description)}`,
+    `URL:${spotUrl}`,
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ];
+
+  const blob = new Blob([lines.join("\r\n") + "\r\n"], {
+    type: "text/calendar;charset=utf-8",
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  const slug = venue.name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  anchor.href = url;
+  anchor.download = `${slug || venue.id}-drop.ics`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return true;
 }
 
 /**

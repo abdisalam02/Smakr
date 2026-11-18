@@ -16,11 +16,12 @@ import {
  * `pageshow` / `visibilitychange`, so mobile bfcache restores or warm edge hits
  * never get stuck on stale CMS data.
  */
-export function useSyncAppData(hasServerData = false) {
+export function useSyncAppData(hasServerData = false, enabled = true) {
   const inFlightRef = useRef(false);
   const lastSyncAtRef = useRef(0);
 
   useEffect(() => {
+    if (!enabled) return;
     let cancelled = false;
 
     const syncFromDb = async () => {
@@ -68,5 +69,5 @@ export function useSyncAppData(hasServerData = false) {
       window.removeEventListener("pageshow", handlePageShow);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [hasServerData]);
+  }, [hasServerData, enabled]);
 }

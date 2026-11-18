@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { requireAuthenticatedUser, checkIpRateLimit } from "@/app/api/_authHelpers";
 import {
   PLACES_API_BASE,
   PLACES_FIELD_MASK,
@@ -14,13 +15,13 @@ export const dynamic = "force-dynamic";
 
 const KEY = process.env.GOOGLE_PLACES_API_KEY;
 
-// Persistent server-side search cache to guarantee zero repeated Google Places API calls
+// In-memory search cache (read-only seed preload when local file exists; never writes to Vercel EROFS)
 const memorySearchCache = new Map<string, { source: string; place: PlaceResult; results: PlaceResult[] }>();
 let searchDiskCacheLoaded = false;
 
 function getSearchCachePath(): string {
   const p1 = path.join(process.cwd(), "curation", "google_places_search_cache.json");
-  if (fs.existsSync(path.dirname(p1))) return p1;
+  if (fs.existsSync(p1)) return p1;
   return path.join(process.cwd(), "frontend", "curation", "google_places_search_cache.json");
 }
 
@@ -33,7 +34,7 @@ function loadSearchDiskCache(): void {
       const raw = JSON.parse(fs.readFileSync(filePath, "utf8"));
       for (const [k, v] of Object.entries(raw)) {
         if (v && typeof v === "object") {
-          memorySearchCache.set(k, v as any);
+          memorySearchCache.set(k, v as { source: string; place: PlaceResult; results: PlaceResult[] });
         }
       }
     }
@@ -42,23 +43,13 @@ function loadSearchDiskCache(): void {
   }
 }
 
-function saveSearchDiskCache(
-  key: string,
-  payload: { source: string; place: PlaceResult; results: PlaceResult[] }
-): void {
-  memorySearchCache.set(key, payload);
-  try {
-    const filePath = getSearchCachePath();
-    const dir = path.dirname(filePath);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    const serialized = Object.fromEntries(memorySearchCache.entries());
-    fs.writeFileSync(filePath, JSON.stringify(serialized, null, 2), "utf8");
-  } catch {
-    // Ignore cache write error
-  }
-}
-
 export async function GET(request: Request) {
+  const auth = await requireAuthenticatedUser();
+  if (!auth.ok) return auth.response;
+
+  const rate = checkIpRateLimit(request, "places-search", 20, 60_000);
+  if (!rate.ok) return rate.response;
+
   const { searchParams } = new URL(request.url);
   const q = (searchParams.get("q") || "").trim();
   const category = (searchParams.get("category") || "all").toLowerCase();
@@ -77,7 +68,7 @@ export async function GET(request: Request) {
       { ...cached, cached: true },
       {
         headers: {
-          "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
+          "Cache-Control": "private, max-age=86400",
         },
       }
     );
@@ -105,10 +96,10 @@ export async function GET(request: Request) {
       const results = (data.places ?? []).slice(0, 5).map((p) => mapGooglePlace(p, category));
       if (results.length > 0) {
         const payload = { source: "google", place: results[0], results };
-        saveSearchDiskCache(cacheKey, payload);
+        memorySearchCache.set(cacheKey, payload);
         return NextResponse.json(payload, {
           headers: {
-            "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
+            "Cache-Control": "private, max-age=86400",
           },
         });
       }

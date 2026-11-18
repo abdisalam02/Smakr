@@ -11,6 +11,7 @@ export async function POST() {
   try {
     revalidateTag("venues");
     revalidateTag("food_posts");
+    revalidateTag("weekly_picks");
     revalidateTag("weekly_drop");
     revalidatePath("/");
     revalidatePath("/admin");

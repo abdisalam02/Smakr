@@ -7,19 +7,15 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import sharp from "sharp";
 import { ingestGooglePhotoToSupabase } from "@/lib/storage/ingestGooglePhoto";
 import { requireAdmin } from "@/app/api/admin/_auth";
+import {
+  readStagedCandidates,
+  writeStagedCandidates,
+} from "@/lib/admin/stagedCandidatesStore";
 
 export const runtime = "nodejs";
 
 const OFFICIAL_AUTHOR_ID = "1be02016-43ec-476a-a9dc-97630b063846";
 const STORAGE_BUCKET = "dish-photos";
-
-function getStagedFilePath(): string {
-  const p1 = path.join(process.cwd(), "curation", "staged_candidates.json");
-  if (fs.existsSync(p1)) return p1;
-  const p2 = path.join(process.cwd(), "frontend", "curation", "staged_candidates.json");
-  if (fs.existsSync(p2)) return p2;
-  return p1;
-}
 
 function slugify(value: string): string {
   return value
@@ -140,8 +136,18 @@ async function ingestPhotoToStorage(
       rawBuffer = Buffer.from(base64Part, "base64");
     } else if (trimmed.startsWith("/")) {
       const localPath = resolveLocalPublicFile(trimmed);
-      if (!localPath) return trimmed;
-      rawBuffer = fs.readFileSync(localPath);
+      if (localPath) {
+        rawBuffer = fs.readFileSync(localPath);
+      } else {
+        const siteOrigin =
+          process.env.NEXT_PUBLIC_SITE_URL ||
+          (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
+        if (!siteOrigin) return trimmed;
+        const absUrl = new URL(trimmed, siteOrigin).toString();
+        const res = await fetch(absUrl);
+        if (!res.ok) return trimmed;
+        rawBuffer = Buffer.from(await res.arrayBuffer());
+      }
     } else {
       const res = await fetch(trimmed, {
         headers: {
@@ -466,18 +472,13 @@ async function syncSpotToSupabase(
   return { seededDishesCount, errors };
 }
 
-// GET: Read staged candidates
+// GET: Read staged candidates (cloud Supabase Storage merged with git baseline)
 export async function GET() {
   const auth = await requireAdmin();
   if (!auth.ok) return auth.response;
 
   try {
-    const filePath = getStagedFilePath();
-    if (!fs.existsSync(filePath)) {
-      return NextResponse.json({ candidates: [] });
-    }
-    const raw = fs.readFileSync(filePath, "utf8");
-    const candidates: StagedCandidateSpot[] = JSON.parse(raw);
+    const candidates = await readStagedCandidates(auth.adminClient);
     return NextResponse.json({ candidates });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -497,13 +498,10 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Missing spotId" }, { status: 400 });
     }
 
-    const filePath = getStagedFilePath();
-    if (!fs.existsSync(filePath)) {
-      return NextResponse.json({ error: "Staged candidates file not found" }, { status: 404 });
+    const candidates = await readStagedCandidates(auth.adminClient);
+    if (candidates.length === 0) {
+      return NextResponse.json({ error: "Staged candidates not found" }, { status: 404 });
     }
-
-    const raw = fs.readFileSync(filePath, "utf8");
-    const candidates: StagedCandidateSpot[] = JSON.parse(raw);
 
     const spotIndex = candidates.findIndex((s) => s.id === spotId);
     if (spotIndex === -1) {
@@ -604,7 +602,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     candidates[spotIndex] = spot;
-    fs.writeFileSync(filePath, JSON.stringify(candidates, null, 2), "utf8");
+    await writeStagedCandidates(auth.adminClient, candidates);
 
     return NextResponse.json({
       success: true,
@@ -636,13 +634,10 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = auth.adminClient;
-    const filePath = getStagedFilePath();
-    if (!fs.existsSync(filePath)) {
-      return NextResponse.json({ error: "Staged candidates file not found" }, { status: 404 });
+    const candidates = await readStagedCandidates(supabase);
+    if (candidates.length === 0) {
+      return NextResponse.json({ error: "Staged candidates not found" }, { status: 404 });
     }
-
-    const raw = fs.readFileSync(filePath, "utf8");
-    const candidates: StagedCandidateSpot[] = JSON.parse(raw);
 
     let approved: StagedCandidateSpot[] = [];
     if (targetSpotIds && targetSpotIds.length > 0) {
@@ -688,7 +683,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    fs.writeFileSync(filePath, JSON.stringify(candidates, null, 2), "utf8");
+    await writeStagedCandidates(supabase, candidates);
     bustLiveCaches();
 
     if (seededVenuesCount === 0 && errors.length > 0) {

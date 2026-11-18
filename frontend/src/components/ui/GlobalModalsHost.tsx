@@ -69,16 +69,9 @@ export function GlobalModalsHost() {
     return () => window.clearTimeout(timer);
   }, []);
 
+  const isAdmin = Boolean(currentUser?.role === "admin" || currentUser?.is_official);
   const needsOnboarding =
-    onboardingPreviewRequested ||
-    isAvatarStudioOpen ||
-    Boolean(
-      currentUser &&
-        profileResolved &&
-        currentUser.onboarding_completed !== true &&
-        !currentUser.is_official &&
-        currentUser.role !== "admin"
-    );
+    isAvatarStudioOpen || (isAdmin && onboardingPreviewRequested);
 
   return (
     <>

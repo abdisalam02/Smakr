@@ -24,22 +24,36 @@ import {
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { useLiveVibeSync } from "@/hooks/useLiveVibeSync";
 import { useSyncAppData } from "@/hooks/useSyncAppData";
-import { FOOD_CATEGORIES } from "@/lib/foodSeeds";
+import { FOOD_CATEGORIES } from "@/lib/foodCategories";
 import { SmakrSIcon } from "@/components/ui/SmakrSIcon";
 import { PeepsBootScreen } from "@/components/ui/PeepsBootScreen";
 import { motion, AnimatePresence } from "motion/react";
 import { Utensils } from "lucide-react";
 import type { FoodPost, Venue, WeeklyPick } from "@/types";
 import { isVisibleInFeed, getPopupUrgencyScore, isPopupVenue, resolvePopupLifecycle } from "@/lib/popupUtils";
+import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import { resolveEntityTaxonomy } from "@/lib/taxonomy";
+
+function slugifySpotParam(value: string): string {
+  return value
+    .trim()
+    .replace(/[øØ]/g, "o")
+    .replace(/[åÅ]/g, "a")
+    .replace(/[æÆ]/g, "ae")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
 
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 /**
  * MapLibre is a large dependency — load it lazily (client-only) so it never
- * blocks the first paint / store hydration. The feed & user render immediately
- * while the map chunks in behind the skeleton.
+ * blocks the first paint / store hydration. The real map initializes underneath
+ * PeepsBootScreen and reveals seamlessly when boot fades away.
  */
 const MapRadarView = dynamic(
   () => import("@/components/map/MapRadarView").then((m) => m.MapRadarView),
@@ -83,10 +97,21 @@ export interface HomeInitialData {
 
 let hasPlayedBootThisLoad = false;
 
-export function HomeView({ initialData }: { initialData: HomeInitialData }) {
-  const [showBoot, setShowBoot] = useState(() => !hasPlayedBootThisLoad);
-  const [mapMountReady, setMapMountReady] = useState(() => hasPlayedBootThisLoad);
+export function HomeView({
+  initialData,
+  bypassBoot = false,
+}: {
+  initialData: HomeInitialData;
+  bypassBoot?: boolean;
+}) {
+  // Original boot-over-background flow: PeepsBootScreen renders immediately on
+  // frame 0 while the real page + MapLibre initialize underneath, and is
+  // bypassed on direct ?spot= share links or ?boot=0.
+  const [showBoot, setShowBoot] = useState(() => !hasPlayedBootThisLoad && !bypassBoot);
+  const [mapMountReady, setMapMountReady] = useState(true);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const urlCampaignInitRef = useRef(false);
+  const spotDeepLinkAppliedRef = useRef(false);
 
   useEffect(() => {
     if (mapMountReady) return;
@@ -122,7 +147,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
 
   // Reconcile non-blockingly in the background after boot and on tab resume/bfcache,
   // so SSR warm edge hits never lock out fresh Supabase edits.
-  useSyncAppData(hasServerData);
+  useSyncAppData(hasServerData, !showBoot);
 
   // Only ONE MapLibre instance should mount. The desktop and mobile layouts are
   // both in the React tree (CSS just hides one), so rendering a map in each
@@ -205,33 +230,61 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
     return () => cancelAnimationFrame(raf);
   }, [viewMode]);
 
-  // Deep linking: ?spot= query parameter auto-selects & flies on mount
+  // Deep linking: ?tab=popups / ?campaign=popups / ?view= / ?sheet= (once on mount)
+  // and ?spot=<id-or-slug> auto-selects, flies, & opens VenueBottomSheet
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
-    const viewParam = params.get("view");
-    if (viewParam === "map" || viewParam === "feed" || viewParam === "split") {
-      useCityPulseStore.getState().setViewMode(viewParam);
-    }
-    const sheetParam = params.get("sheet");
-    if (sheetParam === "peek" || sheetParam === "half" || sheetParam === "full") {
-      useCityPulseStore.getState().setMobileSheetState(sheetParam);
+    const store = useCityPulseStore.getState();
+
+    if (!urlCampaignInitRef.current) {
+      urlCampaignInitRef.current = true;
+      const viewParam = params.get("view");
+      if (viewParam === "map" || viewParam === "feed" || viewParam === "split") {
+        store.setViewMode(viewParam);
+      }
+      const sheetParam = params.get("sheet");
+      if (sheetParam === "peek" || sheetParam === "half" || sheetParam === "full") {
+        store.setMobileSheetState(sheetParam);
+      }
+
+      const tabParam = (params.get("tab") || "").toLowerCase();
+      const campaignParam = (params.get("campaign") || "").toLowerCase();
+      if (tabParam === "popups" || campaignParam === "popups") {
+        store.setSelectedSpotKind("popup");
+      }
     }
 
     const spotParam = params.get("spot");
-    if (!spotParam) return;
+    if (!spotParam || spotDeepLinkAppliedRef.current) return;
 
-    const foundVenue = venues.find((v) => v.id === spotParam);
+    const normalizedSpot = slugifySpotParam(spotParam);
+    const foundVenue =
+      venues.find(
+        (v) =>
+          v.id === spotParam ||
+          v.id.toLowerCase() === spotParam.toLowerCase() ||
+          slugifySpotParam(v.name) === normalizedSpot
+      ) ??
+      (() => {
+        const foundPost = foodPosts.find(
+          (p) =>
+            p.spot_id === spotParam ||
+            p.id === spotParam ||
+            slugifySpotParam(p.spot_name || "") === normalizedSpot
+        );
+        return foundPost ? venues.find((v) => v.id === foundPost.spot_id) : undefined;
+      })();
+
     if (foundVenue) {
-      selectVenueById(foundVenue.id);
+      spotDeepLinkAppliedRef.current = true;
+      store.setDeepLinkLockUntil(Date.now() + 2800);
+      store.selectVenueById(foundVenue.id);
+      store.setIsVenueDetailModalOpen(true);
+      store.setBottomSheetOpen(true);
       flyToSpot([foundVenue.longitude, foundVenue.latitude], foundVenue.id);
-      return;
     }
-    const foundPost = foodPosts.find((p) => p.spot_id === spotParam || p.id === spotParam);
-    if (foundPost) {
-      flyToSpot(foundPost.spot_coords, foundPost.spot_id);
-    }
-  }, [venues, foodPosts, selectVenueById, flyToSpot]);
+  }, [venues, foodPosts, flyToSpot]);
 
   // Memoized food posts filtering to prevent unnecessary re-renders
   const filteredPosts = useMemo(() => {
@@ -281,10 +334,20 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
       // Exclude expired pop-ups (>7 days after closing)
       if (!isVisibleInFeed(linkedVenue)) return false;
 
-      // Spot Type filter (sit-down restaurant, food truck, pop-up)
-      if (spotTypeFilter && spotTypeFilter !== "all") {
-        const venueType = linkedVenue?.spot_type || "restaurant";
-        if (venueType !== spotTypeFilter) return false;
+      // Spot Type filter (sit-down restaurant, food truck, pop-up, or Map selectedSpotKind)
+      const activeSpotKind =
+        selectedSpotKind || (spotTypeFilter && spotTypeFilter !== "all" ? spotTypeFilter : null);
+      if (activeSpotKind) {
+        if (activeSpotKind === "popup") {
+          const isPopupPost =
+            isPopupVenue(linkedVenue) ||
+            post.spot_type === "popup" ||
+            postTax.spotKind === "popup";
+          if (!isPopupPost) return false;
+        } else {
+          const venueType = linkedVenue?.spot_type || post.spot_type || postTax.spotKind || "restaurant";
+          if (venueType !== activeSpotKind && postTax.spotKind !== activeSpotKind) return false;
+        }
       }
 
       // Price Tier filter ($, $$, $$$)
@@ -323,13 +386,13 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
         return false;
       }
 
-      // Open Now
-      if (openNow && !linkedVenue?.open_now) return false;
+      // Open Now (live Oslo time against real opening_hours data)
+      if (openNow && getVenueLiveOpenStatus(linkedVenue).isOpen !== true) return false;
 
       return true;
     });
 
-    if (spotTypeFilter === "popup") {
+    if (spotTypeFilter === "popup" || selectedSpotKind === "popup") {
       return [...filtered].sort((a, b) => {
         const venueA = venueById.get(a.spot_id);
         const venueB = venueById.get(b.spot_id);
@@ -350,6 +413,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
     openNow,
     venueById,
     spotTypeFilter,
+    selectedSpotKind,
     priceTierFilter,
     staffPicksOnly,
     savedOnly,
@@ -364,10 +428,17 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
         // Exclude expired pop-ups (>7 days after closing)
         if (!isVisibleInFeed(venue)) return false;
 
-        // Spot Type filter
-        if (spotTypeFilter && spotTypeFilter !== "all") {
-          const venueType = venue.spot_type || "restaurant";
-          if (venueType !== spotTypeFilter) return false;
+        const venueTax = resolveEntityTaxonomy(venue);
+
+        // Spot Type / Map Kind filter
+        const activeSpotKind =
+          selectedSpotKind || (spotTypeFilter && spotTypeFilter !== "all" ? spotTypeFilter : null);
+        if (activeSpotKind) {
+          if (activeSpotKind === "popup") {
+            if (!isPopupVenue(venue) && venueTax.spotKind !== "popup") return false;
+          } else if (venue.spot_type !== activeSpotKind && venueTax.spotKind !== activeSpotKind) {
+            return false;
+          }
         }
 
         // Price Tier filter
@@ -378,8 +449,6 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
 
         // Staff Picks only
         if (staffPicksOnly && !venue.is_official_pick) return false;
-
-        const venueTax = resolveEntityTaxonomy(venue);
 
         // Taxonomy filtering: Child dish category, Parent group, or legacy Category
         if (selectedDishCategory) {
@@ -432,13 +501,13 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
           return false;
         }
 
-        // Open Now
-        if (openNow && !venue.open_now) return false;
+        // Open Now (live Oslo time against real opening_hours data)
+        if (openNow && getVenueLiveOpenStatus(venue).isOpen !== true) return false;
 
         return true;
       })
       .sort((a, b) => {
-        if (spotTypeFilter === "popup") {
+        if (spotTypeFilter === "popup" || selectedSpotKind === "popup") {
           return getPopupUrgencyScore(a) - getPopupUrgencyScore(b);
         }
         return (a.distance_meters || 9999) - (b.distance_meters || 9999);
@@ -454,6 +523,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
     mapNeighborhood,
     openNow,
     spotTypeFilter,
+    selectedSpotKind,
     priceTierFilter,
     staffPicksOnly,
     savedOnly,
@@ -974,7 +1044,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
       {showBoot && (
         <PeepsBootScreen
           colorMode="colorized"
-          crowdCount={34}
+          crowdCount={28}
           onAtlasReady={() => setMapMountReady(true)}
           onComplete={() => {
             hasPlayedBootThisLoad = true;
@@ -1153,7 +1223,7 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
           relative
         `}
       >
-        {mapMountReady && <MapRadarView />}
+        {mapMountReady && <MapRadarView isBooting={showBoot} />}
 
         {/* Bottom-of-Map Neighborhood Dock + Spot Cards */}
         <div
@@ -1163,7 +1233,11 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
               : "opacity-0 translate-y-4 pointer-events-none"
           } bottom-[76px] lg:bottom-4`}
         >
-          <MapNeighborhoodDock isDesktop={isDesktop} />
+          <MapNeighborhoodDock
+            isDesktop={isDesktop}
+            initialVenues={initialData.venues}
+            initialFoodPosts={initialData.foodPosts}
+          />
         </div>
       </div>
 
@@ -1196,6 +1270,8 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
           />
 
           {/* Floating filter bar + Dishes/Spots toggle under the SMAKR header. */}
+          {viewMode !== "map" && (
+            <>
           <div
             ref={mobileFilterWrapRef}
             className={`absolute inset-x-0 top-[64px] z-20 pointer-events-auto w-full max-w-full overflow-hidden transition-opacity duration-150 will-change-transform ${
@@ -1306,6 +1382,8 @@ export function HomeView({ initialData }: { initialData: HomeInitialData }) {
               )
             )}
           </div>
+            </>
+          )}
         </div>
       )}
 

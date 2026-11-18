@@ -1,38 +1,5 @@
-import { FoodCategoryDef, FoodPost, Venue } from "@/types";
-
-export const FOOD_CATEGORIES: FoodCategoryDef[] = [
-  { id: "all", label: "All", emoji: "✨", shortDesc: "All spots in Oslo" },
-  { id: "coffee", label: "Specialty Coffee", emoji: "☕", shortDesc: "Pour-overs, espresso & brews" },
-  { id: "matcha", label: "Matcha & Tea", emoji: "🍵", shortDesc: "Ceremonial matcha, hojicha & milk teas" },
-  { id: "bakery", label: "Bakery", emoji: "🥐", shortDesc: "Cardamom buns & sourdough" },
-  { id: "pasta", label: "Pasta", emoji: "🍝", shortDesc: "Handmade pasta & classic Italian" },
-  { id: "ramen", label: "Ramen", emoji: "🍜", shortDesc: "Rich broth & noodles" },
-  { id: "burger", label: "Burgers", emoji: "🍔", shortDesc: "Smash burgers & fries" },
-  { id: "pizza", label: "Pizza", emoji: "🍕", shortDesc: "Wood-fired sourdough crusts" },
-  { id: "k_chicken", label: "K-Chicken", emoji: "🍗", shortDesc: "Crispy Korean fried chicken & wings" },
-  { id: "fried_chicken", label: "Fried Chicken & Wings", emoji: "🍗", shortDesc: "Crispy fried chicken & tenders" },
-  { id: "naan", label: "Naan & Flatbread", emoji: "🫓", shortDesc: "Tandoor baked garlic naan & flatbread" },
-  { id: "cinnamon_roll", label: "Cinnamon Roll / Kanelbolle", emoji: "🥮", shortDesc: "Warm spiced cinnamon roll with sweet vanilla glaze" },
-  { id: "kebab", label: "Kebab & Shawarma", emoji: "🥙", shortDesc: "Charcoal-grilled kebab, shawarma & falafel" },
-  { id: "vietnamese", label: "Pho & Vietnamese", emoji: "🍲", shortDesc: "Pho noodle soup, bánh mì & fresh rolls" },
-  { id: "indian", label: "Indian & Curry", emoji: "🍛", shortDesc: "Tandoori, masala, biryani & curries" },
-  { id: "mandi_rice", label: "Mandi & Spiced Rice", emoji: "🍚", shortDesc: "Yemeni mandi, fragrant spiced rice & tender meat" },
-  { id: "middle_eastern", label: "Middle Eastern", emoji: "🫓", shortDesc: "Yemeni, Lebanese, Turkish & Levant specialties" },
-  { id: "street_food", label: "Street Food", emoji: "🥪", shortDesc: "Bánh mì, sandwiches & casual bites" },
-  { id: "dumplings", label: "Dumplings", emoji: "🥟", shortDesc: "Handmade dumplings, gyoza & dim sum" },
-  { id: "tacos", label: "Tacos", emoji: "🌮", shortDesc: "Birria, carnitas & street tacos" },
-  { id: "bao", label: "Bao Buns", emoji: "🥠", shortDesc: "Steamed fluffy bao & buns" },
-  { id: "sushi", label: "Seafood & Sushi", emoji: "🍣", shortDesc: "Fresh Arctic fish & raw bar" },
-  { id: "nordic_seafood", label: "Nordic Seafood", emoji: "🐟", shortDesc: "Wild Norwegian salmon, cod & fresh catch" },
-  { id: "sourdough", label: "Artisan Sourdough", emoji: "🍞", shortDesc: "Rustic slow-fermented Oslo loaves" },
-  { id: "boba", label: "Boba & Bubble Tea", emoji: "🧋", shortDesc: "Tapioca milk tea & fruit brews" },
-  { id: "kbbq", label: "Korean BBQ", emoji: "🥓", shortDesc: "Sizzling table grill & banchan" },
-  { id: "brunch", label: "Brunch & Toast", emoji: "🥑", shortDesc: "Avocado toast, poached eggs & morning plates" },
-  { id: "gelato", label: "Artisan Gelato", emoji: "🍨", shortDesc: "Fresh churned gelato & seasonal sorbets" },
-  { id: "dessert", label: "Sweets", emoji: "🍦", shortDesc: "Artisan pastry & sweet treats" },
-  { id: "drinks", label: "Bars", emoji: "🍸", shortDesc: "Cocktails & craft drinks" },
-  { id: "natural_wine", label: "Natural Wine", emoji: "🍷", shortDesc: "Low-intervention wines & pet-nats" },
-];
+import { FoodPost, Venue } from "@/types";
+export { FOOD_CATEGORIES } from "@/lib/foodCategories";
 
 export const INITIAL_FOOD_SPOTS: Venue[] = [
   {
@@ -629,8 +596,8 @@ export const INITIAL_FOOD_SPOTS: Venue[] = [
   },
   {
     id: "venue-uwan-sum",
-    name: "U WAN SUM",
-    address: "Kristian Augusts gate 21, 0164 Oslo",
+    name: "U WAN' SAM?",
+    address: "Kristian Augusts gate 21, Tullinløkka, 0164 Oslo",
     city: "Oslo",
     latitude: 59.9179,
     longitude: 10.7374,
@@ -639,16 +606,16 @@ export const INITIAL_FOOD_SPOTS: Venue[] = [
     food_category: "coffee",
     icon: "viet_coffee",
     price_level: "$",
-    signature_dishes: ["Vietnamese Egg & Coconut Phin Coffee"],
+    signature_dishes: ["Vietnamese Egg Coffee"],
     neighborhood: "sentrum",
     open_now: false,
     popup_start_date: "2026-11-22",
     popup_end_date: "2026-11-22",
-    current_opening_hours_text: "12:00 – til sold out",
+    current_opening_hours_text: "Sun Nov 22 · 12:00 – til sold out",
     description:
       "Vietnamese Robusta phin coffee meets Egyptian hospitality, founded by Amira Nasr El Din. Catch their next live Oslo pop-up at Kristian Augusts gate 21 (Tullinløkka) on November 22.",
     cover_image_url:
-      "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=1200&q=80",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/popups/u-wan-sum/egg-coffee-cropped.webp",
     has_wifi: false,
     has_outlets: false,
     silent_zone: false,
@@ -661,10 +628,12 @@ export const INITIAL_FOOD_SPOTS: Venue[] = [
     popup_meta: {
       residency_status: "next_confirmed",
       host_venue_name: "Kristian Augusts gate 21, Tullinløkka",
-      host_address: "Kristian Augusts gate 21, 0164 Oslo",
-      dates_label: "Sun Nov 22 + Dec 6",
+      host_address: "Kristian Augusts gate 21, Tullinløkka, 0164 Oslo",
+      dates_label: "Sun Nov 22",
+      next_drop_date: "2026-11-22T12:00:00+01:00",
       daily_hours: "12:00 – til sold out",
-      instagram_url: "https://instagram.com/uwansamofficial",
+      portion_cap: "Small-batch phin brew",
+      instagram_url: "https://www.instagram.com/uwansamofficial/",
     },
     vibe: {
       seat_score: 1.5,
@@ -686,7 +655,7 @@ export const INITIAL_FOOD_SPOTS: Venue[] = [
   {
     id: "venue-mint-on-wheels",
     name: "Mint on Wheels",
-    address: "Operagata 77d, 0194 Oslo",
+    address: "Operagata 77d, Oslobukta, 0194 Oslo",
     city: "Oslo",
     latitude: 59.9065,
     longitude: 10.7589,
@@ -695,7 +664,7 @@ export const INITIAL_FOOD_SPOTS: Venue[] = [
     food_category: "matcha",
     icon: "matcha",
     price_level: "$",
-    signature_dishes: ["Double Biscoff"],
+    signature_dishes: ["Biscoff Butter Matcha"],
     neighborhood: "sentrum",
     open_now: false,
     popup_start_date: "2026-11-14",
@@ -714,11 +683,11 @@ export const INITIAL_FOOD_SPOTS: Venue[] = [
     baseline_noise: 2.0,
     baseline_outlets: false,
     popup_meta: {
-      residency_status: "active",
+      residency_status: "between_residencies",
       host_venue_name: "Mike's Corner, Oslobukta",
-      host_address: "Operagata 77d, 0194 Oslo",
-      dates_label: "Nov 14 · Mike's Corner",
-      instagram_url: "https://instagram.com/mintonwheels",
+      host_address: "Operagata 77d, Oslobukta, 0194 Oslo",
+      dates_label: "Recent drop: Nov 14 · Next TBA",
+      instagram_url: "https://www.instagram.com/mintonwheeels/",
     },
     vibe: {
       seat_score: 1.5,
@@ -740,7 +709,7 @@ export const INITIAL_FOOD_SPOTS: Venue[] = [
   {
     id: "venue-crantz-cookies",
     name: "Crantz Cookies",
-    address: "Operagata 61a, 0191 Oslo",
+    address: "Dronning Eufemias gate 22, 0191 Oslo",
     city: "Oslo",
     latitude: 59.9082,
     longitude: 10.7574,
@@ -757,7 +726,7 @@ export const INITIAL_FOOD_SPOTS: Venue[] = [
     open_now: false,
     popup_start_date: "2026-11-14",
     popup_end_date: "2026-11-15",
-    current_opening_hours_text: "11:00–16:00",
+    current_opening_hours_text: "Next Oslo drop loading",
     description:
       "Founded by sisters Felicia & Adele after testing 100+ recipes. Famous across Oslo for sell-out pop-up drops featuring chunky NYC-style cookies with molten Biscoff, Kinder, and cream cheese cores.",
     cover_image_url:
@@ -772,12 +741,12 @@ export const INITIAL_FOOD_SPOTS: Venue[] = [
     baseline_noise: 2.0,
     baseline_outlets: false,
     popup_meta: {
-      residency_status: "active",
-      host_venue_name: "Operagata 61a, Bjørvika",
-      host_address: "Operagata 61a, 0191 Oslo",
-      dates_label: "Nov 14–15 · Bjørvika",
+      residency_status: "between_residencies",
+      host_venue_name: "Dronning Eufemias gate 22, Bjørvika",
+      host_address: "Dronning Eufemias gate 22, 0191 Oslo",
+      dates_label: "Next Oslo drop loading",
       daily_hours: "11:00–16:00",
-      instagram_url: "https://instagram.com/crantzcookies",
+      instagram_url: "https://www.instagram.com/crantzcookies/",
     },
     vibe: {
       seat_score: 1.6,
@@ -1145,7 +1114,7 @@ export const INITIAL_FOOD_POSTS: FoodPost[] = [
     id: "post-popup-crantz-biscoff",
     spot_id: "venue-crantz-cookies",
     spot_name: "Crantz Cookies",
-    spot_address: "Operagata 61a, 0191 Oslo",
+    spot_address: "Dronning Eufemias gate 22, 0191 Oslo",
     spot_neighborhood: "Bjørvika",
     spot_coords: [10.7574, 59.9082],
     spot_type: "popup",
