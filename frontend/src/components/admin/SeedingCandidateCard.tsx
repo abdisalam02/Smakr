@@ -311,6 +311,14 @@ export function SeedingCandidateCard({
     signature_dishes: spot.dish_highlights.map((d) => d.dish_name),
   } as any);
 
+  const isValidFoodPhoto = (url?: string) =>
+    Boolean(url && !/streetview|facade|building|\/icons\/food\//i.test(url));
+
+  const verifiedDishesCount = spot.dish_highlights.filter(
+    (d) => d.is_verified_food_photo && isValidFoodPhoto(d.dish_image)
+  ).length;
+  const unverifiedDishesCount = spot.dish_highlights.length - verifiedDishesCount;
+
   const allDishesVerified =
     spot.dish_highlights.length > 0 &&
     spot.dish_highlights.every(
@@ -462,7 +470,24 @@ export function SeedingCandidateCard({
           </p>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2.5">
+        <div className="flex shrink-0 items-center gap-2">
+          {!isPopupSpot && spot.verification_status !== "rejected" && (
+            <span
+              title={`${verifiedDishesCount} verified out of 3 target dishes`}
+              className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[10.5px] font-bold tabular-nums ${
+                verifiedDishesCount >= 3
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "border-amber-200 bg-amber-50 text-amber-800"
+              }`}
+            >
+              <span>{verifiedDishesCount}/3 dishes</span>
+              {unverifiedDishesCount > 0 && (
+                <span className="hidden xs:inline text-[#E84A27] font-extrabold">
+                  · {unverifiedDishesCount} to confirm
+                </span>
+              )}
+            </span>
+          )}
           {spot.verification_status === "seeded" ? (
             <span title="Seeded" className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10.5px] font-bold text-emerald-700">
               <Database className="h-3 w-3 shrink-0" />
@@ -1320,19 +1345,33 @@ export function SeedingCandidateCard({
                     <div className="flex items-center gap-1.5">
                       <button
                         type="button"
-                        onClick={() =>
-                          onUpdateDish(spot.id, dish.id, {
+                        onClick={() => {
+                          if (!dish.is_verified_food_photo && !isValidFoodPhoto(dish.dish_image)) {
+                            setEditingDish(dish);
+                            return;
+                          }
+                          void onUpdateDish(spot.id, dish.id, {
                             is_verified_food_photo: !dish.is_verified_food_photo,
-                          })
+                          });
+                        }}
+                        title={
+                          !dish.dish_image
+                            ? "Pick or upload a dish photo first"
+                            : dish.is_verified_food_photo
+                            ? "Verified photo (click to unverify)"
+                            : "Confirm this photo and sync to live DB"
                         }
-                        title="Click to toggle dish photo verification"
                         className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${
                           dish.is_verified_food_photo
                             ? "bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100"
                             : "bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100"
                         }`}
                       >
-                        {dish.is_verified_food_photo ? "🟢 Verified" : "🟡 Verify"}
+                        {dish.is_verified_food_photo
+                          ? "🟢 Verified"
+                          : dish.dish_image
+                          ? "🟡 Confirm photo"
+                          : "🟡 Pick photo"}
                       </button>
 
                       {spot.dish_highlights.length > 1 && dish.is_verified_food_photo && (
@@ -1504,6 +1543,9 @@ export function SeedingCandidateCard({
           spotName={spot.name}
           spotId={spot.id}
           isPopup={isPopupSpot}
+          candidatePhotos={Array.from(
+            new Set([...(spot.candidate_photos || []), ...(spot.place_photos || [])])
+          )}
           onSave={async (dishUpdates) => {
             await onUpdateDish(spot.id, editingDish.id, dishUpdates);
           }}

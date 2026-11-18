@@ -42,12 +42,25 @@ const STATUS_PRIORITY: Record<string, number> = {
   rejected: 4,
 };
 
+type QueueSectionId = "needs_dishes" | "ready" | "complete" | "all";
+
+function countVerifiedDishes(spot: StagedCandidateSpot): number {
+  return (spot.dish_highlights || []).filter(
+    (d) =>
+      d.is_verified_food_photo &&
+      Boolean(d.dish_image) &&
+      !/streetview|facade|building|\/icons\/food\//i.test(d.dish_image)
+  ).length;
+}
+
 export default function SeedingLabPage() {
   const [candidates, setCandidates] = useState<StagedCandidateSpot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCommitting, setIsCommitting] = useState(false);
   const [activeMode, setActiveMode] = useState<"regular" | "popup">("regular");
+  const [activeQueue, setActiveQueue] = useState<QueueSectionId>("needs_dishes");
   const [activeFilter, setActiveFilter] = useState<string>("all");
+  const [showGuide, setShowGuide] = useState(true);
   const [search, setSearch] = useState("");
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [notification, setNotification] = useState<Notification>(null);
@@ -256,16 +269,32 @@ export default function SeedingLabPage() {
     }
   };
 
-  // Filtered view scoped to active mode + search query, with actionable spots first
+  // Filtered view scoped to active mode, workflow queue, status filter & search
   const filteredCandidates = useMemo(() => {
+    const byQueue = currentModeCandidates.filter((s) => {
+      if (activeMode !== "regular") return true;
+      const verifiedCount = countVerifiedDishes(s);
+      const hasUnverified = (s.dish_highlights || []).some((d) => !d.is_verified_food_photo || !d.dish_image);
+      if (activeQueue === "needs_dishes") {
+        return s.verification_status !== "rejected" && (verifiedCount < 3 || hasUnverified);
+      }
+      if (activeQueue === "ready") {
+        return s.verification_status === "approved";
+      }
+      if (activeQueue === "complete") {
+        return s.verification_status === "seeded" && verifiedCount >= 3 && !hasUnverified;
+      }
+      return true;
+    });
+
     const byStatus =
       activeFilter === "all"
-        ? [...currentModeCandidates].sort(
+        ? [...byQueue].sort(
             (a, b) =>
               (STATUS_PRIORITY[a.verification_status] ?? 9) -
               (STATUS_PRIORITY[b.verification_status] ?? 9)
           )
-        : currentModeCandidates.filter((s) => s.verification_status === activeFilter);
+        : byQueue.filter((s) => s.verification_status === activeFilter);
 
     const q = search.trim().toLowerCase();
     if (!q) return byStatus;
@@ -276,7 +305,7 @@ export default function SeedingLabPage() {
         .toLowerCase()
         .includes(q)
     );
-  }, [currentModeCandidates, activeFilter, search]);
+  }, [currentModeCandidates, activeMode, activeQueue, activeFilter, search]);
 
   const stats = useMemo(() => {
     const total = currentModeCandidates.length;
@@ -285,7 +314,37 @@ export default function SeedingLabPage() {
     const seeded = currentModeCandidates.filter((s) => s.verification_status === "seeded").length;
     const rejected = currentModeCandidates.filter((s) => s.verification_status === "rejected").length;
     const pending = currentModeCandidates.filter((s) => s.verification_status === "pending").length;
-    return { total, approved, needsPhoto, seeded, rejected, pending };
+    const activeRegular = currentModeCandidates.filter((s) => s.verification_status !== "rejected");
+    const needsDishesSpots = activeRegular.filter((s) => {
+      const v = countVerifiedDishes(s);
+      const u = (s.dish_highlights || []).some((d) => !d.is_verified_food_photo || !d.dish_image);
+      return v < 3 || u;
+    }).length;
+    const completeSpots = activeRegular.filter(
+      (s) =>
+        s.verification_status === "seeded" &&
+        countVerifiedDishes(s) >= 3 &&
+        !(s.dish_highlights || []).some((d) => !d.is_verified_food_photo || !d.dish_image)
+    ).length;
+    const totalTargetDishes = activeRegular.length * 3;
+    const totalVerifiedDishes = activeRegular.reduce((acc, s) => acc + Math.min(3, countVerifiedDishes(s)), 0);
+    const totalUnverifiedDishes = activeRegular.reduce(
+      (acc, s) => acc + (s.dish_highlights || []).filter((d) => !d.is_verified_food_photo || !d.dish_image).length,
+      0
+    );
+    return {
+      total,
+      approved,
+      needsPhoto,
+      seeded,
+      rejected,
+      pending,
+      needsDishesSpots,
+      completeSpots,
+      totalTargetDishes,
+      totalVerifiedDishes,
+      totalUnverifiedDishes,
+    };
   }, [currentModeCandidates]);
 
   const modeLabel = activeMode === "regular" ? "Regular spots" : "Pop-up radar";
@@ -345,8 +404,133 @@ export default function SeedingLabPage() {
           </div>
         </div>
 
+        {/* ── WORKFLOW GUIDE & 3-DISH COVERAGE SECTION ── */}
+        <section
+          aria-label="Seeding Lab Workflow and Coverage"
+          className="mt-5 rounded-2xl border border-[#EAE5DC] bg-[#FAF7F2] p-4 shadow-xs"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-lg bg-[#E84A27]/12 text-[#E84A27]">
+                  <Layers className="h-3.5 w-3.5" />
+                </span>
+                <h2 className="text-sm font-extrabold text-[#181615]">
+                  {activeMode === "regular" ? "3-Dish Menu Coverage & Workflow" : "Pop-Up Radar Curation Guide"}
+                </h2>
+              </div>
+              {activeMode === "regular" ? (
+                <p className="mt-1 text-xs font-medium text-zinc-600">
+                  <strong className="text-[#181615] tabular-nums">
+                    {stats.totalVerifiedDishes}/{stats.totalTargetDishes}
+                  </strong>{" "}
+                  verified dishes across {stats.total - stats.rejected} regular spots
+                  {stats.totalUnverifiedDishes > 0
+                    ? ` · ${stats.totalUnverifiedDishes} dishes waiting for photo confirmation`
+                    : " · Every regular spot has 3 verified dishes"}
+                </p>
+              ) : (
+                <p className="mt-1 text-xs font-medium text-zinc-600">
+                  Track seasonal Oslo pop-ups, verify drop schedules with AI Shift, and commit approved cards.
+                </p>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowGuide((v) => !v)}
+              className="inline-flex items-center gap-1 rounded-lg border border-[#DDD6C9] bg-white px-2.5 py-1 text-[11px] font-bold text-zinc-700 transition-colors hover:border-[#E84A27]/40 hover:text-[#181615] cursor-pointer"
+            >
+              <span>{showGuide ? "Hide steps" : "How it works"}</span>
+              <ChevronRight className={`h-3 w-3 transition-transform ${showGuide ? "rotate-90" : ""}`} />
+            </button>
+          </div>
+
+          {activeMode === "regular" && stats.totalTargetDishes > 0 && (
+            <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[#EAE5DC]">
+              <div
+                className="h-full rounded-full bg-[#E84A27] transition-all duration-300"
+                style={{
+                  width: `${Math.min(
+                    100,
+                    Math.round((stats.totalVerifiedDishes / stats.totalTargetDishes) * 100)
+                  )}%`,
+                }}
+              />
+            </div>
+          )}
+
+          {showGuide && (
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3 border-t border-[#EAE5DC] pt-3">
+              <div className="rounded-xl border border-[#EAE5DC] bg-white px-3 py-2.5">
+                <span className="text-[10px] font-black uppercase tracking-wider text-[#E84A27]">
+                  Step 1 · Open spot
+                </span>
+                <p className="mt-0.5 text-xs font-bold text-[#181615]">Check dishes in queue</p>
+                <p className="mt-0.5 text-[11px] leading-snug text-zinc-500">
+                  Spots under &ldquo;Needs Setup&rdquo; already have scraped Wolt, IG, or site menu items waiting.
+                </p>
+              </div>
+              <div className="rounded-xl border border-[#EAE5DC] bg-white px-3 py-2.5">
+                <span className="text-[10px] font-black uppercase tracking-wider text-[#E84A27]">
+                  Step 2 · Confirm 3 dishes
+                </span>
+                <p className="mt-0.5 text-xs font-bold text-[#181615]">Pick photo &amp; tap Confirm</p>
+                <p className="mt-0.5 text-[11px] leading-snug text-zinc-500">
+                  Tap yellow dishes to confirm prefilled Wolt photos or pick from the spot gallery / paste (Ctrl+V).
+                </p>
+              </div>
+              <div className="rounded-xl border border-[#EAE5DC] bg-white px-3 py-2.5">
+                <span className="text-[10px] font-black uppercase tracking-wider text-[#E84A27]">
+                  Step 3 · Publish live
+                </span>
+                <p className="mt-0.5 text-xs font-bold text-[#181615]">Sync or Commit to Radar</p>
+                <p className="mt-0.5 text-[11px] leading-snug text-zinc-500">
+                  Verified dishes on Live spots sync right away. New spots publish when you click Approve &amp; Commit.
+                </p>
+              </div>
+            </div>
+          )}
+        </section>
+
         {/* ── UNIFIED CONTROLS BAR ── */}
-        <div className="mt-5 rounded-2xl border border-[#EAE5DC] bg-white p-3 shadow-xs space-y-3">
+        <div className="mt-4 rounded-2xl border border-[#EAE5DC] bg-white p-3 shadow-xs space-y-3">
+          {activeMode === "regular" && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 rounded-xl bg-[#FAF7F2] p-1 border border-[#EAE5DC]">
+              {[
+                { id: "needs_dishes", label: "Needs Setup (<3)", count: stats.needsDishesSpots },
+                { id: "ready", label: "Ready to Commit", count: stats.approved },
+                { id: "complete", label: "Complete (3+ Live)", count: stats.completeSpots },
+                { id: "all", label: "All Regular", count: stats.total },
+              ].map((qTab) => {
+                const isActive = activeQueue === qTab.id;
+                return (
+                  <button
+                    key={qTab.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveQueue(qTab.id as QueueSectionId);
+                      setActiveFilter("all");
+                    }}
+                    className={`flex items-center justify-between gap-1.5 rounded-lg px-2.5 py-2 text-[11px] font-bold transition-all cursor-pointer ${
+                      isActive
+                        ? "bg-[#181615] text-white shadow-xs"
+                        : "text-zinc-600 hover:bg-white hover:text-[#181615]"
+                    }`}
+                  >
+                    <span className="truncate">{qTab.label}</span>
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-[10px] font-extrabold tabular-nums ${
+                        isActive ? "bg-[#E84A27] text-white" : "bg-black/5 text-zinc-500"
+                      }`}
+                    >
+                      {qTab.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
             {/* Mode Switch */}
             <div className="grid grid-cols-2 gap-1 rounded-xl bg-[#F3EFE7] p-1 sm:w-72 shrink-0">
@@ -487,14 +671,28 @@ export default function SeedingLabPage() {
         <div className="mt-5 flex items-center justify-between gap-3 px-1">
           <div className="flex items-baseline gap-2">
             <h2 className="text-sm font-bold text-[#181615]">
-              {activeFilter === "all" ? "All Candidates" : STATUS_FILTERS.find((f) => f.id === activeFilter)?.label}
+              {activeFilter !== "all"
+                ? STATUS_FILTERS.find((f) => f.id === activeFilter)?.label
+                : activeMode === "regular"
+                ? activeQueue === "needs_dishes"
+                  ? "Needs Dish Setup (<3 Verified)"
+                  : activeQueue === "ready"
+                  ? "Ready to Commit"
+                  : activeQueue === "complete"
+                  ? "Complete (3+ Dishes Live)"
+                  : "All Regular Candidates"
+                : "Pop-Up Candidates"}
             </h2>
             <span className="text-xs font-semibold text-zinc-400 tabular-nums">
               {filteredCandidates.length} {filteredCandidates.length === 1 ? "spot" : "spots"}
             </span>
           </div>
           <span className="text-[11px] font-medium text-zinc-400">
-            {stats.needsPhoto > 0 ? `${stats.needsPhoto} awaiting photos` : "All photos verified"}
+            {activeMode === "regular"
+              ? `${stats.totalUnverifiedDishes} dishes awaiting confirmation`
+              : stats.needsPhoto > 0
+              ? `${stats.needsPhoto} awaiting photos`
+              : "All photos verified"}
           </span>
         </div>
 
@@ -535,6 +733,7 @@ export default function SeedingLabPage() {
               <button
                 type="button"
                 onClick={() => {
+                  setActiveQueue("all");
                   setActiveFilter("all");
                   setSearch("");
                 }}

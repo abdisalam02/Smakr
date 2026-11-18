@@ -3,8 +3,8 @@
 Updated: 2026-11-17
 
 ## Now
-- Task: Prevented Slide 01 kicker pill wrapping (`whiteSpace: nowrap`) & changed Slide 04 bottom CTA to borderless orange text (`Check out more on smakr.no ↗`).
-- Status: Verifying build and pushing to GitHub.
+- Task: Harvested 3+ easy-to-find dishes across all 42 regular Oslo spots (+53 Wolt w/ photos + 30 verified non-Wolt w/ IG/Google pools) into staged_candidates.json; added 3-Dish Coverage & Workflow UI + Queue tabs + Spot Photo Pool to /admin/seeding-lab.
+- Status: `npx tsc --noEmit` & `npm run test:security` verified; browser UI check paused at admin auth gate on `/admin/seeding-lab`.
 
 ## Next (max 3)
 1. Preview and export the 2-slide Early Snowfall `@3x` PNG assets in `/ad-reel`.

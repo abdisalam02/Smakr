@@ -32,6 +32,7 @@ interface QuickDishEditModalProps {
   spotName: string;
   spotId?: string;
   isPopup?: boolean;
+  candidatePhotos?: string[];
   onSave: (updated: Partial<StagedDishHighlight>) => Promise<void>;
   onClose: () => void;
 }
@@ -112,6 +113,7 @@ export function QuickDishEditModal({
   spotName,
   spotId = "",
   isPopup = false,
+  candidatePhotos = [],
   onSave,
   onClose,
 }: QuickDishEditModalProps) {
@@ -126,9 +128,13 @@ export function QuickDishEditModal({
   const [imgError, setImgError] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Source selection tabs — defaults to "upload" if editing a pop-up
+  // Open on Photo Picker whenever a dish still needs photo confirmation
   const [activeTab, setActiveTab] = useState<"upload" | "restyle" | "google" | "url" | "presets">(
-    isPopup ? "upload" : "restyle"
+    isPopup
+      ? "upload"
+      : !dish.dish_image || !dish.is_verified_food_photo
+      ? "google"
+      : "restyle"
   );
   const [activeField, setActiveField] = useState<"photo" | "name" | "price" | "meta">("photo");
 
@@ -722,7 +728,7 @@ export function QuickDishEditModal({
                 }`}
               >
                 <Camera className="w-3.5 h-3.5" />
-                <span>Google ({googlePhotos.length})</span>
+                <span>Pick Photo ({candidatePhotos.length + googlePhotos.length})</span>
               </button>
               <button
                 type="button"
@@ -942,9 +948,76 @@ export function QuickDishEditModal({
               </div>
             )}
 
-            {/* Tab 1: Google Places Browser (Cached Fetch-Once) */}
+            {/* Tab 1: Pick Photo (Harvested Spot Gallery + Google Places) */}
             {activeTab === "google" && (
               <div className="p-3.5 rounded-2xl bg-white border border-[#EAE5DC] space-y-3">
+                {candidatePhotos.length > 0 && (
+                  <div className="space-y-2 border-b border-[#EAE5DC] pb-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-black uppercase tracking-wider text-[#181615]">
+                        Spot Menu &amp; IG Photo Pool ({candidatePhotos.length})
+                      </span>
+                      <span className="text-[10.5px] font-bold text-[#E84A27]">
+                        1-click select
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-40 overflow-y-auto p-1">
+                      {candidatePhotos.map((photoUrl, idx) => (
+                        <button
+                          key={`pool-${photoUrl}-${idx}`}
+                          type="button"
+                          onClick={() => handleSelectPhoto(photoUrl)}
+                          className={`relative aspect-[4/3] rounded-xl overflow-hidden border-2 transition-transform hover:scale-105 cursor-pointer ${
+                            dishImage === photoUrl
+                              ? "border-[#E84A27] ring-2 ring-[#E84A27]/30"
+                              : "border-transparent"
+                          }`}
+                        >
+                          <Image
+                            src={photoUrl}
+                            alt={`Harvested photo ${idx + 1}`}
+                            fill
+                            unoptimized
+                            className="object-cover"
+                          />
+                          {dishImage === photoUrl && (
+                            <div className="absolute inset-0 bg-[#E84A27]/30 flex items-center justify-center">
+                              <Check className="w-4 h-4 text-white drop-shadow-md" />
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextQ = `${spotName} Oslo`;
+                      setGoogleQuery(nextQ);
+                      void fetchGooglePhotos(nextQ, false);
+                    }}
+                    className="rounded-full border border-[#DDD6C9] bg-[#FAF7F2] px-2.5 py-1 text-[10.5px] font-bold text-[#181615] hover:border-[#E84A27] cursor-pointer"
+                  >
+                    Spot: {spotName}
+                  </button>
+                  {dishName && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextQ = `${dishName} Oslo`;
+                        setGoogleQuery(nextQ);
+                        void fetchGooglePhotos(nextQ, false);
+                      }}
+                      className="rounded-full border border-[#E84A27]/30 bg-[#E84A27]/8 px-2.5 py-1 text-[10.5px] font-bold text-[#E84A27] hover:bg-[#E84A27] hover:text-white cursor-pointer"
+                    >
+                      Dish: {dishName}
+                    </button>
+                  )}
+                </div>
+
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 flex-1">
                     <input
