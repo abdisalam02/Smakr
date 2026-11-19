@@ -3,8 +3,8 @@
 Updated: 2026-11-19
 
 ## Now
-- Task: Updated restaurant/venue sheets & cards (`VenueBottomSheet`, `VenueDetailPane`, `VenueDishesGrid`, `VenuePhotoStack`, `PopupEventCard`) to Font Pairing #02 (Pally display + clean body), and added `tone="dark" | "light"` `PopupBrandWordmark` logos to pop-up cards across `PopupEventCard`, `MapNeighborhoodDock`, `VenueBottomSheet`, and `VenueDetailPane`.
-- Status: `npx tsc --noEmit` passed (exit 0); dev server live on port 3001.
+- Task: Updated bottom nav (`FoodViewSlider`) and filter pills/drawer (`FeedFilterBar`) to Pally display font, added opposite-direction `FeedPeepsWalkway` (`ltr` mid-feed, `rtl` at feed bottom), verified tsc, and pushed to `origin/main`.
+- Status: `npx tsc --noEmit` passed (exit 0) and pushed to `origin/main`; dev server live on port 3001.
 
 ## Next (max 3)
 1. Preview and export the 2-slide Early Snowfall `@3x` PNG assets in `/ad-reel`.

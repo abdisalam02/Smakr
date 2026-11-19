@@ -671,7 +671,7 @@ export function FeedFilterBar({ compact = false, onExpandedChange }: FeedFilterB
           onClick={() => setIsExpanded(!isExpanded)}
           aria-expanded={isExpanded}
           aria-label="Toggle filter drawer"
-          className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-colors select-none active:scale-95 cursor-pointer ${
+          className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-display font-bold border transition-colors select-none active:scale-95 cursor-pointer ${
             isExpanded
               ? "bg-zinc-100 dark:bg-white/15 text-zinc-900 dark:text-white border-zinc-300 dark:border-white/30 shadow-xs"
               : "bg-white dark:bg-white/10 text-zinc-800 dark:text-zinc-200 border-zinc-200/80 dark:border-white/15 hover:bg-zinc-100 dark:hover:bg-white/15"
@@ -706,7 +706,7 @@ export function FeedFilterBar({ compact = false, onExpandedChange }: FeedFilterB
               key="filter-pill-all"
               type="button"
               onClick={handleSelectAll}
-              className="relative shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border border-zinc-200/70 dark:border-white/10 select-none active:scale-95 cursor-pointer bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 transition-colors duration-150"
+              className="relative shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-display font-bold border border-zinc-200/70 dark:border-white/10 select-none active:scale-95 cursor-pointer bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 transition-colors duration-150"
             >
               {isAllActive && (
                 <motion.div
@@ -715,7 +715,7 @@ export function FeedFilterBar({ compact = false, onExpandedChange }: FeedFilterB
                   transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
                 />
               )}
-              <span className={`relative z-10 flex items-center gap-1.5 transition-colors duration-200 ${isAllActive ? "text-white font-bold" : "font-medium text-zinc-700 dark:text-zinc-200"}`}>
+              <span className={`relative z-10 flex items-center gap-1.5 transition-colors duration-200 ${isAllActive ? "text-white font-bold" : "font-semibold text-zinc-700 dark:text-zinc-200"}`}>
                 <SmakrFoodIcon name="all" className="w-3.5 h-3.5 shrink-0" monochrome={isAllActive} />
                 <span>All</span>
                 <span className={`text-[10px] font-mono ${isAllActive ? "text-white/90" : "text-zinc-400"}`}>
@@ -731,7 +731,7 @@ export function FeedFilterBar({ compact = false, onExpandedChange }: FeedFilterB
           key="filter-pill-saved"
           type="button"
           onClick={handleSelectSaved}
-          className="relative shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border border-zinc-200/70 dark:border-white/10 select-none active:scale-95 cursor-pointer bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 transition-colors duration-200"
+          className="relative shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-display font-bold border border-zinc-200/70 dark:border-white/10 select-none active:scale-95 cursor-pointer bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 transition-colors duration-200"
         >
           {savedOnly && (
             <motion.div
@@ -742,7 +742,7 @@ export function FeedFilterBar({ compact = false, onExpandedChange }: FeedFilterB
           )}
           <span
             className={`relative z-10 flex items-center gap-1.5 transition-colors duration-200 ${
-              savedOnly ? "text-white font-bold" : "font-medium text-zinc-700 dark:text-zinc-200"
+              savedOnly ? "text-white font-bold" : "font-semibold text-zinc-700 dark:text-zinc-200"
             }`}
           >
             <Bookmark className={`w-3.5 h-3.5 ${savedOnly ? "fill-white" : ""}`} />
@@ -763,7 +763,7 @@ export function FeedFilterBar({ compact = false, onExpandedChange }: FeedFilterB
               key="filter-pill-popup"
               type="button"
               onClick={() => handleSelectSpotKind("popup")}
-              className="relative shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold border border-zinc-200/70 dark:border-white/10 select-none active:scale-95 cursor-pointer bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 transition-colors duration-200"
+              className="relative shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-display font-bold border border-zinc-200/70 dark:border-white/10 select-none active:scale-95 cursor-pointer bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 transition-colors duration-200"
             >
               {isPopupActive && (
                 <motion.div
@@ -772,7 +772,7 @@ export function FeedFilterBar({ compact = false, onExpandedChange }: FeedFilterB
                   transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
                 />
               )}
-              <span className={`relative z-10 flex items-center gap-1 transition-colors duration-200 ${isPopupActive ? "text-white font-bold" : "font-medium text-zinc-700 dark:text-zinc-200"}`}>
+              <span className={`relative z-10 flex items-center gap-1 transition-colors duration-200 ${isPopupActive ? "text-white font-bold" : "font-semibold text-zinc-700 dark:text-zinc-200"}`}>
                 <SmakrFoodIcon name="popup" className="w-3.5 h-3.5 shrink-0" monochrome={isPopupActive} />
                 <span>Pop-ups</span>
               </span>
@@ -788,7 +788,7 @@ export function FeedFilterBar({ compact = false, onExpandedChange }: FeedFilterB
               key="filter-pill-matcha"
               type="button"
               onClick={handleSelectMatcha}
-              className="relative shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border border-zinc-200/70 dark:border-white/10 select-none active:scale-95 cursor-pointer bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 transition-colors duration-200"
+              className="relative shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-display font-bold border border-zinc-200/70 dark:border-white/10 select-none active:scale-95 cursor-pointer bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 transition-colors duration-200"
             >
               {isMatchaActive && (
                 <motion.div
@@ -797,7 +797,7 @@ export function FeedFilterBar({ compact = false, onExpandedChange }: FeedFilterB
                   transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
                 />
               )}
-              <span className={`relative z-10 flex items-center gap-1.5 transition-colors duration-200 ${isMatchaActive ? "text-white font-bold" : "font-medium text-zinc-700 dark:text-zinc-200"}`}>
+              <span className={`relative z-10 flex items-center gap-1.5 transition-colors duration-200 ${isMatchaActive ? "text-white font-bold" : "font-semibold text-zinc-700 dark:text-zinc-200"}`}>
                 <span className="text-xs">🍵</span>
                 <span>Matcha</span>
                 <span className={`text-[10px] font-mono ${isMatchaActive ? "text-white/90" : "text-zinc-400"}`}>
@@ -818,7 +818,7 @@ export function FeedFilterBar({ compact = false, onExpandedChange }: FeedFilterB
               key={group.id}
               type="button"
               onClick={() => handleSelectGroup(group.id)}
-              className="relative shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs border border-zinc-200/70 dark:border-white/10 select-none active:scale-95 cursor-pointer bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 transition-colors duration-200"
+              className="relative shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-display font-bold border border-zinc-200/70 dark:border-white/10 select-none active:scale-95 cursor-pointer bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 transition-colors duration-200"
             >
               {isSelected && (
                 <motion.div
@@ -827,7 +827,7 @@ export function FeedFilterBar({ compact = false, onExpandedChange }: FeedFilterB
                   transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
                 />
               )}
-              <span className={`relative z-10 flex items-center gap-1.5 transition-colors duration-200 ${isSelected ? "text-white font-bold" : "font-medium text-zinc-700 dark:text-zinc-200"}`}>
+              <span className={`relative z-10 flex items-center gap-1.5 transition-colors duration-200 ${isSelected ? "text-white font-bold" : "font-semibold text-zinc-700 dark:text-zinc-200"}`}>
                 <SmakrFoodIcon
                   name={group.id}
                   className="w-3.5 h-3.5 shrink-0"
@@ -869,7 +869,7 @@ export function FeedFilterBar({ compact = false, onExpandedChange }: FeedFilterB
                 {/* Header: Compact Row (Categories + active on left, Reset on right) */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold font-comico uppercase tracking-wider text-[#181615] dark:text-white">
+                    <span className="text-xs font-bold font-display uppercase tracking-wider text-[#181615] dark:text-white">
                       Categories
                     </span>
                     {activeExtraFiltersCount > 0 && (

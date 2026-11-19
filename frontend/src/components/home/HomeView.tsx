@@ -22,6 +22,7 @@ import {
   LocalsPicksSwimlane,
   resolveLocalsPicks,
 } from "@/components/food/FoodieCommunityBlocks";
+import { FeedPeepsWalkway } from "@/components/food/FeedPeepsWalkway";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { useLiveVibeSync } from "@/hooks/useLiveVibeSync";
 import { useSyncAppData } from "@/hooks/useSyncAppData";
@@ -798,10 +799,12 @@ export function HomeView({
       return out;
     };
 
-    // Row 1 (between Pop-Up Radar & Locals' Picks), Row 2 (between Locals' Picks & Matcha), Row 3 (between Matcha & Kitchens).
+    // Row 1 (between Pop-Up Radar & Locals' Picks), Row 2 (between Locals' Picks & Matcha),
+    // Row 3a/3b split around the mid-feed walking peeps strip before Kitchens.
     const rowAfterHero = takeEven(4);
     const rowBeforeMatcha = takeEven(4);
-    const rowBeforeKitchens = takeEven(4);
+    const rowBeforeWalkway = takeEven(2);
+    const rowAfterWalkway = takeEven(2);
 
     // STRICT drink lane — never padded with dumplings/kebabs, only real drinks.
     const matchaLaneVenues = new Set<string>();
@@ -1098,11 +1101,14 @@ export function HomeView({
           matchaLane.length > 0
         )}
 
-        {/* 7. Vertical 2-Col Grid — Row 3 */}
-        {renderRow(rowBeforeKitchens)}
+        {/* 7a. Vertical 2-Col Grid — Row 3a (2 posts above walkway) */}
+        {renderRow(rowBeforeWalkway)}
 
-        {/* 8. Become a Foodie Banner (visible mid-scroll before Kitchens) */}
-        <BecomeAFoodieBanner />
+        {/* 7b. Edge-to-Edge Mid-Feed Open Peeps Walkway (sandwiched between vertical food posts) */}
+        <FeedPeepsWalkway direction="ltr" />
+
+        {/* 7c. Vertical 2-Col Grid — Row 3b (2 posts below walkway) */}
+        {renderRow(rowAfterWalkway)}
 
         {/* 9. Horizontal Lane 4 — The Kitchens Behind the Dishes */}
         {renderSwimlane(
@@ -1132,8 +1138,14 @@ export function HomeView({
           kitchenLane.length > 0
         )}
 
-        {/* 10. Vertical 2-Col Grid — Remaining Oslo Dishes */}
+        {/* 10. Become a Foodie Banner (moved below Kitchens) */}
+        <BecomeAFoodieBanner />
+
+        {/* 11. Vertical 2-Col Grid — Remaining Oslo Dishes */}
         {renderRow(remaining)}
+
+        {/* 12. Bottom-of-Feed Open Peeps Walkway (moving in opposite direction) */}
+        <FeedPeepsWalkway direction="rtl" className="mt-3 -mb-4" />
       </div>
     );
   }, [
