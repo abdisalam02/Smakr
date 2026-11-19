@@ -11,6 +11,7 @@ import {
   type PlaceResult,
 } from "@/lib/places/google";
 import { curatedVenuePhotos } from "@/lib/places/curatedPhotos";
+import { captureGeminiGeneration, createAiTraceId } from "@/lib/posthog-ai";
 
 export const runtime = "nodejs";
 
@@ -386,7 +387,8 @@ function fallbackExtractMenu(input: string) {
 async function callGeminiGenerateContent(
   apiKey: string,
   contents: Array<Record<string, unknown>>,
-  temperature = 0.35
+  temperature: number,
+  observability: { traceId: string; distinctId: string; spanName: string }
 ) {
   const models = ["gemini-3.8-flash", "gemini-2.5-flash", "gemini-2.0-flash"];
 
@@ -403,6 +405,7 @@ async function callGeminiGenerateContent(
 
     for (const url of endpoints) {
       try {
+        const startedAt = Date.now();
         const res = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -417,9 +420,36 @@ async function callGeminiGenerateContent(
         if (res.ok) {
           const data = await res.json();
           const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          await captureGeminiGeneration({
+            ...observability,
+            model,
+            input: contents,
+            output: rawText,
+            temperature,
+            latencyMs: Date.now() - startedAt,
+            status: res.status,
+          });
           if (rawText) return rawText as string;
+        } else {
+          await captureGeminiGeneration({
+            ...observability,
+            model,
+            input: contents,
+            temperature,
+            latencyMs: Date.now() - startedAt,
+            status: res.status,
+            error: `Gemini returned HTTP ${res.status}`,
+          });
         }
-      } catch {
+      } catch (error) {
+        await captureGeminiGeneration({
+          ...observability,
+          model,
+          input: contents,
+          temperature,
+          latencyMs: 0,
+          error,
+        });
         // try next endpoint
       }
     }
@@ -434,6 +464,11 @@ export async function POST(req: NextRequest) {
 
     const body = (await req.json()) as AiCurateRequest;
     const apiKey = resolveGeminiApiKey();
+    const observability = {
+      traceId: createAiTraceId(),
+      distinctId: auth.userId,
+      spanName: `ai_curate_${body.mode}`,
+    };
 
     if (body.mode === "generate-dish-note") {
       const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
@@ -485,7 +520,8 @@ export async function POST(req: NextRequest) {
       const rawText = await callGeminiGenerateContent(
         apiKey,
         [{ role: "user", parts: [{ text: prompt }] }],
-        0.35
+        0.35,
+        observability
       );
 
       if (!rawText) {
@@ -540,7 +576,8 @@ export async function POST(req: NextRequest) {
       const rawText = await callGeminiGenerateContent(
         apiKey,
         [{ role: "user", parts }],
-        0.2
+        0.2,
+        observability
       );
 
       if (!rawText) {
@@ -716,7 +753,8 @@ function fallbackParsePopup(
       const rawText = await callGeminiGenerateContent(
         apiKey,
         [{ role: "user", parts: [{ text: prompt }] }],
-        0.55
+        0.55,
+        observability
       );
 
       if (!rawText) {
@@ -851,7 +889,8 @@ Return STRICT JSON:
         const rawResult = await callGeminiGenerateContent(
           apiKey,
           [{ role: "user", parts }],
-          0.3
+          0.3,
+          observability
         );
 
         if (rawResult) {

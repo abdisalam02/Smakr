@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/app/api/admin/_auth";
+import { captureGeminiGeneration, createAiTraceId } from "@/lib/posthog-ai";
 
 export const runtime = "nodejs";
 
@@ -295,6 +296,8 @@ Extract and generate a structured JSON object with these exact keys:
 
 Respond with ONLY raw JSON without markdown code fences.`;
 
+        const traceId = createAiTraceId();
+        const startedAt = Date.now();
         const geminiRes = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${geminiKey}`,
           {
@@ -310,6 +313,17 @@ Respond with ONLY raw JSON without markdown code fences.`;
         if (geminiRes.ok) {
           const geminiData = await geminiRes.json();
           const rawReply = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+          await captureGeminiGeneration({
+            traceId,
+            distinctId: auth.userId,
+            spanName: "extract_food_post",
+            model: "gemini-2.5-flash-lite",
+            input: [{ role: "user", content: prompt }],
+            output: rawReply,
+            temperature: 0.2,
+            latencyMs: Date.now() - startedAt,
+            status: geminiRes.status,
+          });
           if (rawReply) {
             const parsed = JSON.parse(rawReply);
             const resolvedCategory = parsed.category || "street_food";
@@ -332,6 +346,18 @@ Respond with ONLY raw JSON without markdown code fences.`;
               },
             });
           }
+        } else {
+          await captureGeminiGeneration({
+            traceId,
+            distinctId: auth.userId,
+            spanName: "extract_food_post",
+            model: "gemini-2.5-flash-lite",
+            input: [{ role: "user", content: prompt }],
+            temperature: 0.2,
+            latencyMs: Date.now() - startedAt,
+            status: geminiRes.status,
+            error: `Gemini returned HTTP ${geminiRes.status}`,
+          });
         }
       } catch (geminiErr) {
         console.warn("Gemini API call failed, falling back to local NLP:", geminiErr);

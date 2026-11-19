@@ -9,6 +9,7 @@ import {
   readStagedCandidates,
   writeStagedCandidates,
 } from "@/lib/admin/stagedCandidatesStore";
+import { captureGeminiGeneration, createAiTraceId } from "@/lib/posthog-ai";
 
 export const runtime = "nodejs";
 
@@ -171,7 +172,8 @@ function matchOsloHostPreset(text: string): OsloHostPreset | null {
 async function callGeminiShiftParser(
   apiKey: string,
   rawText: string,
-  currentSpot: Partial<StagedCandidateSpot>
+  currentSpot: Partial<StagedCandidateSpot>,
+  observability: { traceId: string; distinctId: string }
 ): Promise<Partial<AiShiftSpotProposal> | null> {
   const models = ["gemini-2.5-flash", "gemini-2.0-flash"];
   const prompt = `You are the lead culinary data curator for Smakr Oslo.
@@ -235,6 +237,7 @@ Return STRICT JSON matching this exact shape:
     ];
     for (const url of endpoints) {
       try {
+        const startedAt = Date.now();
         const res = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -249,11 +252,41 @@ Return STRICT JSON matching this exact shape:
         if (res.ok) {
           const data = await res.json();
           const textOut = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          await captureGeminiGeneration({
+            ...observability,
+            spanName: "parse_spot_shift",
+            model,
+            input: [{ role: "user", content: prompt }],
+            output: textOut,
+            temperature: 0.2,
+            latencyMs: Date.now() - startedAt,
+            status: res.status,
+          });
           if (textOut) {
             return JSON.parse(textOut);
           }
+        } else {
+          await captureGeminiGeneration({
+            ...observability,
+            spanName: "parse_spot_shift",
+            model,
+            input: [{ role: "user", content: prompt }],
+            temperature: 0.2,
+            latencyMs: Date.now() - startedAt,
+            status: res.status,
+            error: `Gemini returned HTTP ${res.status}`,
+          });
         }
-      } catch {
+      } catch (error) {
+        await captureGeminiGeneration({
+          ...observability,
+          spanName: "parse_spot_shift",
+          model,
+          input: [{ role: "user", content: prompt }],
+          temperature: 0.2,
+          latencyMs: 0,
+          error,
+        });
         // try next endpoint
       }
     }
@@ -429,7 +462,10 @@ export async function POST(req: NextRequest) {
       let aiPartial: Partial<AiShiftSpotProposal> | null = null;
 
       if (apiKey) {
-        aiPartial = await callGeminiShiftParser(apiKey, rawText, currentSpot);
+        aiPartial = await callGeminiShiftParser(apiKey, rawText, currentSpot, {
+          traceId: createAiTraceId(),
+          distinctId: auth.userId,
+        });
       }
 
       const preset = matchOsloHostPreset(rawText);

@@ -7,6 +7,7 @@ import {
   mockPlace,
   type GooglePlaceNew,
 } from "@/lib/places/google";
+import { captureGeminiGeneration, createAiTraceId } from "@/lib/posthog-ai";
 
 export const dynamic = "force-dynamic";
 
@@ -87,6 +88,8 @@ export async function GET(request: Request) {
           .filter(Boolean)
           .join(" ");
         const prompt = `Write a factual, single-sentence Warm Nordic description (12-18 words, no exclamation marks, no adjectives like "seamless" or "curated") for this Oslo restaurant. Name: ${place.name}, Category: ${category}, Neighborhood: ${place.neighborhood || "Oslo"}. Reviews context: ${reviewSnippets.slice(0, 400)}`;
+        const traceId = createAiTraceId();
+        const startedAt = Date.now();
         const aiRes = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
           {
@@ -101,8 +104,29 @@ export async function GET(request: Request) {
         );
         if (aiRes.ok) {
           const aiData = await aiRes.json();
-          synthesized = aiData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
-          synthesized = synthesized.replace(/^["']|["']$/g, "").replace(/\n/g, " ").trim();
+          const output = aiData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+          await captureGeminiGeneration({
+            traceId,
+            spanName: "synthesize_place_description",
+            model: "gemini-1.5-flash",
+            input: [{ role: "user", content: prompt }],
+            output,
+            temperature: 0.3,
+            latencyMs: Date.now() - startedAt,
+            status: aiRes.status,
+          });
+          synthesized = output.replace(/^["']|["']$/g, "").replace(/\n/g, " ").trim();
+        } else {
+          await captureGeminiGeneration({
+            traceId,
+            spanName: "synthesize_place_description",
+            model: "gemini-1.5-flash",
+            input: [{ role: "user", content: prompt }],
+            temperature: 0.3,
+            latencyMs: Date.now() - startedAt,
+            status: aiRes.status,
+            error: `Gemini returned HTTP ${aiRes.status}`,
+          });
         }
       } catch {
         // Fallback to deterministic template below

@@ -9,6 +9,7 @@ import { AuthProvider } from "@/components/auth/AuthProvider";
 import { fetchCurrentUserServer } from "@/lib/supabase/serverData";
 import { GlobalModalsHost } from "@/components/ui/GlobalModalsHost";
 import { ToastBanner } from "@/components/ui/ToastBanner";
+import { PostHogProvider } from "@/components/PostHogProvider";
 
 // The root layout reads the auth session (cookies) to SSR the header, so every
 // route is rendered on demand — declare it explicitly to avoid static-generation
@@ -80,16 +81,18 @@ export default async function RootLayout({
         )}
       </head>
       <body className="min-h-dvh flex flex-col antialiased selection:bg-[var(--accent)] selection:text-white transition-colors duration-300">
-        <AuthProvider initialUser={initialUser}>
-          <Header initialUser={initialUser} />
-          <main className="flex-1 flex flex-col relative overflow-x-hidden w-full max-w-[100vw]">
-            {children}
-          </main>
-          <MascotConfigHydrator />
-          <AppStateHydrator />
-          <GlobalModalsHost />
-          <ToastBanner />
-        </AuthProvider>
+        <PostHogProvider>
+          <AuthProvider initialUser={initialUser}>
+            <Header initialUser={initialUser} />
+            <main className="flex-1 flex flex-col relative overflow-x-hidden w-full max-w-[100vw]">
+              {children}
+            </main>
+            <MascotConfigHydrator />
+            <AppStateHydrator />
+            <GlobalModalsHost />
+            <ToastBanner />
+          </AuthProvider>
+        </PostHogProvider>
       </body>
     </html>
   );

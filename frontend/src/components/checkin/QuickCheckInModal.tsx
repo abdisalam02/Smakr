@@ -5,6 +5,7 @@ import { Modal } from "@/components/ui/Modal";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { submitCheckin } from "@/lib/api";
 import { Users, Volume2, Zap, CheckCircle2, Loader2 } from "lucide-react";
+import posthog from "posthog-js";
 
 export function QuickCheckInModal() {
   const isCheckInModalOpen = useCityPulseStore((state) => state.isCheckInModalOpen);
@@ -33,6 +34,12 @@ export function QuickCheckInModal() {
         comment: comment.trim() || undefined,
       });
 
+      posthog.capture("check_in_submitted", {
+        noise_level: noiseLevel,
+        outlets_available: outletsAvailable,
+        seat_level: seatLevel,
+        venue_id: selectedVenue.id,
+      });
       setIsSuccess(true);
       setTimeout(() => {
         setIsSuccess(false);

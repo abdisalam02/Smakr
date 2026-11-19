@@ -17,6 +17,7 @@ import {
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { SmakrSIcon } from "@/components/ui/SmakrSIcon";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import posthog from "posthog-js";
 
 const GOOGLE_DISABLED_MESSAGE =
   "Google sign-in is temporarily unavailable right now. Please sign in with your email or magic link below.";
@@ -178,6 +179,7 @@ export function AuthModal() {
       return;
     }
     if (!error) {
+      posthog.capture("sign_in_completed", { method: "password" });
       setIsAuthModalOpen(false);
       showToast("Welcome back!");
     }
@@ -202,6 +204,7 @@ export function AuthModal() {
       setError(friendlyAuthError(error.message));
       return;
     }
+    posthog.capture("magic_link_requested");
     setNotice(`Magic sign-in link sent to ${cleanEmail}. Check your inbox to sign in.`);
   };
 
@@ -265,6 +268,10 @@ export function AuthModal() {
       setError(friendlyAuthError(error.message));
       return;
     }
+
+    posthog.capture("account_registration_created", {
+      confirmation_required: !data.session,
+    });
 
     // Instant session (email confirmation disabled) — AuthProvider hydrates the
     // profile, so we just close the modal.

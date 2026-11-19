@@ -14,6 +14,7 @@ import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { VenueReaction } from "@/hooks/useVenueDetail";
 import { FEED_BLUR_DARK } from "@/lib/feedImages";
 import { formatOsloLocation } from "@/lib/location";
+import posthog from "posthog-js";
 
 interface DishDetailPopupProps {
   dish: FoodPost | null;
@@ -81,6 +82,16 @@ export function DishDetailPopup({
     }
   };
 
+  const handleSave = () => {
+    if (!isSaved) {
+      posthog.capture("dish_saved", {
+        category: activeDish.category ?? "not_specified",
+        venue_id: activeDish.spot_id,
+      });
+    }
+    toggleSavePost(activeDish.id);
+  };
+
   return (
     <AnimatePresence>
       {isOpen && dish && (
@@ -117,7 +128,7 @@ export function DishDetailPopup({
               <div className="flex items-center gap-1.5 pointer-events-auto">
                 <button
                   type="button"
-                  onClick={() => toggleSavePost(activeDish.id)}
+                  onClick={handleSave}
                   aria-label={isSaved ? "Saved" : "Save dish"}
                   className={`w-8 h-8 rounded-full backdrop-blur-md flex items-center justify-center border transition-all active:scale-90 cursor-pointer ${
                     isSaved

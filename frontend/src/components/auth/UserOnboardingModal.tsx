@@ -15,6 +15,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
+import posthog from "posthog-js";
 import {
   ACCESSORIES_OPTIONS,
   CLOTHING_COLORS,
@@ -280,6 +281,7 @@ export function UserOnboardingModal() {
         onboarding_completed: true,
       });
     }
+    posthog.capture("onboarding_completed", { avatar_creation: "random" });
     setSaving(false);
     setDismissed(true);
     setIsPreview(false);
@@ -333,6 +335,10 @@ export function UserOnboardingModal() {
         onboarding_completed: true,
       });
     }
+    posthog.capture("onboarding_completed", {
+      avatar_creation: "custom",
+      profile_mode: isEditMode ? "edit" : "initial",
+    });
     setSaving(false);
     setDismissed(true);
     setIsPreview(false);

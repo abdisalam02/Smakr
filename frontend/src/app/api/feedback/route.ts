@@ -1,5 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
+import { SeverityNumber } from "@opentelemetry/api-logs";
 import { createClient } from "@supabase/supabase-js";
+import { posthogLogLogger, posthogLogProvider } from "@/instrumentation";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -30,6 +32,33 @@ function getAdminClient() {
   });
 }
 
+function recordFeedbackOutcome(
+  outcome: "created" | "rate_limited" | "validation_rejected" | "storage_unavailable" | "storage_failed",
+  severityNumber: SeverityNumber,
+  statusCode: number,
+  category?: string
+) {
+  try {
+    posthogLogLogger?.emit({
+      body: "feedback submission completed",
+      severityNumber,
+      attributes: {
+        event: "feedback_submission",
+        outcome,
+        status_code: statusCode,
+        ...(category ? { category } : {}),
+      },
+    });
+  } catch {
+    // Log delivery must never affect the feedback response.
+  }
+
+  const logProvider = posthogLogProvider;
+  if (logProvider) {
+    after(() => logProvider.forceFlush().catch(() => {}));
+  }
+}
+
 /**
  * Server-side beta feedback endpoint.
  *
@@ -45,6 +74,7 @@ export async function POST(req: NextRequest) {
     "127.0.0.1";
 
   if (!checkRateLimit(ip)) {
+    recordFeedbackOutcome("rate_limited", SeverityNumber.WARN, 429);
     return NextResponse.json(
       { success: false, error: "Too many feedback submissions. Please wait a few minutes." },
       { status: 429 }
@@ -55,6 +85,7 @@ export async function POST(req: NextRequest) {
   const feedback =
     typeof body.feedback === "string" ? body.feedback.trim().slice(0, 2000) : "";
   if (!feedback) {
+    recordFeedbackOutcome("validation_rejected", SeverityNumber.WARN, 400);
     return NextResponse.json(
       { success: false, error: "Feedback text is required." },
       { status: 400 }
@@ -72,6 +103,7 @@ export async function POST(req: NextRequest) {
 
   const supabase = getAdminClient();
   if (!supabase) {
+    recordFeedbackOutcome("storage_unavailable", SeverityNumber.ERROR, 503, category);
     return NextResponse.json(
       { success: false, error: "Feedback database is not configured." },
       { status: 503 }
@@ -113,11 +145,13 @@ export async function POST(req: NextRequest) {
 
   if (error) {
     console.error("[feedback] insert failed:", error.message);
+    recordFeedbackOutcome("storage_failed", SeverityNumber.ERROR, 500, category);
     return NextResponse.json(
       { success: false, error: "Could not save feedback right now." },
       { status: 500 }
     );
   }
 
+  recordFeedbackOutcome("created", SeverityNumber.INFO, 200, category);
   return NextResponse.json({ success: true });
 }

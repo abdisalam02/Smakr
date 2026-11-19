@@ -11,6 +11,7 @@ import {
 } from "@/lib/dishImageRemixConfig";
 import { ingestGooglePhotoToSupabase } from "@/lib/storage/ingestGooglePhoto";
 import { requireAdmin } from "@/app/api/admin/_auth";
+import { captureGeminiGeneration, createAiTraceId } from "@/lib/posthog-ai";
 
 export const runtime = "nodejs";
 
@@ -69,13 +70,15 @@ async function fetchSourceImageBuffer(rawUrl: string, origin: string): Promise<B
  */
 async function runMultimodalCameraShift(
   referenceJpegBase64: string,
-  synthesisPrompt: string
+  synthesisPrompt: string,
+  observability: { traceId: string; distinctId: string }
 ): Promise<{ imageBuffer: Buffer; visualReceipt: string; modelUsed: string }> {
   const modelsToTry = ["gemini-3.1-flash-lite-image", "gemini-2.5-flash-image"];
   let lastError = "Multimodal image transformation failed";
 
   for (const modelName of modelsToTry) {
     try {
+      const startedAt = Date.now();
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
       const res = await fetch(url, {
         method: "POST",
@@ -104,6 +107,16 @@ async function runMultimodalCameraShift(
       if (!res.ok) {
         const errBody = await res.text();
         lastError = `${modelName} returned ${res.status}: ${errBody.slice(0, 200)}`;
+        await captureGeminiGeneration({
+          ...observability,
+          spanName: "transform_dish_image",
+          model: modelName,
+          input: [{ role: "user", content: [{ type: "image", image: referenceJpegBase64 }, { type: "text", text: synthesisPrompt }] }],
+          temperature: 0.4,
+          latencyMs: Date.now() - startedAt,
+          status: res.status,
+          error: lastError,
+        });
         continue;
       }
 
@@ -125,6 +138,16 @@ async function runMultimodalCameraShift(
         const visualReceipt =
           textParts.filter(Boolean).join(" ") ||
           "Direct multimodal reference image locked (vessel, glaze, and ingredient geometry preserved).";
+        await captureGeminiGeneration({
+          ...observability,
+          spanName: "transform_dish_image",
+          model: modelName,
+          input: [{ role: "user", content: [{ type: "image", image: referenceJpegBase64 }, { type: "text", text: synthesisPrompt }] }],
+          output: visualReceipt,
+          temperature: 0.4,
+          latencyMs: Date.now() - startedAt,
+          status: res.status,
+        });
         return {
           imageBuffer,
           visualReceipt,
@@ -133,8 +156,28 @@ async function runMultimodalCameraShift(
       }
 
       lastError = `${modelName} returned no image inlineData.`;
+      await captureGeminiGeneration({
+        ...observability,
+        spanName: "transform_dish_image",
+        model: modelName,
+        input: [{ role: "user", content: [{ type: "image", image: referenceJpegBase64 }, { type: "text", text: synthesisPrompt }] }],
+        output: textParts.join(" "),
+        temperature: 0.4,
+        latencyMs: Date.now() - startedAt,
+        status: res.status,
+        error: lastError,
+      });
     } catch (err: any) {
       lastError = err.message || String(err);
+      await captureGeminiGeneration({
+        ...observability,
+        spanName: "transform_dish_image",
+        model: modelName,
+        input: [{ role: "user", content: [{ type: "image", image: referenceJpegBase64 }, { type: "text", text: synthesisPrompt }] }],
+        temperature: 0.4,
+        latencyMs: 0,
+        error: lastError,
+      });
     }
   }
 
@@ -200,7 +243,10 @@ export async function POST(req: NextRequest) {
 
     // 3. Run single-pass multimodal camera shift (Nano Banana Lite: gemini-3.1-flash-lite-image)
     const { imageBuffer: generatedRawBuffer, visualReceipt, modelUsed } =
-      await runMultimodalCameraShift(jpegBase64, synthesisPrompt);
+      await runMultimodalCameraShift(jpegBase64, synthesisPrompt, {
+        traceId: createAiTraceId(),
+        distinctId: auth.userId,
+      });
 
     // 4. Post-process via Sharp to exact 4:3 (1080x810) WebP @ quality 84
     const finalWebpBuffer = await sharp(generatedRawBuffer)
