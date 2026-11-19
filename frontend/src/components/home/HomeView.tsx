@@ -17,9 +17,9 @@ import { LocationPrompt } from "@/components/location/LocationPrompt";
 import { VenueDetailPane } from "@/components/venue/VenueDetailPane";
 import { SmakrFoodieInviteModal } from "@/components/auth/SmakrFoodieInviteModal";
 import {
+  BecomeAFoodieBanner,
   FoodieCalloutCard,
   LocalsPicksSwimlane,
-  MakrStudioTicketCard,
   resolveLocalsPicks,
 } from "@/components/food/FoodieCommunityBlocks";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
@@ -34,18 +34,13 @@ import type { FoodPost, Venue, WeeklyPick } from "@/types";
 import { isVisibleInFeed, getPopupUrgencyScore, isPopupVenue, resolvePopupLifecycle } from "@/lib/popupUtils";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import { resolveEntityTaxonomy } from "@/lib/taxonomy";
+import { slugifyVenue } from "@/lib/slugify";
+import { formatOsloLocation } from "@/lib/location";
+import { PopupBrandWordmark } from "@/components/food/PopupBrandWordmark";
+import { trackEvent } from "@/lib/analytics";
 
 function slugifySpotParam(value: string): string {
-  return value
-    .trim()
-    .replace(/[øØ]/g, "o")
-    .replace(/[åÅ]/g, "a")
-    .replace(/[æÆ]/g, "ae")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+  return slugifyVenue(value);
 }
 
 const OSLO_DATE_FORMATTER = new Intl.DateTimeFormat("sv-SE", {
@@ -163,9 +158,11 @@ let hasPlayedBootThisLoad = false;
 export function HomeView({
   initialData,
   bypassBoot = false,
+  initialSpotSlug,
 }: {
   initialData: HomeInitialData;
   bypassBoot?: boolean;
+  initialSpotSlug?: string;
 }) {
   // Original boot-over-background flow: PeepsBootScreen renders immediately on
   // frame 0 while the real page + MapLibre initialize underneath, and is
@@ -318,7 +315,7 @@ export function HomeView({
       }
     }
 
-    const spotParam = params.get("spot");
+    const spotParam = initialSpotSlug || params.get("spot");
     if (!spotParam || spotDeepLinkAppliedRef.current) return;
 
     const normalizedSpot = slugifySpotParam(spotParam);
@@ -346,8 +343,14 @@ export function HomeView({
       store.setIsVenueDetailModalOpen(true);
       store.setBottomSheetOpen(true);
       flyToSpot([foundVenue.longitude, foundVenue.latitude], foundVenue.id);
+      trackEvent("spot_opened", {
+        venue_id: foundVenue.id,
+        venue_name: foundVenue.name,
+        spot_type: foundVenue.spot_type || "restaurant",
+        source: "deep_link",
+      });
     }
-  }, [venues, foodPosts, flyToSpot]);
+  }, [venues, foodPosts, flyToSpot, initialSpotSlug]);
 
   // Memoized food posts filtering to prevent unnecessary re-renders
   const filteredPosts = useMemo(() => {
@@ -841,7 +844,7 @@ export function HomeView({
         className="rounded-[26px] bg-[#F2EDE4] border border-[#E6DFD3] p-4 flex flex-col justify-between aspect-[6/7]"
       >
         <div>
-          <p className="font-comico font-normal text-[15px] uppercase tracking-tight text-[#181615]">
+          <p className="font-display font-bold text-[16px] uppercase tracking-tight text-[#181615]">
             That&apos;s a wrap
           </p>
           <p className="text-[11px] text-[#181615]/65 leading-snug mt-1">
@@ -882,7 +885,7 @@ export function HomeView({
       return (
         <section className="col-span-full -mx-3 px-3 py-2 my-1">
           <div className="flex items-center justify-between gap-2 mb-2.5">
-            <h3 className="text-[19px] font-comico font-normal tracking-tight text-[#181615] dark:text-zinc-100 uppercase leading-tight flex items-center gap-1.5 min-w-0">
+            <h3 className="text-[19px] font-display font-bold tracking-tight text-[#181615] dark:text-zinc-100 uppercase leading-tight flex items-center gap-1.5 min-w-0">
               {title}
             </h3>
             <span className="text-[#E84A27] font-comico text-[11px] whitespace-nowrap shrink-0">
@@ -936,7 +939,7 @@ export function HomeView({
           return (
             <section className="col-span-full -mx-3 px-3 py-1.5">
               <div className="flex items-center justify-between gap-2 mb-2">
-                <h3 className="text-[19px] font-comico font-normal tracking-tight text-[#181615] dark:text-zinc-100 uppercase leading-tight flex items-center gap-1.5 min-w-0">
+                <h3 className="text-[19px] font-display font-bold tracking-tight text-[#181615] dark:text-zinc-100 uppercase leading-tight flex items-center gap-1.5 min-w-0">
                   <SmakrFoodIcon name="popup" className="w-5 h-5 shrink-0" />
                   <span>Oslo Pop-Up Radar</span>
                 </h3>
@@ -950,16 +953,22 @@ export function HomeView({
                 {rawPopupDishes.map((post) => {
                   const v = venueById.get(post.spot_id) ?? null;
                   const lifecycle = v ? resolvePopupLifecycle(v) : null;
-                  const neighborhood = v?.neighborhood && v.neighborhood !== "all"
-                    ? v.neighborhood.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-                    : post.spot_neighborhood || null;
+                  const loc = formatOsloLocation(v?.address || post.spot_address, v?.city);
+                  const neighborhood = (
+                    loc.neighborhood ||
+                    (v?.neighborhood && v.neighborhood !== "all" ? v.neighborhood : post.spot_neighborhood) ||
+                    ""
+                  )
+                    .replace(/_/g, " ")
+                    .replace(/\b\w/g, (c) => c.toUpperCase());
+
                   const statusParts: string[] = [];
                   if (lifecycle?.state === "live") {
-                    statusParts.push("Live Now");
-                    if (lifecycle.shortDateLabel) statusParts.push(lifecycle.shortDateLabel);
+                    const lbl = lifecycle.shortDateLabel || "Live Now";
+                    statusParts.push(/^live/i.test(lbl) ? lbl : `Live Now · ${lbl}`);
                   } else if (lifecycle?.state === "upcoming") {
-                    statusParts.push("Upcoming");
-                    if (lifecycle.shortDateLabel) statusParts.push(lifecycle.shortDateLabel);
+                    const lbl = lifecycle.shortDateLabel || "Upcoming";
+                    statusParts.push(/^upcoming/i.test(lbl) ? lbl : `Upcoming · ${lbl}`);
                   } else if (lifecycle?.state === "passed") {
                     statusParts.push(lifecycle.badgeLabel || "Next drop TBA");
                   } else if (lifecycle?.state === "tba") {
@@ -977,29 +986,41 @@ export function HomeView({
                   return (
                     <div
                       key={`popup-radar-${post.id}`}
-                      className="w-[225px] sm:w-[250px] shrink-0 snap-start flex flex-col items-center"
+                      className="w-[210px] sm:w-[225px] shrink-0 snap-start flex flex-col"
                     >
-                      <div className="w-full h-[250px] sm:h-[265px] overflow-hidden rounded-[24px]">
+                      <div className="w-full h-[205px] sm:h-[215px]">
                         <FoodPostCard
                           post={post}
                           index={0}
                           fillHeight
+                          cleanPhoto
+                          trackSource="popup_radar"
                           linkedVenue={v}
                         />
                       </div>
-                      <p className="mt-1.5 px-1 text-center font-comico font-bold text-[13px] sm:text-[14px] leading-tight text-[#E84A27] line-clamp-1 w-full">
-                        {v?.name || post.spot_name}
-                      </p>
-                      <p className="mt-0.5 px-1 text-center text-[11px] sm:text-[11.5px] font-medium text-stone-500 dark:text-zinc-400 leading-snug line-clamp-2 w-full">
-                        {metaLine}
-                      </p>
+                      <div className="mt-2 px-1 space-y-0.5">
+                        <div className="flex items-center justify-between gap-1.5 min-w-0">
+                          <PopupBrandWordmark venueName={v?.name || post.spot_name} size="sm" />
+                          {typeof post.price_nok === "number" && post.price_nok > 0 && (
+                            <span className="font-comico font-normal text-[11.5px] text-[#E84A27] shrink-0 whitespace-nowrap">
+                              {post.price_nok} kr
+                            </span>
+                          )}
+                        </div>
+                        <p className="font-display text-[12.5px] font-bold text-[#181615] dark:text-zinc-100 leading-snug line-clamp-1">
+                          {post.dish_name}
+                        </p>
+                        <p className="text-[11px] font-medium text-[#181615]/65 dark:text-zinc-400 leading-snug line-clamp-1">
+                          {metaLine}
+                        </p>
+                      </div>
                     </div>
                   );
                 })}
                 {extraPopupVenues.map((venue) => (
                   <div
                     key={`popup-radar-venue-${venue.id}`}
-                    className="w-[225px] sm:w-[250px] h-[250px] sm:h-[265px] shrink-0 snap-start overflow-hidden rounded-[24px]"
+                    className="w-[210px] sm:w-[225px] h-[205px] sm:h-[215px] shrink-0 snap-start overflow-hidden rounded-[22px]"
                   >
                     <PopupEventCard venue={venue} compact />
                   </div>
@@ -1029,34 +1050,65 @@ export function HomeView({
         {renderSwimlane(
           "🍵 Matcha, Coffee & Cocoa",
           "Ceremonial Uji whisks, hojicha, cocoa & signature pours worth crossing town for.",
-          matchaLane.map((post) => (
-            <div
-              key={`swimlane-matcha-${post.id}`}
-              className="w-[215px] h-[265px] shrink-0 snap-start overflow-hidden rounded-[24px]"
-            >
-              <FoodPostCard
-                post={post}
-                index={0}
-                compact
-                fillHeight
-                linkedVenue={venueById.get(post.spot_id) ?? null}
-              />
-            </div>
-          )),
+          matchaLane.map((post) => {
+            const v = venueById.get(post.spot_id) ?? null;
+            const loc = formatOsloLocation(v?.address || post.spot_address, v?.city);
+            const neighborhood = (
+              loc.neighborhood ||
+              (v?.neighborhood && v.neighborhood !== "all" ? v.neighborhood : post.spot_neighborhood) ||
+              "Oslo"
+            )
+              .replace(/_/g, " ")
+              .replace(/\b\w/g, (c) => c.toUpperCase());
+
+            return (
+              <div
+                key={`swimlane-matcha-${post.id}`}
+                className="w-[210px] shrink-0 snap-start flex flex-col"
+              >
+                <div className="w-full h-[205px]">
+                  <FoodPostCard
+                    post={post}
+                    index={0}
+                    compact
+                    fillHeight
+                    cleanPhoto
+                    hideTopTag
+                    trackSource="feed"
+                    linkedVenue={v}
+                  />
+                </div>
+                <div className="mt-2 px-1 space-y-0.5">
+                  <p className="font-display text-[13.5px] font-bold text-[#181615] dark:text-white leading-snug line-clamp-2">
+                    {post.dish_name}
+                  </p>
+                  <p className="text-[11px] font-semibold text-[#181615]/70 dark:text-zinc-300 truncate">
+                    <span>{v?.name || post.spot_name}</span>
+                    {typeof post.price_nok === "number" && post.price_nok > 0 && (
+                      <span className="text-[#E84A27] font-bold"> · {post.price_nok} kr</span>
+                    )}
+                  </p>
+                  <p className="text-[10.5px] font-medium text-[#181615]/55 dark:text-zinc-400 truncate">
+                    {neighborhood}
+                  </p>
+                </div>
+              </div>
+            );
+          }),
           matchaLane.length > 0
         )}
 
         {/* 7. Vertical 2-Col Grid — Row 3 */}
         {renderRow(rowBeforeKitchens)}
 
-        {/* 8. Makr Studio Ticket Card (visible mid-scroll before Kitchens) */}
-        <MakrStudioTicketCard />
+        {/* 8. Become a Foodie Banner (visible mid-scroll before Kitchens) */}
+        <BecomeAFoodieBanner />
 
         {/* 9. Horizontal Lane 4 — The Kitchens Behind the Dishes */}
         {renderSwimlane(
-          <span className="inline-flex items-center gap-1.5 font-comico font-normal">
+          <span className="inline-flex items-center gap-1.5 font-display font-bold">
             <Utensils className="w-5 h-5 shrink-0" />
-            <span className="font-comico font-normal">The Kitchens Behind the Dishes</span>
+            <span className="font-display font-bold">The Kitchens Behind the Dishes</span>
           </span>,
           "",
           kitchenLane.map((venue, idx) => {
@@ -1064,7 +1116,7 @@ export function HomeView({
             return (
               <div
                 key={`swimlane-kitchen-${venue.id}`}
-                className="w-[215px] h-[265px] shrink-0 snap-start overflow-hidden rounded-2xl"
+                className="w-[210px] shrink-0 snap-start"
               >
                 <FoodSpotCard
                   venue={venue}

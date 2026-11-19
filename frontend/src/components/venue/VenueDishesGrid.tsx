@@ -24,7 +24,7 @@ export function VenueDishesGrid({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <h4 className="font-comico font-normal text-[18px] tracking-tight uppercase text-[#181615] dark:text-white">
+        <h4 className="font-display font-bold text-[18px] tracking-tight uppercase text-[#181615] dark:text-white">
           {title}
         </h4>
         <span className="px-2 py-0.5 rounded-full bg-[#EFE9DF] dark:bg-white/10 text-[#181615] dark:text-white font-comico text-[11px] tabular-nums">
@@ -87,7 +87,7 @@ export function VenueDishesGrid({
                 )}
               </div>
 
-              <h5 className="font-comico font-normal text-[13px] leading-[1.2] uppercase text-[#181615] dark:text-white line-clamp-2 px-0.5 group-hover:text-[#E84A27] transition-colors">
+              <h5 className="font-display font-bold text-[13.5px] leading-[1.2] uppercase text-[#181615] dark:text-white line-clamp-2 px-0.5 group-hover:text-[#E84A27] transition-colors">
                 {dish.dish_name}
               </h5>
             </article>

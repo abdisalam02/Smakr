@@ -15,6 +15,7 @@ import {
 import { SmakrFoodIcon } from "@/components/food/FoodIcons";
 import { useCollapseOnFeedScroll } from "@/hooks/useCollapseOnFeedScroll";
 import { isVisibleInFeed } from "@/lib/popupUtils";
+import { trackEvent } from "@/lib/analytics";
 import type { DietaryTag } from "@/types";
 import {
   SlidersHorizontal,
@@ -517,6 +518,7 @@ export function FeedFilterBar({ compact = false, onExpandedChange }: FeedFilterB
     if (savedOnly) {
       handleSelectAll();
     } else {
+      trackEvent("filter_applied", { filter_type: "saved", value: true });
       useCityPulseStore.setState((state) => ({
         selectedGroup: null,
         selectedDishCategory: null,
@@ -537,6 +539,7 @@ export function FeedFilterBar({ compact = false, onExpandedChange }: FeedFilterB
     if (selectedGroup === groupId) {
       handleSelectAll();
     } else {
+      trackEvent("filter_applied", { filter_type: "group", value: groupId });
       // Single atomic Zustand update (eliminates 6-dispatch filter click stutter)
       useCityPulseStore.setState((state) => ({
         selectedSpotKind: null,
@@ -560,6 +563,7 @@ export function FeedFilterBar({ compact = false, onExpandedChange }: FeedFilterB
         feedCategory: "all",
       });
     } else {
+      trackEvent("filter_applied", { filter_type: "category", value: childCat });
       useCityPulseStore.setState({
         selectedDishCategory: childCat,
         feedCategory: "all",
@@ -572,6 +576,7 @@ export function FeedFilterBar({ compact = false, onExpandedChange }: FeedFilterB
     if (selectedSpotKind === kind) {
       handleSelectAll();
     } else {
+      trackEvent("filter_applied", { filter_type: "spot_kind", value: kind });
       useCityPulseStore.setState((state) => ({
         selectedGroup: null,
         selectedDishCategory: null,
@@ -721,34 +726,34 @@ export function FeedFilterBar({ compact = false, onExpandedChange }: FeedFilterB
           );
         })()}
 
-        {/* Saved (N) Pill (Visible only when user has saved spots) */}
-        {savedPostIds.size > 0 && (
-          <button
-            key="filter-pill-saved"
-            type="button"
-            onClick={handleSelectSaved}
-            className="relative shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border border-zinc-200/70 dark:border-white/10 select-none active:scale-95 cursor-pointer bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 transition-colors duration-200"
+        {/* Saved Quick-Access Pill (Always visible next to All / Pop-ups; shows count when > 0) */}
+        <button
+          key="filter-pill-saved"
+          type="button"
+          onClick={handleSelectSaved}
+          className="relative shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border border-zinc-200/70 dark:border-white/10 select-none active:scale-95 cursor-pointer bg-white/80 dark:bg-white/5 text-zinc-700 dark:text-zinc-200 transition-colors duration-200"
+        >
+          {savedOnly && (
+            <motion.div
+              layoutId="feed-filter-active-pill"
+              className="absolute inset-0 rounded-full bg-[#e84a27] shadow-xs"
+              transition={{ type: "spring", stiffness: 320, damping: 28, mass: 0.8 }}
+            />
+          )}
+          <span
+            className={`relative z-10 flex items-center gap-1.5 transition-colors duration-200 ${
+              savedOnly ? "text-white font-bold" : "font-medium text-zinc-700 dark:text-zinc-200"
+            }`}
           >
-            {savedOnly && (
-              <motion.div
-                layoutId="feed-filter-active-pill"
-                className="absolute inset-0 rounded-full bg-[#e84a27] shadow-xs"
-                transition={{ type: "spring", stiffness: 320, damping: 28, mass: 0.8 }}
-              />
-            )}
-            <span
-              className={`relative z-10 flex items-center gap-1.5 transition-colors duration-200 ${
-                savedOnly ? "text-white font-bold" : "font-medium text-zinc-700 dark:text-zinc-200"
-              }`}
-            >
-              <Bookmark className={`w-3.5 h-3.5 ${savedOnly ? "fill-white" : ""}`} />
-              <span>Saved</span>
+            <Bookmark className={`w-3.5 h-3.5 ${savedOnly ? "fill-white" : ""}`} />
+            <span>Saved</span>
+            {savedPostIds.size > 0 && (
               <span className={`text-[10px] font-mono ${savedOnly ? "text-white/90" : "text-zinc-400"}`}>
                 ({savedPostIds.size})
               </span>
-            </span>
-          </button>
-        )}
+            )}
+          </span>
+        </button>
 
         {/* Pop-ups Quick Pill (Only if popup items exist) */}
         {venues.some((v) => v.spot_type === "popup" || v.spot_type === "pop_up") && (() => {

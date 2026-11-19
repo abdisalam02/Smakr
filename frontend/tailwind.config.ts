@@ -11,6 +11,8 @@ const config: Config = {
     extend: {
       fontFamily: {
         comico: ["var(--font-comico)", "sans-serif"],
+        pally: ["var(--font-pally)", "var(--font-jakarta)", "sans-serif"],
+        display: ["var(--font-pally)", "var(--font-jakarta)", "sans-serif"],
       },
       colors: {
         smakr: {

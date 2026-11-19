@@ -3,10 +3,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, ArrowUpRight, Plus, MapPin } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Plus, MapPin, Bookmark } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { SmakrFoodIcon } from "@/components/food/FoodIcons";
 import { getPeepSpriteDataUri } from "@/lib/bustCrowdPeep";
+import { trackEvent } from "@/lib/analytics";
+import { formatOsloLocation } from "@/lib/location";
 import type { FoodPost, Venue } from "@/types";
 
 /** Clean, verified Open Peeps sprite indices (zero flagged faces/limbs; includes pointing & mug poses). */
@@ -52,12 +54,12 @@ export function FoodieCalloutCard() {
         <div className="flex-1 min-w-0">
           <div className="inline-flex items-center gap-1.5 mb-0.5">
             <SmakrFoodIcon name="street_food" className="w-3.5 h-3.5 shrink-0" />
-            <span className="text-[11px] font-comico tracking-[0.12em] uppercase text-[#E84A27]">
+            <span className="text-[11px] font-display font-bold tracking-[0.12em] uppercase text-[#E84A27]">
               OSLO FOODIES
             </span>
           </div>
 
-          <h3 className="font-comico font-normal text-[17px] leading-tight uppercase text-[#181615]">
+          <h3 className="font-display font-bold text-[17.5px] leading-tight uppercase text-[#181615]">
             {currentUser ? "GOT AN OSLO BITE TO DROP?" : "GOT ELITE TASTE IN OSLO?"}
           </h3>
           <p className="text-[11.5px] leading-snug text-[#181615]/70 mt-0.5 line-clamp-2">
@@ -298,6 +300,10 @@ export function LocalsPicksSwimlane({
 }: LocalsPicksSwimlaneProps) {
   const selectVenueById = useCityPulseStore((s) => s.selectVenueById);
   const setIsVenueDetailModalOpen = useCityPulseStore((s) => s.setIsVenueDetailModalOpen);
+  const openCreateDish = useCityPulseStore((s) => s.openCreateDish);
+  const currentUser = useCityPulseStore((s) => s.currentUser);
+  const savedPostIds = useCityPulseStore((s) => s.savedPostIds);
+  const toggleSavePost = useCityPulseStore((s) => s.toggleSavePost);
   const sprites = useCleanPeepSprites(CLEAN_LOCAL_SPRITES);
   const [brokenIds, setBrokenIds] = useState<Record<string, boolean>>({});
 
@@ -311,7 +317,7 @@ export function LocalsPicksSwimlane({
   return (
     <section className="col-span-full -mx-3 px-3 py-2 my-1">
       <div className="flex items-center justify-between gap-2 mb-2.5">
-        <h3 className="text-[19px] font-comico font-normal tracking-tight text-[#181615] uppercase leading-tight flex items-center gap-1.5 min-w-0">
+        <h3 className="text-[19px] font-display font-bold tracking-tight text-[#181615] uppercase leading-tight flex items-center gap-1.5 min-w-0">
           <span className="text-[#E84A27]">✦</span>
           <span>LOCALS&apos; PICKS</span>
         </h3>
@@ -322,82 +328,186 @@ export function LocalsPicksSwimlane({
 
       <div className="overflow-x-auto snap-x snap-mandatory flex gap-3 pb-1 no-scrollbar">
         {localPickCards.map(({ post, venue, handle, quote, spriteIdx, customAvatarUrl }) => {
-          const spriteUri = customAvatarUrl || sprites[spriteIdx];
+          let spriteUri = customAvatarUrl || sprites[spriteIdx];
+          if (spriteUri && spriteUri.startsWith("data:image/svg+xml")) {
+            try {
+              const idx = spriteUri.indexOf(",");
+              if (idx > 0) {
+                const payload = spriteUri.slice(idx + 1);
+                let rawSvg = spriteUri.includes(";base64,") ? atob(payload) : decodeURIComponent(payload);
+                rawSvg = rawSvg
+                  .replace(/<mask[^>]*id="viewboxMask"[^>]*>[\s\S]*?<\/mask>/gi, "")
+                  .replace(/\s*mask="url\(#viewboxMask\)"/gi, "")
+                  .replace(/<rect[^>]*?(?:width="100%"|width="360")[^>]*?>/gi, "");
+                spriteUri = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(rawSvg)}`;
+              }
+            } catch {
+              // Keep original spriteUri if SVG decoding fails
+            }
+          }
           const isImgBroken = Boolean(brokenIds[post.id]) || !post.image_url;
+          const isSaved = savedPostIds.has(post.id);
+          const loc = formatOsloLocation(venue?.address || post.spot_address, venue?.city);
+          const neighborhood = (loc.neighborhood || venue?.neighborhood || post.spot_neighborhood || "Oslo")
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, (c) => c.toUpperCase());
 
           return (
             <article
               key={`locals-pick-${post.id}`}
               onClick={() => {
                 if (post.spot_id) {
+                  trackEvent("spot_opened", {
+                    venue_id: post.spot_id,
+                    venue_name: venue?.name || post.spot_name,
+                    spot_type: venue?.spot_type || post.spot_type || "restaurant",
+                    source: "locals_picks",
+                  });
                   selectVenueById(post.spot_id);
                   setIsVenueDetailModalOpen(true);
                 }
               }}
-              className="w-[215px] h-[265px] shrink-0 snap-start rounded-[24px] overflow-hidden relative bg-[#181615] border border-white/75 shadow-sm cursor-pointer group"
+              className="w-[210px] shrink-0 snap-start flex flex-col cursor-pointer group select-none"
             >
-              {isImgBroken ? (
-                <div className="w-full h-full bg-[#241E1C] flex items-center justify-center">
-                  <SmakrFoodIcon name={post.category || "street_food"} className="w-12 h-12" />
-                </div>
-              ) : (
-                <Image
-                  src={post.image_url}
-                  alt=""
-                  fill
-                  sizes="220px"
-                  onError={() =>
-                    setBrokenIds((prev) => ({ ...prev, [post.id]: true }))
-                  }
-                  className="object-cover text-transparent group-hover:scale-105 transition-transform duration-300"
-                />
-              )}
+              {/* Clean Photo Card Above with floating bottom-left mascot */}
+              <div className="relative w-full h-[205px] rounded-[22px] overflow-hidden bg-[#EDE6DA] border border-black/[0.08] shadow-xs group-hover:shadow-md transition-shadow">
+                {isImgBroken ? (
+                  <div className="w-full h-full bg-[#EFE9DE] flex items-center justify-center">
+                    <SmakrFoodIcon name={post.category || "street_food"} className="w-12 h-12" />
+                  </div>
+                ) : (
+                  <Image
+                    src={post.image_url}
+                    alt={post.dish_name}
+                    fill
+                    sizes="215px"
+                    onError={() =>
+                      setBrokenIds((prev) => ({ ...prev, [post.id]: true }))
+                    }
+                    className="object-cover text-transparent group-hover:scale-105 transition-transform duration-300"
+                  />
+                )}
 
-              <div className="absolute inset-0 bg-gradient-to-t from-[#181615]/95 via-[#181615]/45 to-black/15" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent pointer-events-none" />
 
-              {/* Top-left foodie @handle pill */}
-              <span className="absolute top-2.5 left-2.5 z-10 px-2 py-0.5 rounded-full bg-[#181615]/75 text-[#FAF7F2] border border-white/15 text-[10px] font-bold tracking-tight max-w-[125px] truncate">
-                {handle}
-              </span>
-
-              {post.price_nok ? (
-                <span className="absolute top-2.5 right-2.5 z-10 px-2.5 py-0.5 rounded-full bg-[#E84A27] text-white font-comico font-normal text-[11px] shadow-xs">
-                  {post.price_nok} kr
-                </span>
-              ) : null}
-
-              {/* Bottom-left quote + dish title & spot */}
-              <div className="absolute bottom-3 left-3 right-[62px] z-10 text-[#FAF7F2]">
-                <p className="text-[10.5px] italic text-[#FDEA6B] leading-snug line-clamp-1 mb-1 drop-shadow-xs">
-                  &ldquo;{quote}&rdquo;
-                </p>
-                <h4 className="font-comico font-normal text-[16px] leading-[1.12] uppercase line-clamp-2 drop-shadow-sm">
-                  {post.dish_name}
-                </h4>
-                <p className="mt-1 flex items-center gap-1 text-[10.5px] font-semibold text-[#FAF7F2]/85 truncate">
-                  <MapPin className="w-3 h-3 text-[#E84A27] shrink-0" />
-                  <span className="truncate">
-                    {post.spot_name} · {venue?.neighborhood || post.spot_neighborhood || "Oslo"}
+                {/* Top bar: @handle pill + bookmark */}
+                <div className="absolute top-2.5 inset-x-2.5 z-10 flex items-center justify-between gap-1.5">
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#FAF7F2]/95 text-[#181615] border border-black/10 text-[10.5px] font-bold shadow-sm truncate max-w-[140px]">
+                    {handle}
                   </span>
-                </p>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const nextSaved = !isSaved;
+                      toggleSavePost(post.id);
+                      trackEvent("spot_saved", {
+                        venue_id: post.spot_id,
+                        venue_name: venue?.name || post.spot_name,
+                        saved: nextSaved,
+                      });
+                    }}
+                    aria-label={isSaved ? "Saved" : "Save dish"}
+                    className={`p-1.5 rounded-full border transition-all active:scale-95 cursor-pointer ${
+                      isSaved
+                        ? "bg-white text-zinc-900 border-white shadow-xs"
+                        : "bg-black/45 text-white border-white/15 hover:bg-black/65"
+                    }`}
+                  >
+                    <Bookmark className={`w-3.5 h-3.5 ${isSaved ? "fill-zinc-900" : ""}`} />
+                  </button>
+                </div>
+
+                {/* Bottom row inside photo: floating Open Peeps mascot (no ring) + dish title */}
+                <div className="absolute bottom-0 inset-x-0 z-10 px-2.5 pb-2 flex items-end gap-2">
+                  {spriteUri && (
+                    <div className="w-[46px] h-[52px] shrink-0 overflow-visible pointer-events-none">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={spriteUri}
+                        alt=""
+                        className={`w-full h-full object-contain object-bottom drop-shadow-[0_2px_6px_rgba(0,0,0,0.55)] ${
+                          customAvatarUrl ? "" : "scale-x-100"
+                        }`}
+                      />
+                    </div>
+                  )}
+                  <h4 className="flex-1 min-w-0 font-display font-bold text-[14.5px] leading-[1.12] uppercase text-[#FAF7F2] line-clamp-2 drop-shadow-sm pb-0.5">
+                    {post.dish_name}
+                  </h4>
+                </div>
               </div>
 
-              {/* Bottom-right flipped sprite / user avatar looking/pointing left at the title */}
-              {spriteUri && (
-                <div className="absolute bottom-0 right-1 z-10 w-[58px] h-[74px] pointer-events-none select-none overflow-hidden">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={spriteUri}
-                    alt=""
-                    className={`w-full h-full object-contain object-bottom drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)] ${
-                      customAvatarUrl ? "" : "-scale-x-100"
-                    }`}
-                  />
-                </div>
-              )}
+              {/* Clean Warm Oat Outer Footer Below Card (spot + single price + quote) */}
+              <div className="mt-2 px-1 space-y-1">
+                <p className="text-[11.5px] font-bold text-[#181615] dark:text-zinc-100 leading-snug truncate">
+                  <span>{post.spot_name} · {neighborhood}</span>
+                  {post.price_nok ? (
+                    <span className="text-[#E84A27]"> · {post.price_nok} kr</span>
+                  ) : null}
+                </p>
+
+                <p className="text-[11px] leading-snug text-[#181615]/80 dark:text-zinc-300 line-clamp-2">
+                  &ldquo;{quote}&rdquo;
+                </p>
+              </div>
             </article>
           );
         })}
+
+        {/* End-of-lane Foodie Invite Card matching exact outer-footer card height */}
+        <article
+          onClick={openCreateDish}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              openCreateDish();
+            }
+          }}
+          className="w-[210px] shrink-0 snap-start flex flex-col cursor-pointer group select-none"
+        >
+          <div className="h-[205px] rounded-[22px] bg-[#F3EDE2] border border-[#181615]/15 group-hover:border-[#E84A27]/50 p-4 flex flex-col justify-between transition-colors">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#E84A27]">
+                Oslo Foodies
+              </span>
+              <h4 className="mt-1 font-display font-bold text-[18px] leading-[1.08] uppercase text-[#181615]">
+                Your Avatar Here
+              </h4>
+              <p className="mt-1.5 text-[11px] leading-snug text-[#181615]/70">
+                {currentUser
+                  ? "Log an Oslo favourite. Approved picks go live with your avatar."
+                  : "Build your avatar and drop your favourite Oslo dish."}
+              </p>
+            </div>
+
+            <div className="flex items-end -space-x-2">
+              {CLEAN_LOCAL_SPRITES.slice(0, 3).map((idx) => (
+                <div key={idx} className="w-9 h-10 shrink-0 overflow-visible">
+                  {sprites[idx] ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={sprites[idx]}
+                      alt=""
+                      className="w-full h-full object-contain object-bottom"
+                    />
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-2 px-0.5">
+            <span className="w-full inline-flex items-center justify-center gap-1.5 rounded-full bg-[#E84A27] group-hover:bg-[#d63e1c] text-[#FAF7F2] font-bold text-[11.5px] py-2 px-3 shadow-xs transition-colors">
+              <Plus className="w-3.5 h-3.5" />
+              <span>Drop a Pick</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </span>
+          </div>
+        </article>
       </div>
     </section>
   );
@@ -410,12 +520,12 @@ export function MakrStudioTicketCard() {
         <div className="space-y-1 min-w-0">
           <div className="inline-flex items-center gap-1.5">
             <SmakrFoodIcon name="popup" className="w-4 h-4 shrink-0" />
-            <span className="text-[11px] font-comico tracking-[0.1em] uppercase text-[#E84A27]">
+            <span className="text-[11px] font-display font-bold tracking-[0.1em] uppercase text-[#E84A27]">
               MAKR STUDIO · NO LOGIN REQUIRED
             </span>
           </div>
 
-          <h3 className="font-comico font-normal text-[20px] leading-tight uppercase tracking-wide text-[#181615]">
+          <h3 className="font-display font-bold text-[20px] leading-tight uppercase tracking-tight text-[#181615]">
             RUN A SPOT OR POP-UP IN OSLO?
           </h3>
           <p className="text-[12px] text-[#181615]/70 leading-snug">
@@ -430,6 +540,69 @@ export function MakrStudioTicketCard() {
           <span>Open Makr Studio</span>
           <ArrowUpRight className="w-4 h-4 text-[#E84A27]" />
         </Link>
+      </div>
+    </section>
+  );
+}
+
+export function BecomeAFoodieBanner() {
+  const currentUser = useCityPulseStore((s) => s.currentUser);
+  const setIsFoodieInviteOpen = useCityPulseStore((s) => s.setIsFoodieInviteOpen);
+  const openCreateDish = useCityPulseStore((s) => s.openCreateDish);
+  const sprites = useCleanPeepSprites([37, 55, 71]);
+
+  return (
+    <section className="col-span-full rounded-2xl bg-[#F3EDE2] text-[#181615] border border-[#181615]/12 px-4 py-4 shadow-2xs my-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="space-y-1 min-w-0">
+          <div className="inline-flex items-center gap-1.5">
+            <SmakrFoodIcon name="street_food" className="w-4 h-4 shrink-0" />
+            <span className="text-[11px] font-display font-bold tracking-[0.12em] uppercase text-[#E84A27]">
+              SMAKR FOODIE CLUB
+            </span>
+          </div>
+
+          <h3 className="font-display font-bold text-[19px] leading-tight uppercase tracking-tight text-[#181615]">
+            {currentUser ? "SHARE YOUR NEXT OSLO FIND" : "BECOME A FOODIE IN OSLO"}
+          </h3>
+          <p className="text-[12px] text-[#181615]/75 leading-snug">
+            {currentUser
+              ? "Drop a favourite dish and your mascot goes live in Locals' Picks."
+              : "Build your mascot, save your Oslo hit-list, and get featured in Locals' Picks."}
+          </p>
+        </div>
+
+        <div className="shrink-0 flex items-center justify-between sm:justify-end gap-3">
+          <div className="flex items-end -space-x-2.5">
+            {[37, 55, 71].map((idx) => (
+              <div key={idx} className="w-9 h-10 shrink-0 overflow-visible">
+                {sprites[idx] ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={sprites[idx]}
+                    alt=""
+                    className="w-full h-full object-contain object-bottom drop-shadow-[0_2px_4px_rgba(24,22,21,0.16)]"
+                  />
+                ) : null}
+              </div>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (currentUser) {
+                openCreateDish();
+              } else {
+                setIsFoodieInviteOpen(true);
+              }
+            }}
+            className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[#E84A27] hover:bg-[#d63e1c] active:scale-[0.98] text-[#FAF7F2] font-bold text-[12px] px-4 py-2.5 shadow-xs transition-all cursor-pointer whitespace-nowrap"
+          >
+            <span>{currentUser ? "Drop a Pick" : "Become a Foodie"}</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
     </section>
   );

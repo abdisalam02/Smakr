@@ -2230,10 +2230,10 @@ export function MapRadarView({ isBooting = false }: { isBooting?: boolean } = {}
 
             <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 6px;">
               <span style="
-                font-family: var(--font-comico, sans-serif);
-                font-size: 14.5px;
+                font-family: var(--font-pally), var(--font-jakarta), sans-serif;
+                font-size: 15px;
                 color: #181615;
-                font-weight: bold;
+                font-weight: 700;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;

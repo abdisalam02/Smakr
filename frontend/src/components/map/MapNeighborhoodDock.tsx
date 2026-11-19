@@ -14,8 +14,10 @@ import {
   resolvePopupLifecycle,
 } from "@/lib/popupUtils";
 import { SmakrFoodIcon } from "@/components/food/FoodIcons";
+import { PopupBrandWordmark } from "@/components/food/PopupBrandWordmark";
 import { VenuePhotoStrip, useVenueHeroGallery } from "@/components/venue/VenuePhotoStrip";
 import { endInstantVenueSheet } from "@/lib/venueMorph";
+import { trackEvent } from "@/lib/analytics";
 import type { Venue, VenueDetail, FoodPost } from "@/types";
 
 type VenueWithDishes = Venue & {
@@ -210,9 +212,18 @@ const DockCarouselCard = React.memo(function DockCarouselCard({
         </div>
 
         <div className="flex flex-col justify-end min-w-0">
-          <h4 className="font-comico font-normal text-[16px] leading-tight text-white drop-shadow-xs uppercase truncate">
-            {venue.name}
-          </h4>
+          {isPopup ? (
+            <PopupBrandWordmark
+              venueName={venue.name}
+              size="sm"
+              tone="dark"
+              className="drop-shadow-xs"
+            />
+          ) : (
+            <h4 className="font-display font-bold text-[16px] leading-tight text-white drop-shadow-xs uppercase truncate">
+              {venue.name}
+            </h4>
+          )}
           <div className="flex items-center gap-1 text-[#FAF7F2]/90 text-[11px] truncate mt-0.5">
             <MapPin className="w-3 h-3 text-[#E84A27] shrink-0" />
             <span className="truncate">{locationLine}</span>
@@ -414,9 +425,18 @@ const SpotlightCard = React.memo(function SpotlightCard({
         {/* Bottom editorial stack */}
         <div className="absolute inset-x-0 bottom-0 z-10 p-4 pt-0 flex flex-col justify-end">
           <div data-slot-title="true" className="will-change-transform">
-            <h4 className="font-comico font-normal text-[21px] leading-tight text-white drop-shadow-xs truncate">
-              {venue.name}
-            </h4>
+            {isPopup ? (
+              <PopupBrandWordmark
+                venueName={venue.name}
+                size="md"
+                tone="dark"
+                className="drop-shadow-xs"
+              />
+            ) : (
+              <h4 className="font-display font-bold text-[21px] leading-tight text-white drop-shadow-xs truncate">
+                {venue.name}
+              </h4>
+            )}
             <p className="text-white/80 text-[11.5px] flex items-center gap-1 truncate mt-0.5">
               <MapPin className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
               <span className="truncate">{locationLine}</span>
@@ -620,9 +640,18 @@ const SpotlightCard = React.memo(function SpotlightCard({
         {/* Bottom dark hue: title + Pop-up tag + Last pop-up date + address inline with white Details ↗ */}
         <div className="absolute inset-x-0 bottom-0 z-10 px-4 pb-3.5 pt-2 flex flex-col justify-end gap-1">
           <div data-slot-title="true" className="will-change-transform">
-            <h4 className="font-comico font-bold tracking-wide text-[18px] sm:text-[19px] leading-snug text-white drop-shadow-xs line-clamp-1">
-              {venue.name}
-            </h4>
+            {isPopup ? (
+              <PopupBrandWordmark
+                venueName={venue.name}
+                size="md"
+                tone="dark"
+                className="drop-shadow-xs"
+              />
+            ) : (
+              <h4 className="font-display font-bold tracking-tight text-[18.5px] sm:text-[19.5px] leading-snug text-white drop-shadow-xs line-clamp-1">
+                {venue.name}
+              </h4>
+            )}
             {isPopup && (
               <>
                 <p className="inline-flex items-center gap-1 text-[11px] font-bold text-white/90 mt-0.5">
@@ -1375,6 +1404,12 @@ export const MapNeighborhoodDock = React.memo(function MapNeighborhoodDock({
     }
     (window as unknown as { __smakrMap?: { stop?: () => void } }).__smakrMap?.stop?.();
     endInstantVenueSheet();
+    trackEvent("spot_opened", {
+      venue_id: activeSpotlight.id,
+      venue_name: activeSpotlight.name,
+      spot_type: activeSpotlight.spot_type || "restaurant",
+      source: "map",
+    });
     selectVenueById(activeSpotlight.id);
     window.setTimeout(() => {
       setIsVenueDetailModalOpen(true);
@@ -2050,13 +2085,13 @@ export const MapNeighborhoodDock = React.memo(function MapNeighborhoodDock({
                 setIsFilterDeckOpen(false);
                 handleSelectHood(allOsloHood);
               }}
-              className={`h-8 px-3.5 rounded-full font-comico text-[11px] whitespace-nowrap transition-all select-none shrink-0 cursor-pointer border ${
+              className={`h-8 px-3.5 rounded-full font-display font-bold text-[11.5px] whitespace-nowrap transition-all select-none shrink-0 cursor-pointer border ${
                 activeHoodId === allOsloHood.id
                   ? "bg-[#E84A27] text-white border-[#E84A27] shadow-md"
-                  : "bg-[#FAF7F2]/92 backdrop-blur-sm text-[#181615] border-[#181615]/12 shadow-sm hover:bg-[#FAF7F2]"
+                  : "bg-[#FAF7F2]/95 backdrop-blur-sm text-[#181615] border-[#181615]/12 shadow-sm hover:bg-[#FAF7F2]"
               }`}
             >
-              <span className="font-comico font-normal tracking-wide">{allOsloHood.label}</span>
+              <span className="font-display font-bold tracking-wide">{allOsloHood.label}</span>
             </button>
 
             <button
@@ -2064,10 +2099,10 @@ export const MapNeighborhoodDock = React.memo(function MapNeighborhoodDock({
               onClick={() => setIsFilterDeckOpen((prev) => !prev)}
               aria-label="Filter map spots"
               aria-expanded={isFilterDeckOpen}
-              className={`h-8 px-2.5 rounded-full font-comico text-[11px] flex items-center justify-center gap-1 transition-all select-none shrink-0 cursor-pointer border ${
+              className={`h-8 px-2.5 rounded-full font-display font-bold text-[11.5px] flex items-center justify-center gap-1 transition-all select-none shrink-0 cursor-pointer border ${
                 isFilterDeckOpen || hasActiveFilter
                   ? "bg-[#181615] text-white border-[#181615] shadow-md"
-                  : "bg-[#FAF7F2]/92 backdrop-blur-sm text-[#181615] border-[#181615]/12 shadow-sm hover:bg-[#FAF7F2]"
+                  : "bg-[#FAF7F2]/95 backdrop-blur-sm text-[#181615] border-[#181615]/12 shadow-sm hover:bg-[#FAF7F2]"
               }`}
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -2088,13 +2123,13 @@ export const MapNeighborhoodDock = React.memo(function MapNeighborhoodDock({
                     setIsFilterDeckOpen(false);
                     handleSelectHood(hood);
                   }}
-                  className={`h-8 px-3.5 rounded-full font-comico text-[11px] whitespace-nowrap transition-all select-none shrink-0 cursor-pointer border ${
+                  className={`h-8 px-3.5 rounded-full font-display font-bold text-[11.5px] whitespace-nowrap transition-all select-none shrink-0 cursor-pointer border ${
                     isActive
                       ? "bg-[#E84A27] text-white border-[#E84A27] shadow-md"
                       : "bg-[#FAF7F2]/90 backdrop-blur-sm text-[#181615] border-[#181615]/12 shadow-sm hover:bg-[#FAF7F2]"
                   }`}
                 >
-                  <span className="font-comico font-normal tracking-wide">{hood.label}</span>
+                  <span className="font-display font-bold tracking-wide">{hood.label}</span>
                 </button>
               );
             })}
@@ -2151,7 +2186,7 @@ export const MapNeighborhoodDock = React.memo(function MapNeighborhoodDock({
                 {/* Bottom connected pill: filter name */}
                 <div className="absolute top-[72px] left-0 right-0 z-10 h-[31px] px-3 flex items-center justify-center">
                   <span
-                    className={`font-comico font-normal text-[11px] leading-none uppercase truncate ${
+                    className={`font-display font-bold text-[11px] leading-none uppercase truncate ${
                       opt.active
                         ? "text-white drop-shadow-[0_1px_2px_rgba(24,22,21,0.25)]"
                         : "text-[#181615] drop-shadow-[0_1px_2px_rgba(255,255,255,0.85)]"
@@ -2235,7 +2270,7 @@ export const MapNeighborhoodDock = React.memo(function MapNeighborhoodDock({
                       />
                       <rect x="11" y="1" width="4" height="12" fill="#FAF7F2" />
                     </svg>
-                    <p className="font-comico font-normal text-[12px] leading-snug text-[#181615] line-clamp-2">
+                    <p className="font-display font-semibold text-[11.5px] leading-[1.28] text-[#181615] line-clamp-2">
                       {weeklyBubble}
                     </p>
                   </div>

@@ -20,6 +20,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
+import { PopupBrandWordmark } from "@/components/food/PopupBrandWordmark";
 import { isInstantVenueSheet, getVenueMorphImage } from "@/lib/venueMorph";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "motion/react";
 import { useVenueDetail } from "@/hooks/useVenueDetail";
@@ -34,6 +35,8 @@ import {
   getPopupUpcomingDropDate,
   downloadPopupCalendarIcs,
 } from "@/lib/popupUtils";
+import { slugifyVenue } from "@/lib/slugify";
+import { trackEvent } from "@/lib/analytics";
 import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import { formatOsloLocation, formatVenueLocationLine } from "@/lib/location";
 import { ExpandableReviewText } from "./ExpandableReviewText";
@@ -103,12 +106,17 @@ export function VenueBottomSheet() {
 
   const handleShare = async () => {
     if (!selectedVenue) return;
-    const url = `${window.location.origin}/?spot=${selectedVenue.id}`;
+    const slug = slugifyVenue(selectedVenue.name) || selectedVenue.id;
+    const url = `${window.location.origin}/spot/${slug}`;
     const shareData = {
       title: `${selectedVenue.name} · Smakr Oslo`,
       text: `Check out ${selectedVenue.name} on Smakr`,
       url,
     };
+    trackEvent("spot_shared", {
+      venue_id: selectedVenue.id,
+      venue_name: selectedVenue.name,
+    });
     try {
       if (typeof navigator !== "undefined" && navigator.share) {
         await navigator.share(shareData);
@@ -202,6 +210,11 @@ export function VenueBottomSheet() {
   const handleAddToCalendar = () => {
     if (!selectedVenue) return;
     if (downloadPopupCalendarIcs(selectedVenue)) {
+      trackEvent("calendar_added", {
+        venue_id: selectedVenue.id,
+        venue_name: selectedVenue.name,
+        drop_date: upcomingDropDate ? upcomingDropDate.toISOString().slice(0, 10) : null,
+      });
       showToast("Drop added to calendar download (.ics)");
     }
   };
@@ -671,17 +684,26 @@ export function VenueBottomSheet() {
                         )}
                       </div>
 
-                      <h3
-                        className={`font-comico text-[#FAF7F2] tracking-tight leading-[1.15] line-clamp-2 max-w-full drop-shadow-[0_1px_4px_rgba(0,0,0,0.22)] ${
-                          selectedVenue.name.length > 24
-                            ? "text-[18px] sm:text-2xl"
-                            : selectedVenue.name.length > 16
-                            ? "text-[20px] sm:text-2xl"
-                            : "text-2xl sm:text-3xl"
-                        }`}
-                      >
-                        {selectedVenue.name}
-                      </h3>
+                      {isPopup ? (
+                        <PopupBrandWordmark
+                          venueName={selectedVenue.name}
+                          size="lg"
+                          tone="dark"
+                          className="drop-shadow-[0_1px_4px_rgba(0,0,0,0.28)]"
+                        />
+                      ) : (
+                        <h3
+                          className={`font-display font-bold text-[#FAF7F2] tracking-tight leading-[1.15] line-clamp-2 max-w-full drop-shadow-[0_1px_4px_rgba(0,0,0,0.22)] ${
+                            selectedVenue.name.length > 24
+                              ? "text-[18px] sm:text-2xl"
+                              : selectedVenue.name.length > 16
+                              ? "text-[20px] sm:text-2xl"
+                              : "text-2xl sm:text-3xl"
+                          }`}
+                        >
+                          {selectedVenue.name}
+                        </h3>
+                      )}
                       <p className="text-xs sm:text-[13px] text-[#FAF7F2]/85 font-medium flex items-center gap-1.5 truncate max-w-full">
                         <MapPin className="w-3.5 h-3.5 text-[#e84a27] shrink-0" />
                         <span className="truncate">
@@ -824,6 +846,12 @@ export function VenueBottomSheet() {
                               href={googleMapsUrl}
                               target="_blank"
                               rel="noopener noreferrer"
+                              onClick={() =>
+                                trackEvent("directions_clicked", {
+                                  venue_id: selectedVenue.id,
+                                  venue_name: selectedVenue.name,
+                                })
+                              }
                               className="px-3 py-1 rounded-full bg-[#EFE9DF] hover:bg-[#E5DDD0] dark:bg-white/10 text-[#181615] dark:text-white text-[11px] font-bold flex items-center gap-1 shrink-0 transition-colors"
                             >
                               <span>Directions</span>
@@ -885,10 +913,10 @@ export function VenueBottomSheet() {
                     {/* Story & Culinary Concept directly beneath the floating handle */}
                     {selectedVenue.description && (
                       <div className="px-1 py-0.5 space-y-1.5">
-                        <div className="text-[10.5px] font-comico uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                        <div className="text-[10.5px] font-display font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
                           <span>✦ STORY</span>
                         </div>
-                        <p className="font-comico text-[13.5px] sm:text-[15px] text-[#181615]/90 dark:text-zinc-100 leading-relaxed whitespace-pre-line font-normal">
+                        <p className="text-[13.5px] sm:text-[14.5px] text-[#181615]/90 dark:text-zinc-100 leading-relaxed whitespace-pre-line font-normal">
                           {selectedVenue.description}
                         </p>
                         {popupMeta?.guest_chef && (
@@ -1007,6 +1035,12 @@ export function VenueBottomSheet() {
                       href={googleMapsUrl}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={() =>
+                        trackEvent("directions_clicked", {
+                          venue_id: selectedVenue.id,
+                          venue_name: selectedVenue.name,
+                        })
+                      }
                       className="flex items-center justify-center gap-1.5 py-2.5 rounded-2xl bg-white hover:bg-zinc-50 dark:bg-[#1E1C1A] dark:hover:bg-zinc-800 border border-[#181615]/10 dark:border-white/10 text-zinc-900 dark:text-white font-semibold transition-colors shadow-2xs"
                     >
                       <span>Directions</span>
@@ -1034,7 +1068,7 @@ export function VenueBottomSheet() {
                         </h4>
                       </div>
                       <p
-                        className={`font-comico text-xs sm:text-[13px] text-zinc-800 dark:text-zinc-200 leading-relaxed ${
+                        className={`text-xs sm:text-[13.5px] text-zinc-800 dark:text-zinc-200 leading-relaxed ${
                           !isStoryExpanded ? "line-clamp-3" : ""
                         }`}
                       >
@@ -1176,7 +1210,7 @@ export function VenueBottomSheet() {
                   {/* Verified Diner Reviews — Honest Empty Prompt when 0 reviews */}
                   <div className="space-y-2 pt-2 border-t border-[#181615]/8 dark:border-white/10">
                     <div className="flex items-center justify-between pt-1">
-                      <h4 className="font-comico font-normal text-[17px] tracking-tight uppercase text-[#181615] dark:text-white">
+                      <h4 className="font-display font-bold text-[17px] tracking-tight uppercase text-[#181615] dark:text-white">
                         Reviews
                       </h4>
                       {reviews.length > 0 && (

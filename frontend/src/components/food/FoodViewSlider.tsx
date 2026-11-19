@@ -4,6 +4,7 @@ import React, { useRef } from "react";
 import { Utensils, Compass, Plus } from "lucide-react";
 import { motion } from "motion/react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
+import { trackEvent } from "@/lib/analytics";
 
 interface FoodViewSliderProps {
   dishesCount: number;
@@ -38,6 +39,9 @@ export function FoodViewSlider({
   };
 
   const handleSelectFeed = () => {
+    if (viewMode === "map") {
+      trackEvent("tab_switched", { from: "map", to: "feed" });
+    }
     setViewMode("split");
     setFeedMode("food");
     if (mobileSheet === "peek") {
@@ -46,6 +50,9 @@ export function FoodViewSlider({
   };
 
   const handleSelectMap = () => {
+    if (viewMode !== "map") {
+      trackEvent("tab_switched", { from: "feed", to: "map" });
+    }
     setViewMode("map");
     setMobileSheet("peek");
   };

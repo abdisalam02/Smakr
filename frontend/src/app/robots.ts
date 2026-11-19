@@ -11,6 +11,7 @@ export default function robots(): MetadataRoute.Robots {
         "/ad-reel",
         "/boot-lab",
         "/email-preview",
+        "/font-lab",
         "/food-icon-studio",
         "/mascot-studio",
         "/studio",

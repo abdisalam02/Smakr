@@ -8,6 +8,26 @@ interface SmakrWeeklyPickSplitBannerProps {
   className?: string;
 }
 
+const MAX_WEEKLY_BUBBLE_CHARS = 58;
+
+function clampWeeklyBubble(raw: string, maxChars = MAX_WEEKLY_BUBBLE_CHARS): string {
+  const cleaned = raw.trim().replace(/\s+/g, " ");
+  if (!cleaned) return "Catch U WAN' SAM? this Sunday Nov 22 at Tullinløkka";
+  if (cleaned.length <= maxChars) return cleaned;
+  // Drop trailing dash/em-dash clauses first if that brings it cleanly inside the limit.
+  const firstClause = cleaned.split(/\s+[—–]\s+/)[0].trim();
+  if (firstClause.length > 0 && firstClause.length <= maxChars) {
+    return firstClause;
+  }
+  const sliced = firstClause.slice(0, maxChars);
+  const lastSpace = sliced.lastIndexOf(" ");
+  const boundary = lastSpace >= Math.floor(maxChars * 0.6) ? sliced.slice(0, lastSpace) : sliced;
+  // Never end awkwardly on a dangling preposition/conjunction after clamping.
+  return boundary
+    .replace(/\b(for|at|with|and|or|the|to|in|on|of|from)\s*$/i, "")
+    .replace(/[.,;:\-–—\s]+$/, "");
+}
+
 export function SmakrWeeklyPickSplitBanner({
   className = "",
 }: SmakrWeeklyPickSplitBannerProps) {
@@ -21,13 +41,16 @@ export function SmakrWeeklyPickSplitBanner({
   const venue = venues.find((v) => v.id === weeklyPick.venue_id) ?? null;
   const venueName = venue?.name ?? "Em Oi!";
   const locationInfo = formatOsloLocation(venue?.address, venue?.city);
-  const neighborhood =
-    venue?.neighborhood || locationInfo.neighborhood || "Grønland";
+  const rawNeighborhood = locationInfo.neighborhood || venue?.neighborhood || "Grønland";
+  const neighborhood = rawNeighborhood
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
   const dishName = weeklyPick.dish_name || "COCONUT COFFEE";
 
-  const note =
+  const note = clampWeeklyBubble(
     weeklyPick.speech_bubble ||
-    "Order the warm 🥥 coconut coffee with ube/egg foam — rich, velvety & worth the walk.";
+      "Catch U WAN' SAM? this Sunday Nov 22 at Tullinløkka"
+  );
 
   const handleCheckSpot = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -41,10 +64,10 @@ export function SmakrWeeklyPickSplitBanner({
 
   return (
     <div className={`col-span-full ${className}`}>
-      {/* Centred section title above the card */}
+      {/* Centred section kicker above the card (bold clean display sans, no star) */}
       <div className="flex items-center justify-center mb-1.5">
-        <span className="text-[12px] font-comico tracking-[0.12em] uppercase text-[#E84A27]">
-          ✦ Smakr Weekly Pick
+        <span className="font-display text-[11px] font-bold tracking-[0.12em] uppercase text-[#E84A27]">
+          Smakr Weekly Pick
         </span>
       </div>
 
@@ -64,26 +87,31 @@ export function SmakrWeeklyPickSplitBanner({
 
         {/* ── Speech bubble + title + location ── */}
         <div className="flex-1 min-w-0">
-          <div className="relative rounded-2xl rounded-bl-md bg-white/75 dark:bg-white/10 border border-[#E6DFD3] dark:border-white/15 px-3 py-2 shadow-xs">
-            <p className="text-[11px] italic text-[#181615]/80 dark:text-zinc-300 line-clamp-2 leading-snug font-sans">
+          <div className="relative rounded-2xl rounded-bl-md bg-white/85 dark:bg-white/10 border border-[#E6DFD3] dark:border-white/15 px-3 py-2 shadow-xs">
+            <p className="font-display text-[11.5px] font-semibold text-[#181615]/90 dark:text-zinc-200 leading-[1.28]">
               &ldquo;{note}&rdquo;
             </p>
             {/* Tail pointing back at the mascot */}
             <span
               aria-hidden="true"
-              className="absolute -left-[5px] bottom-1.5 h-2.5 w-2.5 rotate-45 bg-white/75 border-l border-b border-[#E6DFD3] dark:border-white/15"
+              className="absolute -left-[5px] bottom-1.5 h-2.5 w-2.5 rotate-45 bg-white/85 border-l border-b border-[#E6DFD3] dark:border-white/15"
             />
           </div>
 
-          <h3 className="mt-2 font-comico font-normal text-[16px] sm:text-[17px] leading-[1.15] text-[#181615] dark:text-white uppercase line-clamp-2">
+          <h3 className="mt-2 font-display font-bold text-[16.5px] sm:text-[18px] leading-[1.15] text-[#181615] dark:text-white uppercase line-clamp-2">
             {dishName}
           </h3>
-          <p className="text-[11.5px] font-semibold text-[#181615]/75 dark:text-zinc-300 leading-snug line-clamp-2 mt-0.5">
-            <span>📍 {venueName} · {neighborhood}</span>
+          <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[11.5px] font-semibold text-[#181615]/75 dark:text-zinc-300 leading-snug mt-0.5">
+            <span className="whitespace-nowrap">📍 {venueName}</span>
+            <span className="text-[#181615]/40 dark:text-zinc-500">·</span>
+            <span className="whitespace-nowrap">{neighborhood}</span>
             {typeof weeklyPick.price_nok === "number" && weeklyPick.price_nok > 0 && (
-              <span className="text-[#E84A27] font-bold"> · {weeklyPick.price_nok} kr</span>
+              <>
+                <span className="text-[#181615]/40 dark:text-zinc-500">·</span>
+                <span className="text-[#E84A27] font-bold whitespace-nowrap">{weeklyPick.price_nok} kr</span>
+              </>
             )}
-          </p>
+          </div>
         </div>
 
         {/* ── Dish photo (price badge removed) ── */}

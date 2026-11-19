@@ -1031,12 +1031,13 @@ export default function AdminControlCenterPage() {
 
                     {dispatchPanel === "bubble" && (
                       <div className="p-3.5 rounded-2xl bg-white border border-[#EAE5DC] space-y-3">
-                        <Field label="Mascot Speech Bubble Note *">
+                        <Field label={`Mascot Speech Bubble Note * (${speech.length}/58)`}>
                           <textarea
                             value={speech}
-                            onChange={(e) => setSpeech(e.target.value)}
+                            maxLength={58}
+                            onChange={(e) => setSpeech(e.target.value.slice(0, 58))}
                             rows={2}
-                            placeholder="Skip the queue at Koie — order the Spicy Miso before 17:30!"
+                            placeholder="Catch U WAN' SAM? this Sunday Nov 22 at Tullinløkka"
                             className={`${inputCls} resize-none`}
                           />
                         </Field>

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
+import { PopupBrandWordmark } from "@/components/food/PopupBrandWordmark";
 import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowLeft,
@@ -370,9 +371,15 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
             </div>
           )}
 
-          <h1 className="font-comico text-2xl xl:text-3xl text-[var(--foreground)] leading-tight">
-            {venue.name}
-          </h1>
+          {isPopup ? (
+            <h1 className="leading-tight">
+              <PopupBrandWordmark venueName={venue.name} size="lg" tone="light" />
+            </h1>
+          ) : (
+            <h1 className="font-display font-bold text-2xl xl:text-3xl text-[var(--foreground)] leading-tight">
+              {venue.name}
+            </h1>
+          )}
 
           <div className="flex items-center gap-1.5 flex-wrap">
             {isPopup ? (
@@ -505,10 +512,10 @@ export function VenueDetailPane({ venue, onBack }: VenueDetailPaneProps) {
 
               {venue.description && (
                 <div className="pt-1 space-y-1">
-                  <div className="text-[10px] font-comico uppercase tracking-wider text-zinc-400">
+                  <div className="text-[10px] font-display font-bold uppercase tracking-wider text-zinc-400">
                     ✦ STORY
                   </div>
-                  <p className="font-comico text-[14px] sm:text-[15px] text-[#181615]/90 dark:text-zinc-200 leading-relaxed font-normal">
+                  <p className="text-[13.5px] sm:text-[14.5px] text-[#181615]/90 dark:text-zinc-200 leading-relaxed font-normal">
                     {venue.description}
                   </p>
                 </div>

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Bookmark, Flame, Calendar, Clock, ExternalLink } from "lucide-react";
 import type { FoodPost, Venue } from "@/types";
 import { getPopupStatus, getPopupMeta, resolvePopupLifecycle } from "@/lib/popupUtils";
+import { PopupBrandWordmark } from "@/components/food/PopupBrandWordmark";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 
 export interface PopupEventCardProps {
@@ -167,9 +168,12 @@ export const PopupEventCard = React.memo(function PopupEventCard({
           ===================================================================== */}
       <div className={`relative z-10 ${compact ? "space-y-1.5 pt-1.5" : "space-y-2 pt-2"}`}>
         <div>
-          <h3 className={`font-comico font-normal ${compact ? "text-[15px]" : "text-xl sm:text-2xl"} text-white tracking-tight leading-tight line-clamp-2 drop-shadow-md`}>
-            {title}
-          </h3>
+          <PopupBrandWordmark
+            venueName={title}
+            size={compact ? "sm" : "lg"}
+            tone="dark"
+            className="drop-shadow-md"
+          />
         </div>
 
         {/* Inactive hint or Drop details indicator */}

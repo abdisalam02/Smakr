@@ -114,13 +114,17 @@ button, a, [role="button"] {
   touch-action: manipulation;
 }
 
-body, input, textarea, button, select, p, span, h1, h2, h3, h4, h5, h6, a, div {
+body, input, textarea, button, select {
   font-family: var(--font-body, var(--font-main));
 }
 
 /* Strictly reserve font-comico for logo branding & expressive price tags */
 .font-brand, .font-comico {
   font-family: var(--font-comico), cursive, sans-serif !important;
+}
+
+.font-display, .font-pally {
+  font-family: var(--font-pally), var(--font-jakarta), sans-serif;
 }
 
 .font-mono {

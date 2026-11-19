@@ -224,14 +224,20 @@ export function EditWeeklyDropModal({ isOpen, onClose }: EditWeeklyDropModalProp
 
           {/* Mascot Speech Bubble Hot-Take */}
           <div>
-            <label className="text-[11px] font-semibold text-zinc-300 mb-1 block">
-              Mascot Speech Bubble Note
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[11px] font-semibold text-zinc-300">
+                Mascot Speech Bubble Note
+              </label>
+              <span className="text-[10px] font-mono text-zinc-400">
+                {speechBubble.length}/58
+              </span>
+            </div>
             <textarea
-              rows={3}
+              rows={2}
+              maxLength={58}
               value={speechBubble}
-              onChange={(e) => setSpeechBubble(e.target.value)}
-              placeholder="Rich, 16-hour broth that warms your soul on rainy Oslo afternoons."
+              onChange={(e) => setSpeechBubble(e.target.value.slice(0, 58))}
+              placeholder="Catch U WAN' SAM? this Sunday Nov 22 at Tullinløkka"
               className="w-full text-xs px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white focus:outline-hidden focus:border-[#e84a27]"
             />
           </div>

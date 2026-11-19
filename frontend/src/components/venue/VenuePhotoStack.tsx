@@ -93,7 +93,7 @@ export function VenuePhotoStack({ venue, extraPhotos = [] }: VenuePhotoStackProp
   return (
     <div className="space-y-2.5">
       <div className="flex items-center justify-between gap-2">
-        <h4 className="font-comico font-normal text-[17px] tracking-tight uppercase text-[#181615] dark:text-white flex items-center gap-1.5">
+        <h4 className="font-display font-bold text-[17px] tracking-tight uppercase text-[#181615] dark:text-white flex items-center gap-1.5">
           <Images className="w-4 h-4 text-[#E84A27]" />
           <span>Place Photos</span>
         </h4>

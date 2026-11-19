@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Plus_Jakarta_Sans } from "next/font/google";
-import { comico } from "@/lib/fonts";
+import { comico, pally } from "@/lib/fonts";
 import { Header } from "@/components/ui/Header";
 import { MascotConfigHydrator } from "@/components/avatar/MascotConfigHydrator";
 import { AppStateHydrator } from "@/components/state/AppStateHydrator";
@@ -9,6 +9,7 @@ import { AuthProvider } from "@/components/auth/AuthProvider";
 import { fetchCurrentUserServer } from "@/lib/supabase/serverData";
 import { GlobalModalsHost } from "@/components/ui/GlobalModalsHost";
 import { ToastBanner } from "@/components/ui/ToastBanner";
+import { PostHogProvider } from "@/components/providers/PostHogProvider";
 
 // The root layout reads the auth session (cookies) to SSR the header, so every
 // route is rendered on demand — declare it explicitly to avoid static-generation
@@ -65,7 +66,7 @@ export default async function RootLayout({
     <html
       lang="en"
       data-theme="oat-espresso"
-      className={`${comico.variable} ${plusJakarta.variable}`}
+      className={`${comico.variable} ${pally.variable} ${plusJakarta.variable}`}
       suppressHydrationWarning
     >
       <head>
@@ -80,16 +81,18 @@ export default async function RootLayout({
         )}
       </head>
       <body className="min-h-dvh flex flex-col antialiased selection:bg-[var(--accent)] selection:text-white transition-colors duration-300">
-        <AuthProvider initialUser={initialUser}>
-          <Header initialUser={initialUser} />
-          <main className="flex-1 flex flex-col relative overflow-x-hidden w-full max-w-[100vw]">
-            {children}
-          </main>
-          <MascotConfigHydrator />
-          <AppStateHydrator />
-          <GlobalModalsHost />
-          <ToastBanner />
-        </AuthProvider>
+        <PostHogProvider>
+          <AuthProvider initialUser={initialUser}>
+            <Header initialUser={initialUser} />
+            <main className="flex-1 flex flex-col relative overflow-x-hidden w-full max-w-[100vw]">
+              {children}
+            </main>
+            <MascotConfigHydrator />
+            <AppStateHydrator />
+            <GlobalModalsHost />
+            <ToastBanner />
+          </AuthProvider>
+        </PostHogProvider>
       </body>
     </html>
   );

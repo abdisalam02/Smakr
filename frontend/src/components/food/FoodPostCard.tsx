@@ -19,6 +19,8 @@ import { getPopupStatus, getPopupMeta, resolvePopupLifecycle } from "@/lib/popup
 import { resolveVenueDisplayBadge } from "@/lib/taxonomy";
 import { formatOsloLocation } from "@/lib/location";
 import { getDistanceInMeters, formatDistance } from "@/lib/math";
+import { slugifyVenue } from "@/lib/slugify";
+import { trackEvent, type SpotOpenSource } from "@/lib/analytics";
 
 const LOADED_FEED_IMAGES = new Set<string>();
 const PRESET_AVATAR_CACHE = new Map<OpenPeepsPresetId, string>();
@@ -44,6 +46,12 @@ interface FoodPostCardProps {
   fillHeight?: boolean;
   /** Show spot_name even on pop-up cards (used in filtered views outside the Pop-Up Dishes swimlane). */
   showSpotName?: boolean;
+  /** Unified horizontal-slider photo mode: light frame/tag, bookmark top-right, zero bottom scrim/overlay. */
+  cleanPhoto?: boolean;
+  /** Hide top-left category/type tag badge (used when lane title already communicates the category). */
+  hideTopTag?: boolean;
+  /** Optional analytics source label when tapped. */
+  trackSource?: SpotOpenSource;
 }
 
 /**
@@ -60,6 +68,9 @@ export const FoodPostCard = React.memo(function FoodPostCard({
   compact = false,
   fillHeight = false,
   showSpotName = false,
+  cleanPhoto = false,
+  hideTopTag = false,
+  trackSource,
 }: FoodPostCardProps) {
   // Atomic selectors: each returns a stable primitive / reference, so only the
   // cards whose own state changed re-render.
@@ -299,18 +310,28 @@ export const FoodPostCard = React.memo(function FoodPostCard({
   const handleToggleSave = () => {
     const nextSaved = !isSaved;
     toggleSavePost(post.id);
+    trackEvent("spot_saved", {
+      venue_id: post.spot_id,
+      venue_name: linkedVenue?.name || post.spot_name,
+      saved: nextSaved,
+    });
     const uid = useCityPulseStore.getState().currentUser?.id;
     if (uid) void setPostSave(uid, post.id, nextSaved);
   };
 
   const handleShareDish = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const url = `${window.location.origin}/?spot=${encodeURIComponent(post.spot_id)}&dish=${encodeURIComponent(post.dish_name)}`;
+    const slug = slugifyVenue(linkedVenue?.name || post.spot_name) || post.spot_id;
+    const url = `${window.location.origin}/spot/${slug}`;
     const shareData = {
       title: `${post.dish_name} · ${post.spot_name}`,
       text: `Spise her? 👀 ${post.dish_name} at ${post.spot_name} on Smakr Oslo`,
       url,
     };
+    trackEvent("spot_shared", {
+      venue_id: post.spot_id,
+      venue_name: linkedVenue?.name || post.spot_name,
+    });
     try {
       if (typeof navigator !== "undefined" && navigator.share) {
         await navigator.share(shareData);
@@ -335,6 +356,12 @@ export const FoodPostCard = React.memo(function FoodPostCard({
   const handleOpenDetails = (e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (post.spot_id) {
+      trackEvent("spot_opened", {
+        venue_id: post.spot_id,
+        venue_name: linkedVenue?.name || post.spot_name,
+        spot_type: linkedVenue?.spot_type || post.spot_type || "restaurant",
+        source: trackSource || (isPopup ? "popup_radar" : "feed"),
+      });
       selectVenueById(post.spot_id);
       setIsVenueDetailModalOpen(true);
     }
@@ -480,18 +507,24 @@ export const FoodPostCard = React.memo(function FoodPostCard({
     <article
       style={{ contain: "layout paint style" }}
       onClick={handleCardClick}
-      className={`group relative w-full rounded-[26px] overflow-hidden border bg-[#181615] shadow-md transition-[box-shadow,transform] duration-200 md:hover:-translate-y-0.5 hover:shadow-xl cursor-pointer select-none ${
+      className={`group relative w-full ${
+        cleanPhoto ? "rounded-[22px] bg-[#EDE6DA]" : "rounded-[26px] bg-[#181615]"
+      } overflow-hidden border shadow-sm transition-[box-shadow,transform] duration-200 md:hover:-translate-y-0.5 hover:shadow-xl cursor-pointer select-none ${
         fillHeight ? "h-full" : ""
       } ${
-        isPopup
-          ? "border border-white/20 shadow-[0_8px_24px_rgba(24,22,21,0.16)]"
+        cleanPhoto
+          ? isSelected
+            ? "ring-2 ring-[#E84A27] border-[#E84A27]/40"
+            : "border-black/[0.08] dark:border-white/10"
+          : isPopup
+          ? "border-black/[0.08] dark:border-white/10 shadow-[0_8px_24px_rgba(24,22,21,0.14)]"
           : isSelected
           ? "ring-2 ring-white border-white/80"
           : "border-black/[0.08] dark:border-white/10"
-      } ${""}`}
+      }`}
     >
       {/* Full-Bleed Photography Hero Container */}
-      <div className={`relative w-full overflow-hidden bg-[#E8E0D2] dark:bg-[#24201D] ${
+      <div className={`relative w-full overflow-hidden bg-[#EDE6DA] dark:bg-[#24201D] ${
         fillHeight
           ? "h-full min-h-0"
           : isGridMode
@@ -541,26 +574,33 @@ export const FoodPostCard = React.memo(function FoodPostCard({
           }`}
         />
 
-        {/* Seamless Dark Gradient Overlay covering the bottom 60% */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/55 to-transparent pointer-events-none" />
+        {/* Seamless Dark Gradient Overlay (omitted on cleanPhoto horizontal cards where footer sits outside) */}
+        {!cleanPhoto && (
+          <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/55 to-transparent pointer-events-none" />
+        )}
 
         {/* Floating Top Badges (Over Image) */}
-        <div className="absolute top-3 inset-x-3 flex items-start justify-between gap-2 z-10 pointer-events-auto">
-          {/* Top-Left: Pop-up / Price / Kitchen Badge */}
-          <div className="flex flex-wrap items-center gap-1.5 max-w-[75%]">
-            {/* Pop-up Icon + Spot Type (What they serve) in Top-Left */}
-            {isPopup && (
+        <div className="absolute top-2.5 inset-x-2.5 flex items-start justify-between gap-2 z-10 pointer-events-auto">
+          {/* Top-Left: Pop-up / Category / Price / Kitchen Badge */}
+          <div className="flex flex-wrap items-center gap-1.5 max-w-[76%]">
+            {/* Light translucent Pop-Up / Category pill (high-contrast cream backdrop) */}
+            {!hideTopTag && isPopup && (
               <span
-                className="px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1.5 bg-[#181615]/90 text-white border border-white/20 text-[10.5px] font-bold whitespace-nowrap"
+                className="px-2.5 py-0.5 rounded-full shadow-sm flex items-center gap-1 bg-[#FAF7F2]/95 text-[#181615] border border-black/10 text-[10px] font-bold whitespace-nowrap"
                 title="Pop-Up"
               >
-                <SmakrFoodIcon name="popup" className="w-3.5 h-3.5 shrink-0" />
+                <SmakrFoodIcon name="popup" className="w-3 h-3 shrink-0" />
                 <span>{popupSpotType || "Pop-Up"}</span>
               </span>
             )}
+            {!hideTopTag && cleanPhoto && !isPopup && post.category && post.category !== "all" && (
+              <span className="px-2.5 py-0.5 rounded-full shadow-sm flex items-center gap-1 bg-[#FAF7F2]/95 text-[#181615] border border-black/10 text-[10px] font-bold capitalize whitespace-nowrap">
+                <span>{post.category.replace(/_/g, " ")}</span>
+              </span>
+            )}
 
-            {/* Price pill whenever price_nok is available (regular & pop-up dishes) */}
-            {typeof post.price_nok === "number" && post.price_nok > 0 ? (
+            {/* Price pill on photo (omitted when cleanPhoto puts price cleanly below in outer footer) */}
+            {!cleanPhoto && (typeof post.price_nok === "number" && post.price_nok > 0 ? (
               <span
                 className={`font-comico font-bold tracking-tight bg-[#e84a27] text-white rounded-full shadow-md rotate-[-1deg] whitespace-nowrap ${
                   isGridMode ? "px-2.5 py-1 text-[11px]" : "px-3 py-1 text-xs"
@@ -588,42 +628,42 @@ export const FoodPostCard = React.memo(function FoodPostCard({
               >
                 {post.price_tier || linkedVenue?.price_level}
               </span>
-            ) : null}
+            ) : null)}
 
             {/* Live Kitchen Batch Badges (1-column mode only to keep 2-col grid clean) */}
-            {!isGridMode && activeKitchenStatus === "fresh_batch" && (
+            {!cleanPhoto && !isGridMode && activeKitchenStatus === "fresh_batch" && (
               <span className="bg-[#e84a27] text-white font-bold px-2.5 py-1 rounded-full text-[11px] shadow-md flex items-center gap-1 animate-pulse whitespace-nowrap">
                 <span>🔥</span>
                 <span>Fresh Batch</span>
               </span>
             )}
-            {!isGridMode && activeKitchenStatus === "low_stock" && (
+            {!cleanPhoto && !isGridMode && activeKitchenStatus === "low_stock" && (
               <span className="bg-amber-500 text-zinc-950 font-bold px-2.5 py-1 rounded-full text-[11px] shadow-md flex items-center gap-1 whitespace-nowrap">
                 <span>⚡</span>
                 <span>Few Left Today</span>
               </span>
             )}
-            {!isGridMode && activeKitchenStatus === "sold_out" && (
+            {!cleanPhoto && !isGridMode && activeKitchenStatus === "sold_out" && (
               <span className="bg-zinc-900/90 text-zinc-300 font-bold px-2.5 py-1 rounded-full text-[11px] border border-white/20 flex items-center gap-1 whitespace-nowrap">
                 <span>❌</span>
                 <span>Sold Out Today</span>
               </span>
             )}
 
-            {!isPopup && !isGridMode && popupStatus.status === "active" && (
+            {!cleanPhoto && !isPopup && !isGridMode && popupStatus.status === "active" && (
               <span className="bg-[#E84A27] text-white font-bold px-2.5 py-1 rounded-full text-[11px] shadow-sm flex items-center gap-1 whitespace-nowrap">
                 <Flame className="w-3 h-3 fill-white" />
                 <span>{popupStatus.label}</span>
               </span>
             )}
-            {!isPopup && !isGridMode && popupStatus.status === "grace" && (
+            {!cleanPhoto && !isPopup && !isGridMode && popupStatus.status === "grace" && (
               <span className="bg-zinc-800/90 text-zinc-300 font-medium px-2.5 py-1 rounded-full text-[11px] border border-white/10 whitespace-nowrap">
                 {popupStatus.label}
               </span>
             )}
 
             {/* Food Truck Badge */}
-            {!isGridMode && linkedVenue?.spot_type === "food_truck" && (
+            {!cleanPhoto && !isGridMode && linkedVenue?.spot_type === "food_truck" && (
               <span className="bg-emerald-600 text-white font-bold px-2.5 py-1 rounded-full text-[11px] shadow-md flex items-center gap-1 whitespace-nowrap">
                 <span>🚚</span>
                 <span>Food Truck</span>
@@ -631,9 +671,9 @@ export const FoodPostCard = React.memo(function FoodPostCard({
             )}
           </div>
 
-          {/* Top-Right: Admin Quick Edit + Rating pill (or Pop-Up Price Pill) + Save bookmark */}
+          {/* Top-Right: Admin Quick Edit + Rating pill + Save bookmark */}
           <div className="flex items-center gap-1.5 shrink-0">
-            {isViewerAdmin && !isGridMode && (
+            {isViewerAdmin && !isGridMode && !cleanPhoto && (
               <button
                 type="button"
                 onClick={(e) => {
@@ -649,8 +689,8 @@ export const FoodPostCard = React.memo(function FoodPostCard({
               </button>
             )}
 
-            {/* Regular Spot Rating Pill (hidden in 2-col grid mode to de-clutter top row) */}
-            {!isPopup && !isGridMode && (
+            {/* Regular Spot Rating Pill (hidden in 2-col grid mode, pop-up & cleanPhoto) */}
+            {!cleanPhoto && !isPopup && !isGridMode && (
               <span className="bg-black/75 text-amber-400 font-bold px-2.5 py-1 rounded-full text-xs border border-white/10 flex items-center gap-1 shadow-xs whitespace-nowrap">
                 <span className="text-amber-400 text-xs">★</span>
                 <span className="font-sans font-bold text-white text-xs tracking-tight">{displayRating}</span>
@@ -665,7 +705,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
               className={`p-1.5 rounded-full border transition-all active:scale-95 ${
                 isSaved
                   ? "bg-white text-zinc-900 border-white shadow-xs"
-                  : "bg-black/60 text-white border-white/10 hover:bg-black/80"
+                  : "bg-black/45 text-white border-white/15 hover:bg-black/70"
               }`}
               title={isSaved ? "Saved" : "Save dish"}
               aria-label={isSaved ? "Saved" : "Save dish"}
@@ -684,16 +724,17 @@ export const FoodPostCard = React.memo(function FoodPostCard({
           </div>
         )}
 
-        {/* Overlaid Editorial Content (Bottom Half of Photo) */}
+        {/* Overlaid Editorial Content (Omitted when cleanPhoto moves caption cleanly outside below card) */}
+        {!cleanPhoto && (
         <div className={`absolute bottom-0 inset-x-0 z-10 flex flex-col justify-end pointer-events-auto ${
           isGridMode ? "p-2.5 sm:p-3" : "p-3.5 sm:p-4"
         }`}>
-          {/* Dish Title (Comico brand font — 2 lines allowed in grid & pop-up modes) */}
-          <h3 className={`font-comico font-normal tracking-wide leading-[1.15] text-white capitalize drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] ${
+          {/* Dish Title (Pally 700 display sibling — 2 lines allowed in grid & pop-up modes) */}
+          <h3 className={`font-display font-bold tracking-tight leading-[1.15] text-white capitalize drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] ${
             isGridMode
-              ? "text-[14px] sm:text-[15px] line-clamp-2"
+              ? "text-[14.5px] sm:text-[15.5px] line-clamp-2"
               : isPopup
-              ? "text-[18px] sm:text-[20px] line-clamp-2"
+              ? "text-[18.5px] sm:text-[20.5px] line-clamp-2"
               : "text-[21px] sm:text-[23px] line-clamp-1"
           }`}>
             {post.dish_name}
@@ -826,6 +867,7 @@ export const FoodPostCard = React.memo(function FoodPostCard({
             </div>
           )}
         </div>
+        )}
       </div>
     </article>
   );
