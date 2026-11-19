@@ -711,7 +711,7 @@ export function HomeView({
       return <FeedEmptyState />;
     }
 
-    const gridClass = "grid grid-cols-2 gap-3 pb-28";
+    const gridClass = isDefaultFeedView ? "grid grid-cols-2 gap-3 pb-0" : "grid grid-cols-2 gap-3 pb-28";
 
     // Filter Override: When any filter pill is active, render filtered results directly without swimlanes
     if (!isDefaultFeedView) {
@@ -1144,8 +1144,8 @@ export function HomeView({
         {/* 11. Vertical 2-Col Grid — Remaining Oslo Dishes */}
         {renderRow(remaining)}
 
-        {/* 12. Bottom-of-Feed Open Peeps Walkway (moving in opposite direction) */}
-        <FeedPeepsWalkway direction="rtl" className="mt-3 -mb-4" />
+        {/* 12. Bottom-of-Feed Open Peeps Walkway (flush to screen bottom behind floating nav) */}
+        <FeedPeepsWalkway direction="rtl" className="mt-3 mb-0" />
       </div>
     );
   }, [
@@ -1314,7 +1314,9 @@ export function HomeView({
                 ref={desktopFeedScrollRef}
                 onScroll={handleDesktopScroll}
                 data-feed-scroll
-                className="flex-1 overflow-y-auto px-3.5 py-2.5 space-y-2.5 no-scrollbar pb-36"
+                className={`flex-1 overflow-y-auto px-3.5 pt-2.5 space-y-2.5 no-scrollbar ${
+                  feedMode === "food" && isDefaultFeedView ? "pb-0" : "pb-36"
+                }`}
               >
                 {/* Pop-ups Feed Panel */}
                 {feedMode === "popups" && (
@@ -1500,7 +1502,9 @@ export function HomeView({
               maskImage:
                 "linear-gradient(to bottom, transparent 0px, transparent 48px, rgba(0,0,0,0.4) 84px, #000 116px)",
             }}
-            className="flex-1 min-h-0 overflow-y-auto px-3 pt-[122px] pb-32 space-y-2.5 no-scrollbar overscroll-contain"
+            className={`flex-1 min-h-0 overflow-y-auto px-3 pt-[122px] space-y-2.5 no-scrollbar overscroll-contain ${
+              feedMode === "food" && isDefaultFeedView ? "pb-0" : "pb-32"
+            }`}
           >
             {/* 1. Mobile Pop-ups Panel */}
             {feedMode === "popups" && (

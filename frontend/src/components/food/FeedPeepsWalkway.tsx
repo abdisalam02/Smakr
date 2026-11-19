@@ -332,7 +332,7 @@ export function FeedPeepsWalkway({
     <section
       ref={sectionRef}
       aria-hidden="true"
-      className={`col-span-full -mx-3 lg:-mx-3.5 w-[calc(100%+24px)] lg:w-[calc(100%+28px)] h-[144px] sm:h-[164px] overflow-hidden relative select-none pointer-events-none my-1 ${className}`}
+      className={`col-span-full -mx-3 lg:-mx-3.5 w-[calc(100%+24px)] lg:w-[calc(100%+28px)] h-[144px] sm:h-[164px] overflow-hidden relative select-none pointer-events-none ${className || "my-1"}`}
     >
       <canvas ref={canvasRef} className="block w-full h-full" />
     </section>

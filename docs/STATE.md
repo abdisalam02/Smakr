@@ -3,8 +3,8 @@
 Updated: 2026-11-19
 
 ## Now
-- Task: Updated bottom nav (`FoodViewSlider`) and filter pills/drawer (`FeedFilterBar`) to Pally display font, added opposite-direction `FeedPeepsWalkway` (`ltr` mid-feed, `rtl` at feed bottom), verified tsc, and pushed to `origin/main`.
-- Status: `npx tsc --noEmit` passed (exit 0) and pushed to `origin/main`; dev server live on port 3001.
+- Task: Removed `pb-32`/`pb-36` bottom padding on `HomeView.tsx` scroll containers when `feedMode === "food" && isDefaultFeedView` so the bottom `FeedPeepsWalkway` sits flush at 0px bottom edge.
+- Status: `npx tsc --noEmit` passed (exit 0); dev server live on port 3001.
 
 ## Next (max 3)
 1. Preview and export the 2-slide Early Snowfall `@3x` PNG assets in `/ad-reel`.
