@@ -29,9 +29,9 @@ function spriteBackgroundStyle(atlasUrl: string, spriteIdx: number): React.CSSPr
 }
 
 const BAKED_ATLAS_SRC = "/boot/peeps-atlas-baked.webp";
-const BAKED_ATLAS_COLS = 7;
-const BAKED_ATLAS_ROWS = 4;
-const BAKED_ATLAS_COUNT = 28;
+const BAKED_ATLAS_COLS = 8;
+const BAKED_ATLAS_ROWS = 6;
+const BAKED_ATLAS_COUNT = 48;
 
 let bakedImgPromise: Promise<HTMLImageElement> | null = null;
 function loadBakedAtlasImage(): Promise<HTMLImageElement> {
@@ -106,12 +106,12 @@ function peepHeightFor(stageW: number): number {
   return Math.round(PEEP_HEIGHT_MOBILE + t * (PEEP_HEIGHT_DESKTOP - PEEP_HEIGHT_MOBILE));
 }
 
-/** Mobile keeps 18 busts for 60fps boot performance & clean silhouette density; desktop scales up to baseCount. */
+/** Mobile keeps 30 busts for 60fps boot performance & rich crowd density; desktop scales up to baseCount (46). */
 function crowdCountFor(baseCount: number, stageW: number): number {
-  if (stageW < 640) return Math.min(baseCount, 18);
+  if (stageW < 640) return Math.min(baseCount, 30);
   if (stageW >= 1180) return baseCount;
   const t = (stageW - 640) / (1180 - 640);
-  return Math.max(18, Math.round(18 + t * (baseCount - 18)));
+  return Math.max(30, Math.round(30 + t * (baseCount - 30)));
 }
 
 function xDurationFor(stageW: number, peepWidth: number): number {
@@ -159,7 +159,7 @@ export function PeepsBootScreen({
   onComplete,
   onAtlasReady,
   persistent = false,
-  crowdCount = 28,
+  crowdCount = 46,
   speedMultiplier = 1.0,
   forceSeed = 1,
   showAtlasInspector = false,

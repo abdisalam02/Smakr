@@ -167,15 +167,15 @@ export const PopupEventCard = React.memo(function PopupEventCard({
           ===================================================================== */}
       <div className={`relative z-10 ${compact ? "space-y-1.5 pt-1.5" : "space-y-2 pt-2"}`}>
         <div>
-          <h3 className={`font-comico font-normal ${compact ? "text-[15px]" : "text-xl sm:text-2xl"} text-white tracking-tight leading-tight line-clamp-1 drop-shadow-md`}>
+          <h3 className={`font-comico font-normal ${compact ? "text-[15px]" : "text-xl sm:text-2xl"} text-white tracking-tight leading-tight line-clamp-2 drop-shadow-md`}>
             {title}
           </h3>
         </div>
 
         {/* Inactive hint or Drop details indicator */}
         {isDormant ? (
-          <div className="text-[10px] font-medium text-stone-300/80">
-            Dates &amp; location announcing soon
+          <div className="text-[10px] font-medium text-stone-300/85 truncate">
+            Next drop TBA
           </div>
         ) : popupMeta?.dates_label ? (
           <div
@@ -204,13 +204,13 @@ export const PopupEventCard = React.memo(function PopupEventCard({
             e.stopPropagation();
             handleOpenDetails();
           }}
-          className={`group/btn touch-manipulation w-full ${compact ? "py-2 text-[11px]" : "py-2 sm:py-2.5 text-xs"} rounded-full font-bold tracking-wide flex items-center justify-center gap-1.5 shadow-md transition-all duration-150 ease-out active:scale-[0.94] active:brightness-90 cursor-pointer ${
+          className={`group/btn touch-manipulation w-full ${compact ? "py-2 text-[11px]" : "py-2 sm:py-2.5 text-xs"} rounded-full font-bold tracking-wide flex items-center justify-center gap-1.5 shadow-md transition-all duration-150 ease-out active:scale-[0.94] active:brightness-90 cursor-pointer whitespace-nowrap ${
             isDormant
               ? "bg-[#FAF7F2]/95 hover:bg-white text-[#181615]"
               : "bg-white hover:bg-stone-100 text-[#181615]"
           }`}
         >
-          <span>{isDormant ? "View Pop-Up Residency" : compact ? "View Details" : "View Pop-Up Details"}</span>
+          <span>{compact ? "Details" : "View Details"}</span>
           <span className="inline-block text-[#E84A27] transition-transform duration-150 group-active/btn:translate-x-0.5 group-active/btn:-translate-y-0.5">
             ↗
           </span>

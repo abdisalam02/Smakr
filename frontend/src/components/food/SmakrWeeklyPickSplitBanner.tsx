@@ -75,11 +75,14 @@ export function SmakrWeeklyPickSplitBanner({
             />
           </div>
 
-          <h3 className="mt-2 font-comico font-normal text-[17px] leading-tight text-[#181615] dark:text-white uppercase truncate">
+          <h3 className="mt-2 font-comico font-normal text-[16px] sm:text-[17px] leading-[1.15] text-[#181615] dark:text-white uppercase line-clamp-2">
             {dishName}
           </h3>
-          <p className="text-[11.5px] font-semibold text-[#181615]/75 dark:text-zinc-300 truncate mt-0.5">
-            📍 {venueName} · {neighborhood}
+          <p className="text-[11.5px] font-semibold text-[#181615]/75 dark:text-zinc-300 leading-snug line-clamp-2 mt-0.5">
+            <span>📍 {venueName} · {neighborhood}</span>
+            {typeof weeklyPick.price_nok === "number" && weeklyPick.price_nok > 0 && (
+              <span className="text-[#E84A27] font-bold"> · {weeklyPick.price_nok} kr</span>
+            )}
           </p>
         </div>
 

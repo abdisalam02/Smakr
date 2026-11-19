@@ -118,34 +118,193 @@ export function FoodieCalloutCard() {
   );
 }
 
+interface FoundingLocalPickDef {
+  handle: string;
+  quote: string;
+  spriteIdx: number;
+  matchTerms: string[];
+}
+
+/** Curated Founding Oslo Locals showcase used to backfill up to 6 distinct venues behind real approved user picks. */
+const FOUNDING_LOCAL_PICKS: FoundingLocalPickDef[] = [
+  {
+    handle: "@majak",
+    quote: "Worth crossing town for this broth",
+    spriteIdx: 37,
+    matchTerms: ["ramen", "hrimnir", "koie", "sapporo", "tonkotsu", "paitan"],
+  },
+  {
+    handle: "@jonasb",
+    quote: "Crispiest crust in Grünerløkka",
+    spriteIdx: 35,
+    matchTerms: ["pizza", "zz pizza", "mamma", "focaccia", "sourdough", "farine"],
+  },
+  {
+    handle: "@sara.n",
+    quote: "Order this before 14:00 or it sells out",
+    spriteIdx: 55,
+    matchTerms: ["cardamom", "bolle", "bun", "ille brød", "croissant", "cookie", "bakery"],
+  },
+  {
+    handle: "@henrik_s",
+    quote: "Best late-lunch smash in Sentrum",
+    spriteIdx: 38,
+    matchTerms: ["burger", "smash", "troys", "cheesesteak", "kebab", "k-fried", "chicken"],
+  },
+  {
+    handle: "@norah",
+    quote: "Velvety pour, zero bitterness",
+    spriteIdx: 71,
+    matchTerms: ["matcha", "coconut coffee", "egg coffee", "cà phê", "wendelboe", "latte", "espresso"],
+  },
+  {
+    handle: "@tarikm",
+    quote: "Hidden gem I bring every visitor to",
+    spriteIdx: 98,
+    matchTerms: ["dumpling", "bao", "banh mi", "taco", "gelato", "fiskeriet", "izakaya"],
+  },
+];
+
+export interface ResolvedLocalPick {
+  post: FoodPost;
+  venue: Venue | null;
+  handle: string;
+  quote: string;
+  spriteIdx: number;
+  customAvatarUrl: string | null;
+  isCommunitySubmission: boolean;
+}
+
+export function resolveLocalsPicks(
+  posts: FoodPost[],
+  venueById: Map<string, Venue>
+): ResolvedLocalPick[] {
+  const result: ResolvedLocalPick[] = [];
+  const usedVenueIds = new Set<string>();
+  const usedPostIds = new Set<string>();
+
+  // 1) Real approved community picks from Supabase ALWAYS come first.
+  const approvedUserPicks = posts.filter(
+    (p) =>
+      !p.is_archived &&
+      p.is_published !== false &&
+      (p.is_local_pick || (p.dietary_tags as string[] | undefined)?.includes("local_pick"))
+  );
+
+  for (const post of approvedUserPicks) {
+    if (result.length >= 6) break;
+    const venueKey = post.spot_id || post.spot_name;
+    if (venueKey && usedVenueIds.has(venueKey)) continue;
+    if (venueKey) usedVenueIds.add(venueKey);
+    usedPostIds.add(post.id);
+
+    const rawHandle = post.author?.handle?.trim() || "oslo_foodie";
+    const handle = rawHandle.startsWith("@") ? rawHandle : `@${rawHandle}`;
+    const quote =
+      post.review_text?.trim() ||
+      post.diner_quotes?.[0]?.text?.trim() ||
+      "Approved Oslo local pick";
+    const customAvatar =
+      post.author?.avatar_url && post.author.avatar_url.trim().length > 0
+        ? post.author.avatar_url
+        : null;
+
+    result.push({
+      post,
+      venue: venueById.get(post.spot_id) ?? null,
+      handle,
+      quote,
+      spriteIdx: CLEAN_LOCAL_SPRITES[result.length % CLEAN_LOCAL_SPRITES.length],
+      customAvatarUrl: customAvatar,
+      isCommunitySubmission: true,
+    });
+  }
+
+  // 2) Curated Founding Oslo Locals backfill (distinct venues only, never raw created_at DESC dump).
+  const eligible = posts.filter(
+    (p) =>
+      !p.is_archived &&
+      p.is_published !== false &&
+      Boolean(p.image_url) &&
+      !usedPostIds.has(p.id) &&
+      venueById.get(p.spot_id)?.spot_type !== "popup" &&
+      p.spot_type !== "popup"
+  );
+
+  for (const slot of FOUNDING_LOCAL_PICKS) {
+    if (result.length >= 6) break;
+    const match = eligible.find((p) => {
+      const venueKey = p.spot_id || p.spot_name;
+      if (venueKey && usedVenueIds.has(venueKey)) return false;
+      const hay = `${p.dish_name} ${p.spot_name} ${p.category || ""}`.toLowerCase();
+      return slot.matchTerms.some((term) => hay.includes(term));
+    });
+    if (match) {
+      const venueKey = match.spot_id || match.spot_name;
+      if (venueKey) usedVenueIds.add(venueKey);
+      usedPostIds.add(match.id);
+      result.push({
+        post: match,
+        venue: venueById.get(match.spot_id) ?? null,
+        handle: slot.handle,
+        quote: slot.quote,
+        spriteIdx: slot.spriteIdx,
+        customAvatarUrl: null,
+        isCommunitySubmission: false,
+      });
+    }
+  }
+
+  // 3) Safety backfill if fewer than 6 matched (highest-rated distinct venues).
+  if (result.length < 6) {
+    const byQuality = [...eligible]
+      .filter((p) => !usedPostIds.has(p.id) && !usedVenueIds.has(p.spot_id || p.spot_name))
+      .sort((a, b) => {
+        const ra = venueById.get(a.spot_id)?.google_rating ?? a.rating ?? 0;
+        const rb = venueById.get(b.spot_id)?.google_rating ?? b.rating ?? 0;
+        return rb - ra;
+      });
+    for (const post of byQuality) {
+      if (result.length >= 6) break;
+      const venueKey = post.spot_id || post.spot_name;
+      if (venueKey && usedVenueIds.has(venueKey)) continue;
+      if (venueKey) usedVenueIds.add(venueKey);
+      const fallbackSlot = FOUNDING_LOCAL_PICKS[result.length % FOUNDING_LOCAL_PICKS.length];
+      result.push({
+        post,
+        venue: venueById.get(post.spot_id) ?? null,
+        handle: fallbackSlot.handle,
+        quote: post.diner_quotes?.[0]?.text?.trim() || fallbackSlot.quote,
+        spriteIdx: fallbackSlot.spriteIdx,
+        customAvatarUrl: null,
+        isCommunitySubmission: false,
+      });
+    }
+  }
+
+  return result;
+}
+
 interface LocalsPicksSwimlaneProps {
   posts: FoodPost[];
   venueById: Map<string, Venue>;
+  resolvedPicks?: ResolvedLocalPick[];
 }
 
-export function LocalsPicksSwimlane({ posts, venueById }: LocalsPicksSwimlaneProps) {
+export function LocalsPicksSwimlane({
+  posts,
+  venueById,
+  resolvedPicks,
+}: LocalsPicksSwimlaneProps) {
   const selectVenueById = useCityPulseStore((s) => s.selectVenueById);
   const setIsVenueDetailModalOpen = useCityPulseStore((s) => s.setIsVenueDetailModalOpen);
   const sprites = useCleanPeepSprites(CLEAN_LOCAL_SPRITES);
   const [brokenIds, setBrokenIds] = useState<Record<string, boolean>>({});
 
-  const localPickCards = useMemo(() => {
-    const approvedUserPicks = posts.filter(
-      (p) => !p.is_archived && (p.is_local_pick || (p.dietary_tags as string[] | undefined)?.includes("local_pick"))
-    );
-
-    const curatedFallback = posts.filter(
-      (p) => !p.is_archived && p.image_url && !approvedUserPicks.some((a) => a.id === p.id)
-    );
-
-    const combined = [...approvedUserPicks, ...curatedFallback].slice(0, 6);
-
-    return combined.map((post, idx) => ({
-      post,
-      venue: venueById.get(post.spot_id) ?? null,
-      spriteIdx: CLEAN_LOCAL_SPRITES[idx % CLEAN_LOCAL_SPRITES.length],
-    }));
-  }, [posts, venueById]);
+  const localPickCards = useMemo(
+    () => resolvedPicks ?? resolveLocalsPicks(posts, venueById),
+    [resolvedPicks, posts, venueById]
+  );
 
   if (localPickCards.length === 0) return null;
 
@@ -162,8 +321,8 @@ export function LocalsPicksSwimlane({ posts, venueById }: LocalsPicksSwimlanePro
       </div>
 
       <div className="overflow-x-auto snap-x snap-mandatory flex gap-3 pb-1 no-scrollbar">
-        {localPickCards.map(({ post, venue, spriteIdx }) => {
-          const spriteUri = sprites[spriteIdx];
+        {localPickCards.map(({ post, venue, handle, quote, spriteIdx, customAvatarUrl }) => {
+          const spriteUri = customAvatarUrl || sprites[spriteIdx];
           const isImgBroken = Boolean(brokenIds[post.id]) || !post.image_url;
 
           return (
@@ -194,7 +353,12 @@ export function LocalsPicksSwimlane({ posts, venueById }: LocalsPicksSwimlanePro
                 />
               )}
 
-              <div className="absolute inset-0 bg-gradient-to-t from-[#181615]/95 via-[#181615]/30 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#181615]/95 via-[#181615]/45 to-black/15" />
+
+              {/* Top-left foodie @handle pill */}
+              <span className="absolute top-2.5 left-2.5 z-10 px-2 py-0.5 rounded-full bg-[#181615]/75 text-[#FAF7F2] border border-white/15 text-[10px] font-bold tracking-tight max-w-[125px] truncate">
+                {handle}
+              </span>
 
               {post.price_nok ? (
                 <span className="absolute top-2.5 right-2.5 z-10 px-2.5 py-0.5 rounded-full bg-[#E84A27] text-white font-comico font-normal text-[11px] shadow-xs">
@@ -202,12 +366,15 @@ export function LocalsPicksSwimlane({ posts, venueById }: LocalsPicksSwimlanePro
                 </span>
               ) : null}
 
-              {/* Bottom-left dish title & spot */}
-              <div className="absolute bottom-3 left-3 right-[66px] z-10 text-[#FAF7F2]">
-                <h4 className="font-comico font-normal text-[17px] leading-[1.12] uppercase line-clamp-2 drop-shadow-sm">
+              {/* Bottom-left quote + dish title & spot */}
+              <div className="absolute bottom-3 left-3 right-[62px] z-10 text-[#FAF7F2]">
+                <p className="text-[10.5px] italic text-[#FDEA6B] leading-snug line-clamp-1 mb-1 drop-shadow-xs">
+                  &ldquo;{quote}&rdquo;
+                </p>
+                <h4 className="font-comico font-normal text-[16px] leading-[1.12] uppercase line-clamp-2 drop-shadow-sm">
                   {post.dish_name}
                 </h4>
-                <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-[#FAF7F2]/85 truncate">
+                <p className="mt-1 flex items-center gap-1 text-[10.5px] font-semibold text-[#FAF7F2]/85 truncate">
                   <MapPin className="w-3 h-3 text-[#E84A27] shrink-0" />
                   <span className="truncate">
                     {post.spot_name} · {venue?.neighborhood || post.spot_neighborhood || "Oslo"}
@@ -215,14 +382,16 @@ export function LocalsPicksSwimlane({ posts, venueById }: LocalsPicksSwimlanePro
                 </p>
               </div>
 
-              {/* Bottom-right flipped sprite looking/pointing left at the title */}
+              {/* Bottom-right flipped sprite / user avatar looking/pointing left at the title */}
               {spriteUri && (
-                <div className="absolute bottom-0 right-1 z-10 w-[60px] h-[78px] pointer-events-none select-none overflow-hidden">
+                <div className="absolute bottom-0 right-1 z-10 w-[58px] h-[74px] pointer-events-none select-none overflow-hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={spriteUri}
                     alt=""
-                    className="w-full h-full object-contain object-bottom -scale-x-100 drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)]"
+                    className={`w-full h-full object-contain object-bottom drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)] ${
+                      customAvatarUrl ? "" : "-scale-x-100"
+                    }`}
                   />
                 </div>
               )}

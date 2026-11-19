@@ -10,9 +10,9 @@ import {
   colorizeCell,
 } from "../src/lib/bustCrowdPeep";
 
-const BAKE_COUNT = 28;
-const BAKE_COLS = 7;
-const BAKE_ROWS = 4;
+const BAKE_COUNT = 48;
+const BAKE_COLS = 8;
+const BAKE_ROWS = 6;
 const BAKE_SEED = 1;
 
 async function main() {
@@ -100,7 +100,7 @@ async function main() {
     },
   })
     .composite(composites)
-    .webp({ quality: 86, alphaQuality: 95, effort: 5 })
+    .webp({ quality: 80, alphaQuality: 90, effort: 6 })
     .toFile(outWebp);
 
   const manifest = {

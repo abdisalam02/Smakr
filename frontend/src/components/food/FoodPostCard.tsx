@@ -688,25 +688,34 @@ export const FoodPostCard = React.memo(function FoodPostCard({
         <div className={`absolute bottom-0 inset-x-0 z-10 flex flex-col justify-end pointer-events-auto ${
           isGridMode ? "p-2.5 sm:p-3" : "p-3.5 sm:p-4"
         }`}>
-          {/* Dish Title (Comico brand font — 2 lines allowed in grid mode) */}
+          {/* Dish Title (Comico brand font — 2 lines allowed in grid & pop-up modes) */}
           <h3 className={`font-comico font-normal tracking-wide leading-[1.15] text-white capitalize drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] ${
             isGridMode
               ? "text-[14px] sm:text-[15px] line-clamp-2"
+              : isPopup
+              ? "text-[18px] sm:text-[20px] line-clamp-2"
               : "text-[21px] sm:text-[23px] line-clamp-1"
           }`}>
             {post.dish_name}
           </h3>
 
-          {/* Location row: Pop-ups show MapPin + neighborhood (spot name sits outside below the card unless showSpotName) */}
-          <div className={`${isGridMode ? "text-[11.5px]" : "text-[13.5px]"} font-semibold text-white/95 drop-shadow-xs mt-1 flex items-center gap-1.5 flex-wrap`}>
-            <MapPin className={`${isGridMode ? "w-3.5 h-3.5" : "w-[15px] h-[15px]"} text-[#e84a27] shrink-0`} />
-            {(!isPopup || showSpotName) && (
-              <span className="font-semibold text-white truncate max-w-[175px] sm:max-w-none">
-                {post.spot_name}
+          {/* Location row: 2-col grid shows Venue · Neighborhood cleanly on 1 line; Pop-ups show MapPin + neighborhood */}
+          <div className={`${isGridMode ? "text-[11px]" : "text-[13.5px]"} font-semibold text-white/95 drop-shadow-xs mt-1 flex items-center gap-1 ${isGridMode ? "min-w-0 flex-nowrap" : "gap-1.5 flex-wrap"}`}>
+            <MapPin className={`${isGridMode ? "w-3 h-3" : "w-[15px] h-[15px]"} text-[#e84a27] shrink-0`} />
+            {isGridMode ? (
+              <span className="truncate min-w-0">
+                <span className="font-semibold text-white">{post.spot_name}</span>
+                {hasConfirmedLocation && locationInfo.neighborhood && (
+                  <span className="text-white/75 font-medium"> · {locationInfo.neighborhood}</span>
+                )}
               </span>
-            )}
-            {!isGridMode && (
+            ) : (
               <>
+                {(!isPopup || showSpotName) && (
+                  <span className="font-semibold text-white truncate max-w-[175px] sm:max-w-none">
+                    {post.spot_name}
+                  </span>
+                )}
                 {(!isPopup || showSpotName) && <span className="text-zinc-400">·</span>}
                 <span>{hasConfirmedLocation ? locationInfo.neighborhood : "Location TBA"}</span>
               </>

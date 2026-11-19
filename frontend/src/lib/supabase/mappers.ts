@@ -90,6 +90,7 @@ export interface FoodPostRow {
   rating?: number | null;
   dietary_tags?: string[] | null;
   is_official_pick?: boolean | null;
+  is_local_pick?: boolean | null;
   likes_count?: number | null;
   saves_count?: number | null;
   diner_quotes?: unknown;
@@ -533,6 +534,12 @@ export function mapFoodPostRow(row: FoodPostRow): FoodPost {
     saves_count: row.saves_count ?? 0,
     created_at_relative: relativeTime(row.created_at),
     is_official_pick: Boolean(row.is_official_pick),
+    is_local_pick:
+      Boolean(row.is_local_pick) ||
+      Boolean(
+        Array.isArray(row.dietary_tags) &&
+          row.dietary_tags.some((t) => String(t).toLowerCase().replace(/\s+|-/g, "_") === "local_pick")
+      ),
     dietary_tags: mapDietary(row.dietary_tags),
     diner_quotes: mapReviews(row.diner_quotes),
     spot_type: ((venue?.spot_type || (venue?.vibe_signals as any)?.spot_type) as SpotType) || "restaurant",

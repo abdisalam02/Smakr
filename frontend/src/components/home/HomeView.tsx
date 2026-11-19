@@ -20,6 +20,7 @@ import {
   FoodieCalloutCard,
   LocalsPicksSwimlane,
   MakrStudioTicketCard,
+  resolveLocalsPicks,
 } from "@/components/food/FoodieCommunityBlocks";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { useLiveVibeSync } from "@/hooks/useLiveVibeSync";
@@ -45,6 +46,68 @@ function slugifySpotParam(value: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+const OSLO_DATE_FORMATTER = new Intl.DateTimeFormat("sv-SE", {
+  timeZone: "Europe/Oslo",
+});
+
+function getOsloDateSeed(): string {
+  return OSLO_DATE_FORMATTER.format(new Date());
+}
+
+function fnv1a32(str: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    hash ^= str.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
+}
+
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** Deterministic daily shuffle (SSR/client hydration safe via Oslo YYYY-MM-DD). */
+function dailySeededShuffle<T>(items: T[], seedKey: string): T[] {
+  const out = [...items];
+  const rand = mulberry32(fnv1a32(`${getOsloDateSeed()}::${seedKey}`));
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    const tmp = out[i];
+    out[i] = out[j];
+    out[j] = tmp;
+  }
+  return out;
+}
+
+/** Spread adjacent dishes in 2-col rows so identical categories do not sit side-by-side when alternatives exist. */
+function spreadAdjacentCategories(posts: FoodPost[]): FoodPost[] {
+  const out = [...posts];
+  for (let i = 1; i < out.length; i += 2) {
+    const leftCat = out[i - 1]?.category;
+    if (!leftCat || out[i]?.category !== leftCat) continue;
+    for (let j = i + 1; j < out.length; j++) {
+      if (out[j]?.category !== leftCat) {
+        const tmp = out[i];
+        out[i] = out[j];
+        out[j] = tmp;
+        break;
+      }
+    }
+  }
+  return out;
+}
+
+function dailyUnitNoise(id: string, seedKey: string): number {
+  return mulberry32(fnv1a32(`${getOsloDateSeed()}::${seedKey}::${id}`))();
 }
 
 const useIsomorphicLayoutEffect =
@@ -579,8 +642,19 @@ export function HomeView({
     });
   }, [filteredPosts]);
 
+  const weeklyPick = useCityPulseStore((state) => state.weeklyPick);
+  const activeWeeklyPick = weeklyPick?.venue_id ? weeklyPick : initialData.weeklyPick;
+
   const featuredKitchens = useMemo(() => {
-    return venues.filter((v) => v.spot_type !== "popup" && isVisibleInFeed(v)).slice(0, 10);
+    const eligible = venues.filter((v) => v.spot_type !== "popup" && isVisibleInFeed(v));
+    // Rating-weighted daily rotation so A–Z sorting never locks one venue to slot #1.
+    return [...eligible]
+      .sort((a, b) => {
+        const scoreA = (a.google_rating ?? 4.2) * 0.45 + dailyUnitNoise(a.id, "kitchens");
+        const scoreB = (b.google_rating ?? 4.2) * 0.45 + dailyUnitNoise(b.id, "kitchens");
+        return scoreB - scoreA;
+      })
+      .slice(0, 10);
   }, [venues]);
 
   const isDefaultFeedView = useMemo(() => {
@@ -662,21 +736,56 @@ export function HomeView({
     const isPopupPost = (post: FoodPost) =>
       venueById.get(post.spot_id)?.spot_type === "popup" || post.spot_type === "popup";
 
-    // Cross-lane dedupe is intentionally OFF: the same dish/venue may appear in
-    // the vertical feed AND in a curated horizontal lane.
     const heroPost =
       filteredPosts[0] && isPopupPost(filteredPosts[0]) ? filteredPosts[0] : null;
 
-    // Vertical lanes never repeat the same venue (that reads as a duplicate),
-    // but they are independent from the horizontal swimlanes.
+    // Resolve Locals' Picks up front so Row 1 / Row 2 don't immediately repeat those spots.
+    const resolvedLocalsPicks = resolveLocalsPicks(filteredPosts, venueById);
+    const localsPickPostIds = new Set(resolvedLocalsPicks.map((p) => p.post.id));
+    const localsPickVenueIds = new Set(
+      resolvedLocalsPicks.map((p) => p.post.spot_id).filter(Boolean)
+    );
+
+    const isWeeklyPickPost = (post: FoodPost) => {
+      if (!activeWeeklyPick) return false;
+      if (post.id === activeWeeklyPick.id) return true;
+      if (activeWeeklyPick.venue_id && post.spot_id === activeWeeklyPick.venue_id) {
+        const a = (post.dish_name || "").trim().toLowerCase();
+        const b = (activeWeeklyPick.dish_name || "").trim().toLowerCase();
+        if (!b || a === b || a.includes(b) || b.includes(a)) return true;
+      }
+      return false;
+    };
+
+    // Vertical lanes never repeat the same venue and rotate deterministically each Oslo day.
     const verticalVenues = new Set<string>();
-    const pool = filteredPosts.filter((post) => {
+    const uniqueNonPopupPosts = filteredPosts.filter((post) => {
       if (isPopupPost(post)) return false;
       if (post.spot_id && verticalVenues.has(post.spot_id)) return false;
       if (post.spot_id) verticalVenues.add(post.spot_id);
       return true;
     });
 
+    const shuffledVertical = spreadAdjacentCategories(
+      dailySeededShuffle(uniqueNonPopupPosts, "vertical-dishes")
+    );
+
+    // Partition out Weekly Pick and Locals' Picks from the top 2 rows so adjacent lanes feel fresh.
+    const deferredFromTop: FoodPost[] = [];
+    const primaryPool: FoodPost[] = [];
+    for (const post of shuffledVertical) {
+      if (
+        isWeeklyPickPost(post) ||
+        localsPickPostIds.has(post.id) ||
+        (post.spot_id && localsPickVenueIds.has(post.spot_id))
+      ) {
+        deferredFromTop.push(post);
+      } else {
+        primaryPool.push(post);
+      }
+    }
+
+    const pool = [...primaryPool];
     const takeEven = (count: number) => {
       const out = pool.splice(0, count);
       if (out.length % 2 === 1) {
@@ -686,12 +795,9 @@ export function HomeView({
       return out;
     };
 
-    // Block 1: First 4 editorial dish cards directly beneath Weekly Pick & optional Hero Pop-Up.
+    // Row 1 (between Pop-Up Radar & Locals' Picks), Row 2 (between Locals' Picks & Matcha), Row 3 (between Matcha & Kitchens).
     const rowAfterHero = takeEven(4);
-
-    // Space every horizontal swimlane apart with 4 editorial dishes in between.
     const rowBeforeMatcha = takeEven(4);
-    const rowBeforePopups = takeEven(4);
     const rowBeforeKitchens = takeEven(4);
 
     // STRICT drink lane — never padded with dumplings/kebabs, only real drinks.
@@ -705,13 +811,13 @@ export function HomeView({
       })
       .slice(0, 8);
 
-    // ALL pop-ups, even when they also appear in the vertical feed.
-    const popupLane = popupVenues;
-
     const kitchenLane = featuredKitchens;
 
-    // Remaining editorial cards, rendered in pairs (with an end-cap on odd rows).
-    const remaining = pool.splice(0);
+    // Remaining editorial cards (re-append deferred non-Weekly-Pick posts at the bottom if desired, excluding duplicate Weekly Pick).
+    const remaining = spreadAdjacentCategories([
+      ...pool.splice(0),
+      ...deferredFromTop.filter((p) => !isWeeklyPickPost(p)),
+    ]);
 
     let cardIndex = 0;
     const renderCard = (post: FoodPost) => {
@@ -792,7 +898,7 @@ export function HomeView({
 
     return (
       <div className={gridClass}>
-        {/* BLOCK 1: Smakr Weekly Pick Split Banner + Pop-Up Dishes Carousel + first editorial cards */}
+        {/* 1. Smakr Weekly Pick Split Banner */}
         <div
           className="col-span-full my-0.5 will-change-[transform,opacity]"
           style={{
@@ -802,39 +908,75 @@ export function HomeView({
         >
           <SmakrWeeklyPickSplitBanner />
         </div>
+
+        {/* 2. Horizontal Lane 1 — Oslo Pop-Up Radar (unified flagship pop-up lane) */}
         {(() => {
-          const popupDishes = [
+          const seenPopupVenues = new Set<string>();
+          const rawPopupDishes = [
             ...(heroPost ? [heroPost] : []),
             ...filteredPosts.filter((p) => {
               if (heroPost && p.id === heroPost.id) return false;
               const v = venueById.get(p.spot_id);
               return p.spot_type === "popup" || v?.spot_type === "popup" || Boolean(p.is_drop);
             }),
-          ];
-          if (popupDishes.length === 0) return null;
+          ]
+            .sort((a, b) => getPopupUrgencyScore(venueById.get(a.spot_id)) - getPopupUrgencyScore(venueById.get(b.spot_id)))
+            .filter((p) => {
+              const key = p.spot_id || p.id;
+              if (seenPopupVenues.has(key)) return false;
+              seenPopupVenues.add(key);
+              return true;
+            });
+
+          // Include any visible pop-up venues that don't yet have a dedicated food_post
+          const extraPopupVenues = popupVenues.filter((v) => !seenPopupVenues.has(v.id));
+          const totalPopupCount = rawPopupDishes.length + extraPopupVenues.length;
+          if (totalPopupCount === 0) return null;
+
           return (
             <section className="col-span-full -mx-3 px-3 py-1.5">
               <div className="flex items-center justify-between gap-2 mb-2">
                 <h3 className="text-[19px] font-comico font-normal tracking-tight text-[#181615] dark:text-zinc-100 uppercase leading-tight flex items-center gap-1.5 min-w-0">
-                  <span>Pop-Up Dishes</span>
+                  <SmakrFoodIcon name="popup" className="w-5 h-5 shrink-0" />
+                  <span>Oslo Pop-Up Radar</span>
                 </h3>
-                {popupDishes.length > 1 && (
+                {totalPopupCount > 1 && (
                   <span className="text-[#E84A27] font-comico text-[11px] whitespace-nowrap shrink-0">
                     Swipe →
                   </span>
                 )}
               </div>
               <div className="overflow-x-auto snap-x snap-mandatory flex gap-3 pb-2 no-scrollbar">
-                {popupDishes.map((post) => {
+                {rawPopupDishes.map((post) => {
                   const v = venueById.get(post.spot_id) ?? null;
                   const lifecycle = v ? resolvePopupLifecycle(v) : null;
-                  const dateLabel =
-                    lifecycle?.shortDateLabel ||
-                    (post.drop_badge ? post.drop_badge.replace(/\s*Drop$/i, "").trim() : null) ||
-                    null;
+                  const neighborhood = v?.neighborhood && v.neighborhood !== "all"
+                    ? v.neighborhood.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+                    : post.spot_neighborhood || null;
+                  const statusParts: string[] = [];
+                  if (lifecycle?.state === "live") {
+                    statusParts.push("Live Now");
+                    if (lifecycle.shortDateLabel) statusParts.push(lifecycle.shortDateLabel);
+                  } else if (lifecycle?.state === "upcoming") {
+                    statusParts.push("Upcoming");
+                    if (lifecycle.shortDateLabel) statusParts.push(lifecycle.shortDateLabel);
+                  } else if (lifecycle?.state === "passed") {
+                    statusParts.push(lifecycle.badgeLabel || "Next drop TBA");
+                  } else if (lifecycle?.state === "tba") {
+                    statusParts.push("Next drop TBA");
+                  } else if (post.drop_badge) {
+                    statusParts.push(post.drop_badge.replace(/\s*Drop$/i, "").trim());
+                  } else {
+                    statusParts.push("Next drop TBA");
+                  }
+                  if (neighborhood && lifecycle?.state !== "tba" && lifecycle?.state !== "passed") {
+                    statusParts.push(neighborhood);
+                  }
+                  const metaLine = statusParts.join(" · ");
+
                   return (
                     <div
-                      key={`popup-hero-${post.id}`}
+                      key={`popup-radar-${post.id}`}
                       className="w-[225px] sm:w-[250px] shrink-0 snap-start flex flex-col items-center"
                     >
                       <div className="w-full h-[250px] sm:h-[265px] overflow-hidden rounded-[24px]">
@@ -845,35 +987,48 @@ export function HomeView({
                           linkedVenue={v}
                         />
                       </div>
-                      <p className="mt-1.5 px-1 text-center font-comico font-bold text-[13px] sm:text-[14px] leading-tight text-[#E84A27] truncate w-full">
+                      <p className="mt-1.5 px-1 text-center font-comico font-bold text-[13px] sm:text-[14px] leading-tight text-[#E84A27] line-clamp-1 w-full">
                         {v?.name || post.spot_name}
                       </p>
-                      {dateLabel && (
-                        <p className="mt-0.5 px-1 text-center text-[11px] sm:text-[11.5px] font-medium text-stone-500 dark:text-zinc-400 truncate w-full">
-                          {dateLabel}
-                        </p>
-                      )}
+                      <p className="mt-0.5 px-1 text-center text-[11px] sm:text-[11.5px] font-medium text-stone-500 dark:text-zinc-400 leading-snug line-clamp-2 w-full">
+                        {metaLine}
+                      </p>
                     </div>
                   );
                 })}
+                {extraPopupVenues.map((venue) => (
+                  <div
+                    key={`popup-radar-venue-${venue.id}`}
+                    className="w-[225px] sm:w-[250px] h-[250px] sm:h-[265px] shrink-0 snap-start overflow-hidden rounded-[24px]"
+                  >
+                    <PopupEventCard venue={venue} compact />
+                  </div>
+                ))}
               </div>
             </section>
           );
         })()}
+
+        {/* 3. Vertical 2-Col Grid — Row 1 */}
         {renderRow(rowAfterHero)}
 
-        {/* BLOCK 2: Compact Bare-Background Oslo Foodies Callout */}
+        {/* 4a. Compact Bare-Background Oslo Foodies Callout Row */}
         <FoodieCalloutCard />
 
-        {/* BLOCK 3: ✦ LOCALS' PICKS Horizontal Swimlane */}
-        <LocalsPicksSwimlane posts={filteredPosts} venueById={venueById} />
+        {/* 4b. Horizontal Lane 2 — ✦ Locals' Picks */}
+        <LocalsPicksSwimlane
+          posts={filteredPosts}
+          venueById={venueById}
+          resolvedPicks={resolvedLocalsPicks}
+        />
 
-        {/* Dish cards separating LOCALS' PICKS and Matcha */}
+        {/* 5. Vertical 2-Col Grid — Row 2 */}
         {renderRow(rowBeforeMatcha)}
 
+        {/* 6. Horizontal Lane 3 — Matcha, Coffee & Cocoa */}
         {renderSwimlane(
-          "🍵 Matcha & Specialty Coffee",
-          "Ceremonial Uji whisks, hojicha & signature iced pours worth crossing town for.",
+          "🍵 Matcha, Coffee & Cocoa",
+          "Ceremonial Uji whisks, hojicha, cocoa & signature pours worth crossing town for.",
           matchaLane.map((post) => (
             <div
               key={`swimlane-matcha-${post.id}`}
@@ -891,31 +1046,13 @@ export function HomeView({
           matchaLane.length > 0
         )}
 
-        {/* Dish cards separating Matcha and Pop-Up Drops */}
-        {renderRow(rowBeforePopups)}
-
-        {renderSwimlane(
-          <span className="inline-flex items-center gap-1.5 font-comico font-normal">
-            <SmakrFoodIcon name="popup" className="w-5 h-5 shrink-0" />
-            <span className="font-comico font-normal">Popups</span>
-          </span>,
-          "",
-          popupLane.map((venue) => (
-            <div
-              key={`swimlane-popup-${venue.id}`}
-              className="w-[215px] h-[265px] shrink-0 snap-start overflow-hidden rounded-[24px]"
-            >
-              <PopupEventCard venue={venue} compact />
-            </div>
-          )),
-          popupLane.length > 0
-        )}
-
-        {/* Dish cards separating Popups and Kitchens */}
+        {/* 7. Vertical 2-Col Grid — Row 3 */}
         {renderRow(rowBeforeKitchens)}
 
+        {/* 8. Makr Studio Ticket Card (visible mid-scroll before Kitchens) */}
         <MakrStudioTicketCard />
 
+        {/* 9. Horizontal Lane 4 — The Kitchens Behind the Dishes */}
         {renderSwimlane(
           <span className="inline-flex items-center gap-1.5 font-comico font-normal">
             <Utensils className="w-5 h-5 shrink-0" />
@@ -943,6 +1080,7 @@ export function HomeView({
           kitchenLane.length > 0
         )}
 
+        {/* 10. Vertical 2-Col Grid — Remaining Oslo Dishes */}
         {renderRow(remaining)}
       </div>
     );
@@ -952,6 +1090,7 @@ export function HomeView({
     isHydratingData,
     foodPosts.length,
     venueById,
+    activeWeeklyPick,
     matchaPosts,
     popupVenues,
     featuredKitchens,
@@ -1044,7 +1183,7 @@ export function HomeView({
       {showBoot && (
         <PeepsBootScreen
           colorMode="colorized"
-          crowdCount={28}
+          crowdCount={46}
           onAtlasReady={() => setMapMountReady(true)}
           onComplete={() => {
             hasPlayedBootThisLoad = true;

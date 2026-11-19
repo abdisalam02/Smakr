@@ -3,8 +3,8 @@
 Updated: 2026-11-19
 
 ## Now
-- Task: 60fps boot & interaction pass: translucent Warm Oat boot veil, single logo pop-in, zero-layout-thrash dock swiping & map panning, hoisted Oslo time formatter, and deep-link race resilience.
-- Status: `npx tsc --noEmit` clean, 23/23 security tests pass, dev server running on port 3001.
+- Task: Shipped feed coherence upgrade: Oslo daily seeded shuffle + category spreading, unified `Oslo Pop-Up Radar`, `Locals' Picks` mapping fix + Founding Oslo Locals showcase + end-of-lane invite card, card truncation/neighborhood polish, and 48-bust baked boot atlas (30 mobile / 46 desktop, 245.4 KB WebP).
+- Status: `npx tsc --noEmit` exit 0 and `npm run build` passed (`/` 69.5 kB, First Load JS 473 kB).
 
 ## Next (max 3)
 1. Preview and export the 2-slide Early Snowfall `@3x` PNG assets in `/ad-reel`.
