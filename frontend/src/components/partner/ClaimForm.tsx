@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { CheckCircle2, Loader2, ShieldCheck, ArrowRight, Building2, Mail, Phone, Instagram } from "lucide-react";
+import posthog from "posthog-js";
 
 export interface ClaimFormProps {
   venueId: string;
@@ -91,6 +92,12 @@ export function ClaimForm({ venueId, venueName, proposedCard, onSuccess }: Claim
         return;
       }
 
+      posthog.capture("partner_claim_submitted", {
+        has_dietary_tags: Boolean(proposedCard.dietaryTags?.length),
+        role,
+        spot_type: proposedCard.spotType ?? "not_specified",
+        venue_id: venueId,
+      });
       setSubmittedClaimId(data.claimId);
       onSuccess(data.claimId);
     } catch {

@@ -70,7 +70,9 @@ export function initPostHog(): boolean {
   if (initialized) return enabled;
   initialized = true;
 
-  const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  const key =
+    process.env.NEXT_PUBLIC_POSTHOG_KEY ||
+    process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
   if (!key) {
     enabled = false;
     return false;
@@ -81,10 +83,12 @@ export function initPostHog(): boolean {
 
   posthog.init(key, {
     api_host: host,
+    defaults: "2026-08-30",
     person_profiles: "identified_only",
     autocapture: false,
     capture_pageview: true,
     capture_pageleave: true,
+    capture_exceptions: true,
   });
 
   const { traffic_source, is_in_app_webview } = detectTrafficSource();

@@ -15,6 +15,7 @@ import { resolveFoodCategoryAndIcon } from "@/lib/categoryResolver";
 import { curatedVenuePhotos } from "@/lib/places/curatedPhotos";
 import { ingestGooglePhotoToSupabase } from "@/lib/storage/ingestGooglePhoto";
 import type { DietaryTag, FoodCategory, ReviewItem } from "@/types";
+import { captureGeminiGeneration, createAiTraceId } from "@/lib/posthog-ai";
 
 export const runtime = "nodejs";
 
@@ -40,7 +41,8 @@ function resolveGeminiApiKey(): string {
 async function callGeminiGenerateContent(
   apiKey: string,
   contents: Array<Record<string, unknown>>,
-  temperature = 0.35
+  temperature: number,
+  observability: { traceId: string; distinctId: string; spanName: string }
 ) {
   const models = ["gemini-3.8-flash", "gemini-2.5-flash", "gemini-2.0-flash"];
 
@@ -57,6 +59,7 @@ async function callGeminiGenerateContent(
 
     for (const url of endpoints) {
       try {
+        const startedAt = Date.now();
         const res = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -71,9 +74,36 @@ async function callGeminiGenerateContent(
         if (res.ok) {
           const data = await res.json();
           const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          await captureGeminiGeneration({
+            ...observability,
+            model,
+            input: contents,
+            output: rawText,
+            temperature,
+            latencyMs: Date.now() - startedAt,
+            status: res.status,
+          });
           if (rawText) return rawText as string;
+        } else {
+          await captureGeminiGeneration({
+            ...observability,
+            model,
+            input: contents,
+            temperature,
+            latencyMs: Date.now() - startedAt,
+            status: res.status,
+            error: `Gemini returned HTTP ${res.status}`,
+          });
         }
-      } catch {
+      } catch (error) {
+        await captureGeminiGeneration({
+          ...observability,
+          model,
+          input: contents,
+          temperature,
+          latencyMs: 0,
+          error,
+        });
         // try next
       }
     }
@@ -318,6 +348,11 @@ export async function POST(req: NextRequest) {
     }
 
     const apiKey = resolveGeminiApiKey();
+    const observability = {
+      traceId: createAiTraceId(),
+      distinctId: auth.userId,
+      spanName: "bulk_enrich_dishes",
+    };
 
     // Concurrency pool (max 3-4 parallel lookups)
     const concurrency = 3;
@@ -383,7 +418,8 @@ export async function POST(req: NextRequest) {
           const rawReply = await callGeminiGenerateContent(
             apiKey,
             [{ role: "user", parts: [{ text: prompt }] }],
-            0.25
+            0.25,
+            observability
           );
 
           if (rawReply) {

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
+import posthog from "posthog-js";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { persistMascotConfig } from "@/lib/supabase/data";
@@ -60,11 +61,40 @@ export function AuthProvider({
   const setProfileResolved = useCityPulseStore((state) => state.setProfileResolved);
   const hydrateMascotConfig = useCityPulseStore((state) => state.hydrateMascotConfig);
   const showToast = useCityPulseStore((state) => state.showToast);
+  const identifiedUserId = useRef<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+    let identifyTimeout: number | undefined;
+
+    const posthogKey =
+      process.env.NEXT_PUBLIC_POSTHOG_KEY ||
+      process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
+
+    const identifyUser = (user: Pick<UserProfile, "id" | "email" | "name">) => {
+      if (!posthogKey || identifiedUserId.current === user.id) {
+        return;
+      }
+
+      if (identifiedUserId.current && identifiedUserId.current !== user.id) {
+        posthog.reset();
+      }
+
+      identifiedUserId.current = user.id;
+      identifyTimeout = window.setTimeout(() => {
+        if (cancelled) return;
+
+        posthog.identify(user.id, {
+          ...(user.email ? { email: user.email } : {}),
+          ...(user.name ? { name: user.name } : {}),
+        });
+      }, 0);
+    };
+
     // Seed the SSR-resolved user before anything else so the client matches the
     // server-rendered header instantly (no logged-out flash on refresh).
     if (initialUser) {
+      identifyUser(initialUser);
       setCurrentUser(initialUser);
       setIsAuthResolved(true);
       // The SSR payload already read `public.profiles`, so onboarding can decide
@@ -90,10 +120,11 @@ export function AuthProvider({
       // No Supabase configured (local dev bypass) → stop showing the skeleton.
       setIsAuthResolved(true);
       setProfileResolved(true);
-      return;
+      return () => {
+        cancelled = true;
+        if (identifyTimeout) window.clearTimeout(identifyTimeout);
+      };
     }
-
-    let cancelled = false;
 
     const fetchProfile = async (id: string): Promise<ProfileRow | null> => {
       const { data, error } = await supabase
@@ -244,6 +275,16 @@ export function AuthProvider({
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT" || !session) {
+        // Do not reset on Supabase's initial anonymous-session notification: it
+        // would discard the browser's anonymous PostHog history before login.
+        if (event === "SIGNED_OUT") {
+          if (identifyTimeout) window.clearTimeout(identifyTimeout);
+          identifiedUserId.current = null;
+          if (posthogKey) {
+            posthog.reset();
+          }
+        }
+
         // No session → clear currentUser, but preserve any saved mascot in localStorage
         // so logging out never unexpectedly swaps the mascot character.
         hydratedUserId = null;
@@ -262,6 +303,8 @@ export function AuthProvider({
       }
 
       const uid = session.user.id;
+      identifyUser(metaUser(session));
+
       // A different account (or the first resolve after sign-in) → block
       // onboarding until its `profiles` row has actually been read.
       if (hydratedUserId !== uid) {
@@ -290,6 +333,7 @@ export function AuthProvider({
 
     return () => {
       cancelled = true;
+      if (identifyTimeout) window.clearTimeout(identifyTimeout);
       subscription.unsubscribe();
     };
   }, [setCurrentUser, setIsAuthResolved, setProfileResolved, hydrateMascotConfig, initialUser]);

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { X, Loader2, Check, Send } from "lucide-react";
 import { useCityPulseStore } from "@/store/useCityPulseStore";
+import posthog from "posthog-js";
 
 /**
  * In-app Beta Feedback drawer — a lightweight, mobile-first bottom sheet that
@@ -88,6 +89,9 @@ export function BetaFeedbackDrawer() {
       console.warn("[beta] feedback submit failed:", err);
     }
 
+    if (ok) {
+      posthog.capture("feedback_submitted", { category });
+    }
     setSubmitting(false);
     setIsOpen(false);
     showToast(

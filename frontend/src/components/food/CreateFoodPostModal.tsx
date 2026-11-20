@@ -30,6 +30,7 @@ import type { FoodCategory, Venue, SpotType } from "@/types";
 import type { PlaceResult } from "@/lib/places/google";
 import { resolveFoodCategoryAndIcon } from "@/lib/categoryResolver";
 import type { PendingSubmission } from "@/lib/pendingQueue";
+import posthog from "posthog-js";
 
 /* ------------------------------------------------------------------ */
 /* Constants & helpers                                                  */
@@ -705,6 +706,14 @@ export function CreateFoodPostModal() {
         // Local queue already stored the submission cleanly
       }
 
+      posthog.capture("dish_submission_created", {
+        category: activeCategory.category,
+        has_photo: Boolean(finalImage),
+        has_price: numericPrice !== null,
+        spot_type: formatType,
+        venue_source: google ? "google_places" : "existing_spot",
+        vibe: vibe ?? "not_selected",
+      });
       setSubmittedForCuration(true);
       showToast("Submitted for Curation ✨");
     } catch (err) {

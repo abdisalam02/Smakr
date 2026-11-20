@@ -3,8 +3,8 @@
 Updated: 2026-11-19
 
 ## Now
-- Task: Removed `pb-32`/`pb-36` bottom padding on `HomeView.tsx` scroll containers when `feedMode === "food" && isDefaultFeedView` so the bottom `FeedPeepsWalkway` sits flush at 0px bottom edge.
-- Status: `npx tsc --noEmit` passed (exit 0); dev server live on port 3001.
+- Task: Merged `origin/posthog/wizard-01a1f4376fe1` into `main`, resolved `package.json`/`package-lock.json`/`layout.tsx` conflicts, unified `PostHogProvider` + env key support (`NEXT_PUBLIC_POSTHOG_KEY` or `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN`), and verified `npm install`.
+- Status: `npx tsc --noEmit` passed (exit 0); merge committed locally, ready to push to `origin/main`.
 
 ## Next (max 3)
 1. Preview and export the 2-slide Early Snowfall `@3x` PNG assets in `/ad-reel`.
