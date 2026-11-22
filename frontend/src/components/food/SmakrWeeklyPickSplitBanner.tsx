@@ -12,7 +12,7 @@ const MAX_WEEKLY_BUBBLE_CHARS = 58;
 
 function clampWeeklyBubble(raw: string, maxChars = MAX_WEEKLY_BUBBLE_CHARS): string {
   const cleaned = raw.trim().replace(/\s+/g, " ");
-  if (!cleaned) return "Catch U WAN' SAM? this Sunday Nov 22 at Tullinløkka";
+  if (!cleaned) return "6 pop-up dates at Tullinløkka · Nov 22 – Dec 13";
   if (cleaned.length <= maxChars) return cleaned;
   // Drop trailing dash/em-dash clauses first if that brings it cleanly inside the limit.
   const firstClause = cleaned.split(/\s+[—–]\s+/)[0].trim();
@@ -49,7 +49,7 @@ export function SmakrWeeklyPickSplitBanner({
 
   const note = clampWeeklyBubble(
     weeklyPick.speech_bubble ||
-      "Catch U WAN' SAM? this Sunday Nov 22 at Tullinløkka"
+      "6 pop-up dates at Tullinløkka · Nov 22 – Dec 13"
   );
 
   const handleCheckSpot = (e: React.MouseEvent) => {

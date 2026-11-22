@@ -49,9 +49,10 @@ function formatShortDate(d: Date): string {
 function parseEndOfDayMs(raw?: string | null): number | null {
   if (!raw) return null;
   const trimmed = raw.trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-    const [y, m, d] = trimmed.split("-").map(Number);
-    return new Date(y, m - 1, d, 23, 59, 59, 999).getTime();
+  const dateOnlyMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})(?:T00:00(?::00(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?$/);
+  if (dateOnlyMatch) {
+    const [, y, m, d] = dateOnlyMatch;
+    return new Date(Number(y), Number(m) - 1, Number(d), 23, 59, 59, 999).getTime();
   }
   const t = new Date(trimmed).getTime();
   return Number.isNaN(t) ? null : t;
@@ -60,12 +61,106 @@ function parseEndOfDayMs(raw?: string | null): number | null {
 function parseStartOfDayMs(raw?: string | null): number | null {
   if (!raw) return null;
   const trimmed = raw.trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-    const [y, m, d] = trimmed.split("-").map(Number);
-    return new Date(y, m - 1, d, 0, 0, 0, 0).getTime();
+  const dateOnlyMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})(?:T00:00(?::00(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?$/);
+  if (dateOnlyMatch) {
+    const [, y, m, d] = dateOnlyMatch;
+    return new Date(Number(y), Number(m) - 1, Number(d), 0, 0, 0, 0).getTime();
   }
   const t = new Date(trimmed).getTime();
   return Number.isNaN(t) ? null : t;
+}
+
+export interface PopupScheduleSession {
+  id: string;
+  isoDate: string;
+  weekday: string;
+  shortDate: string;
+  hours: string | null;
+  status: "today" | "next" | "upcoming" | "past";
+  startDate: Date;
+}
+
+/**
+ * Parses `popup_meta.schedule_dates` entries (e.g. "2026-11-22 11:00-17:00")
+ * into chronologically sorted session chips with live today/next/past status.
+ */
+export function parsePopupScheduleDates(
+  venue?: Venue | null,
+  nowMs = Date.now()
+): PopupScheduleSession[] {
+  const meta = getPopupMeta(venue);
+  const rawList = meta?.schedule_dates;
+  if (!Array.isArray(rawList) || rawList.length === 0) return [];
+
+  const now = new Date(nowMs);
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).getTime();
+  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
+
+  const parsed: Array<{
+    isoDate: string;
+    weekday: string;
+    shortDate: string;
+    hours: string | null;
+    startDate: Date;
+    dayStartMs: number;
+    endMs: number;
+  }> = [];
+
+  for (const entry of rawList) {
+    if (typeof entry !== "string") continue;
+    const m = entry.trim().match(/^(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2}))?/);
+    if (!m) continue;
+    const y = Number(m[1]);
+    const mo = Number(m[2]) - 1;
+    const d = Number(m[3]);
+    const startH = m[4] ? Number(m[4].split(":")[0]) : 12;
+    const startMin = m[4] ? Number(m[4].split(":")[1]) : 0;
+    const endH = m[5] ? Number(m[5].split(":")[0]) : 23;
+    const endMin = m[5] ? Number(m[5].split(":")[1]) : 59;
+
+    const dayStart = new Date(y, mo, d, 0, 0, 0, 0);
+    const startDate = new Date(y, mo, d, startH, startMin, 0, 0);
+    const endDate = new Date(y, mo, d, endH, endMin, 59, 999);
+    const hours = m[4] && m[5]
+      ? `${m[4].replace(/:00$/, "")}–${m[5].replace(/:00$/, "")}`
+      : null;
+
+    parsed.push({
+      isoDate: `${m[1]}-${m[2]}-${m[3]}`,
+      weekday: dayStart.toLocaleDateString("en-US", { weekday: "short" }),
+      shortDate: formatShortDate(dayStart),
+      hours,
+      startDate,
+      dayStartMs: dayStart.getTime(),
+      endMs: endDate.getTime(),
+    });
+  }
+
+  parsed.sort((a, b) => a.dayStartMs - b.dayStartMs);
+
+  let foundNext = false;
+  return parsed.map((item) => {
+    let status: PopupScheduleSession["status"];
+    if (item.dayStartMs >= todayStart && item.dayStartMs <= todayEnd && item.endMs >= nowMs) {
+      status = "today";
+    } else if (item.endMs < nowMs) {
+      status = "past";
+    } else if (!foundNext) {
+      foundNext = true;
+      status = "next";
+    } else {
+      status = "upcoming";
+    }
+    return {
+      id: item.isoDate,
+      isoDate: item.isoDate,
+      weekday: item.weekday,
+      shortDate: item.shortDate,
+      hours: item.hours,
+      status,
+      startDate: item.startDate,
+    };
+  });
 }
 
 /**
@@ -118,6 +213,10 @@ export function getPopupUpcomingDropDate(
   nowMs = Date.now()
 ): Date | null {
   if (!venue || !isPopupVenue(venue)) return null;
+  const scheduled = parsePopupScheduleDates(venue, nowMs);
+  const nextScheduled = scheduled.find((s) => s.status === "today" || s.status === "next" || s.status === "upcoming");
+  if (nextScheduled) return nextScheduled.startDate;
+
   const meta = getPopupMeta(venue);
   const lifecycle = resolvePopupLifecycle(venue, nowMs);
   const raw =

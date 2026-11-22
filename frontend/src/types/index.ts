@@ -230,6 +230,7 @@ export interface PopupResidencyMeta {
   date_label?: string;                        // e.g. "Oct 24 – Oct 27"
   dates_label?: string;                       // e.g. "Oct 24 – Oct 27"
   next_drop_date?: string;                    // ISO date for upcoming residency drop
+  schedule_dates?: string[];                  // Explicit multi-day sessions e.g. "2026-11-22 11:00-17:00"
   bring_back_count?: number;                  // Community crowd-demand counter
   tiktok_url?: string;                        // Social video source
   instagram_url?: string;

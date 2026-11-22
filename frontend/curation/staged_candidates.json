@@ -1,5 +1,558 @@
 [
   {
+    "id": "felloni-piersante",
+    "name": "Felloni & Piersante",
+    "address": "Gøteborggata 1, 0566 Oslo",
+    "neighborhood": "grunerlokka",
+    "latitude": 59.9233468,
+    "longitude": 10.766245099999999,
+    "food_category": "street_sandwich",
+    "icon": "banh_mi",
+    "spot_type": "restaurant",
+    "google_place_id": "ChIJx2B46oZvQUYRHVqEa5VEPFE",
+    "google_reviews_count": 174,
+    "cover_image_url": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/05ef583e685f7bd0a5f8e41681d3.webp",
+    "place_photos": [
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/05ef583e685f7bd0a5f8e41681d3.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/a4a2bb00a3202b9839fabb497a7f.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/341ba0ee5f61da5ae2a1bbf77be9.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/bc51185ac4d11975e254e92b2beb.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/8b4191abdd9de1a38ffa472c6c34.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/9df681c44b90c2672685bf250981.webp"
+    ],
+    "candidate_photos": [
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/05ef583e685f7bd0a5f8e41681d3.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/a4a2bb00a3202b9839fabb497a7f.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/341ba0ee5f61da5ae2a1bbf77be9.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/bc51185ac4d11975e254e92b2beb.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/8b4191abdd9de1a38ffa472c6c34.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/9df681c44b90c2672685bf250981.webp"
+    ],
+    "price_level": "$",
+    "google_rating": 4.9,
+    "signature_dish": "Porchetta Focaccia",
+    "why_curated": "Tiny Italian neighborhood deli by Sofienbergparken baking thick, airy focaccia daily and stuffing it to order with freshly roasted porchetta, salsiccia, and spicy pesto.",
+    "verification_status": "pending",
+    "website_uri": "http://felloniogpiersante.no/",
+    "opening_hours_text": "Monday: Closed · Tuesday: 12:00 – 6:00 PM · Wednesday: 12:00 – 6:00 PM · Thursday: 12:00 – 6:00 PM · Friday: 11:00 AM – 6:00 PM · Saturday: 11:00 AM – 6:00 PM · Sunday: 11:00 AM – 5:30 PM",
+    "opening_hours": {
+      "sun": "11:00-17:30",
+      "tue": "12:00-18:00",
+      "wed": "12:00-18:00",
+      "thu": "12:00-18:00",
+      "fri": "11:00-18:00",
+      "sat": "11:00-18:00"
+    },
+    "notes": "Sandwich Ad Research Batch (Nov 2026) | Hidden gem Italian deli counter; porchetta focaccia listed ~129 kr — verify counter price & dish photo before seeding.",
+    "dish_highlights": [
+      {
+        "id": "felloni-piersante-dish-1",
+        "dish_name": "Porchetta Focaccia",
+        "category": "street_sandwich",
+        "price_nok": 129,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/05ef583e685f7bd0a5f8e41681d3.webp",
+        "is_verified_food_photo": false,
+        "review_text": "Thick, crisp-edged daily focaccia packed with freshly roasted porchetta and house spicy pesto.",
+        "taste_tags": [
+          "focaccia",
+          "porchetta",
+          "quick-bite"
+        ]
+      },
+      {
+        "id": "felloni-piersante-dish-2",
+        "dish_name": "Salsiccia Focaccia",
+        "category": "street_sandwich",
+        "price_nok": 129,
+        "dish_image": "",
+        "is_verified_food_photo": false,
+        "review_text": "Warm Italian salsiccia layered into fluffy olive-oil focaccia with mustard-honey or pesto sauce.",
+        "taste_tags": [
+          "italian-deli",
+          "focaccia",
+          "savory"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "banh-mi-cousins",
+    "name": "Bánh Mì Cousins",
+    "address": "Storgata 25, 0184 Oslo",
+    "neighborhood": "sentrum",
+    "latitude": 59.91404250000001,
+    "longitude": 10.7512973,
+    "food_category": "banh_mi",
+    "icon": "banh_mi",
+    "spot_type": "restaurant",
+    "google_place_id": "ChIJg7o2L2JuQUYR2cNPtT4Y-gQ",
+    "google_reviews_count": 429,
+    "cover_image_url": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/def05e48698117da8d1744410e9a.webp",
+    "place_photos": [
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/def05e48698117da8d1744410e9a.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/fb9803f6cacb46e532ed86b51ebb.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/e23e31f784904dcf47f6e293236a.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/24cba1ebeecf02b9753d33e8d346.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/cff1e14338c8b034523869604628.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/427f2c7f59e20c40c75d46694837.webp"
+    ],
+    "candidate_photos": [
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/def05e48698117da8d1744410e9a.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/fb9803f6cacb46e532ed86b51ebb.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/e23e31f784904dcf47f6e293236a.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/24cba1ebeecf02b9753d33e8d346.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/cff1e14338c8b034523869604628.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/427f2c7f59e20c40c75d46694837.webp"
+    ],
+    "price_level": "$",
+    "google_rating": 4.4,
+    "signature_dish": "Bánh Mì Ribbe (Crispy Pork Belly)",
+    "why_curated": "Unpretentious, family-run Storgata counter serving crackly Vietnamese baguettes stuffed heavy with crispy pork belly, pâté, and pickled daikon.",
+    "verification_status": "seeded",
+    "website_uri": "http://banh-mi.no/",
+    "opening_hours_text": "Monday: 10:00 AM – 7:00 PM · Tuesday: 10:00 AM – 7:00 PM · Wednesday: 10:00 AM – 7:00 PM · Thursday: 10:00 AM – 7:00 PM · Friday: 10:00 AM – 7:00 PM · Saturday: 10:00 AM – 6:00 PM · Sunday: Closed",
+    "opening_hours": {
+      "mon": "10:00-19:00",
+      "tue": "10:00-19:00",
+      "wed": "10:00-19:00",
+      "thu": "10:00-19:00",
+      "fri": "10:00-19:00",
+      "sat": "10:00-18:00"
+    },
+    "notes": "Sandwich Ad Research Batch (Nov 2026) | Storgata #25 vs Bánh Mì XO #23 rivalry hook. Verify counter vs Wolt pricing (~159-189 kr) before seeding.",
+    "dish_highlights": [
+      {
+        "id": "banh-mi-cousins-dish-1",
+        "dish_name": "Bánh Mì Ribbe (Crispy Pork Belly)",
+        "category": "banh_mi",
+        "price_nok": 189,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/39c4c14d5e52fa379299a47f4c5a.webp",
+        "is_verified_food_photo": true,
+        "review_text": "Crackly baguette loaded with crispy roast pork belly, rich pâté, pickled carrots, fresh coriander, and chili.",
+        "taste_tags": [
+          "crispy-pork",
+          "banh-mi",
+          "street-food"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "banh-mi-xo",
+    "name": "Bánh Mì XO",
+    "address": "Storgata 23, 0184 Oslo",
+    "neighborhood": "sentrum",
+    "latitude": 59.91387079999999,
+    "longitude": 10.750671100000002,
+    "food_category": "banh_mi",
+    "icon": "banh_mi",
+    "spot_type": "restaurant",
+    "google_place_id": "ChIJ6f8HSQBvQUYRKcpKlgukGL0",
+    "google_reviews_count": 76,
+    "cover_image_url": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/70a4145d9da7fe725dfac4b92775.webp",
+    "place_photos": [
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/70a4145d9da7fe725dfac4b92775.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/6e4d211edef536ec21272bac83e9.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/2e91fc5862fea8c950727d1ac35f.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/baa575a0cb427029c385397fafa2.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/bdfa1f26cc94ae5cca281b961d33.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/b71ed4303df21becc4ee2e66eed8.webp"
+    ],
+    "candidate_photos": [
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/70a4145d9da7fe725dfac4b92775.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/6e4d211edef536ec21272bac83e9.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/2e91fc5862fea8c950727d1ac35f.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/baa575a0cb427029c385397fafa2.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/bdfa1f26cc94ae5cca281b961d33.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/b71ed4303df21becc4ee2e66eed8.webp"
+    ],
+    "price_level": "$",
+    "google_rating": 4.3,
+    "signature_dish": "Bánh Mì Đặc Biệt (House Special)",
+    "why_curated": "Crisp, airy Vietnamese baguettes finished with signature house-made XO sauce right next door to Bánh Mì Cousins on Storgata.",
+    "verification_status": "seeded",
+    "website_uri": "http://banhmixo.no/",
+    "opening_hours_text": "Monday: 10:30 AM – 7:00 PM · Tuesday: 10:30 AM – 7:00 PM · Wednesday: 10:30 AM – 7:00 PM · Thursday: 10:30 AM – 7:00 PM · Friday: 10:30 AM – 7:00 PM · Saturday: 11:30 AM – 7:00 PM · Sunday: Closed",
+    "opening_hours": {
+      "mon": "10:30-19:00",
+      "tue": "10:30-19:00",
+      "wed": "10:30-19:00",
+      "thu": "10:30-19:00",
+      "fri": "10:30-19:00",
+      "sat": "11:30-19:00"
+    },
+    "notes": "Sandwich Ad Research Batch (Nov 2026) | Storgata #23 branch (also Olav Vs gate 4). Verify counter pricing (~170-189 kr) before seeding.",
+    "dish_highlights": [
+      {
+        "id": "banh-mi-xo-dish-1",
+        "dish_name": "Bánh Mì Đặc Biệt (House Special)",
+        "category": "banh_mi",
+        "price_nok": 189,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/6e4d211edef536ec21272bac83e9.webp",
+        "is_verified_food_photo": true,
+        "review_text": "Airy toasted baguette layered with Vietnamese cold cuts, pâté, house XO sauce, pickled daikon, and herbs.",
+        "taste_tags": [
+          "banh-mi",
+          "xo-sauce",
+          "umami"
+        ]
+      },
+      {
+        "id": "banh-mi-xo-dish-2",
+        "dish_name": "Bánh Mì XO (Lemongrass Beef)",
+        "category": "banh_mi",
+        "price_nok": 189,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/bdfa1f26cc94ae5cca281b961d33.webp",
+        "is_verified_food_photo": true,
+        "review_text": "Fragrant lemongrass beef paired with rich house-made XO sauce, fresh cucumber, and pickled veggies.",
+        "taste_tags": [
+          "lemongrass-beef",
+          "banh-mi",
+          "savory"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pan-by-bread-n-butter",
+    "name": "PAN by Bread 'N Butter",
+    "address": "Sandakerveien 101B, 0483 Oslo",
+    "neighborhood": "torshov",
+    "latitude": 59.9449063,
+    "longitude": 10.772418799999999,
+    "food_category": "street_sandwich",
+    "icon": "banh_mi",
+    "spot_type": "cafe",
+    "google_place_id": "ChIJU8fXPCZtQUYRoTWJEmTn4Xc",
+    "google_reviews_count": 186,
+    "cover_image_url": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/1a201129eec4bc662507a4f185af.webp",
+    "place_photos": [
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/1a201129eec4bc662507a4f185af.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/63b7f82bc01d2807100e7f0ce168.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/407df051ad0ecd899af18041cbb6.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/60dc9df155e9be09b82134a01a9f.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/74f24e27e40e36fa4dbca22f4179.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/935eb097001053e5bb2958ebc428.webp"
+    ],
+    "candidate_photos": [
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/1a201129eec4bc662507a4f185af.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/63b7f82bc01d2807100e7f0ce168.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/407df051ad0ecd899af18041cbb6.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/60dc9df155e9be09b82134a01a9f.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/74f24e27e40e36fa4dbca22f4179.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/935eb097001053e5bb2958ebc428.webp"
+    ],
+    "price_level": "$$",
+    "google_rating": 4.6,
+    "signature_dish": "Chicken Katsu Sando",
+    "why_curated": "Japanese-inspired bakery and café by Storo baking pillowy shokupan milk bread for thick-cut Chicken, Pork, and Ebi Katsu Sandos.",
+    "verification_status": "seeded",
+    "website_uri": "https://mymenuweb.com/nor/restaurants/2050558/?utm_source=google_profile&utm_medium=google_profile&utm_campaign=admin",
+    "opening_hours_text": "Monday: Closed · Tuesday: 11:00 AM – 6:00 PM · Wednesday: 11:00 AM – 6:00 PM · Thursday: 11:00 AM – 6:00 PM · Friday: 11:00 AM – 6:00 PM · Saturday: 11:00 AM – 5:00 PM · Sunday: 12:00 – 5:00 PM",
+    "opening_hours": {
+      "sun": "12:00-17:00",
+      "tue": "11:00-18:00",
+      "wed": "11:00-18:00",
+      "thu": "11:00-18:00",
+      "fri": "11:00-18:00",
+      "sat": "11:00-17:00"
+    },
+    "notes": "Sandwich Ad Research Batch (Nov 2026) | High-impact katsu sando cross-section. Verify exact NOK counter prices before seeding.",
+    "dish_highlights": [
+      {
+        "id": "pan-by-bread-n-butter-dish-1",
+        "dish_name": "Chicken Katsu Sando",
+        "category": "street_sandwich",
+        "price_nok": null,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/9f23cf2fb6bf48e87ec5095e3d13.webp",
+        "is_verified_food_photo": true,
+        "review_text": "Crispy panko-fried chicken cutlet tucked into soft Japanese shokupan milk bread with shredded cabbage and honey-tonkatsu sauce.",
+        "taste_tags": [
+          "katsu-sando",
+          "shokupan",
+          "crispy"
+        ]
+      },
+      {
+        "id": "pan-by-bread-n-butter-dish-2",
+        "dish_name": "Pork Katsu Sando",
+        "category": "street_sandwich",
+        "price_nok": null,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/74f24e27e40e36fa4dbca22f4179.webp",
+        "is_verified_food_photo": true,
+        "review_text": "Thick golden-crusted pork katsu layered cleanly between crustless milk-bread slices with tangy tonkatsu glaze.",
+        "taste_tags": [
+          "japanese-bakery",
+          "katsu-sando",
+          "savory"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "ugly-duckling-oslo",
+    "name": "Ugly Duckling",
+    "address": "Torggata 21b, 0183 Oslo",
+    "neighborhood": "torggata",
+    "latitude": 59.916460699999995,
+    "longitude": 10.7525072,
+    "food_category": "street_sandwich",
+    "icon": "cheesesteak",
+    "spot_type": "restaurant",
+    "google_place_id": "ChIJgWjCKotvQUYR8u6tpn16aoU",
+    "google_reviews_count": 178,
+    "cover_image_url": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/02851c5de053158099d8a7839011.webp",
+    "place_photos": [
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/02851c5de053158099d8a7839011.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/bdf562bb2aa4185fd2bda8858c64.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/212ef97f841f3a4867f4e8474e1e.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/a0a1de84b2ef38debda4f2ad5ac3.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/c225c35f47422d24182d41b143be.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/ea9b91efedd512c1ec965218e232.webp"
+    ],
+    "candidate_photos": [
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/02851c5de053158099d8a7839011.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/bdf562bb2aa4185fd2bda8858c64.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/212ef97f841f3a4867f4e8474e1e.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/a0a1de84b2ef38debda4f2ad5ac3.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/c225c35f47422d24182d41b143be.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/ea9b91efedd512c1ec965218e232.webp"
+    ],
+    "price_level": "$$",
+    "google_rating": 4.5,
+    "signature_dish": "Spicy Meatball Sub",
+    "why_curated": "Born as Oslo's no-sign black-door pickup spot and now pouring natural wine on Torggata, serving loaded porchetta, duck confit, and chicken katsu on house-baked brioche.",
+    "verification_status": "seeded",
+    "website_uri": "https://www.udoslo.com/",
+    "opening_hours_text": "Monday: 11:00 AM – 3:00 PM · Tuesday: 11:00 AM – 3:00 PM · Wednesday: 11:00 AM – 7:00 PM · Thursday: 11:00 AM – 7:00 PM · Friday: 11:00 AM – 12:00 AM · Saturday: 12:00 PM – 12:00 AM · Sunday: 1:00 – 7:00 PM",
+    "opening_hours": {
+      "sun": "13:00-19:00",
+      "mon": "11:00-15:00",
+      "tue": "11:00-15:00",
+      "wed": "11:00-19:00",
+      "thu": "11:00-19:00",
+      "fri": "11:00-00:00",
+      "sat": "12:00-00:00"
+    },
+    "notes": "Sandwich Ad Research Batch (Nov 2026) | Strong TikTok/IG hook (~205-255 kr). Verify live Torggata counter prices before seeding.",
+    "dish_highlights": [
+      {
+        "id": "ugly-duckling-oslo-dish-1",
+        "dish_name": "Spicy Meatball Sub",
+        "category": "street_sandwich",
+        "price_nok": 245,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/a0a1de84b2ef38debda4f2ad5ac3.webp",
+        "is_verified_food_photo": true,
+        "review_text": "Slow-roasted porchetta with shattering crackling and bright fennel salad stacked inside soft house-baked brioche.",
+        "taste_tags": [
+          "porchetta",
+          "brioche",
+          "heavyweight"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "albertino-sandwich",
+    "name": "Albertino Sandwich",
+    "address": "Sandakerveien 106, Oslo",
+    "neighborhood": "torshov",
+    "latitude": 59.945018700000006,
+    "longitude": 10.771834799999999,
+    "food_category": "street_sandwich",
+    "icon": "banh_mi",
+    "spot_type": "restaurant",
+    "google_place_id": "ChIJDViYIwBvQUYRm4S50yjSL7s",
+    "google_reviews_count": 101,
+    "cover_image_url": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/6c208acebfa26e28005dcb83742e.webp",
+    "place_photos": [
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/6c208acebfa26e28005dcb83742e.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/39016e0af156ede8e5aa5784d980.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/d4dcecfffcfbdeb6b83277ecb87c.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/95357eb18a7680144d76be9834b5.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/e36fb05cee460b96557738b73cc2.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/63c7c15c485b0965e9cfe8f68131.webp"
+    ],
+    "candidate_photos": [
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/6c208acebfa26e28005dcb83742e.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/39016e0af156ede8e5aa5784d980.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/d4dcecfffcfbdeb6b83277ecb87c.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/95357eb18a7680144d76be9834b5.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/e36fb05cee460b96557738b73cc2.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/63c7c15c485b0965e9cfe8f68131.webp"
+    ],
+    "price_level": "$$",
+    "google_rating": 4.9,
+    "signature_dish": "Bufalino Focaccia",
+    "why_curated": "Tuscan-style sandwich counter at Lillo Gård layering fresh crisp focaccia and scrocchiarella with Italian cold cuts, buffalo mozzarella, and house pestos.",
+    "verification_status": "pending",
+    "website_uri": "https://www.albertino.no/",
+    "opening_hours_text": "Monday: 10:00 AM – 6:00 PM · Tuesday: 10:00 AM – 6:00 PM · Wednesday: 10:00 AM – 6:00 PM · Thursday: 10:00 AM – 6:00 PM · Friday: 10:00 AM – 6:00 PM · Saturday: 10:00 AM – 6:00 PM · Sunday: Closed",
+    "opening_hours": {
+      "mon": "10:00-18:00",
+      "tue": "10:00-18:00",
+      "wed": "10:00-18:00",
+      "thu": "10:00-18:00",
+      "fri": "10:00-18:00",
+      "sat": "10:00-18:00"
+    },
+    "notes": "Sandwich Ad Research Batch (Nov 2026) | Replaced Løkka Deli (permanently closed in 2025). Listed ~169-189 kr (Bufalino, Classico, Elegante) — verify live counter prices before seeding.",
+    "dish_highlights": [
+      {
+        "id": "albertino-sandwich-dish-1",
+        "dish_name": "Bufalino Focaccia",
+        "category": "street_sandwich",
+        "price_nok": 179,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/6c208acebfa26e28005dcb83742e.webp",
+        "is_verified_food_photo": false,
+        "review_text": "Crisp freshly baked Italian focaccia packed with creamy buffalo mozzarella, cured meats, and house pesto.",
+        "taste_tags": [
+          "focaccia",
+          "italian-deli",
+          "mozzarella"
+        ]
+      },
+      {
+        "id": "albertino-sandwich-dish-2",
+        "dish_name": "Classico Italian Panini",
+        "category": "street_sandwich",
+        "price_nok": 169,
+        "dish_image": "",
+        "is_verified_food_photo": false,
+        "review_text": "Tuscan scrocchiarella bread loaded with thin-sliced Italian cold cuts, aged cheese, and olive oil.",
+        "taste_tags": [
+          "panini",
+          "tuscan",
+          "quick-bite"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "down-south-deli",
+    "name": "Down South Deli",
+    "address": "Waldemar Thranes gate 8, 0171 Oslo",
+    "neighborhood": "st_hanshaugen",
+    "latitude": 59.923351499999995,
+    "longitude": 10.7393124,
+    "food_category": "street_sandwich",
+    "icon": "cheesesteak",
+    "spot_type": "restaurant",
+    "google_place_id": "ChIJiUWuz91vQUYRz5m-cy_PxTg",
+    "google_reviews_count": 224,
+    "cover_image_url": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/cc7507cb9ffe9af8287565a52a98.webp",
+    "place_photos": [
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/cc7507cb9ffe9af8287565a52a98.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/db7bb3b67f3ad3d491183f2e5587.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/df8542ba9229879435ce23c8ddd9.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/1dd289ae135c1f61e5bdf4faeadf.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/384a411262e31fe113c923acc79b.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/8182cfb2a95dba6f732301991c5f.webp"
+    ],
+    "candidate_photos": [
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/cc7507cb9ffe9af8287565a52a98.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/db7bb3b67f3ad3d491183f2e5587.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/df8542ba9229879435ce23c8ddd9.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/1dd289ae135c1f61e5bdf4faeadf.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/384a411262e31fe113c923acc79b.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/8182cfb2a95dba6f732301991c5f.webp"
+    ],
+    "price_level": "$$",
+    "google_rating": 4.6,
+    "signature_dish": "The Reuben (Smoked Pastrami Beef Cheek)",
+    "why_curated": "Lowkey St. Hanshaugen neighborhood deli known for house-smoked meats, sourdough bread, and one of Oslo's heaviest pastrami beef cheek Reubens.",
+    "verification_status": "pending",
+    "website_uri": "https://www.waydownsouth.no/down-south-deli-menu",
+    "opening_hours_text": "Monday: Closed · Tuesday: Closed · Wednesday: 4:00 – 9:00 PM · Thursday: 4:00 – 9:00 PM · Friday: 4:00 – 9:00 PM · Saturday: 1:00 – 8:00 PM · Sunday: 11:00 AM – 6:00 PM",
+    "opening_hours": {
+      "sun": "11:00-18:00",
+      "wed": "16:00-21:00",
+      "thu": "16:00-21:00",
+      "fri": "16:00-21:00",
+      "sat": "13:00-20:00"
+    },
+    "notes": "Sandwich Ad Research Batch (Nov 2026) | Listed ~249-289 kr for The Reuben; confirm counter price before seeding.",
+    "dish_highlights": [
+      {
+        "id": "down-south-deli-dish-1",
+        "dish_name": "The Reuben (Smoked Pastrami Beef Cheek)",
+        "category": "street_sandwich",
+        "price_nok": 249,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/cc7507cb9ffe9af8287565a52a98.webp",
+        "is_verified_food_photo": false,
+        "review_text": "House-smoked pastrami beef cheek, melted Gruyère, sauerkraut, and dressing pressed between toasted sourdough slices.",
+        "taste_tags": [
+          "smoked-meat",
+          "reuben",
+          "sourdough"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "pinerolo-focacceria",
+    "name": "Pinerolo Focacceria",
+    "address": "Operagata 61d, 0194 Oslo",
+    "neighborhood": "bjorvika",
+    "latitude": 59.906871499999994,
+    "longitude": 10.7576022,
+    "food_category": "street_sandwich",
+    "icon": "banh_mi",
+    "spot_type": "restaurant",
+    "google_place_id": "ChIJ1ZrnixpvQUYRcnjCihn42w4",
+    "google_reviews_count": 8,
+    "cover_image_url": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/6e4e956757668fa0932009118541.webp",
+    "place_photos": [
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/6e4e956757668fa0932009118541.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/12ad99c14087bd409c5ce111a24b.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/96d6df000f42dce1885a82489b7d.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/18f6185a1c76d804eccde34b397f.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/5be4572b6bf405570e1be527a267.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/6c2f874358e461a6e8913b2c8d59.webp"
+    ],
+    "candidate_photos": [
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/6e4e956757668fa0932009118541.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/12ad99c14087bd409c5ce111a24b.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/96d6df000f42dce1885a82489b7d.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/18f6185a1c76d804eccde34b397f.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/5be4572b6bf405570e1be527a267.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/6c2f874358e461a6e8913b2c8d59.webp"
+    ],
+    "price_level": "$$",
+    "google_rating": 4.3,
+    "signature_dish": "Mortadella, Stracciatella & Pistachio Focaccia",
+    "why_curated": "Venetian-inspired waterfront focacceria in Bjørvika stuffing crispy toasted focaccia with silky mortadella, stracciatella, and pistachio pesto.",
+    "verification_status": "pending",
+    "website_uri": "https://www.pinerolo.no/bjorvika",
+    "opening_hours_text": "Monday: 1:00 – 9:00 PM · Tuesday: 1:00 – 9:00 PM · Wednesday: 1:00 – 9:00 PM · Thursday: 11:00 AM – 9:00 PM · Friday: 11:00 AM – 9:00 PM · Saturday: 11:00 AM – 9:00 PM · Sunday: 11:00 AM – 9:00 PM",
+    "opening_hours": {
+      "sun": "11:00-21:00",
+      "mon": "13:00-21:00",
+      "tue": "13:00-21:00",
+      "wed": "13:00-21:00",
+      "thu": "11:00-21:00",
+      "fri": "11:00-21:00",
+      "sat": "11:00-21:00"
+    },
+    "notes": "Sandwich Ad Research Batch (Nov 2026) | Verify current seasonal opening status & exact counter prices (~140-180 kr) before seeding.",
+    "dish_highlights": [
+      {
+        "id": "pinerolo-focacceria-dish-1",
+        "dish_name": "Mortadella, Stracciatella & Pistachio Focaccia",
+        "category": "street_sandwich",
+        "price_nok": null,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/6e4e956757668fa0932009118541.webp",
+        "is_verified_food_photo": false,
+        "review_text": "Crisp golden focaccia packed with thin-sliced mortadella, creamy stracciatella, and crushed pistachio pesto.",
+        "taste_tags": [
+          "focaccia",
+          "mortadella",
+          "pistachio"
+        ]
+      }
+    ]
+  },
+  {
     "id": "kims-kitchen",
     "name": "Kim's Kitchen",
     "address": "Thereses gate 47A, 0354 Oslo",

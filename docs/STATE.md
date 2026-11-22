@@ -1,10 +1,10 @@
 # STATE.md — CityPulse / Smakr (read first, keep <= 30 lines)
 
-Updated: 2026-11-19
+Updated: 2026-11-22
 
 ## Now
-- Task: Merged `origin/posthog/wizard-01a1f4376fe1` into `main`, resolved `package.json`/`package-lock.json`/`layout.tsx` conflicts, unified `PostHogProvider` + env key support (`NEXT_PUBLIC_POSTHOG_KEY` or `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN`), and verified `npm install`.
-- Status: `npx tsc --noEmit` passed (exit 0); merge committed locally, ready to push to `origin/main`.
+- Task: Fixed `U WAN' SAM?` pop-up dates (`Nov 22 – Dec 13`) in Supabase `venues` + `weekly_picks` (Smakr Pick), fixed `parseEndOfDayMs` midnight-ISO expiry bug in `popupUtils.ts`, and added live multi-date session chips + website links to `VenueBottomSheet` & `VenueDetailPane`.
+- Status: Live in Supabase + local dev (`:3001`); Bánh Mì 1-slide branded ad mockup (`v5`) ready to wire into `/ad-reel`.
 
 ## Next (max 3)
 1. Preview and export the 2-slide Early Snowfall `@3x` PNG assets in `/ad-reel`.

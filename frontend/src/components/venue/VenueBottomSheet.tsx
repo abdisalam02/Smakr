@@ -32,6 +32,7 @@ import {
   getPopupMeta,
   isPopupVenue,
   resolvePopupLifecycle,
+  parsePopupScheduleDates,
   getPopupUpcomingDropDate,
   downloadPopupCalendarIcs,
 } from "@/lib/popupUtils";
@@ -203,6 +204,10 @@ export function VenueBottomSheet() {
   const isPopup = isPopupVenue(selectedVenue);
   const popupMeta = selectedVenue ? getPopupMeta(selectedVenue) : null;
   const popupLifecycle = isPopup && selectedVenue ? resolvePopupLifecycle(selectedVenue) : null;
+  const popupScheduleSessions = useMemo(
+    () => (isPopup && selectedVenue ? parsePopupScheduleDates(selectedVenue) : []),
+    [isPopup, selectedVenue]
+  );
   const upcomingDropDate = useMemo(
     () => (isPopup && selectedVenue ? getPopupUpcomingDropDate(selectedVenue) : null),
     [isPopup, selectedVenue]
@@ -864,25 +869,72 @@ export function VenueBottomSheet() {
                             <span>Roaming Oslo · Next location announced on Instagram</span>
                           </div>
                         ) : null}
+
+                        {/* Multi-Date Pop-Up Schedule Pills (auto-highlights Today & Next) */}
+                        {popupScheduleSessions.length > 0 && (
+                          <div className="pt-1.5 flex flex-wrap gap-1.5">
+                            {popupScheduleSessions.map((session) => {
+                              const isToday = session.status === "today";
+                              const isNext = session.status === "next";
+                              const isPast = session.status === "past";
+                              return (
+                                <span
+                                  key={session.id}
+                                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors ${
+                                    isToday
+                                      ? "bg-[#E84A27] text-white shadow-xs"
+                                      : isNext
+                                      ? "bg-[#FAF7F2] dark:bg-white/10 text-[#181615] dark:text-white border border-[#E84A27]/60"
+                                      : isPast
+                                      ? "bg-[#EFE9DF]/50 dark:bg-white/5 text-[#181615]/40 dark:text-zinc-500 line-through"
+                                      : "bg-[#EFE9DF] dark:bg-white/8 text-[#181615]/85 dark:text-zinc-200"
+                                  }`}
+                                >
+                                  {isToday && <span>Today ·</span>}
+                                  {isNext && <span className="text-[#E84A27]">Next ·</span>}
+                                  <span>{session.weekday} {session.shortDate}</span>
+                                  {session.hours && (
+                                    <span className={isToday ? "text-white/85 font-semibold" : "opacity-65 font-semibold"}>
+                                      · {session.hours}
+                                    </span>
+                                  )}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
 
-                      {/* Floating Instagram @handle + zero-login Calendar Drop + optional RSVP pill */}
-                      {(popupMeta?.instagram_url || upcomingDropDate || (popupMeta?.ticket_url && !isDormant)) && (
+                      {/* Floating Instagram @handle + Website + zero-login Calendar Drop + optional RSVP pill */}
+                      {(popupMeta?.instagram_url || selectedVenue.website_uri || upcomingDropDate || (popupMeta?.ticket_url && !isDormant)) && (
                         <div className="flex items-center justify-between gap-2 flex-wrap">
-                          {popupMeta?.instagram_url && (
-                            <a
-                              href={popupMeta.instagram_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 py-0.5 text-xs text-[#181615] dark:text-white hover:text-[#E84A27] transition-colors group"
-                            >
-                              <Instagram className="w-4 h-4 text-[#E84A27] shrink-0" />
-                              <span className="font-comico tracking-wide underline-offset-4 group-hover:underline">
-                                {instagramHandle ? `@${instagramHandle}` : "Instagram"}
-                              </span>
-                              <ExternalLink className="w-3 h-3 opacity-50 shrink-0" />
-                            </a>
-                          )}
+                          <div className="flex items-center gap-3 flex-wrap">
+                            {popupMeta?.instagram_url && (
+                              <a
+                                href={popupMeta.instagram_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 py-0.5 text-xs text-[#181615] dark:text-white hover:text-[#E84A27] transition-colors group"
+                              >
+                                <Instagram className="w-4 h-4 text-[#E84A27] shrink-0" />
+                                <span className="font-comico tracking-wide underline-offset-4 group-hover:underline">
+                                  {instagramHandle ? `@${instagramHandle}` : "Instagram"}
+                                </span>
+                                <ExternalLink className="w-3 h-3 opacity-50 shrink-0" />
+                              </a>
+                            )}
+                            {selectedVenue.website_uri && (
+                              <a
+                                href={selectedVenue.website_uri}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 py-0.5 text-xs font-semibold text-[#181615]/75 dark:text-zinc-300 hover:text-[#E84A27] transition-colors"
+                              >
+                                <Globe className="w-3.5 h-3.5 text-[#E84A27] shrink-0" />
+                                <span>{selectedVenue.website_uri.replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, "")}</span>
+                              </a>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2 flex-wrap">
                             {upcomingDropDate && (
                               <button
