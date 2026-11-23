@@ -38,7 +38,7 @@ import {
   type PosterLayer,
 } from "@/lib/adPosterTemplates";
 
-const STORAGE_PREFIX = "smakr_poster_editor_v14_";
+const STORAGE_PREFIX = "smakr_poster_editor_v16_";
 const SNAP_THRESHOLD = 9;
 
 type SafeZoneMode = "off" | "tiktok" | "ig" | "all";

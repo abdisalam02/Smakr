@@ -3,7 +3,7 @@
 Updated: 2026-11-23
 
 ## Now
-- Task: Split mobile **Download** (direct `@3x` PNG blob download) and **Share** (`navigator.share`) into separate buttons in `AdPosterEditorLab.tsx` on `/ad-reel`.
+- Task: Baked updated `9:16` Slide 1 Bánh Mì layout (`0.97` Burnt Paprika center box, larger sandwich cutouts, Cousins `21°`, Lai Zai `749,1321`) + `1.0` opacity default on `3:4` into `adPosterTemplates.ts` & bumped `AdPosterEditorLab.tsx` storage key (`v16`).
 - Status: Verified (`tsc --noEmit` clean) and pushed to `origin/main` for Vercel deploy.
 
 ## Next (max 3)
