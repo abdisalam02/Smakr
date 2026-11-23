@@ -316,8 +316,8 @@ export function LocalsPicksSwimlane({
   if (localPickCards.length === 0) return null;
 
   return (
-    <section className="col-span-full -mx-3 px-3 py-2 my-1">
-      <div className="flex items-center justify-between gap-2 mb-2.5">
+    <section className="col-span-full -mx-3 lg:-mx-3.5 py-2 my-1">
+      <div className="flex items-center justify-between gap-2 mb-2.5 px-3 lg:px-3.5">
         <h3 className="text-[19px] font-display font-bold tracking-tight text-[#181615] uppercase leading-tight flex items-center gap-1.5 min-w-0">
           <span className="text-[#E84A27]">✦</span>
           <span>LOCALS&apos; PICKS</span>

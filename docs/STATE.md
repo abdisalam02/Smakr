@@ -3,8 +3,8 @@
 Updated: 2026-11-23
 
 ## Now
-- Task: Shipped 60fps Feed motion & Oslo Pop-Up Radar Fanned Flyer Stack (`FeedMotionLanes.tsx`): counter-drift + snap-focus + living Open Peeps avatars across `Locals' Picks`, `Matcha, Coffee & Cocoa`, and `The Kitchens Behind the Dishes`, plus `POPUP_RADAR_LAYOUT_MODE` toggle for Fanned Stack vs Horizontal + Warm Oat Scout card (`/makr`).
-- Status: Verified (`npx tsc --noEmit` + `npm run build` exit 0; `/` First Load JS `606 kB`).
+- Task: Refined Feed motion (`FeedMotionLanes.tsx`, `HomeView.tsx`, `FoodieCommunityBlocks.tsx`): added automatic alternating-direction flyer flicking (every 3.8s, pauses on touch/hover) + alternating per-card tilts on `PopupRadarDeck`, increased vertical counter-drift to `48px` with live viewport progress, and made all horizontal shelves true edge-to-edge full-bleed with zero side clipping.
+- Status: Verified (`npx tsc --noEmit` exit 0).
 
 ## Next (max 3)
 1. Preview and export the 2-slide Early Snowfall `@3x` PNG assets in `/ad-reel`.

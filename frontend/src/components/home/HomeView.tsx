@@ -892,8 +892,8 @@ export function HomeView({
     ) => {
       if (!hasItems) return null;
       return (
-        <section className="col-span-full -mx-3 px-3 py-2 my-1">
-          <div className="flex items-center justify-between gap-2 mb-2.5">
+        <section className="col-span-full -mx-3 lg:-mx-3.5 py-2 my-1">
+          <div className="flex items-center justify-between gap-2 mb-2.5 px-3 lg:px-3.5">
             <h3 className="text-[19px] font-display font-bold tracking-tight text-[#181615] dark:text-zinc-100 uppercase leading-tight flex items-center gap-1.5 min-w-0">
               {title}
             </h3>
@@ -994,8 +994,8 @@ export function HomeView({
           ];
 
           return (
-            <section className="col-span-full -mx-3 px-3 py-1.5">
-              <div className="flex items-center justify-between gap-2 mb-2">
+            <section className="col-span-full -mx-3 lg:-mx-3.5 py-1.5">
+              <div className="flex items-center justify-between gap-2 mb-2 px-3 lg:px-3.5">
                 <h3 className="text-[19px] font-display font-bold tracking-tight text-[#181615] dark:text-zinc-100 uppercase leading-tight flex items-center gap-1.5 min-w-0">
                   <SmakrFoodIcon name="popup" className="w-5 h-5 shrink-0" />
                   <span>Oslo Pop-Up Radar</span>

@@ -47,7 +47,7 @@ function prefersReducedMotion(): boolean {
  */
 export function KineticFeedLane({
   driftDirection = -1,
-  maxDriftPx = 14,
+  maxDriftPx = 48,
   className = "",
   children,
 }: KineticFeedLaneProps) {
@@ -58,11 +58,12 @@ export function KineticFeedLane({
     clientWidth: number;
     scrollWidth: number;
     padLeft: number;
-  }>({ clientWidth: 360, scrollWidth: 360, padLeft: 0 });
-  const laneTopRef = useRef<number>(0);
-  const laneHeightRef = useRef<number>(260);
+  }>({ clientWidth: 360, scrollWidth: 360, padLeft: 12 });
   const isVisibleRef = useRef<boolean>(true);
-  const driftFrozenRef = useRef<boolean>(false);
+  const isHorizontalActiveRef = useRef<boolean>(false);
+  const resumeDriftTimerRef = useRef<number | null>(null);
+  const lastVerticalProgressRef = useRef<number | null>(null);
+  const currentDriftPxRef = useRef<number>(0);
   const hRafRef = useRef<number | null>(null);
   const vRafRef = useRef<number | null>(null);
   const reducedMotionRef = useRef<boolean>(false);
@@ -72,8 +73,8 @@ export function KineticFeedLane({
     const driftWrap = driftWrapRef.current;
     if (!track || !driftWrap) return;
 
-    const style = window.getComputedStyle(track);
-    const padLeft = parseFloat(style.paddingLeft) || 0;
+    const innerStyle = window.getComputedStyle(driftWrap);
+    const padLeft = parseFloat(innerStyle.paddingLeft) || 12;
     containerMetaRef.current = {
       clientWidth: track.clientWidth || 360,
       scrollWidth: track.scrollWidth || 360,
@@ -92,15 +93,6 @@ export function KineticFeedLane({
       });
     });
     metricsRef.current = next;
-
-    // Cache vertical offset relative to the feed scroll container once (never inside scroll rAF)
-    const feedScroller = track.closest<HTMLElement>("[data-feed-scroll]");
-    if (feedScroller) {
-      const feedRect = feedScroller.getBoundingClientRect();
-      const trackRect = track.getBoundingClientRect();
-      laneTopRef.current = trackRect.top - feedRect.top + feedScroller.scrollTop;
-      laneHeightRef.current = trackRect.height || 260;
-    }
   }, []);
 
   const applyHorizontalFocus = useCallback(() => {
@@ -161,31 +153,38 @@ export function KineticFeedLane({
     }
   }, []);
 
-  const handleHorizontalScroll = useCallback(() => {
-    const track = scrollerRef.current;
-    if (track && track.scrollLeft > 3 && !driftFrozenRef.current) {
-      driftFrozenRef.current = true;
-      if (driftWrapRef.current) {
-        driftWrapRef.current.style.transition = "transform 220ms cubic-bezier(0.22,1,0.36,1)";
-        driftWrapRef.current.style.transform = "translate3d(0, 0, 0)";
-      }
+  const pauseDriftTemporarily = useCallback((resumeDelayMs = 420) => {
+    isHorizontalActiveRef.current = true;
+    if (resumeDriftTimerRef.current !== null) {
+      window.clearTimeout(resumeDriftTimerRef.current);
     }
+    resumeDriftTimerRef.current = window.setTimeout(() => {
+      resumeDriftTimerRef.current = null;
+      isHorizontalActiveRef.current = false;
+    }, resumeDelayMs);
+  }, []);
+
+  const handleHorizontalScroll = useCallback(() => {
+    pauseDriftTemporarily(420);
 
     if (hRafRef.current !== null) return;
     hRafRef.current = requestAnimationFrame(() => {
       hRafRef.current = null;
       applyHorizontalFocus();
     });
-  }, [applyHorizontalFocus]);
+  }, [applyHorizontalFocus, pauseDriftTemporarily]);
 
-  const freezeDriftOnInteraction = useCallback(() => {
-    if (driftFrozenRef.current) return;
-    driftFrozenRef.current = true;
-    // Freeze in place immediately while the user's thumb is down so nothing slides under it.
-    if (driftWrapRef.current) {
-      driftWrapRef.current.style.transition = "";
+  const handlePointerStart = useCallback(() => {
+    isHorizontalActiveRef.current = true;
+    if (resumeDriftTimerRef.current !== null) {
+      window.clearTimeout(resumeDriftTimerRef.current);
+      resumeDriftTimerRef.current = null;
     }
   }, []);
+
+  const handlePointerRelease = useCallback(() => {
+    pauseDriftTemporarily(320);
+  }, [pauseDriftTemporarily]);
 
   useEffect(() => {
     reducedMotionRef.current = prefersReducedMotion();
@@ -224,26 +223,44 @@ export function KineticFeedLane({
       vRafRef.current = null;
       if (
         reducedMotionRef.current ||
-        driftFrozenRef.current ||
         !isVisibleRef.current ||
         !feedScroller ||
-        !driftWrapRef.current
+        !driftWrapRef.current ||
+        !scrollerRef.current
       ) {
         return;
       }
-      const viewH = feedScroller.clientHeight || 720;
-      const scrollY = feedScroller.scrollTop;
-      const totalSpan = Math.max(1, viewH + laneHeightRef.current);
-      const rawProgress = (scrollY + viewH - laneTopRef.current) / totalSpan;
+      const scrollerRect = feedScroller.getBoundingClientRect();
+      const laneRect = scrollerRef.current.getBoundingClientRect();
+      const totalSpan = Math.max(1, scrollerRect.height + laneRect.height);
+      const rawProgress = (scrollerRect.bottom - laneRect.top) / totalSpan;
       const progress = Math.max(0, Math.min(1, rawProgress));
-      // Keep left edge flush or gently tucked negative (never pulls right into a blank left gap)
-      const tx =
-        driftDirection === -1 ? -progress * maxDriftPx : -(1 - progress) * maxDriftPx;
-      driftWrapRef.current.style.transform = `translate3d(${tx.toFixed(1)}px, 0, 0)`;
+
+      const prevProgress = lastVerticalProgressRef.current;
+      lastVerticalProgressRef.current = progress;
+
+      // Never slide cards while the user's thumb is touching or actively swiping horizontally
+      if (isHorizontalActiveRef.current) return;
+
+      const minTx = -maxDriftPx;
+      const maxTx = scrollerRef.current.scrollLeft > maxDriftPx ? maxDriftPx : 0;
+
+      if (prevProgress === null) {
+        currentDriftPxRef.current =
+          driftDirection === -1 ? -progress * maxDriftPx : -(1 - progress) * maxDriftPx;
+      } else {
+        const deltaPx = (progress - prevProgress) * maxDriftPx * driftDirection;
+        currentDriftPxRef.current = Math.max(
+          minTx,
+          Math.min(maxTx, currentDriftPxRef.current + deltaPx)
+        );
+      }
+
+      driftWrapRef.current.style.transform = `translate3d(${currentDriftPxRef.current.toFixed(1)}px, 0, 0)`;
     };
 
     const onFeedScroll = () => {
-      if (reducedMotionRef.current || driftFrozenRef.current || !isVisibleRef.current) return;
+      if (reducedMotionRef.current || !isVisibleRef.current) return;
       if (vRafRef.current !== null) return;
       vRafRef.current = requestAnimationFrame(applyVerticalDrift);
     };
@@ -257,6 +274,7 @@ export function KineticFeedLane({
       cancelAnimationFrame(initRaf);
       if (hRafRef.current !== null) cancelAnimationFrame(hRafRef.current);
       if (vRafRef.current !== null) cancelAnimationFrame(vRafRef.current);
+      if (resumeDriftTimerRef.current !== null) window.clearTimeout(resumeDriftTimerRef.current);
       ro.disconnect();
       io?.disconnect();
       feedScroller?.removeEventListener("scroll", onFeedScroll);
@@ -267,13 +285,17 @@ export function KineticFeedLane({
     <div
       ref={scrollerRef}
       onScroll={handleHorizontalScroll}
-      onPointerDown={freezeDriftOnInteraction}
-      onTouchStart={freezeDriftOnInteraction}
-      className={`overflow-x-auto snap-x snap-mandatory no-scrollbar ${className}`}
+      onPointerDown={handlePointerStart}
+      onPointerUp={handlePointerRelease}
+      onPointerCancel={handlePointerRelease}
+      onTouchStart={handlePointerStart}
+      onTouchEnd={handlePointerRelease}
+      onTouchCancel={handlePointerRelease}
+      className={`w-full overflow-x-auto snap-x snap-mandatory scroll-px-3 lg:scroll-px-3.5 no-scrollbar ${className}`}
     >
       <div
         ref={driftWrapRef}
-        className="flex gap-3 pb-1 w-max will-change-transform"
+        className="flex gap-3 px-3 lg:px-3.5 pb-1 w-max will-change-transform"
       >
         {children}
       </div>
@@ -403,9 +425,14 @@ export function PopupRadarDeck({
   const [activeIndex, setActiveIndex] = useState(0);
   const safeIndex = count > 0 ? activeIndex % count : 0;
 
+  const stageWrapRef = useRef<HTMLDivElement | null>(null);
   const cardRefs = useRef<Array<HTMLDivElement | null>>([]);
   const didDragRef = useRef(false);
   const isAnimatingOutRef = useRef(false);
+  const isInteractingRef = useRef(false);
+  const isInViewRef = useRef(true);
+  const pauseAutoUntilRef = useRef<number>(0);
+  const autoDirRef = useRef<-1 | 1>(-1);
   const dragCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -414,15 +441,26 @@ export function PopupRadarDeck({
     };
   }, []);
 
-  const getRestTransform = (slot: number) => {
-    if (slot === 0) return "translate3d(0px, 0px, 0) rotate(0deg) scale(1)";
-    if (slot === 1) return "translate3d(18px, 6px, 0) rotate(3.2deg) scale(0.95)";
-    return "translate3d(-14px, 10px, 0) rotate(-3.4deg) scale(0.91)";
+  const getTopTiltDeg = (idx: number) => {
+    const pattern = [-1.8, 1.9, -1.5, 1.6];
+    return pattern[idx % pattern.length];
+  };
+
+  const getRestTransform = (slot: number, itemIdx: number) => {
+    if (slot === 0) {
+      const deg = getTopTiltDeg(itemIdx);
+      return `translate3d(0px, 0px, 0) rotate(${deg}deg) scale(1)`;
+    }
+    if (slot === 1) return "translate3d(22px, 7px, 0) rotate(5.2deg) scale(0.945)";
+    return "translate3d(-20px, 11px, 0) rotate(-5.4deg) scale(0.90)";
   };
 
   const cycleBy = useCallback(
-    (delta: number, flingDir?: -1 | 1) => {
+    (delta: number, flingDir?: -1 | 1, isAuto = false) => {
       if (count <= 1 || isAnimatingOutRef.current) return;
+      if (!isAuto) {
+        pauseAutoUntilRef.current = Date.now() + 6000;
+      }
       const topEl = cardRefs.current[0];
 
       if (prefersReducedMotion() || !topEl || !flingDir) {
@@ -431,19 +469,20 @@ export function PopupRadarDeck({
       }
 
       isAnimatingOutRef.current = true;
-      if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+      if (!isAuto && typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
         navigator.vibrate(6);
       }
 
       topEl.style.transition =
-        "transform 200ms cubic-bezier(0.22, 1, 0.36, 1), opacity 190ms ease-out";
-      topEl.style.transform = `translate3d(${flingDir * 320}px, 14px, 0) rotate(${flingDir * 13}deg) scale(0.96)`;
+        "transform 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 230ms ease-out";
+      topEl.style.transform = `translate3d(${flingDir * 330}px, 16px, 0) rotate(${flingDir * 15}deg) scale(0.95)`;
       topEl.style.opacity = "0";
 
       const secondEl = cardRefs.current[1];
+      const nextIdx = (safeIndex + delta + count) % count;
       if (secondEl) {
-        secondEl.style.transition = "transform 200ms cubic-bezier(0.22, 1, 0.36, 1)";
-        secondEl.style.transform = "translate3d(0px, 0px, 0) rotate(0deg) scale(1)";
+        secondEl.style.transition = "transform 260ms cubic-bezier(0.22, 1, 0.36, 1)";
+        secondEl.style.transform = getRestTransform(0, nextIdx);
       }
 
       window.setTimeout(() => {
@@ -458,10 +497,46 @@ export function PopupRadarDeck({
         }
         setActiveIndex((prev) => (prev + delta + count) % count);
         isAnimatingOutRef.current = false;
-      }, 205);
+      }, 265);
     },
-    [count]
+    [count, safeIndex]
   );
+
+  // Track visibility & automatically flick the top flyer every ~3.8s (pauses during touch/hover)
+  useEffect(() => {
+    if (mode !== "fanned_stack" || count <= 1 || prefersReducedMotion()) return;
+
+    const el = stageWrapRef.current;
+    let io: IntersectionObserver | null = null;
+    if (el && typeof IntersectionObserver !== "undefined") {
+      io = new IntersectionObserver(
+        (entries) => {
+          if (entries[0]) isInViewRef.current = entries[0].isIntersecting;
+        },
+        { threshold: 0.35 }
+      );
+      io.observe(el);
+    }
+
+    const timer = window.setInterval(() => {
+      if (
+        !isInViewRef.current ||
+        isInteractingRef.current ||
+        isAnimatingOutRef.current ||
+        Date.now() < pauseAutoUntilRef.current
+      ) {
+        return;
+      }
+      const dir = autoDirRef.current;
+      autoDirRef.current = dir === -1 ? 1 : -1;
+      cycleBy(1, dir, true);
+    }, 3800);
+
+    return () => {
+      window.clearInterval(timer);
+      io?.disconnect();
+    };
+  }, [count, cycleBy, mode]);
 
   const handleTopPointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
@@ -473,6 +548,8 @@ export function PopupRadarDeck({
       if (target?.closest("button, a")) return;
 
       dragCleanupRef.current?.();
+      isInteractingRef.current = true;
+      pauseAutoUntilRef.current = Date.now() + 6000;
 
       const startX = e.clientX;
       const startY = e.clientY;
@@ -488,45 +565,46 @@ export function PopupRadarDeck({
       const topEl = cardRefs.current[0];
       const secondEl = cardRefs.current[1];
       const thirdEl = cardRefs.current[2];
+      const baseTopTilt = getTopTiltDeg(safeIndex);
 
       const applyDragFrame = () => {
         rafId = null;
         if (lock !== "x" || !topEl) return;
 
-        const rot = Math.max(-14, Math.min(14, latestDx * 0.045));
+        const rot = Math.max(-16, Math.min(16, baseTopTilt + latestDx * 0.045));
         topEl.style.transition = "none";
         topEl.style.transform = `translate3d(${latestDx.toFixed(1)}px, ${(latestDy * 0.08).toFixed(1)}px, 0) rotate(${rot.toFixed(2)}deg)`;
 
         const progress = Math.min(1, Math.abs(latestDx) / 150);
         if (secondEl) {
-          const tx = (18 * (1 - progress)).toFixed(1);
-          const ty = (6 * (1 - progress)).toFixed(1);
-          const r = (3.2 * (1 - progress)).toFixed(2);
-          const s = (0.95 + progress * 0.05).toFixed(3);
+          const tx = (22 * (1 - progress)).toFixed(1);
+          const ty = (7 * (1 - progress)).toFixed(1);
+          const r = (5.2 * (1 - progress)).toFixed(2);
+          const s = (0.945 + progress * 0.055).toFixed(3);
           secondEl.style.transition = "none";
           secondEl.style.transform = `translate3d(${tx}px, ${ty}px, 0) rotate(${r}deg) scale(${s})`;
         }
         if (thirdEl) {
-          const tx = (-14 + progress * 8).toFixed(1);
-          const ty = (10 - progress * 3).toFixed(1);
-          const s = (0.91 + progress * 0.03).toFixed(3);
+          const tx = (-20 + progress * 8).toFixed(1);
+          const ty = (11 - progress * 3).toFixed(1);
+          const s = (0.9 + progress * 0.03).toFixed(3);
           thirdEl.style.transition = "none";
-          thirdEl.style.transform = `translate3d(${tx}px, ${ty}px, 0) rotate(-2.8deg) scale(${s})`;
+          thirdEl.style.transform = `translate3d(${tx}px, ${ty}px, 0) rotate(-4.4deg) scale(${s})`;
         }
       };
 
       const resetCards = () => {
         if (topEl) {
           topEl.style.transition = "transform 240ms cubic-bezier(0.22, 1, 0.36, 1)";
-          topEl.style.transform = getRestTransform(0);
+          topEl.style.transform = getRestTransform(0, safeIndex);
         }
         if (secondEl) {
           secondEl.style.transition = "transform 240ms cubic-bezier(0.22, 1, 0.36, 1)";
-          secondEl.style.transform = getRestTransform(1);
+          secondEl.style.transform = getRestTransform(1, (safeIndex + 1) % count);
         }
         if (thirdEl) {
           thirdEl.style.transition = "transform 240ms cubic-bezier(0.22, 1, 0.36, 1)";
-          thirdEl.style.transform = getRestTransform(2);
+          thirdEl.style.transform = getRestTransform(2, (safeIndex + 2) % count);
         }
       };
 
@@ -567,6 +645,7 @@ export function PopupRadarDeck({
           cancelAnimationFrame(rafId);
           rafId = null;
         }
+        isInteractingRef.current = false;
         window.removeEventListener("pointermove", onMove);
         window.removeEventListener("pointerup", onEnd);
         window.removeEventListener("pointercancel", onCancel);
@@ -608,7 +687,7 @@ export function PopupRadarDeck({
       window.addEventListener("pointercancel", onCancel, { passive: true });
       dragCleanupRef.current = cleanup;
     },
-    [count, cycleBy]
+    [count, cycleBy, safeIndex]
   );
 
   if (count === 0) return null;
@@ -639,16 +718,25 @@ export function PopupRadarDeck({
   });
 
   return (
-    <div className="w-full pt-1 pb-2">
+    <div
+      ref={stageWrapRef}
+      onMouseEnter={() => {
+        isInteractingRef.current = true;
+      }}
+      onMouseLeave={() => {
+        isInteractingRef.current = false;
+      }}
+      className="w-full pt-2 pb-2 overflow-x-clip"
+    >
       <div
-        className="relative mx-auto w-full max-w-[308px] sm:max-w-[330px] h-[296px] sm:h-[310px] select-none"
+        className="relative mx-auto w-full max-w-[308px] sm:max-w-[330px] h-[300px] sm:h-[314px] select-none"
         style={{ touchAction: "pan-y" }}
       >
         {/* Render back-to-front so slot 0 sits cleanly on top */}
         {[...stackedSlots].reverse().map(({ slot, itemIdx, item }) => {
           const isTop = slot === 0;
           const zClass = slot === 0 ? "z-30" : slot === 1 ? "z-20" : "z-10";
-          const restTransform = getRestTransform(slot);
+          const restTransform = getRestTransform(slot, itemIdx);
 
           return (
             <div
@@ -669,6 +757,7 @@ export function PopupRadarDeck({
                       // Tapping a peeking flyer brings it cleanly to the front without opening details
                       e.stopPropagation();
                       e.preventDefault();
+                      pauseAutoUntilRef.current = Date.now() + 6000;
                       setActiveIndex(itemIdx);
                     }
               }
