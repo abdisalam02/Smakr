@@ -385,6 +385,14 @@ export default function SeedingLabPage() {
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
+            <Link
+              href="/ad-reel?tab=poster_lab"
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-[#EAE5DC] bg-white px-3 py-2.5 text-xs font-bold text-[#181615] shadow-xs transition-colors hover:border-[#E84A27]/50 hover:text-[#E84A27]"
+              title="Open interactive Poster Editor Lab"
+            >
+              <Layers className="h-3.5 w-3.5 text-[#E84A27]" />
+              <span>Poster Lab</span>
+            </Link>
             <button
               type="button"
               onClick={loadCandidates}

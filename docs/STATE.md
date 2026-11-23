@@ -1,10 +1,10 @@
 # STATE.md — CityPulse / Smakr (read first, keep <= 30 lines)
 
-Updated: 2026-11-22
+Updated: 2026-11-23
 
 ## Now
-- Task: Fixed `U WAN' SAM?` pop-up dates (`Nov 22 – Dec 13`) in Supabase `venues` + `weekly_picks` (Smakr Pick), fixed `parseEndOfDayMs` midnight-ISO expiry bug in `popupUtils.ts`, and added live multi-date session chips + website links to `VenueBottomSheet` & `VenueDetailPane`.
-- Status: Live in Supabase + local dev (`:3001`); Bánh Mì 1-slide branded ad mockup (`v5`) ready to wire into `/ad-reel`.
+- Task: Shipped mobile-first **Ad Studio Hub** on `/ad-reel` + **Poster Editor Lab** (`AdPosterEditorLab.tsx`, `adPosterTemplates.ts`, 4 **Oslo Bánh Mì** `3:4` & `9:16` templates, native mobile `@3x` PNG share/save bar, Safe Zones, Motion Reel paused by default).
+- Status: Verified (`tsc --noEmit` clean) and pushed to `origin/main` for Vercel deploy & phone downloads.
 
 ## Next (max 3)
 1. Preview and export the 2-slide Early Snowfall `@3x` PNG assets in `/ad-reel`.

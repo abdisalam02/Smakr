@@ -5,10 +5,12 @@ import { AnimatePresence, motion } from "motion/react";
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import {
+  ArrowLeft,
   ArrowUpRight,
   Bookmark,
   Check,
   ChevronDown,
+  ChevronRight,
   Compass,
   Download,
   ExternalLink,
@@ -38,9 +40,11 @@ import {
   VolumeX,
   X,
   Layers,
+  Move,
 } from "lucide-react";
 import { SmakrMascotRig } from "@/components/studio/SmakrMascotRig";
 import { CarouselStoryDeck } from "@/components/studio/CarouselStoryDeck";
+import { AdPosterEditorLab } from "@/components/studio/AdPosterEditorLab";
 import { FOOD_PIN_SVG_MAP } from "@/components/food/FoodIcons";
 import SmakrLogo from "@/components/ui/SmakrLogo";
 import { OfficialSmakrMascot, OFFICIAL_SMAKR_MASCOT_CONFIG } from "@/lib/officialSmakrMascot";
@@ -652,8 +656,22 @@ export default function AdReelStagePage() {
   const weeklyPick = useCityPulseStore((s) => s.weeklyPick);
   const venues = useCityPulseStore((s) => s.venues);
 
-  // Campaign switcher: 5-Slide Story Deck vs Partner Ad (Static) vs Motion Reel (Video)
-  const [activeCampaignTab, setActiveCampaignTab] = useState<"story_deck" | "partner_ad" | "motion_reel">("story_deck");
+  // Campaign switcher: Story Deck vs Poster Editor Lab vs Partner Ad vs Motion Reel
+  const [activeCampaignTab, setActiveCampaignTab] = useState<
+    "story_deck" | "poster_lab" | "partner_ad" | "motion_reel"
+  >("story_deck");
+  const [showMobileHub, setShowMobileHub] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    if (tab === "poster_lab" || tab === "story_deck" || tab === "partner_ad" || tab === "motion_reel") {
+      setActiveCampaignTab(tab);
+      setShowMobileHub(false);
+    } else if (window.innerWidth < 768) {
+      setShowMobileHub(true);
+    }
+  }, []);
   const [partnerAdAspect, setPartnerAdAspect] = useState<"4:5" | "9:16">("4:5");
   const [partnerAdHook, setPartnerAdHook] = useState<"front_door" | "delivery_markup" | "food_radar">("front_door");
   const [selectedPartnerVenueId, setSelectedPartnerVenueId] = useState<string>("");
@@ -669,13 +687,7 @@ export default function AdReelStagePage() {
   }, [venues, selectedPartnerVenueId]);
 
   const [aspectMode, setAspectMode] = useState<AspectMode>("9:16");
-  const [isPlaying, setIsPlaying] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      const p = new URLSearchParams(window.location.search);
-      if (p.has("t")) return false;
-    }
-    return true;
-  });
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [speed, setSpeed] = useState<PlaybackSpeed>(1);
   const [timelineSec, setTimelineSec] = useState<number>(() => {
     if (typeof window !== "undefined") {
@@ -1892,7 +1904,36 @@ export default function AdReelStagePage() {
       {/* FLOATING PRODUCTION TOOLBAR (Hidden in Record Mode)                   */}
       {/* ===================================================================== */}
       {!isRecordMode && (
-        <header className="w-full max-w-6xl mx-auto px-4 pt-3 pb-2 flex flex-wrap items-center justify-between gap-2 z-50">
+        <>
+          {/* Mobile Compact Top Bar (when inside a section) */}
+          {!showMobileHub && (
+            <header className="md:hidden w-full px-3 pt-3 pb-2 flex items-center justify-between gap-2 z-50 border-b border-white/10 bg-[#141312]">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsPlaying(false);
+                  setShowMobileHub(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 text-white text-xs font-bold active:scale-95 cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 text-[#e84a27]" />
+                <span>All Ads</span>
+              </button>
+              <span className="font-display text-xs font-bold text-zinc-200 truncate">
+                {activeCampaignTab === "poster_lab"
+                  ? "Poster Editor Lab"
+                  : activeCampaignTab === "story_deck"
+                  ? "Story Deck"
+                  : activeCampaignTab === "partner_ad"
+                  ? "Partner Ad"
+                  : "Motion Reel"}
+              </span>
+              <span className="font-comico text-xs tracking-wider text-[#e84a27]">SMAKR</span>
+            </header>
+          )}
+
+          {/* Desktop Production Toolbar */}
+          <header className="hidden md:flex w-full max-w-6xl mx-auto px-4 pt-3 pb-2 flex-wrap items-center justify-between gap-2 z-50">
           {/* Campaign Studio Switcher */}
           <div className="flex items-center gap-2">
             <div className="flex items-center p-1 rounded-2xl bg-[#22201E] border border-white/10 shadow-lg text-xs">
@@ -1910,6 +1951,22 @@ export default function AdReelStagePage() {
               >
                 <Layers className="w-3.5 h-3.5" />
                 <span>Story Deck</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveCampaignTab("poster_lab");
+                  setIsPlaying(false);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+                  activeCampaignTab === "poster_lab"
+                    ? "bg-[#e84a27] text-white shadow-xs"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                <Move className="w-3.5 h-3.5" />
+                <span>Poster Editor Lab</span>
               </button>
 
               <button
@@ -1946,6 +2003,10 @@ export default function AdReelStagePage() {
           {activeCampaignTab === "story_deck" ? (
             <div className="text-[11px] font-bold text-zinc-400 px-2">
               5-Slide How Smakr Works · 2-Slide Early Snow · @3x PNG
+            </div>
+          ) : activeCampaignTab === "poster_lab" ? (
+            <div className="text-[11px] font-bold text-zinc-400 px-2">
+              Drag, Resize &amp; Rotate Components · Autosaved · @3x PNG
             </div>
           ) : activeCampaignTab === "partner_ad" ? (
             <div className="flex items-center gap-2">
@@ -2282,6 +2343,7 @@ export default function AdReelStagePage() {
           </>
           )}
         </header>
+        </>
       )}
 
       {/* Floating Exit Record Mode button for touch devices / quick exit */}
@@ -2298,9 +2360,106 @@ export default function AdReelStagePage() {
       {/* ===================================================================== */}
       {/* THE STAGE: STATIC PARTNER AD STUDIO VS MOTION REEL VIDEO               */}
       {/* ===================================================================== */}
-      {activeCampaignTab === "story_deck" ? (
+      {/* ===================================================================== */}
+      {/* MOBILE AD STUDIO LANDING HUB (Vertical Navigation on Phones)          */}
+      {/* ===================================================================== */}
+      {showMobileHub ? (
+        <main className="md:hidden flex-1 w-full overflow-y-auto px-4 pt-6 pb-10 flex flex-col gap-4">
+          <div className="space-y-1.5 pb-1">
+            <div className="flex items-center gap-2">
+              <span className="font-comico text-2xl tracking-wide text-[#e84a27]">SMAKR</span>
+              <span className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-zinc-400">
+                AD STUDIO
+              </span>
+            </div>
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              Pick a campaign below to preview and save @3x PNGs directly to your camera roll.
+            </p>
+          </div>
+
+          <nav aria-label="Ad Studio Sections" className="flex flex-col gap-3">
+            {[
+              {
+                id: "poster_lab" as const,
+                badge: "NEW · 9:16 & 3:4",
+                title: "Oslo Bánh Mì — Poster Lab",
+                desc: "Slide 1 & Slide 2 Map posters. View, tweak, and save @3x PNGs to Photos.",
+                Icon: Move,
+                featured: true,
+              },
+              {
+                id: "story_deck" as const,
+                badge: "3 DECKS · @3x PNG",
+                title: "Story Deck Carousels",
+                desc: "How Smakr Works (5), Early Snow Bowls (2), and Oslo Pop-Up Radar (4).",
+                Icon: Layers,
+                featured: false,
+              },
+              {
+                id: "motion_reel" as const,
+                badge: "VIDEO · 9:16",
+                title: "Motion Reel Stage",
+                desc: "Animated Oslo food radar reel (starts paused until you tap Play).",
+                Icon: Video,
+                featured: false,
+              },
+              {
+                id: "partner_ad" as const,
+                badge: "STATIC",
+                title: "Partner Promo Cards",
+                desc: "Static restaurant partner pitch cards.",
+                Icon: Sparkles,
+                featured: false,
+              },
+            ].map(({ id, badge, title, desc, Icon, featured }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => {
+                  setIsPlaying(false);
+                  setActiveCampaignTab(id);
+                  setShowMobileHub(false);
+                }}
+                className={`w-full text-left rounded-2xl p-4 border transition-all active:scale-[0.98] cursor-pointer flex items-center justify-between gap-3 ${
+                  featured
+                    ? "bg-[#e84a27]/15 border-[#e84a27]/60 shadow-lg shadow-[#e84a27]/10"
+                    : "bg-[#1C1A18] border-white/10"
+                }`}
+              >
+                <div className="flex items-start gap-3 min-w-0">
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                      featured ? "bg-[#e84a27] text-white" : "bg-white/10 text-[#e84a27]"
+                    }`}
+                  >
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span
+                      className={`inline-block text-[10px] font-extrabold uppercase tracking-wider mb-0.5 ${
+                        featured ? "text-[#ff9c85]" : "text-zinc-400"
+                      }`}
+                    >
+                      {badge}
+                    </span>
+                    <div className="font-display text-base font-bold text-white leading-snug">
+                      {title}
+                    </div>
+                    <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">{desc}</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-zinc-400 shrink-0" />
+              </button>
+            ))}
+          </nav>
+        </main>
+      ) : activeCampaignTab === "story_deck" ? (
         <div className="flex-1 w-full overflow-y-auto">
           <CarouselStoryDeck />
+        </div>
+      ) : activeCampaignTab === "poster_lab" ? (
+        <div className="flex-1 w-full min-h-0 overflow-y-auto lg:overflow-hidden">
+          <AdPosterEditorLab />
         </div>
       ) : activeCampaignTab === "partner_ad" ? (
         <div className="flex-1 w-full overflow-y-auto px-4 py-6 flex flex-col items-center">
