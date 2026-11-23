@@ -86,6 +86,7 @@ export function AdPosterEditorLab() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [snapGuide, setSnapGuide] = useState<{ x: boolean; y: boolean }>({ x: false, y: false });
   const [isExporting, setIsExporting] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const [copiedJson, setCopiedJson] = useState(false);
   const [safeZoneMode, setSafeZoneMode] = useState<SafeZoneMode>("off");
   const [showMobileControls, setShowMobileControls] = useState(false);
@@ -408,57 +409,79 @@ export function AdPosterEditorLab() {
     }
   };
 
-  const handleExportPng = async () => {
+  const renderPosterBlob = async (): Promise<{ blob: Blob; filename: string } | null> => {
     const node = canvasRef.current;
-    if (!node || isExporting) return;
-    const prevSelected = selectedId;
-    setSelectedId(null);
-    setIsExporting(true);
+    if (!node) return null;
 
     // Wait 2 animation frames so selection outline cleanly unmounts before capture
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
+    const blob = await toBlob(node, {
+      width: canvasW,
+      height: canvasH,
+      pixelRatio: 3,
+      cacheBust: true,
+      style: {
+        transform: "none",
+        transformOrigin: "top left",
+      },
+    });
+    if (!blob) throw new Error("Export blob was null");
+    return {
+      blob,
+      filename: `${currentTemplate.fileSlug}_${doc.aspect.replace(":", "x")}_3x.png`,
+    };
+  };
+
+  const triggerBlobDownload = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 2500);
+  };
+
+  const handleExportPng = async () => {
+    if (isExporting || isSharing) return;
+    const prevSelected = selectedId;
+    setSelectedId(null);
+    setIsExporting(true);
     try {
-      const blob = await toBlob(node, {
-        width: canvasW,
-        height: canvasH,
-        pixelRatio: 3,
-        cacheBust: true,
-        style: {
-          transform: "none",
-          transformOrigin: "top left",
-        },
-      });
-      if (!blob) throw new Error("Export blob was null");
-      const filename = `${currentTemplate.fileSlug}_${doc.aspect.replace(":", "x")}_3x.png`;
-
-      // Prefer native mobile share sheet (Save to Photos on iOS/Android) when on touch devices
-      const isMobileUa =
-        typeof navigator !== "undefined" &&
-        /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      if (isMobileUa && typeof navigator.share === "function" && typeof File !== "undefined") {
-        try {
-          const file = new File([blob], filename, { type: "image/png" });
-          if (!navigator.canShare || navigator.canShare({ files: [file] })) {
-            await navigator.share({ files: [file], title: currentTemplate.name });
-            return;
-          }
-        } catch (shareErr) {
-          // User cancelled share or share unsupported -> fall back to direct download
-          if ((shareErr as Error)?.name === "AbortError") return;
-        }
-      }
-
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
+      const res = await renderPosterBlob();
+      if (res) triggerBlobDownload(res.blob, res.filename);
     } catch (err) {
       console.error("Poster PNG export failed:", err);
     } finally {
       setIsExporting(false);
+      setSelectedId(prevSelected);
+    }
+  };
+
+  const handleSharePng = async () => {
+    if (isExporting || isSharing) return;
+    const prevSelected = selectedId;
+    setSelectedId(null);
+    setIsSharing(true);
+    try {
+      const res = await renderPosterBlob();
+      if (!res) return;
+      if (typeof navigator !== "undefined" && typeof navigator.share === "function" && typeof File !== "undefined") {
+        const file = new File([res.blob], res.filename, { type: "image/png" });
+        if (!navigator.canShare || navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: currentTemplate.name });
+          return;
+        }
+      }
+      triggerBlobDownload(res.blob, res.filename);
+    } catch (err) {
+      if ((err as Error)?.name !== "AbortError") {
+        console.error("Poster PNG share failed:", err);
+      }
+    } finally {
+      setIsSharing(false);
       setSelectedId(prevSelected);
     }
   };
@@ -727,7 +750,7 @@ export function AdPosterEditorLab() {
               }}
             >
               {/* Smart Center Snap Guides */}
-              {!isExporting && snapGuide.x && (
+              {!isExporting && !isSharing && snapGuide.x && (
                 <div
                   style={{
                     position: "absolute",
@@ -742,7 +765,7 @@ export function AdPosterEditorLab() {
                   }}
                 />
               )}
-              {!isExporting && snapGuide.y && (
+              {!isExporting && !isSharing && snapGuide.y && (
                 <div
                   style={{
                     position: "absolute",
@@ -760,7 +783,7 @@ export function AdPosterEditorLab() {
 
               {doc.layers.map((layer) => {
                 if (!layer.visible) return null;
-                const isSelected = !isExporting && layer.id === selectedId;
+                const isSelected = !isExporting && !isSharing && layer.id === selectedId;
                 return (
                   <EditableLayerNode
                     key={layer.id}
@@ -775,7 +798,7 @@ export function AdPosterEditorLab() {
               })}
 
               {/* Non-exported Platform Safe-Zone Overlays (Side Crop + TikTok UI Rail) */}
-              {!isExporting && safeZoneMode !== "off" && (
+              {!isExporting && !isSharing && safeZoneMode !== "off" && (
                 <>
                   {/* Side-Edge Crop Danger Bands (44px left & right + top/bottom in All/Sides) */}
                   {(safeZoneMode === "ig" || safeZoneMode === "all" || safeZoneMode === "tiktok") && (
@@ -1481,14 +1504,14 @@ export function AdPosterEditorLab() {
         </aside>
       </div>
 
-      {/* ── MOBILE STICKY DOWNLOAD & QUICK CONTROLS BAR (< lg) ── */}
+      {/* ── MOBILE STICKY DOWNLOAD, SHARE & QUICK CONTROLS BAR (< lg) ── */}
       <div className="lg:hidden fixed bottom-0 inset-x-0 z-50 bg-[#181615]/95 backdrop-blur-md border-t border-white/10 px-3 py-2.5 pb-[max(0.65rem,env(safe-area-inset-bottom))] flex items-center gap-2">
         <button
           type="button"
           onClick={() =>
             setSafeZoneMode((m) => (m === "off" ? "tiktok" : m === "tiktok" ? "all" : "off"))
           }
-          className={`inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold border cursor-pointer shrink-0 ${
+          className={`inline-flex items-center justify-center gap-1 px-2.5 py-2.5 rounded-xl text-xs font-bold border cursor-pointer shrink-0 ${
             safeZoneMode !== "off"
               ? "bg-[#e84a27]/20 border-[#e84a27]/60 text-[#ff9d87]"
               : "bg-white/5 border-white/10 text-zinc-300"
@@ -1502,7 +1525,7 @@ export function AdPosterEditorLab() {
         <button
           type="button"
           onClick={() => setShowMobileControls((v) => !v)}
-          className={`inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-bold border cursor-pointer shrink-0 ${
+          className={`inline-flex items-center justify-center gap-1 px-2.5 py-2.5 rounded-xl text-xs font-bold border cursor-pointer shrink-0 ${
             showMobileControls
               ? "bg-white text-stone-900 border-white"
               : "bg-white/5 border-white/10 text-zinc-300"
@@ -1514,16 +1537,28 @@ export function AdPosterEditorLab() {
 
         <button
           type="button"
+          onClick={handleSharePng}
+          disabled={isExporting || isSharing}
+          className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 active:scale-[0.98] border border-white/15 text-white text-xs font-bold cursor-pointer disabled:opacity-60 shrink-0"
+          title="Share @3x PNG"
+        >
+          {isSharing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
+          <span>Share</span>
+        </button>
+
+        <button
+          type="button"
           onClick={handleExportPng}
-          disabled={isExporting}
-          className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#e84a27] hover:bg-[#d33e1d] active:scale-[0.98] text-white text-xs font-extrabold shadow-md cursor-pointer disabled:opacity-60"
+          disabled={isExporting || isSharing}
+          className="flex-1 inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#e84a27] hover:bg-[#d33e1d] active:scale-[0.98] text-white text-xs font-extrabold shadow-md cursor-pointer disabled:opacity-60"
+          title="Download @3x PNG"
         >
           {isExporting ? (
             <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
-            <Share2 className="w-4 h-4" />
+            <Download className="w-4 h-4" />
           )}
-          <span>{isExporting ? "Preparing @3x PNG..." : "Save @3x PNG"}</span>
+          <span>{isExporting ? "Saving..." : "Download"}</span>
         </button>
       </div>
     </div>

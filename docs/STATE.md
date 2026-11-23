@@ -3,8 +3,8 @@
 Updated: 2026-11-23
 
 ## Now
-- Task: Shipped mobile-first **Ad Studio Hub** on `/ad-reel` + **Poster Editor Lab** (`AdPosterEditorLab.tsx`, `adPosterTemplates.ts`, 4 **Oslo Bánh Mì** `3:4` & `9:16` templates, native mobile `@3x` PNG share/save bar, Safe Zones, Motion Reel paused by default).
-- Status: Verified (`tsc --noEmit` clean) and pushed to `origin/main` for Vercel deploy & phone downloads.
+- Task: Split mobile **Download** (direct `@3x` PNG blob download) and **Share** (`navigator.share`) into separate buttons in `AdPosterEditorLab.tsx` on `/ad-reel`.
+- Status: Verified (`tsc --noEmit` clean) and pushed to `origin/main` for Vercel deploy.
 
 ## Next (max 3)
 1. Preview and export the 2-slide Early Snowfall `@3x` PNG assets in `/ad-reel`.
