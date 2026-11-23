@@ -52,11 +52,11 @@ function shouldSuppressMapMascot(
   const cosLat = Math.cos((pickLat * Math.PI) / 180);
   const dxMeters = (selectedVenue.longitude - pickLng) * 111320 * cosLat;
   const dyMeters = (selectedVenue.latitude - pickLat) * 111320;
-  if (Math.hypot(dxMeters, dyMeters) <= 260) return true;
-  if (map) {
+  if (Math.hypot(dxMeters, dyMeters) <= 140) return true;
+  if (map && map.getZoom() >= 14.0) {
     const pPick = map.project([pickLng, pickLat]);
     const pSel = map.project([selectedVenue.longitude, selectedVenue.latitude]);
-    if (Math.hypot(pPick.x - pSel.x, pPick.y - pSel.y) < 175) return true;
+    if (Math.hypot(pPick.x - pSel.x, pPick.y - pSel.y) < 115) return true;
   }
   return false;
 }
@@ -432,8 +432,6 @@ function createAquarellePinElement(
 
   const haloHtml = isFreshBatch
     ? `<div style="position:absolute;top:-6px;left:-6px;width:46px;height:46px;border-radius:9999px;border:2px solid #e84a27;background:rgba(232,74,39,0.25);animation:ping 1.4s cubic-bezier(0,0,0.2,1) infinite;pointer-events:none;"></div>`
-    : popupStatus.isPulsingMarker
-    ? `<div style="position:absolute;top:-5px;left:-5px;width:44px;height:44px;border-radius:9999px;border:2px solid #e84a27;background:rgba(232,74,39,0.22);animation:ping 1.6s cubic-bezier(0,0,0.2,1) infinite;pointer-events:none;"></div>`
     : "";
 
   let kitchenBadgeHtml = "";
@@ -561,6 +559,7 @@ export function MapRadarView({ isBooting = false }: { isBooting?: boolean } = {}
   const weeklyMarkerRef = useRef<maplibregl.Marker | null>(null);
   const weeklyPickIdRef = useRef<string | null>(null);
   const weeklyMascotSuppressedRef = useRef(false);
+  const weeklyMascotRevealTimerRef = useRef<number | null>(null);
   const weeklyPlaceRightRef = useRef(false);
   const weeklyBustRef = useRef<HTMLDivElement | null>(null);
   const weeklyInnerRef = useRef<HTMLDivElement | null>(null);
@@ -930,7 +929,7 @@ export function MapRadarView({ isBooting = false }: { isBooting?: boolean } = {}
       const venueBadge = resolveVenueDisplayBadge(venue);
       const badgePinKey = resolveCustomIconKey(venueBadge.pinIcon) || "";
       const dishKey = resolveCustomIconKey(venueTax.dishCategory) || venueTax.dishCategory;
-      const pinKey = `v6|${badgePinKey}|${venue.icon ?? ""}|${dishKey}|${venue.spot_type ?? ""}|${popupStatus.status}|${popupStatus.lifecycle ?? ""}|${kitchenStatus}|${venue.food_category}|${venue.name}|${venue.popup_end_date ?? ""}|${overrideIconKey ?? ""}|${isWeeklyPickVenue ? "1" : "0"}`;
+      const pinKey = `v7|${badgePinKey}|${venue.icon ?? ""}|${dishKey}|${venue.spot_type ?? ""}|${popupStatus.status}|${popupStatus.lifecycle ?? ""}|${kitchenStatus}|${venue.food_category}|${venue.name}|${venue.popup_end_date ?? ""}|${overrideIconKey ?? ""}|${isWeeklyPickVenue ? "1" : "0"}`;
       const pinOffset = offsetByVenueId.get(venue.id) ?? [0, 0];
 
       let existing = markerPoolRef.current.get(venue.id);
@@ -1136,12 +1135,13 @@ export function MapRadarView({ isBooting = false }: { isBooting?: boolean } = {}
     const pick = state.weeklyPick;
     const [lng, lat] = pick.coords;
     if (typeof lng !== "number" || typeof lat !== "number") return;
-    // Hide the map mascot when the weekly spot is selected (the card mascot
-    // takes over) or when a neighboring pin is selected nearby.
+    // Hide the map mascot only while the weekly spot or an adjacent pin is selected.
     const isSuppressed = shouldSuppressMapMascot(state.selectedVenue, pick, map);
-    const hideMascot = isSuppressed || weeklyMascotSuppressedRef.current;
+    const hideMascot = isSuppressed;
+    weeklyMascotSuppressedRef.current = isSuppressed;
 
-    // Check if any filter is active and whether the Weekly Pick venue passes the active filter
+    // Check if any filter is active and whether the Weekly Pick venue is hidden by it.
+    // Guard on markerPoolRef.size > 0 so early boot never hides the mascot before pins mount.
     const hasActiveFilter =
       Boolean(state.selectedDishCategory) ||
       Boolean(state.selectedGroup) ||
@@ -1157,7 +1157,7 @@ export function MapRadarView({ isBooting = false }: { isBooting?: boolean } = {}
       state.mapNeighborhood !== "all" ||
       Boolean(state.filters.open_now);
 
-    if (hasActiveFilter) {
+    if (hasActiveFilter && markerPoolRef.current.size > 0) {
       const pickPoolEntry = markerPoolRef.current.get(pick.venue_id);
       const isPickVenueVisible = pickPoolEntry
         ? pickPoolEntry.rootEl.style.display !== "none"
@@ -1286,7 +1286,18 @@ export function MapRadarView({ isBooting = false }: { isBooting?: boolean } = {}
       if (hideMascot) root.style.display = "none";
     } else {
       weeklyMarkerRef.current.setLngLat([lng, lat]);
-      weeklyMarkerRef.current.getElement().style.display = hideMascot ? "none" : "block";
+      const rootEl = weeklyMarkerRef.current.getElement();
+      if (hideMascot) {
+        rootEl.style.display = "none";
+      } else {
+        // Cancel any lingering fill:"forwards" exit animation so opacity can never stick at 0
+        if (weeklyInnerRef.current) {
+          for (const anim of weeklyInnerRef.current.getAnimations()) anim.cancel();
+          weeklyInnerRef.current.style.opacity = "";
+          weeklyInnerRef.current.style.transform = "";
+        }
+        rootEl.style.display = "block";
+      }
     }
 
     updateInnerPlacement();
@@ -1511,8 +1522,16 @@ export function MapRadarView({ isBooting = false }: { isBooting?: boolean } = {}
       // with its icon.
       checkSpotlightDriftDismiss(false);
 
-      const currentPickId = useCityPulseStore.getState().weeklyPick.venue_id;
+      const currentState = useCityPulseStore.getState();
+      const currentPickId = currentState.weeklyPick.venue_id;
       if (!weeklyMarkerRef.current || weeklyPickIdRef.current !== currentPickId) {
+        renderWeeklyMarker();
+      } else if (
+        weeklyMarkerRef.current.getElement().style.display === "none" &&
+        !shouldSuppressMapMascot(currentState.selectedVenue, currentState.weeklyPick, map) &&
+        weeklyMascotRevealTimerRef.current === null
+      ) {
+        // Reconcile after map pans/zooms so the mascot never stays stuck hidden
         renderWeeklyMarker();
       }
       if (process.env.NODE_ENV !== "production") {
@@ -1560,6 +1579,10 @@ export function MapRadarView({ isBooting = false }: { isBooting?: boolean } = {}
       window.removeEventListener("resize", handleResize);
       if (markerBootTimer !== null) window.clearTimeout(markerBootTimer);
       if (flyTimerRef.current) clearTimeout(flyTimerRef.current);
+      if (weeklyMascotRevealTimerRef.current !== null) {
+        window.clearTimeout(weeklyMascotRevealTimerRef.current);
+        weeklyMascotRevealTimerRef.current = null;
+      }
       containerResizeObserver?.disconnect();
       resizeObserver.disconnect();
       markerPoolRef.current.forEach(({ marker }) => marker.remove());
@@ -1722,9 +1745,18 @@ export function MapRadarView({ isBooting = false }: { isBooting?: boolean } = {}
           currentState.weeklyPick,
           map
         );
+
+        // Always cancel any pending reveal timer so rapid taps never race
+        if (weeklyMascotRevealTimerRef.current !== null) {
+          window.clearTimeout(weeklyMascotRevealTimerRef.current);
+          weeklyMascotRevealTimerRef.current = null;
+        }
+
         if (shouldHide) {
+          const wasAlreadyHidden =
+            weeklyMascotSuppressedRef.current && weeklyRoot.style.display === "none";
           weeklyMascotSuppressedRef.current = true;
-          if (inner && typeof inner.animate === "function") {
+          if (!wasAlreadyHidden && inner && typeof inner.animate === "function") {
             for (const anim of inner.getAnimations()) anim.cancel();
             const exitAnim = inner.animate(
               [
@@ -1747,47 +1779,71 @@ export function MapRadarView({ isBooting = false }: { isBooting?: boolean } = {}
                 )
               ) {
                 weeklyRoot.style.display = "none";
-                exitAnim.cancel();
               }
+              // Always cancel fill:"forwards" so inner never remains stuck at opacity:0
+              exitAnim.cancel();
             });
           } else {
+            if (inner) {
+              for (const anim of inner.getAnimations()) anim.cancel();
+              inner.style.opacity = "";
+              inner.style.transform = "";
+            }
             weeklyRoot.style.display = "none";
           }
-        } else if (weeklyMascotSuppressedRef.current) {
-          weeklyMascotSuppressedRef.current = true;
-          window.setTimeout(() => {
-            weeklyMascotSuppressedRef.current = false;
+        } else {
+          const wasHidden =
+            weeklyMascotSuppressedRef.current || weeklyRoot.style.display === "none";
+          weeklyMascotSuppressedRef.current = false;
+
+          const revealMascot = () => {
+            weeklyMascotRevealTimerRef.current = null;
             const st = useCityPulseStore.getState();
             if (
-              !shouldSuppressMapMascot(
+              shouldSuppressMapMascot(
                 st.selectedVenue,
                 st.weeklyPick,
                 mapInstance.current
               )
             ) {
-              const root = weeklyMarkerRef.current?.getElement();
-              if (root) {
-                root.style.display = "block";
-                const curInner = weeklyInnerRef.current;
-                if (curInner && typeof curInner.animate === "function") {
-                  for (const anim of curInner.getAnimations()) anim.cancel();
-                  curInner.animate(
-                    [
-                      { opacity: 0, transform: "translateY(10px) scale(0.84)" },
-                      { opacity: 1, transform: "translateY(0) scale(1)" },
-                    ],
-                    {
-                      duration: 300,
-                      easing: "cubic-bezier(0.22,1,0.36,1)",
-                      fill: "none",
-                    }
-                  );
-                }
-              }
+              return;
             }
-          }, 240);
-        } else {
-          weeklyRoot.style.display = "block";
+            const root = weeklyMarkerRef.current?.getElement();
+            if (!root) return;
+            const curInner = weeklyInnerRef.current;
+            if (curInner) {
+              for (const anim of curInner.getAnimations()) anim.cancel();
+              curInner.style.opacity = "";
+              curInner.style.transform = "";
+            }
+            root.style.display = "block";
+            if (wasHidden && curInner && typeof curInner.animate === "function") {
+              curInner.animate(
+                [
+                  { opacity: 0, transform: "translateY(10px) scale(0.84)" },
+                  { opacity: 1, transform: "translateY(0) scale(1)" },
+                ],
+                {
+                  duration: 280,
+                  easing: "cubic-bezier(0.22,1,0.36,1)",
+                  fill: "none",
+                }
+              );
+            }
+          };
+
+          // Cancel any in-flight exit animation immediately so it cannot fire after deselect
+          if (inner) {
+            for (const anim of inner.getAnimations()) anim.cancel();
+            inner.style.opacity = "";
+            inner.style.transform = "";
+          }
+
+          if (wasHidden) {
+            weeklyMascotRevealTimerRef.current = window.setTimeout(revealMascot, 180);
+          } else {
+            revealMascot();
+          }
         }
       }
     };
@@ -1803,20 +1859,34 @@ export function MapRadarView({ isBooting = false }: { isBooting?: boolean } = {}
       // then switch to map mode. Fly once the map is actually visible and
       // re-apply the map-mode selected pin scale (1.55x) so the icon matches a
       // pin tapped directly on the map.
-      if (nextId && state.viewMode === "map" && prevState.viewMode !== "map") {
+      if (state.viewMode === "map" && prevState.viewMode !== "map") {
         const m = mapInstance.current;
-        const entry = markerPoolRef.current.get(nextId);
-        if (entry && m) {
-          const visual = entry.visualEl;
-          if (visual) {
-            visual.style.transition = "transform 260ms cubic-bezier(0.22,1,0.36,1)";
-            window.setTimeout(() => {
-              visual.style.transition = "";
-            }, 280);
+        if (nextId) {
+          const entry = markerPoolRef.current.get(nextId);
+          if (entry && m) {
+            const visual = entry.visualEl;
+            if (visual) {
+              visual.style.transition = "transform 260ms cubic-bezier(0.22,1,0.36,1)";
+              window.setTimeout(() => {
+                visual.style.transition = "";
+              }, 280);
+            }
+            applyPinState(entry.rootEl, true, m.getZoom());
           }
-          applyPinState(entry.rootEl, true, m.getZoom());
+          flyToSelectedVenue();
+        } else if (
+          m &&
+          weeklyMarkerRef.current &&
+          !shouldSuppressMapMascot(null, state.weeklyPick, m)
+        ) {
+          if (weeklyInnerRef.current) {
+            for (const anim of weeklyInnerRef.current.getAnimations()) anim.cancel();
+            weeklyInnerRef.current.style.opacity = "";
+            weeklyInnerRef.current.style.transform = "";
+          }
+          weeklyMascotSuppressedRef.current = false;
+          weeklyMarkerRef.current.getElement().style.display = "block";
         }
-        flyToSelectedVenue();
       }
     });
     return unsubscribe;

@@ -85,6 +85,7 @@ export async function POST(req: NextRequest) {
           .from(STORAGE_BUCKET)
           .upload(storageKey, webpBuffer, {
             contentType: "image/webp",
+            cacheControl: "31536000",
             upsert: true,
           });
 

@@ -24,6 +24,7 @@ import {
   ChevronDown,
   Database,
   Plus,
+  Globe,
 } from "lucide-react";
 import { IconPickerModal } from "@/components/admin/IconPickerModal";
 import {
@@ -44,6 +45,14 @@ import type {
   VerificationStatus,
 } from "@/app/api/admin/seeding-lab/route";
 import type { AiShiftSpotProposal } from "@/app/api/admin/ai-shift-spot/route";
+import {
+  detectImageSource,
+  getSourceBadgeMeta,
+  isDeliveryAppImageUrl,
+  isValidVenueCoverUrl,
+  type DishImageSource,
+  type PhotoVisionTag,
+} from "@/lib/admin/imageSource";
 
 type ActiveSpotField =
   | null
@@ -172,15 +181,495 @@ export function SeedingCandidateCard({
   );
   const [spotCoverUrl, setSpotCoverUrl] = useState(spot.cover_image_url || "");
   const [spotWhyCurated, setSpotWhyCurated] = useState(spot.why_curated || "");
-  const [spotPhotoTab, setSpotPhotoTab] = useState<"upload" | "google" | "url">(
-    isPopupSpot ? "upload" : "google"
+  const [spotPhotoTab, setSpotPhotoTab] = useState<"pool" | "upload" | "google" | "url">(
+    isPopupSpot
+      ? "upload"
+      : (spot.candidate_photos?.length || 0) + (spot.place_photos?.length || 0) > 0
+      ? "pool"
+      : "google"
   );
+  const [coverPoolFilter, setCoverPoolFilter] = useState<"all" | "food" | "venue_vibe">("all");
   const [spotGoogleQuery, setSpotGoogleQuery] = useState(`${spot.name} Oslo`);
   const [spotGooglePhotos, setSpotGooglePhotos] = useState<string[]>(
     () => getCachedPhotosForQuery(`${spot.name} Oslo`) || []
   );
   const [isLoadingSpotGoogle, setIsLoadingSpotGoogle] = useState(false);
   const [isSavingSpot, setIsSavingSpot] = useState(false);
+
+  // Free Photo Fetch + Web/Site Pull + Gemini Vision Auto-Match State
+  const [isFetchingFoodPhotos, setIsFetchingFoodPhotos] = useState(false);
+  const [isPullingWebPhotos, setIsPullingWebPhotos] = useState(false);
+  const [isVisionMatching, setIsVisionMatching] = useState(false);
+  const [workflowToast, setWorkflowToast] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+  const [localPhotoTags, setLocalPhotoTags] = useState<Record<string, PhotoVisionTag>>(
+    () => spot.photo_vision_tags || {}
+  );
+  const [suggestedCover, setSuggestedCover] = useState<{
+    url: string;
+    reason: string;
+    rankedGalleryUrls: string[];
+  } | null>(null);
+
+  const mergedPhotoTags: Record<string, PhotoVisionTag> = {
+    ...(spot.photo_vision_tags || {}),
+    ...localPhotoTags,
+  };
+
+  const combinedPoolPhotos = Array.from(
+    new Set([...(spot.candidate_photos || []), ...(spot.place_photos || [])])
+  ).filter((u) => Boolean(u && u.trim()));
+
+  const handleFetchFoodPhotos = async () => {
+    setIsFetchingFoodPhotos(true);
+    setWorkflowToast(null);
+    try {
+      const res = await fetch("/api/admin/fetch-food-photos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          spotId: spot.id,
+          spotName: spot.name,
+          address: spot.address,
+          googlePlaceId: spot.google_place_id || null,
+          existingPhotos: combinedPoolPhotos,
+          mode: "both",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to fetch photos");
+
+      const sourceTag = data.source === "serpapi_maps" ? "serpapi_maps" : "google";
+      const nextTags: Record<string, PhotoVisionTag> = { ...mergedPhotoTags };
+      for (const u of (data.foodPhotos || []) as string[]) {
+        nextTags[u] = { ...(nextTags[u] || { bucket: "food" }), bucket: "food", source: sourceTag };
+      }
+      for (const u of (data.vibePhotos || []) as string[]) {
+        nextTags[u] = {
+          ...(nextTags[u] || { bucket: "venue_vibe" }),
+          bucket: "venue_vibe",
+          source: sourceTag,
+        };
+      }
+      for (const u of (data.allPhotos || []) as string[]) {
+        if (!nextTags[u]) {
+          nextTags[u] = { bucket: "food", source: sourceTag };
+        } else if (!nextTags[u].source) {
+          nextTags[u] = { ...nextTags[u], source: sourceTag };
+        }
+      }
+
+      const nextCandidates: string[] = Array.isArray(data.mergedPool)
+        ? data.mergedPool
+        : Array.from(new Set([...(spot.candidate_photos || []), ...(data.allPhotos || [])])).slice(
+            0,
+            30
+          );
+      const nextPlacePhotos = Array.from(
+        new Set([...(spot.place_photos || []), ...(data.vibePhotos || [])])
+      )
+        .filter((u) => !isDeliveryAppImageUrl(u))
+        .slice(0, 12);
+
+      setLocalPhotoTags(nextTags);
+      await onUpdateSpot(spot.id, {
+        candidate_photos: nextCandidates,
+        ...(nextPlacePhotos.length > 0 ? { place_photos: nextPlacePhotos } : {}),
+        ...(data.resolvedPlaceId && !spot.google_place_id
+          ? { google_place_id: data.resolvedPlaceId }
+          : {}),
+        photo_vision_tags: nextTags,
+      });
+
+      const viaLabel = data.source === "serpapi_maps" ? "SerpApi Maps" : "Google Places";
+      const detail =
+        data.source === "serpapi_maps"
+          ? `${(data.foodPhotos || []).length} food + ${(data.vibePhotos || []).length} vibe`
+          : `${(data.allPhotos || []).length} mixed`;
+      setWorkflowToast({
+        type: "success",
+        message: `Fetched ${detail} photos via ${viaLabel} (+${data.addedCount || 0} new in pool).`,
+      });
+    } catch (err: any) {
+      setWorkflowToast({
+        type: "error",
+        message: err?.message || "Could not fetch photos.",
+      });
+    } finally {
+      setIsFetchingFoodPhotos(false);
+    }
+  };
+
+  const handleVisionAutoMatch = async () => {
+    setIsVisionMatching(true);
+    setWorkflowToast(null);
+    try {
+      const res = await fetch("/api/admin/vision-match-dishes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          spotId: spot.id,
+          spotName: spot.name,
+          dishes: spot.dish_highlights.map((d) => ({
+            id: d.id,
+            dish_name: d.dish_name,
+            category: d.category,
+            review_text: d.review_text,
+            menu_description: d.menu_description || null,
+          })),
+          candidatePhotos: combinedPoolPhotos,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Vision auto-match failed");
+
+      // Merge 3-bucket tags (Food / Vibe / Junk) without losing source hints
+      const nextTags: Record<string, PhotoVisionTag> = { ...mergedPhotoTags };
+      const returnedTags = (data.photoTags || {}) as Record<
+        string,
+        { bucket: "food" | "venue_vibe" | "junk"; description?: string }
+      >;
+      for (const [url, tag] of Object.entries(returnedTags)) {
+        nextTags[url] = {
+          bucket: tag.bucket,
+          description: tag.description,
+          source: nextTags[url]?.source || detectImageSource(url),
+        };
+      }
+
+      // Prune ONLY confirmed junk (NEVER prune venue_vibe storefronts/interiors/logos)
+      const junkSet = new Set<string>(data.junkUrls || []);
+      const prunedCandidates = (spot.candidate_photos || []).filter((u) => !junkSet.has(u));
+      const prunedPlacePhotos = (spot.place_photos || []).filter((u) => !junkSet.has(u));
+
+      const matchMap = new Map<
+        string,
+        { matched_url: string | null; confidence: number; visual_reason: string }
+      >();
+      for (const m of data.matches || []) {
+        matchMap.set(m.dish_id, m);
+      }
+
+      let matchedHighCount = 0;
+      const updatedDishes: StagedDishHighlight[] = spot.dish_highlights.map((d) => {
+        const m = matchMap.get(d.id);
+        if (!m) return d;
+
+        const needsPhoto =
+          !d.dish_image || !d.is_verified_food_photo || isDeliveryAppImageUrl(d.dish_image);
+        if (m.matched_url && m.confidence >= 75 && needsPhoto) {
+          matchedHighCount++;
+          const src = nextTags[m.matched_url]?.source || detectImageSource(m.matched_url);
+          return {
+            ...d,
+            dish_image: m.matched_url,
+            image_source: src,
+            source_url: m.matched_url,
+            vision_confidence: m.confidence,
+            vision_reason: m.visual_reason,
+            is_ai_enhanced: src === "ai_polish",
+          };
+        }
+
+        // Record confidence & reason for curator review without overwriting already-verified custom photos
+        if (m.matched_url && needsPhoto) {
+          return {
+            ...d,
+            vision_confidence: m.confidence,
+            vision_reason: m.visual_reason,
+          };
+        }
+        return d;
+      });
+
+      const rankedGalleryUrls: string[] = Array.isArray(data.rankedGalleryUrls)
+        ? data.rankedGalleryUrls.filter((u: string) => !junkSet.has(u) && !isDeliveryAppImageUrl(u))
+        : [];
+      const recCoverUrl: string | null = data.recommendedCover?.url || null;
+      const recCoverReason: string = data.recommendedCover?.reason || "Best venue entrance/vibe shot";
+
+      const hasValidExistingCover =
+        isValidVenueCoverUrl(spot.cover_image_url) && !isDeliveryAppImageUrl(spot.cover_image_url);
+
+      let nextCoverUrl = spot.cover_image_url;
+      let nextPlacePhotos = prunedPlacePhotos;
+      let autoAppliedCover = false;
+
+      if (!hasValidExistingCover && recCoverUrl) {
+        nextCoverUrl = recCoverUrl;
+        autoAppliedCover = true;
+      }
+      if (rankedGalleryUrls.length > 0 && (!hasValidExistingCover || prunedPlacePhotos.length === 0)) {
+        nextPlacePhotos = Array.from(new Set([...rankedGalleryUrls, ...prunedPlacePhotos])).slice(
+          0,
+          10
+        );
+      }
+
+      if (recCoverUrl && !autoAppliedCover) {
+        setSuggestedCover({
+          url: recCoverUrl,
+          reason: recCoverReason,
+          rankedGalleryUrls,
+        });
+      } else {
+        setSuggestedCover(null);
+      }
+
+      setLocalPhotoTags(nextTags);
+      await onUpdateSpot(spot.id, {
+        dish_highlights: updatedDishes,
+        candidate_photos: prunedCandidates,
+        place_photos: nextPlacePhotos,
+        ...(autoAppliedCover && nextCoverUrl ? { cover_image_url: nextCoverUrl } : {}),
+        photo_vision_tags: nextTags,
+      });
+
+      const vibeCount = (data.venueVibeIndices || []).length;
+      const junkCount = junkSet.size;
+      setWorkflowToast({
+        type: "success",
+        message: `Matched ${matchedHighCount}/${spot.dish_highlights.length} dishes · Kept ${vibeCount} vibe shots · Pruned ${junkCount} junk${autoAppliedCover ? " · Applied cover" : ""} (${data.modelUsed || "gemini"}).`,
+      });
+    } catch (err: any) {
+      setWorkflowToast({
+        type: "error",
+        message: err?.message || "Vision auto-match failed.",
+      });
+    } finally {
+      setIsVisionMatching(false);
+    }
+  };
+
+  const handleApplySuggestedCover = async () => {
+    if (!suggestedCover) return;
+    const nextPlacePhotos = Array.from(
+      new Set([
+        suggestedCover.url,
+        ...suggestedCover.rankedGalleryUrls,
+        ...(spot.place_photos || []),
+      ])
+    )
+      .filter((u) => isValidVenueCoverUrl(u) && !isDeliveryAppImageUrl(u))
+      .slice(0, 10);
+
+    await onUpdateSpot(spot.id, {
+      cover_image_url: suggestedCover.url,
+      place_photos: nextPlacePhotos,
+    });
+    setSuggestedCover(null);
+    setWorkflowToast({
+      type: "success",
+      message: "Applied suggested venue cover and ranked gallery strip.",
+    });
+  };
+
+  const handlePruneCandidatePhoto = async (photoUrl: string) => {
+    const nextCandidates = (spot.candidate_photos || []).filter((u) => u !== photoUrl);
+    const nextPlacePhotos = (spot.place_photos || []).filter((u) => u !== photoUrl);
+    const nextTags = { ...mergedPhotoTags };
+    delete nextTags[photoUrl];
+    setLocalPhotoTags(nextTags);
+    await onUpdateSpot(spot.id, {
+      candidate_photos: nextCandidates,
+      place_photos: nextPlacePhotos,
+      photo_vision_tags: nextTags,
+    });
+  };
+
+  const handleSetSpotCover = async (photoUrl: string) => {
+    const nextPlacePhotos = Array.from(
+      new Set([photoUrl, ...(spot.place_photos || [])])
+    )
+      .filter((u) => isValidVenueCoverUrl(u) && !isDeliveryAppImageUrl(u))
+      .slice(0, 10);
+    await onUpdateSpot(spot.id, {
+      cover_image_url: photoUrl,
+      place_photos: nextPlacePhotos,
+    });
+  };
+
+  const handleAddCandidatePhotos = async (urls: string[], source: DishImageSource) => {
+    const clean = urls.filter((u) => Boolean(u && !isDeliveryAppImageUrl(u)));
+    if (clean.length === 0) return;
+    const nextCandidates = Array.from(new Set([...clean, ...(spot.candidate_photos || [])]))
+      .filter((u) => !isDeliveryAppImageUrl(u))
+      .slice(0, 30);
+    const nextTags: Record<string, PhotoVisionTag> = { ...mergedPhotoTags };
+    for (const u of clean) {
+      if (!nextTags[u]) {
+        nextTags[u] = { bucket: "food", source };
+      } else if (!nextTags[u].source) {
+        nextTags[u] = { ...nextTags[u], source };
+      }
+    }
+    setLocalPhotoTags(nextTags);
+    await onUpdateSpot(spot.id, {
+      candidate_photos: nextCandidates,
+      photo_vision_tags: nextTags,
+    });
+  };
+
+  const handlePullWebAndSitePhotos = async () => {
+    setIsPullingWebPhotos(true);
+    setWorkflowToast(null);
+    try {
+      const siteUrls: string[] = [];
+      const webDishUrls: string[] = [];
+      const webCoverUrls: string[] = [];
+      const nextTags: Record<string, PhotoVisionTag> = { ...mergedPhotoTags };
+      const notes: string[] = [];
+
+      // 1. Scrape restaurant website directly if a non-Instagram website URL exists
+      const rawSite = (spot.website_uri || "").trim();
+      if (rawSite && !/instagram\.com|facebook\.com|wolt\.com|foodora\./i.test(rawSite)) {
+        try {
+          const siteRes = await fetch("/api/admin/scrape-website-photos", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ websiteUrl: rawSite, spotName: spot.name }),
+          });
+          if (siteRes.ok) {
+            const siteData = await siteRes.json();
+            for (const p of (siteData.photos || []).slice(0, 10) as Array<{
+              url: string;
+              altText?: string;
+            }>) {
+              if (!p?.url || isDeliveryAppImageUrl(p.url)) continue;
+              siteUrls.push(p.url);
+              nextTags[p.url] = {
+                bucket: nextTags[p.url]?.bucket || "food",
+                description: p.altText || nextTags[p.url]?.description,
+                source: "website",
+              };
+            }
+          }
+        } catch {
+          // Continue to per-dish web searches even if website scrape fails
+        }
+      }
+
+      // 2. Targeted per-dish web search for dishes missing a photo, unverified, or flagged Wolt/Foodora
+      const dishesNeedingPhotos = spot.dish_highlights.filter(
+        (d) => !d.dish_image || !d.is_verified_food_photo || isDeliveryAppImageUrl(d.dish_image)
+      );
+      const targetDishes =
+        dishesNeedingPhotos.length > 0
+          ? dishesNeedingPhotos.slice(0, 4)
+          : spot.dish_highlights.slice(0, 3);
+
+      const searchJobs = targetDishes.map(async (d) => {
+        const res = await fetch("/api/admin/search-dish-web-images", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            spotName: spot.name,
+            dishName: d.dish_name,
+            neighborhood: spot.neighborhood,
+            mode: "dish",
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Web image search failed");
+        return (data.results || []).slice(0, 5) as Array<{
+          imageUrl: string;
+          title?: string;
+          domain?: string;
+        }>;
+      });
+
+      const needsCover =
+        !isValidVenueCoverUrl(spot.cover_image_url) || isDeliveryAppImageUrl(spot.cover_image_url);
+      const coverJob = needsCover
+        ? fetch("/api/admin/search-dish-web-images", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              spotName: spot.name,
+              neighborhood: spot.neighborhood,
+              mode: "venue_cover",
+            }),
+          })
+            .then((r) => (r.ok ? r.json() : { results: [] }))
+            .then((d) => (d.results || []).slice(0, 4) as Array<{ imageUrl: string; title?: string }>)
+            .catch(() => [])
+        : Promise.resolve([]);
+
+      const [dishSettled, coverFound] = await Promise.all([
+        Promise.allSettled(searchJobs),
+        coverJob,
+      ]);
+
+      let firstSearchErr: string | null = null;
+      for (const s of dishSettled) {
+        if (s.status === "fulfilled") {
+          for (const item of s.value) {
+            if (!item?.imageUrl || isDeliveryAppImageUrl(item.imageUrl)) continue;
+            webDishUrls.push(item.imageUrl);
+            nextTags[item.imageUrl] = {
+              bucket: "food",
+              description: item.title || item.domain || nextTags[item.imageUrl]?.description,
+              source: "web_search",
+            };
+          }
+        } else if (!firstSearchErr) {
+          firstSearchErr = s.reason?.message || String(s.reason);
+        }
+      }
+
+      for (const item of coverFound) {
+        if (!item?.imageUrl || isDeliveryAppImageUrl(item.imageUrl)) continue;
+        webCoverUrls.push(item.imageUrl);
+        nextTags[item.imageUrl] = {
+          bucket: "venue_vibe",
+          description: item.title || nextTags[item.imageUrl]?.description,
+          source: "web_search",
+        };
+      }
+
+      const incomingAll = Array.from(new Set([...webDishUrls, ...siteUrls, ...webCoverUrls]));
+      if (incomingAll.length === 0) {
+        throw new Error(
+          firstSearchErr ||
+            "No new web or website photos were returned. Try opening Dish Studio → 🌐 Web Search with a broader query."
+        );
+      }
+
+      const existingClean = (spot.candidate_photos || []).filter((u) => !isDeliveryAppImageUrl(u));
+      // Place fresh dish-targeted web & website photos at the front so Vision Auto-Match evaluates them first
+      const nextCandidates = Array.from(new Set([...incomingAll, ...existingClean])).slice(0, 30);
+      const nextPlacePhotos =
+        webCoverUrls.length > 0
+          ? Array.from(new Set([...webCoverUrls, ...(spot.place_photos || [])]))
+              .filter((u) => isValidVenueCoverUrl(u) && !isDeliveryAppImageUrl(u))
+              .slice(0, 12)
+          : spot.place_photos;
+
+      setLocalPhotoTags(nextTags);
+      await onUpdateSpot(spot.id, {
+        candidate_photos: nextCandidates,
+        ...(nextPlacePhotos ? { place_photos: nextPlacePhotos } : {}),
+        photo_vision_tags: nextTags,
+      });
+
+      if (siteUrls.length > 0) notes.push(`${siteUrls.length} website`);
+      if (webDishUrls.length > 0) notes.push(`${webDishUrls.length} dish web`);
+      if (webCoverUrls.length > 0) notes.push(`${webCoverUrls.length} cover web`);
+      setWorkflowToast({
+        type: "success",
+        message: `Pulled ${notes.join(" + ")} photos into pool (${nextCandidates.length} total) — ready for ✨ Vision Auto-Match.`,
+      });
+    } catch (err: any) {
+      setWorkflowToast({
+        type: "error",
+        message: err?.message || "Failed to pull web & website photos.",
+      });
+    } finally {
+      setIsPullingWebPhotos(false);
+    }
+  };
 
   // Direct Cover Upload & Clipboard Paste state
   const [isUploadingCover, setIsUploadingCover] = useState(false);
@@ -312,7 +801,15 @@ export function SeedingCandidateCard({
   } as any);
 
   const isValidFoodPhoto = (url?: string) =>
-    Boolean(url && !/streetview|facade|building|\/icons\/food\//i.test(url));
+    Boolean(
+      url &&
+        !isDeliveryAppImageUrl(url) &&
+        !/streetview|facade|building|\/icons\/food\//i.test(url)
+    );
+
+  const deliveryDishesCount = spot.dish_highlights.filter((d) =>
+    isDeliveryAppImageUrl(d.dish_image)
+  ).length;
 
   const verifiedDishesCount = spot.dish_highlights.filter(
     (d) => d.is_verified_food_photo && isValidFoodPhoto(d.dish_image)
@@ -325,36 +822,43 @@ export function SeedingCandidateCard({
       (d) =>
         d.is_verified_food_photo &&
         Boolean(d.dish_image) &&
+        !isDeliveryAppImageUrl(d.dish_image) &&
         !/streetview|facade|building|\/icons\/food\//i.test(d.dish_image)
     );
 
   const [isCommittingSpot, setIsCommittingSpot] = useState(false);
+  const [pendingDialog, setPendingDialog] = useState<{
+    title: string;
+    description: string;
+    confirmLabel: string;
+    tone?: "primary" | "danger";
+    onConfirm: () => Promise<void>;
+  } | null>(null);
+  const [isConfirmingDialog, setIsConfirmingDialog] = useState(false);
 
   const handleStatusChange = async (newStatus: VerificationStatus) => {
     const anyMissingPhoto = spot.dish_highlights.some(
       (d) => !d.dish_image || /\/icons\/food\//i.test(d.dish_image)
     );
+    const anyDeliveryPhoto = spot.dish_highlights.some((d) => isDeliveryAppImageUrl(d.dish_image));
     if (newStatus === "approved" && anyMissingPhoto) {
-      alert("Cannot approve spot until every dish has a real photo URL (not an SVG fallback).");
+      setWorkflowToast({
+        type: "error",
+        message: "Cannot approve spot until every dish has a real photo URL (not an SVG fallback).",
+      });
+      return;
+    }
+    if (newStatus === "approved" && anyDeliveryPhoto) {
+      setWorkflowToast({
+        type: "error",
+        message: "Replace all ⚠️ WOLT / FOODORA dish photos before approving this spot.",
+      });
       return;
     }
     await onUpdateSpot(spot.id, { verification_status: newStatus });
   };
 
-  const handleCommitSingleSpot = async () => {
-    if (!allDishesVerified) {
-      alert(`Cannot commit "${spot.name}": Every active dish must have a verified photo first.`);
-      return;
-    }
-
-    if (
-      !confirm(
-        `Commit "${spot.name}" with ${spot.dish_highlights.length} dish(es) directly to Supabase production?`
-      )
-    ) {
-      return;
-    }
-
+  const executeCommitSingleSpot = async () => {
     setIsCommittingSpot(true);
     try {
       const res = await fetch("/api/admin/seeding-lab", {
@@ -366,45 +870,81 @@ export function SeedingCandidateCard({
       if (!res.ok) throw new Error(data.error || "Commit failed.");
 
       await onUpdateSpot(spot.id, { verification_status: "seeded" });
-      alert(`Successfully seeded "${spot.name}" and ${spot.dish_highlights.length} dish(es) to production!`);
+      setWorkflowToast({
+        type: "success",
+        message: `Seeded "${spot.name}" and ${spot.dish_highlights.length} dish(es) to production.`,
+      });
     } catch (err: any) {
-      alert(`Commit error: ${err.message}`);
+      setWorkflowToast({
+        type: "error",
+        message: `Commit error: ${err.message}`,
+      });
     } finally {
       setIsCommittingSpot(false);
     }
   };
 
-  const handleUseOnlyThisDish = async (dishToKeep: StagedDishHighlight) => {
-    if (
-      !confirm(
-        `Use only "${dishToKeep.dish_name}" for ${spot.name}? This will remove other unverified dishes.`
-      )
-    ) {
+  const handleCommitSingleSpot = () => {
+    if (!allDishesVerified) {
+      setWorkflowToast({
+        type: "error",
+        message: `Cannot commit "${spot.name}": Every active dish must have a verified photo first.`,
+      });
       return;
     }
-    await onUpdateSpot(spot.id, {
-      dish_highlights: [dishToKeep],
-      signature_dish: dishToKeep.dish_name,
-      verification_status: dishToKeep.is_verified_food_photo ? "approved" : "needs_photo",
+
+    setPendingDialog({
+      title: `Commit "${spot.name}"?`,
+      description: `This writes "${spot.name}" and ${spot.dish_highlights.length} verified dish(es) to Supabase production and uploads optimized WebP photos to the CDN.`,
+      confirmLabel: "Commit now",
+      tone: "primary",
+      onConfirm: executeCommitSingleSpot,
     });
   };
 
-  const handleRemoveDish = async (dishToRemoveId: string, dishToRemoveName: string) => {
+  const handleUseOnlyThisDish = (dishToKeep: StagedDishHighlight) => {
+    setPendingDialog({
+      title: `Keep only "${dishToKeep.dish_name}"?`,
+      description: `All other dishes on ${spot.name} will be removed so this spot commits with "${dishToKeep.dish_name}" as its solo dish.`,
+      confirmLabel: "Use Solo Dish",
+      tone: "primary",
+      onConfirm: async () => {
+        await onUpdateSpot(spot.id, {
+          dish_highlights: [dishToKeep],
+          signature_dish: dishToKeep.dish_name,
+          verification_status: dishToKeep.is_verified_food_photo ? "approved" : "needs_photo",
+        });
+      },
+    });
+  };
+
+  const handleRemoveDish = (dishToRemoveId: string, dishToRemoveName: string) => {
     if (spot.dish_highlights.length <= 1) {
-      alert("A candidate spot must have at least one dish.");
+      setWorkflowToast({
+        type: "error",
+        message: "A candidate spot must have at least one dish.",
+      });
       return;
     }
-    if (!confirm(`Remove "${dishToRemoveName}" from ${spot.name}?`)) {
-      return;
-    }
-    const remaining = spot.dish_highlights.filter((d) => d.id !== dishToRemoveId);
-    const allRemainingVerified = remaining.every(
-      (d) => d.is_verified_food_photo && Boolean(d.dish_image)
-    );
-    await onUpdateSpot(spot.id, {
-      dish_highlights: remaining,
-      signature_dish: remaining[0]?.dish_name,
-      verification_status: allRemainingVerified ? "approved" : "needs_photo",
+    setPendingDialog({
+      title: `Remove "${dishToRemoveName}"?`,
+      description: `This removes "${dishToRemoveName}" from ${spot.name} in staging.`,
+      confirmLabel: "Remove dish",
+      tone: "danger",
+      onConfirm: async () => {
+        const remaining = spot.dish_highlights.filter((d) => d.id !== dishToRemoveId);
+        const allRemainingVerified = remaining.every(
+          (d) =>
+            d.is_verified_food_photo &&
+            Boolean(d.dish_image) &&
+            !isDeliveryAppImageUrl(d.dish_image)
+        );
+        await onUpdateSpot(spot.id, {
+          dish_highlights: remaining,
+          signature_dish: remaining[0]?.dish_name,
+          verification_status: allRemainingVerified ? "approved" : "needs_photo",
+        });
+      },
     });
   };
 
@@ -471,6 +1011,14 @@ export function SeedingCandidateCard({
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
+          {deliveryDishesCount > 0 && spot.verification_status !== "rejected" && (
+            <span
+              title={`${deliveryDishesCount} dish(es) use a Wolt/Foodora URL — replace before commit`}
+              className="inline-flex items-center gap-1 rounded-lg border border-rose-300 bg-rose-600 px-2 py-1 text-[10px] font-black text-white tabular-nums"
+            >
+              ⚠️ {deliveryDishesCount} WOLT
+            </span>
+          )}
           {!isPopupSpot && spot.verification_status !== "rejected" && (
             <span
               title={`${verifiedDishesCount} verified out of 3 target dishes`}
@@ -527,21 +1075,60 @@ export function SeedingCandidateCard({
           <div className="flex flex-wrap items-center gap-1.5 border-t border-[#EAE5DC] bg-[#FAF7F2] px-3 py-2.5 animate-in fade-in-0 duration-150">
             <button
               type="button"
+              onClick={() => void handlePullWebAndSitePhotos()}
+              disabled={isPullingWebPhotos}
+              className="inline-flex h-8 items-center gap-1.5 rounded-full bg-teal-700 px-3 text-[11px] font-bold text-white transition-colors hover:bg-teal-800 disabled:opacity-50 cursor-pointer shadow-2xs"
+              title="Scrape restaurant website + run targeted per-dish web searches (Wolt/Foodora excluded)"
+            >
+              <Globe className={`h-3.5 w-3.5 ${isPullingWebPhotos ? "animate-spin" : ""}`} />
+              {isPullingWebPhotos ? "Pulling Web..." : "🌐 Pull Web & Site Photos"}
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleFetchFoodPhotos()}
+              disabled={isFetchingFoodPhotos}
+              className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#181615] px-3 text-[11px] font-bold text-white transition-colors hover:bg-[#E84A27] disabled:opacity-50 cursor-pointer"
+              title="Fetch clean Food & drink + Entrance/Interior photos (SerpApi Maps or Google Places fallback)"
+            >
+              <Camera className={`h-3.5 w-3.5 ${isFetchingFoodPhotos ? "animate-spin" : ""}`} />
+              {isFetchingFoodPhotos ? "Fetching..." : "Fetch Photos (Food + Vibe)"}
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleVisionAutoMatch()}
+              disabled={isVisionMatching || combinedPoolPhotos.length === 0}
+              className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#E84A27] px-3 text-[11px] font-bold text-white transition-colors hover:bg-[#d03d1b] disabled:opacity-45 disabled:cursor-not-allowed cursor-pointer shadow-2xs"
+              title={
+                combinedPoolPhotos.length === 0
+                  ? "Fetch photos first before running Vision Auto-Match"
+                  : "Classify Food / Vibe / Junk, auto-match dishes, and recommend venue cover & gallery"
+              }
+            >
+              <Sparkles className={`h-3.5 w-3.5 ${isVisionMatching ? "animate-spin" : ""}`} />
+              {isVisionMatching ? "Matching..." : "✨ Vision Auto-Match"}
+            </button>
+            <button
+              type="button"
               onClick={() => {
                 setIsAiShiftOpen(true);
                 setAiShiftError(null);
               }}
-              className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#181615] px-3 text-[11px] font-bold text-white transition-colors hover:bg-[#E84A27] cursor-pointer"
-              title="Paste drop text to update the card and production DB with AI"
+              className="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#DDD6C9] bg-white px-3 text-[11px] font-bold text-[#181615] transition-colors hover:border-[#E84A27]/40 hover:text-[#E84A27] cursor-pointer"
+              title="Paste a pop-up drop announcement or schedule text to parse with AI"
             >
-              <Sparkles className="h-3.5 w-3.5" />
-              AI shift
+              <Sparkles className="h-3.5 w-3.5 text-[#E84A27]" />
+              Parse Drop
             </button>
             <button
               type="button"
-              onClick={() =>
-                setActiveSpotField((cur) => (cur === "cover" ? null : "cover"))
-              }
+              onClick={() => {
+                setActiveSpotField((cur) => (cur === "cover" ? null : "cover"));
+                const hasVibe = combinedPoolPhotos.some(
+                  (u) => mergedPhotoTags[u]?.bucket === "venue_vibe"
+                );
+                setCoverPoolFilter(hasVibe ? "venue_vibe" : "all");
+                if (combinedPoolPhotos.length > 0) setSpotPhotoTab("pool");
+              }}
               className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[11px] font-bold transition-colors cursor-pointer ${
                 activeSpotField === "cover"
                   ? "border-[#E84A27] bg-[#E84A27] text-white"
@@ -582,9 +1169,64 @@ export function SeedingCandidateCard({
                 isPopupSpot && instagramUrl ? "" : "ml-auto"
               }`}
             >
-              Tap card elements to edit
+              Pool: {combinedPoolPhotos.length}
             </span>
           </div>
+
+          {workflowToast && (
+            <div
+              className={`flex items-center justify-between gap-2 border-t px-3.5 py-2 text-[11.5px] font-bold ${
+                workflowToast.type === "success"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                  : "border-rose-200 bg-rose-50 text-rose-800"
+              }`}
+            >
+              <span>{workflowToast.message}</span>
+              <button
+                type="button"
+                onClick={() => setWorkflowToast(null)}
+                className="p-0.5 rounded hover:bg-black/5 cursor-pointer"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+
+          {suggestedCover && (
+            <div className="flex flex-wrap items-center gap-3 border-t border-amber-200 bg-amber-50/70 px-3.5 py-2.5">
+              <div className="relative h-12 w-16 shrink-0 overflow-hidden rounded-lg border border-amber-300 bg-white">
+                <Image
+                  src={suggestedCover.url}
+                  alt="Suggested venue cover"
+                  fill
+                  unoptimized
+                  className="object-cover"
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-black text-[#181615]">
+                  🏠 Vision Suggested Venue Cover &amp; Gallery ({suggestedCover.rankedGalleryUrls.length} shots)
+                </p>
+                <p className="text-[10.5px] text-zinc-600 truncate">{suggestedCover.reason}</p>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => void handleApplySuggestedCover()}
+                  className="px-3 py-1.5 rounded-xl bg-[#181615] hover:bg-[#E84A27] text-white text-[11px] font-bold transition-colors cursor-pointer"
+                >
+                  Apply Suggested Cover &amp; Gallery
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSuggestedCover(null)}
+                  className="p-1.5 rounded-lg text-zinc-500 hover:bg-black/5 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Pop-up drop pattern */}
           {isPopupSpot && (
@@ -867,19 +1509,20 @@ export function SeedingCandidateCard({
                   </button>
                 </div>
 
-                <div className="grid grid-cols-3 gap-1 bg-[#EFEAE1] p-1 rounded-xl">
+                <div className="grid grid-cols-4 gap-1 bg-[#EFEAE1] p-1 rounded-xl">
                   {(
                     [
-                      { id: "upload", label: "Upload / Paste" },
+                      { id: "pool", label: `Pool (${combinedPoolPhotos.length})` },
+                      { id: "upload", label: "Upload" },
                       { id: "google", label: `Google (${spotGooglePhotos.length})` },
-                      { id: "url", label: "Direct URL" },
+                      { id: "url", label: "URL" },
                     ] as const
                   ).map((t) => (
                     <button
                       key={t.id}
                       type="button"
                       onClick={() => setSpotPhotoTab(t.id)}
-                      className={`py-1.5 px-2 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${
+                      className={`py-1.5 px-1.5 rounded-lg text-[10.5px] font-bold cursor-pointer transition-all truncate ${
                         spotPhotoTab === t.id
                           ? "bg-[#E84A27] text-white shadow-xs"
                           : "text-zinc-600 hover:text-[#181615]"
@@ -890,7 +1533,90 @@ export function SeedingCandidateCard({
                   ))}
                 </div>
 
-                {spotPhotoTab === "upload" ? (
+                {spotPhotoTab === "pool" ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1 rounded-xl bg-[#FAF7F2] p-0.5 border border-[#EAE5DC]">
+                      {(
+                        [
+                          { id: "all", label: `All (${combinedPoolPhotos.length})` },
+                          {
+                            id: "venue_vibe",
+                            label: `🏠 Entrance & Vibe (${
+                              combinedPoolPhotos.filter(
+                                (u) => mergedPhotoTags[u]?.bucket === "venue_vibe"
+                              ).length
+                            })`,
+                          },
+                          {
+                            id: "food",
+                            label: `🍽️ Food (${
+                              combinedPoolPhotos.filter((u) => mergedPhotoTags[u]?.bucket === "food")
+                                .length
+                            })`,
+                          },
+                        ] as const
+                      ).map((f) => (
+                        <button
+                          key={f.id}
+                          type="button"
+                          onClick={() => setCoverPoolFilter(f.id)}
+                          className={`flex-1 py-1 px-1.5 rounded-lg text-[10px] font-bold transition-colors cursor-pointer truncate ${
+                            coverPoolFilter === f.id
+                              ? "bg-[#181615] text-white"
+                              : "text-zinc-600 hover:text-[#181615]"
+                          }`}
+                        >
+                          {f.label}
+                        </button>
+                      ))}
+                    </div>
+                    {(() => {
+                      const coverCandidates = combinedPoolPhotos.filter((u) => {
+                        if (isDeliveryAppImageUrl(u)) return false;
+                        if (coverPoolFilter === "all") return true;
+                        return mergedPhotoTags[u]?.bucket === coverPoolFilter;
+                      });
+                      if (coverCandidates.length === 0) {
+                        return (
+                          <p className="text-[11px] text-zinc-500 py-3 text-center bg-[#FAF7F2] rounded-xl border border-dashed border-[#DDD6C9]">
+                            No photos in this filter yet. Click Fetch Photos + Vision Auto-Match or switch to All.
+                          </p>
+                        );
+                      }
+                      return (
+                        <div className="grid grid-cols-4 gap-1.5 max-h-40 overflow-y-auto p-0.5">
+                          {coverCandidates.map((pUrl, i) => {
+                            const tag = mergedPhotoTags[pUrl];
+                            const badge = getSourceBadgeMeta(detectImageSource(pUrl, tag?.source));
+                            return (
+                              <button
+                                key={pUrl + i}
+                                type="button"
+                                title={tag?.description || "Set as venue cover"}
+                                onClick={() => void handleSetSpotCover(pUrl)}
+                                className={`relative aspect-square rounded-xl overflow-hidden border-2 cursor-pointer ${
+                                  spotCoverUrl === pUrl ? "border-[#E84A27]" : "border-transparent"
+                                }`}
+                              >
+                                <Image src={pUrl} alt="" fill unoptimized className="object-cover" />
+                                <span
+                                  className={`pointer-events-none absolute top-0.5 left-0.5 px-1 py-0.5 rounded text-[7.5px] font-black leading-none border ${badge.className}`}
+                                >
+                                  {badge.label}
+                                </span>
+                                {tag?.bucket && (
+                                  <span className="pointer-events-none absolute bottom-0.5 left-0.5 px-1 py-0.5 rounded bg-black/70 text-white text-[7.5px] font-bold leading-none">
+                                    {tag.bucket === "venue_vibe" ? "🏠" : "🍽️"}
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                ) : spotPhotoTab === "upload" ? (
                   <div
                     onDragOver={(e) => {
                       e.preventDefault();
@@ -1230,15 +1956,23 @@ export function SeedingCandidateCard({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {spot.dish_highlights.map((dish) => {
+              const dishSource = detectImageSource(dish.dish_image, dish.image_source);
+              const isDeliveryPhoto = isDeliveryAppImageUrl(dish.dish_image);
               const isBadImage =
                 !dish.dish_image ||
+                isDeliveryPhoto ||
                 /streetview|facade|building|\/icons\/food\//i.test(dish.dish_image) ||
                 !dish.is_verified_food_photo;
+              const refSearchUrl = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(
+                `${dish.dish_name} ${spot.name}`
+              )}`;
 
               return (
                 <div
                   key={dish.id}
-                  className="group relative rounded-3xl overflow-hidden bg-[#181615] border border-black/10 shadow-md flex flex-col transition-all hover:shadow-xl"
+                  className={`group relative rounded-3xl overflow-hidden bg-[#181615] border shadow-md flex flex-col transition-all hover:shadow-xl ${
+                    isDeliveryPhoto ? "border-rose-500 ring-2 ring-rose-500/30" : "border-black/10"
+                  }`}
                 >
                   {/* Clickable Full-Bleed 4:3 Photography Container */}
                   {!dish.dish_image ? (
@@ -1259,7 +1993,7 @@ export function SeedingCandidateCard({
                         {dish.dish_name}
                       </p>
                       <p className="mt-1 text-[11px] font-semibold text-amber-700">
-                        Tap to upload or paste dish photo
+                        Tap to pick from pool or upload photo
                       </p>
                       {dish.review_text && (
                         <p className="mt-2 text-[11px] text-zinc-500 line-clamp-2 max-w-[26ch]">
@@ -1270,7 +2004,7 @@ export function SeedingCandidateCard({
                   ) : (
                     <div
                       onClick={() => setEditingDish(dish)}
-                      title="Tap anywhere on dish card to edit photo, price or AI Shift"
+                      title="Tap anywhere on dish card to edit photo, price or AI Polish"
                       className="relative w-full aspect-[4/3] overflow-hidden bg-[#E8E0D2] cursor-pointer"
                     >
                       <Image
@@ -1283,12 +2017,21 @@ export function SeedingCandidateCard({
 
                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-transparent pointer-events-none" />
 
-                      {isBadImage && (
-                        <div className="absolute inset-x-3 top-3 z-20 px-2.5 py-1.5 rounded-xl bg-amber-400/95 text-black text-[11px] font-bold flex items-center gap-1.5 shadow-md backdrop-blur-md">
+                      {isDeliveryPhoto ? (
+                        <div className="absolute top-3 left-3 z-20 px-2.5 py-1 rounded-xl bg-rose-600 text-white text-[10.5px] font-black flex items-center gap-1 shadow-md border border-rose-700">
+                          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                          <span>{dishSource === "foodora" ? "⚠️ FOODORA" : "⚠️ WOLT"} · Replace</span>
+                        </div>
+                      ) : isBadImage ? (
+                        <div className="absolute top-3 left-3 right-24 z-20 px-2.5 py-1.5 rounded-xl bg-amber-400/95 text-black text-[11px] font-bold flex items-center gap-1.5 shadow-md backdrop-blur-md">
                           <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-black" />
                           <span className="truncate">Tap to verify photo</span>
                         </div>
-                      )}
+                      ) : dish.is_ai_enhanced || dishSource === "ai_polish" ? (
+                        <div className="absolute top-3 left-3 z-20 px-2 py-0.5 rounded-full bg-[#E84A27]/95 text-white text-[9.5px] font-black shadow-xs">
+                          ✨ AI Polished
+                        </div>
+                      ) : null}
 
                       {dish.price_nok && (
                         <div className="absolute top-3 right-3 z-10 px-2.5 py-1 rounded-full bg-[#E84A27] text-white font-bold text-xs shadow-md">
@@ -1340,13 +2083,46 @@ export function SeedingCandidateCard({
                     </div>
                   )}
 
+                  {/* Vision Confidence & Visual Proof Strip */}
+                  {(typeof dish.vision_confidence === "number" || dish.vision_reason || isDeliveryPhoto) && (
+                    <div className="px-3 py-1.5 bg-white border-t border-[#EAE5DC] flex flex-wrap items-center gap-1.5 text-[10.5px]">
+                      {isDeliveryPhoto && (
+                        <span className="px-1.5 py-0.5 rounded-md bg-rose-600 text-white font-black text-[9.5px]">
+                          {dishSource === "foodora" ? "⚠️ FOODORA" : "⚠️ WOLT"}
+                        </span>
+                      )}
+                      {typeof dish.vision_confidence === "number" && dish.vision_confidence > 0 && (
+                        <span
+                          className={`px-1.5 py-0.5 rounded-md font-black tabular-nums text-[10px] ${
+                            dish.vision_confidence >= 80
+                              ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                              : "bg-amber-100 text-amber-800 border border-amber-200"
+                          }`}
+                        >
+                          {dish.vision_confidence}% {dish.vision_confidence >= 80 ? "match" : "check"}
+                        </span>
+                      )}
+                      {dish.vision_reason && (
+                        <span
+                          title={dish.vision_reason}
+                          className="min-w-0 flex-1 truncate text-zinc-600 font-medium"
+                        >
+                          {dish.vision_reason}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
                   {/* Card Action Strip */}
                   <div className="p-3 bg-[#FAF7F2] border-t border-[#EAE5DC] flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <button
                         type="button"
                         onClick={() => {
-                          if (!dish.is_verified_food_photo && !isValidFoodPhoto(dish.dish_image)) {
+                          if (
+                            isDeliveryPhoto ||
+                            (!dish.is_verified_food_photo && !isValidFoodPhoto(dish.dish_image))
+                          ) {
                             setEditingDish(dish);
                             return;
                           }
@@ -1355,26 +2131,42 @@ export function SeedingCandidateCard({
                           });
                         }}
                         title={
-                          !dish.dish_image
+                          isDeliveryPhoto
+                            ? "Wolt/Foodora photo must be replaced before verifying"
+                            : !dish.dish_image
                             ? "Pick or upload a dish photo first"
                             : dish.is_verified_food_photo
                             ? "Verified photo (click to unverify)"
                             : "Confirm this photo and sync to live DB"
                         }
                         className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${
-                          dish.is_verified_food_photo
+                          isDeliveryPhoto
+                            ? "bg-rose-50 text-rose-700 border border-rose-300 hover:bg-rose-100"
+                            : dish.is_verified_food_photo
                             ? "bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100"
                             : "bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100"
                         }`}
                       >
-                        {dish.is_verified_food_photo
+                        {isDeliveryPhoto
+                          ? "⚠️ Replace photo"
+                          : dish.is_verified_food_photo
                           ? "🟢 Verified"
                           : dish.dish_image
                           ? "🟡 Confirm photo"
                           : "🟡 Pick photo"}
                       </button>
 
-                      {spot.dish_highlights.length > 1 && dish.is_verified_food_photo && (
+                      <a
+                        href={refSearchUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={`Visual reference search for "${dish.dish_name}" at ${spot.name}`}
+                        className="px-2 py-1 rounded-lg bg-white hover:bg-zinc-100 text-zinc-700 border border-[#DDD6C9] text-[10.5px] font-bold transition-colors"
+                      >
+                        🔍 Ref
+                      </a>
+
+                      {spot.dish_highlights.length > 1 && dish.is_verified_food_photo && !isDeliveryPhoto && (
                         <button
                           type="button"
                           onClick={() => handleUseOnlyThisDish(dish)}
@@ -1542,10 +2334,14 @@ export function SeedingCandidateCard({
           dish={editingDish}
           spotName={spot.name}
           spotId={spot.id}
+          neighborhood={spot.neighborhood}
+          websiteUrl={spot.website_uri || null}
           isPopup={isPopupSpot}
-          candidatePhotos={Array.from(
-            new Set([...(spot.candidate_photos || []), ...(spot.place_photos || [])])
-          )}
+          candidatePhotos={combinedPoolPhotos}
+          photoVisionTags={mergedPhotoTags}
+          onPruneCandidatePhoto={handlePruneCandidatePhoto}
+          onSetSpotCover={handleSetSpotCover}
+          onAddCandidatePhotos={handleAddCandidatePhotos}
           onSave={async (dishUpdates) => {
             await onUpdateDish(spot.id, editingDish.id, dishUpdates);
           }}
@@ -1553,7 +2349,7 @@ export function SeedingCandidateCard({
         />
       )}
 
-      {/* ── AI QUICK SHIFT MODAL (NLP DROP UPDATER + LIVE DIFF PREVIEW) ── */}
+      {/* ── PARSE DROP MODAL (NLP DROP UPDATER + LIVE DIFF PREVIEW) ── */}
       {isAiShiftOpen && (
         <div
           className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
@@ -1570,7 +2366,7 @@ export function SeedingCandidateCard({
                 </span>
                 <div>
                   <h3 className="text-lg font-black text-[#181615]">
-                    ✨ AI Quick Shift: {spot.name}
+                    ✨ Parse Drop: {spot.name}
                   </h3>
                   <p className="text-xs text-zinc-500">
                     Paste an Instagram drop announcement or type changes in plain language to update{" "}
@@ -1940,6 +2736,80 @@ export function SeedingCandidateCard({
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── CUSTOM CONFIRMATION MODAL (REPLACES NATIVE CHROME ALERT/CONFIRM) ── */}
+      {pendingDialog && (
+        <div
+          className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+          onClick={() => !isConfirmingDialog && setPendingDialog(null)}
+        >
+          <div
+            className="w-full rounded-t-3xl border border-[#EAE5DC] bg-[#FAF7F2] p-5 pb-[calc(env(safe-area-inset-bottom,0px)+20px)] shadow-2xl sm:max-w-md sm:rounded-3xl sm:p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <span
+                className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl ${
+                  pendingDialog.tone === "danger"
+                    ? "bg-rose-100 text-rose-600"
+                    : "bg-[#E84A27]/10 text-[#E84A27]"
+                }`}
+              >
+                {pendingDialog.tone === "danger" ? (
+                  <Trash2 className="h-5 w-5" />
+                ) : (
+                  <Rocket className="h-5 w-5" />
+                )}
+              </span>
+              <div className="min-w-0">
+                <h3 className="font-comico text-lg tracking-wide text-[#181615]">
+                  {pendingDialog.title}
+                </h3>
+                <p className="mt-1 text-xs leading-relaxed text-zinc-600">
+                  {pendingDialog.description}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 flex items-center gap-2.5">
+              <button
+                type="button"
+                disabled={isConfirmingDialog}
+                onClick={() => setPendingDialog(null)}
+                className="flex-1 rounded-2xl border border-[#DDD6C9] bg-white px-4 py-3 text-xs font-black text-zinc-600 transition-colors hover:text-[#181615] cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isConfirmingDialog}
+                onClick={async () => {
+                  const action = pendingDialog.onConfirm;
+                  setIsConfirmingDialog(true);
+                  try {
+                    await action();
+                    setPendingDialog(null);
+                  } finally {
+                    setIsConfirmingDialog(false);
+                  }
+                }}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-2xl px-4 py-3 text-xs font-black text-white shadow-lg transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer ${
+                  pendingDialog.tone === "danger"
+                    ? "bg-rose-600 hover:bg-rose-700 shadow-rose-600/25"
+                    : "bg-[#E84A27] hover:bg-[#d03d1b] shadow-[#E84A27]/25"
+                }`}
+              >
+                {pendingDialog.tone === "danger" ? (
+                  <Trash2 className="h-4 w-4" />
+                ) : (
+                  <Rocket className={`h-4 w-4 ${isConfirmingDialog ? "animate-bounce" : ""}`} />
+                )}
+                <span>{isConfirmingDialog ? "Working..." : pendingDialog.confirmLabel}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

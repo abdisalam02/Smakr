@@ -186,7 +186,10 @@ export const FoodSpotCard = React.memo(function FoodSpotCard({
         </div>
 
         {/* Clean Warm Oat Outer Footer */}
-        <div className="mt-2 px-1 space-y-0.5">
+        <div
+          data-lane-footer="true"
+          className="mt-2 px-1 space-y-0.5 transition-opacity duration-150"
+        >
           <h3 className="font-display font-bold text-[16px] sm:text-[17px] leading-[1.18] text-[#181615] dark:text-white line-clamp-2 group-hover:text-[#E84A27] transition-colors">
             {venue.name}
           </h3>

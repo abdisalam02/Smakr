@@ -13,7 +13,12 @@
  *   2. Background table surface underneath the original vessel (`environmentPreset`)
  */
 
-export type AnglePresetId = "hero_25" | "diner_45" | "bowl_60" | "editorial_top_75";
+export type AnglePresetId =
+  | "preserve_food_clean_scene"
+  | "hero_25"
+  | "diner_45"
+  | "bowl_60"
+  | "editorial_top_75";
 
 export type EnvironmentPresetId =
   | "neutral_original"
@@ -30,6 +35,13 @@ export interface PresetOption<T extends string> {
 }
 
 export const ANGLE_PRESETS: Record<AnglePresetId, PresetOption<AnglePresetId>> = {
+  preserve_food_clean_scene: {
+    id: "preserve_food_clean_scene",
+    label: "Preserve Food · Clean Surroundings",
+    shortLabel: "Preserve Food",
+    promptInstruction:
+      "the exact same camera angle and framing as the reference photo, locking the food, garnish, portion, and vessel identically",
+  },
   hero_25: {
     id: "hero_25",
     label: "25° Low Hero Angle",
@@ -109,28 +121,20 @@ export function resolveCategoryRemixDefaults(
 
   if (/ramen|pho|vietnamese|noodle|curry|mandi|bowl|soup|dumpling/i.test(combined)) {
     return {
-      defaultAngle: "bowl_60",
-      defaultEnvironment: "matte_dark",
-    };
-  }
-
-  if (/burger|sandwich|banh_mi|cheesesteak|kebab|wrap|taco|iced|matcha|pancake/i.test(combined)) {
-    return {
-      defaultAngle: "hero_25",
-      defaultEnvironment: "warm_wood",
+      defaultAngle: "preserve_food_clean_scene",
+      defaultEnvironment: "clean_stone",
     };
   }
 
   return {
-    defaultAngle: "diner_45",
+    defaultAngle: "preserve_food_clean_scene",
     defaultEnvironment: "warm_wood",
   };
 }
 
 /**
  * Builds the direct multimodal image-to-image prompt that locks 100% of the
- * reference image's vessel, utensils, and food textures while shifting ONLY
- * the camera viewing angle and background surface.
+ * reference image's vessel, utensils, and food textures.
  */
 export function buildDishSynthesisPrompt(params: {
   dishName: string;
@@ -142,6 +146,7 @@ export function buildDishSynthesisPrompt(params: {
   prompt: string;
   selectedAngleLabel: string;
   selectedSurfaceLabel: string;
+  recommendedTemperature: number;
 } {
   const { dishName, category, anglePreset, environmentPreset, variationSeed } = params;
   const defaults = resolveCategoryRemixDefaults(category, dishName);
@@ -149,6 +154,33 @@ export function buildDishSynthesisPrompt(params: {
   const angleSpec = ANGLE_PRESETS[anglePreset] || ANGLE_PRESETS[defaults.defaultAngle];
   const envSpec =
     ENVIRONMENT_PRESETS[environmentPreset] || ENVIRONMENT_PRESETS[defaults.defaultEnvironment];
+
+  if (angleSpec.id === "preserve_food_clean_scene") {
+    const cleanSurface =
+      envSpec.id === "neutral_original"
+        ? "a subtle natural Scandinavian oak or pale warm stone Oslo café tabletop"
+        : envSpec.promptInstruction;
+
+    const prompt = [
+      `Subtle photorealistic cleanup and natural daylight polish of the exact dish ("${dishName}") in the attached reference image.`,
+      ``,
+      `First, write a 2-sentence visual receipt describing the exact plated food item, ingredients, garnishes, portion size, and vessel visible in the reference photo.`,
+      `Second, generate the cleaned image following these STRICT PRESERVATION RULES:`,
+      `- LOCK THE FOOD & VESSEL 100%: Keep the EXACT plated food item, exact ingredients, exact garnishes, exact portion size, exact bowl/plate/cup/wrapper, and the EXACT camera angle and framing from the reference photo.`,
+      `- ONLY IMPROVE LIGHTING, FOCUS & SURROUNDINGS: Balance harsh/yellow indoor shadows into soft natural Scandinavian window daylight, gently sharpen focus on the dish, and clean or replace messy background clutter (stray elbows, napkins, menus, harsh tabletop reflections) with ${cleanSurface}.`,
+      `- Must look like an authentic, unedited iPhone 16 Pro diner photo in Oslo — NO warm orange AI glow, NO plastic sheen, NO fake steam clouds, NO oversaturated colors, and NO added utensils, bowls, or garnishes that were not in the reference photo.`,
+      variationSeed ? `- Variation seed: ${variationSeed}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    return {
+      prompt,
+      selectedAngleLabel: angleSpec.label,
+      selectedSurfaceLabel: envSpec.label,
+      recommendedTemperature: 0.25,
+    };
+  }
 
   const prompt = [
     `Photorealistic camera angle shift of the exact dish ("${dishName}") and exact bowl/plate/vessel in the attached reference image.`,
@@ -169,5 +201,6 @@ export function buildDishSynthesisPrompt(params: {
     prompt,
     selectedAngleLabel: angleSpec.label,
     selectedSurfaceLabel: envSpec.label,
+    recommendedTemperature: 0.4,
   };
 }

@@ -22,6 +22,7 @@ import type {
   StagedCandidateSpot,
   StagedDishHighlight,
 } from "@/app/api/admin/seeding-lab/route";
+import { isDeliveryAppImageUrl } from "@/lib/admin/imageSource";
 
 type Notification = { type: "success" | "error"; message: string } | null;
 
@@ -49,6 +50,7 @@ function countVerifiedDishes(spot: StagedCandidateSpot): number {
     (d) =>
       d.is_verified_food_photo &&
       Boolean(d.dish_image) &&
+      !isDeliveryAppImageUrl(d.dish_image) &&
       !/streetview|facade|building|\/icons\/food\//i.test(d.dish_image)
   ).length;
 }
@@ -276,7 +278,9 @@ export default function SeedingLabPage() {
     const byQueue = currentModeCandidates.filter((s) => {
       if (activeMode !== "regular") return true;
       const verifiedCount = countVerifiedDishes(s);
-      const hasUnverified = (s.dish_highlights || []).some((d) => !d.is_verified_food_photo || !d.dish_image);
+      const hasUnverified = (s.dish_highlights || []).some(
+        (d) => !d.is_verified_food_photo || !d.dish_image || isDeliveryAppImageUrl(d.dish_image)
+      );
       if (activeQueue === "needs_dishes") {
         return s.verification_status !== "rejected" && (verifiedCount < 3 || hasUnverified);
       }
@@ -319,19 +323,32 @@ export default function SeedingLabPage() {
     const activeRegular = currentModeCandidates.filter((s) => s.verification_status !== "rejected");
     const needsDishesSpots = activeRegular.filter((s) => {
       const v = countVerifiedDishes(s);
-      const u = (s.dish_highlights || []).some((d) => !d.is_verified_food_photo || !d.dish_image);
+      const u = (s.dish_highlights || []).some(
+        (d) => !d.is_verified_food_photo || !d.dish_image || isDeliveryAppImageUrl(d.dish_image)
+      );
       return v < 3 || u;
     }).length;
     const completeSpots = activeRegular.filter(
       (s) =>
         s.verification_status === "seeded" &&
         countVerifiedDishes(s) >= 3 &&
-        !(s.dish_highlights || []).some((d) => !d.is_verified_food_photo || !d.dish_image)
+        !(s.dish_highlights || []).some(
+          (d) => !d.is_verified_food_photo || !d.dish_image || isDeliveryAppImageUrl(d.dish_image)
+        )
     ).length;
     const totalTargetDishes = activeRegular.length * 3;
     const totalVerifiedDishes = activeRegular.reduce((acc, s) => acc + Math.min(3, countVerifiedDishes(s)), 0);
     const totalUnverifiedDishes = activeRegular.reduce(
-      (acc, s) => acc + (s.dish_highlights || []).filter((d) => !d.is_verified_food_photo || !d.dish_image).length,
+      (acc, s) =>
+        acc +
+        (s.dish_highlights || []).filter(
+          (d) => !d.is_verified_food_photo || !d.dish_image || isDeliveryAppImageUrl(d.dish_image)
+        ).length,
+      0
+    );
+    const totalDeliveryDishes = activeRegular.reduce(
+      (acc, s) =>
+        acc + (s.dish_highlights || []).filter((d) => isDeliveryAppImageUrl(d.dish_image)).length,
       0
     );
     return {
@@ -346,6 +363,7 @@ export default function SeedingLabPage() {
       totalTargetDishes,
       totalVerifiedDishes,
       totalUnverifiedDishes,
+      totalDeliveryDishes,
     };
   }, [currentModeCandidates]);
 
@@ -474,20 +492,20 @@ export default function SeedingLabPage() {
             <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3 border-t border-[#EAE5DC] pt-3">
               <div className="rounded-xl border border-[#EAE5DC] bg-white px-3 py-2.5">
                 <span className="text-[10px] font-black uppercase tracking-wider text-[#E84A27]">
-                  Step 1 · Open spot
+                  Step 1 · Fetch Photos
                 </span>
-                <p className="mt-0.5 text-xs font-bold text-[#181615]">Check dishes in queue</p>
+                <p className="mt-0.5 text-xs font-bold text-[#181615]">Pull Food + Entrance shots</p>
                 <p className="mt-0.5 text-[11px] leading-snug text-zinc-500">
-                  Spots under &ldquo;Needs Setup&rdquo; already have scraped Wolt, IG, or site menu items waiting.
+                  Open any spot and click Fetch Photos (Food + Vibe) to pull clean Google Maps food &amp; storefront photos.
                 </p>
               </div>
               <div className="rounded-xl border border-[#EAE5DC] bg-white px-3 py-2.5">
                 <span className="text-[10px] font-black uppercase tracking-wider text-[#E84A27]">
-                  Step 2 · Confirm 3 dishes
+                  Step 2 · Vision Auto-Match
                 </span>
-                <p className="mt-0.5 text-xs font-bold text-[#181615]">Pick photo &amp; tap Confirm</p>
+                <p className="mt-0.5 text-xs font-bold text-[#181615]">Pair dishes &amp; replace ⚠️ WOLT</p>
                 <p className="mt-0.5 text-[11px] leading-snug text-zinc-500">
-                  Tap yellow dishes to confirm prefilled Wolt photos or pick from the spot gallery / paste (Ctrl+V).
+                  Run Vision Auto-Match to pair dishes, keep storefront covers, prune junk, and confirm each match.
                 </p>
               </div>
               <div className="rounded-xl border border-[#EAE5DC] bg-white px-3 py-2.5">
@@ -496,7 +514,9 @@ export default function SeedingLabPage() {
                 </span>
                 <p className="mt-0.5 text-xs font-bold text-[#181615]">Sync or Commit to Radar</p>
                 <p className="mt-0.5 text-[11px] leading-snug text-zinc-500">
-                  Verified dishes on Live spots sync right away. New spots publish when you click Approve &amp; Commit.
+                  {stats.totalDeliveryDishes > 0
+                    ? `${stats.totalDeliveryDishes} staged dish(es) currently flagged ⚠️ WOLT/FOODORA — replace before committing.`
+                    : "Verified dishes on Live spots sync right away. New spots publish when you click Approve & Commit."}
                 </p>
               </div>
             </div>
@@ -678,7 +698,7 @@ export default function SeedingLabPage() {
         )}
 
         {/* ── LIST HEADER ── */}
-        <div className="mt-5 flex items-center justify-between gap-3 px-1">
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 px-1">
           <div className="flex items-baseline gap-2">
             <h2 className="text-sm font-bold text-[#181615]">
               {activeFilter !== "all"
@@ -697,13 +717,28 @@ export default function SeedingLabPage() {
               {filteredCandidates.length} {filteredCandidates.length === 1 ? "spot" : "spots"}
             </span>
           </div>
-          <span className="text-[11px] font-medium text-zinc-400">
-            {activeMode === "regular"
-              ? `${stats.totalUnverifiedDishes} dishes awaiting confirmation`
-              : stats.needsPhoto > 0
-              ? `${stats.needsPhoto} awaiting photos`
-              : "All photos verified"}
-          </span>
+          <div className="flex items-center gap-2.5">
+            {(activeQueue === "ready" || approvedInMode > 0) && (
+              <button
+                type="button"
+                onClick={() => setIsConfirmOpen(true)}
+                disabled={isCommitting || approvedInMode === 0}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#E84A27] hover:bg-[#d03d1b] px-3.5 py-2 text-xs font-black text-white shadow-sm shadow-[#E84A27]/25 transition-all active:scale-[0.98] disabled:opacity-40 cursor-pointer"
+              >
+                <Rocket className={`h-3.5 w-3.5 ${isCommitting ? "animate-bounce" : ""}`} />
+                <span>
+                  {isCommitting ? "Committing all..." : `Commit All (${approvedInMode})`}
+                </span>
+              </button>
+            )}
+            <span className="hidden sm:inline text-[11px] font-medium text-zinc-400">
+              {activeMode === "regular"
+                ? `${stats.totalUnverifiedDishes} dishes awaiting confirmation`
+                : stats.needsPhoto > 0
+                ? `${stats.needsPhoto} awaiting photos`
+                : "All photos verified"}
+            </span>
+          </div>
         </div>
 
         {/* ── CANDIDATES ── */}
@@ -815,6 +850,30 @@ export default function SeedingLabPage() {
                 </p>
               </div>
             </div>
+
+            {(() => {
+              const approvedSpots = currentModeCandidates.filter(
+                (s) => s.verification_status === "approved"
+              );
+              if (approvedSpots.length === 0) return null;
+              return (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {approvedSpots.slice(0, 6).map((s) => (
+                    <span
+                      key={s.id}
+                      className="rounded-lg border border-[#EAE5DC] bg-white px-2 py-1 text-[11px] font-bold text-[#181615]"
+                    >
+                      {s.name}
+                    </span>
+                  ))}
+                  {approvedSpots.length > 6 && (
+                    <span className="rounded-lg bg-[#EAE5DC]/70 px-2 py-1 text-[11px] font-bold text-zinc-600">
+                      +{approvedSpots.length - 6} more
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
 
             <div className="mt-4 rounded-2xl border border-[#EAE5DC] bg-white px-3.5 py-3 text-[11.5px] font-medium text-zinc-600">
               <span className="font-bold text-[#181615]">This cannot be undone</span> from the lab. You would need to

@@ -3,8 +3,8 @@
 Updated: 2026-11-23
 
 ## Now
-- Task: Baked updated `9:16` Slide 1 Bánh Mì layout (`0.97` Burnt Paprika center box, larger sandwich cutouts, Cousins `21°`, Lai Zai `749,1321`) + `1.0` opacity default on `3:4` into `adPosterTemplates.ts` & bumped `AdPosterEditorLab.tsx` storage key (`v16`).
-- Status: Verified (`tsc --noEmit` clean) and pushed to `origin/main` for Vercel deploy.
+- Task: Shipped 60fps Feed motion & Oslo Pop-Up Radar Fanned Flyer Stack (`FeedMotionLanes.tsx`): counter-drift + snap-focus + living Open Peeps avatars across `Locals' Picks`, `Matcha, Coffee & Cocoa`, and `The Kitchens Behind the Dishes`, plus `POPUP_RADAR_LAYOUT_MODE` toggle for Fanned Stack vs Horizontal + Warm Oat Scout card (`/makr`).
+- Status: Verified (`npx tsc --noEmit` + `npm run build` exit 0; `/` First Load JS `606 kB`).
 
 ## Next (max 3)
 1. Preview and export the 2-slide Early Snowfall `@3x` PNG assets in `/ad-reel`.

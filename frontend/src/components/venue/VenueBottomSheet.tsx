@@ -579,10 +579,10 @@ export function VenueBottomSheet() {
                     {/* Top scrim for controls + rich bottom black hue behind resting white title/address */}
                     <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/50 to-transparent" />
                     <div
-                      className="absolute inset-x-0 bottom-0 h-[220px]"
+                      className="absolute inset-x-0 bottom-0 h-[240px]"
                       style={{
                         background:
-                          "linear-gradient(to top, rgba(24,22,21,0.96) 0%, rgba(24,22,21,0.84) 44%, rgba(24,22,21,0.36) 76%, rgba(24,22,21,0) 100%)",
+                          "linear-gradient(to top, #181615 0%, rgba(24,22,21,0.86) 38%, rgba(24,22,21,0.34) 74%, rgba(24,22,21,0) 100%)",
                       }}
                     />
                   </motion.div>
@@ -775,16 +775,25 @@ export function VenueBottomSheet() {
                       close beneath the resting title/location. */}
                   <div className="w-full h-[285px] sm:h-[320px] shrink-0" />
 
-                  {/* Content Card: One continuous dark-to-cream hue (from above title, fading gradually behind carousel into #FAF7F2) */}
-                  <div className="relative z-10 bg-[#FAF7F2] dark:bg-[#181615] px-4 pt-2 pb-14 space-y-3">
+                  {/* Content Card: One continuous seamless dark-to-cream gradient from hero behind title, flowing under carousel into #FAF7F2 */}
+                  <div className="relative z-10 dark:bg-[#181615] px-4 pt-2 pb-14 space-y-3">
                     <div
                       aria-hidden="true"
                       style={{
                         marginTop: 0,
                         background:
-                          "linear-gradient(to bottom, rgba(24,22,21,0) 0%, rgba(24,22,21,0.48) 20%, rgba(24,22,21,0.96) 40%, rgba(24,22,21,0.92) 48%, rgba(24,22,21,0.58) 62%, rgba(24,22,21,0.26) 76%, rgba(24,22,21,0.08) 89%, rgba(24,22,21,0) 100%)",
+                          "linear-gradient(to bottom, rgba(24,22,21,0) 0px, rgba(24,22,21,0.34) 55px, rgba(24,22,21,0.82) 115px, #181615 162px, #1F1D1B 192px, #47423E 245px, #8A847C 305px, #CBC4BA 365px, #EFEAE1 420px, #FAF7F2 480px, #FAF7F2 100%)",
                       }}
-                      className="pointer-events-none absolute -top-40 inset-x-0 h-[390px] dark:hidden"
+                      className="pointer-events-none absolute -top-44 inset-x-0 bottom-0 -z-10 dark:hidden"
+                    />
+                    <div
+                      aria-hidden="true"
+                      style={{
+                        marginTop: 0,
+                        background:
+                          "linear-gradient(to bottom, rgba(24,22,21,0) 0%, rgba(24,22,21,0.72) 60%, #181615 100%)",
+                      }}
+                      className="pointer-events-none hidden dark:block absolute -top-44 inset-x-0 h-44 -z-10"
                     />
 
                     {/* Google-style Horizontal Bento Gallery right under resting title & address */}
@@ -1040,9 +1049,9 @@ export function VenueBottomSheet() {
                       close beneath the resting title/location. */}
                   <div className="w-full h-[285px] sm:h-[320px] shrink-0" />
 
-                  {/* Content Card: One continuous dark-to-cream hue (from above title, fading gradually behind carousel into #FAF7F2) */}
+                  {/* Content Card: One continuous seamless dark-to-cream gradient from hero behind title, flowing under carousel into #FAF7F2 */}
                   <div
-                    className={`relative z-10 bg-[#FAF7F2] dark:bg-[#181615] px-4 pb-14 space-y-3 ${
+                    className={`relative z-10 dark:bg-[#181615] px-4 pb-14 space-y-3 ${
                       gallery.photos.length > 1 ? "pt-1.5" : "pt-4"
                     }`}
                   >
@@ -1051,9 +1060,18 @@ export function VenueBottomSheet() {
                       style={{
                         marginTop: 0,
                         background:
-                          "linear-gradient(to bottom, rgba(24,22,21,0) 0%, rgba(24,22,21,0.48) 20%, rgba(24,22,21,0.96) 40%, rgba(24,22,21,0.92) 48%, rgba(24,22,21,0.58) 62%, rgba(24,22,21,0.26) 76%, rgba(24,22,21,0.08) 89%, rgba(24,22,21,0) 100%)",
+                          "linear-gradient(to bottom, rgba(24,22,21,0) 0px, rgba(24,22,21,0.34) 55px, rgba(24,22,21,0.82) 115px, #181615 162px, #1F1D1B 192px, #47423E 245px, #8A847C 305px, #CBC4BA 365px, #EFEAE1 420px, #FAF7F2 480px, #FAF7F2 100%)",
                       }}
-                      className="pointer-events-none absolute -top-40 inset-x-0 h-[390px] dark:hidden"
+                      className="pointer-events-none absolute -top-44 inset-x-0 bottom-0 -z-10 dark:hidden"
+                    />
+                    <div
+                      aria-hidden="true"
+                      style={{
+                        marginTop: 0,
+                        background:
+                          "linear-gradient(to bottom, rgba(24,22,21,0) 0%, rgba(24,22,21,0.72) 60%, #181615 100%)",
+                      }}
+                      className="pointer-events-none hidden dark:block absolute -top-44 inset-x-0 h-44 -z-10"
                     />
 
                     {/* Food Truck schedule callout */}

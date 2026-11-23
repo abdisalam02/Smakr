@@ -11,6 +11,14 @@ import {
   readStagedCandidates,
   writeStagedCandidates,
 } from "@/lib/admin/stagedCandidatesStore";
+import {
+  detectImageSource,
+  isDeliveryAppImageUrl,
+  isValidDishPhotoUrl,
+  isValidVenueCoverUrl,
+  type DishImageSource,
+  type PhotoVisionTag,
+} from "@/lib/admin/imageSource";
 
 export const runtime = "nodejs";
 
@@ -39,6 +47,12 @@ export interface StagedDishHighlight {
   is_verified_food_photo: boolean;
   review_text: string;
   taste_tags: string[];
+  menu_description?: string | null;
+  image_source?: DishImageSource;
+  source_url?: string | null;
+  vision_confidence?: number | null;
+  vision_reason?: string | null;
+  is_ai_enhanced?: boolean;
 }
 
 export interface StagedCandidateSpot {
@@ -54,6 +68,7 @@ export interface StagedCandidateSpot {
   cover_image_url: string;
   place_photos?: string[];
   candidate_photos?: string[];
+  photo_vision_tags?: Record<string, PhotoVisionTag>;
   google_place_id?: string;
   google_reviews_count?: number;
   price_level?: "$" | "$$" | "$$$";
@@ -71,16 +86,7 @@ export interface StagedCandidateSpot {
 }
 
 function isValidSeedPhotoUrl(rawUrl: string): boolean {
-  const url = (rawUrl || "").trim();
-  if (!url) return false;
-  const hasValidPrefix =
-    url.startsWith("http://") ||
-    url.startsWith("https://") ||
-    url.startsWith("/api/places/photos") ||
-    url.startsWith("/curation-remix/") ||
-    url.startsWith("/uploads/");
-  const isBad = /streetview|facade|building|\/icons\/food\//i.test(url);
-  return hasValidPrefix && !isBad;
+  return isValidDishPhotoUrl(rawUrl);
 }
 
 function resolveLocalPublicFile(relUrl: string): string | null {
@@ -174,6 +180,7 @@ async function ingestPhotoToStorage(
       .from(STORAGE_BUCKET)
       .upload(storagePath, webpBuffer, {
         contentType: "image/webp",
+        cacheControl: "31536000",
         upsert: true,
       });
 
@@ -197,37 +204,83 @@ async function syncSpotToSupabase(
   const errors: string[] = [];
   let seededDishesCount = 0;
 
-  // 1. Ingest Dish Photos to Supabase CDN
+  // 1. Ingest Dish Photos to Supabase CDN and capture provenance before CDN rewrite
   const ingestedDishes: { dish: StagedDishHighlight; finalUrl: string }[] = [];
+  const dishProvenance: Record<
+    string,
+    {
+      image_source: DishImageSource;
+      is_ai_enhanced: boolean;
+      source_url?: string | null;
+      vision_confidence?: number | null;
+    }
+  > = {};
+
   for (const dish of spot.dish_highlights) {
     if (options.onlyVerifiedDishes && !isValidSeedPhotoUrl(dish.dish_image)) {
       continue;
     }
-    const cdnUrl = await ingestPhotoToStorage(supabase, dish.dish_image, "dish");
+    if (isDeliveryAppImageUrl(dish.dish_image)) {
+      errors.push(`Skipped delivery-app photo on "${dish.dish_name}" — replace Wolt/Foodora URL first.`);
+      continue;
+    }
+    const originalUrl = dish.dish_image;
+    const inferredSource =
+      dish.image_source && dish.image_source !== "unknown"
+        ? dish.image_source
+        : detectImageSource(originalUrl);
+    const cdnUrl = await ingestPhotoToStorage(supabase, originalUrl, "dish");
     dish.dish_image = cdnUrl;
+    dish.image_source = inferredSource;
+    if (!dish.source_url && originalUrl && originalUrl !== cdnUrl) {
+      dish.source_url = originalUrl;
+    }
+    const isAiEnhanced = Boolean(
+      dish.is_ai_enhanced ||
+        inferredSource === "ai_polish" ||
+        detectImageSource(cdnUrl) === "ai_polish"
+    );
+    dish.is_ai_enhanced = isAiEnhanced;
+    dishProvenance[dish.dish_name] = {
+      image_source: inferredSource,
+      is_ai_enhanced: isAiEnhanced,
+      source_url: dish.source_url || null,
+      vision_confidence: dish.vision_confidence ?? null,
+    };
     ingestedDishes.push({ dish, finalUrl: cdnUrl });
   }
 
-  // 2. Ingest Cover Photo to Supabase CDN (fallback to first valid dish photo if missing)
-  let finalCoverUrl = spot.cover_image_url || ingestedDishes[0]?.finalUrl || "";
+  // 2. Ingest Cover Photo to Supabase CDN (explicitly allows entrance/exterior/logo shots)
+  let finalCoverUrl =
+    (isValidVenueCoverUrl(spot.cover_image_url) && !isDeliveryAppImageUrl(spot.cover_image_url)
+      ? spot.cover_image_url
+      : "") ||
+    ingestedDishes[0]?.finalUrl ||
+    "";
   if (finalCoverUrl) {
     finalCoverUrl = await ingestPhotoToStorage(supabase, finalCoverUrl, "cover");
     spot.cover_image_url = finalCoverUrl;
   }
 
   // Build deduplicated pre-ingested Supabase CDN gallery for VenuePhotoStrip / VenuePhotoStack
+  // Preserves entrance/interior/signage shots from place_photos alongside hero dish photos.
   const rawGallery = [
+    ...(finalCoverUrl ? [finalCoverUrl] : []),
     ...(spot.place_photos ?? []),
     ...(spot.candidate_photos ?? []),
-    ...(finalCoverUrl ? [finalCoverUrl] : []),
     ...ingestedDishes.map((d) => d.finalUrl),
-  ].filter((u): u is string => typeof u === "string" && u.trim().length > 0 && !u.includes("/api/places/photos"));
+  ].filter(
+    (u): u is string =>
+      typeof u === "string" &&
+      isValidVenueCoverUrl(u) &&
+      !isDeliveryAppImageUrl(u)
+  );
 
   const ingestedPlacePhotos: string[] = [];
   for (const rawUrl of rawGallery) {
     if (ingestedPlacePhotos.length >= 8) break;
     const cdnUrl = await ingestPhotoToStorage(supabase, rawUrl, "cover");
-    if (cdnUrl && !ingestedPlacePhotos.includes(cdnUrl)) {
+    if (cdnUrl && isValidVenueCoverUrl(cdnUrl) && !ingestedPlacePhotos.includes(cdnUrl)) {
       ingestedPlacePhotos.push(cdnUrl);
     }
   }
@@ -343,6 +396,14 @@ async function syncSpotToSupabase(
           spot_type: spot.spot_type || "restaurant",
           ...(ingestedPlacePhotos.length ? { place_photos: ingestedPlacePhotos } : {}),
           ...(spot.candidate_photos?.length ? { candidate_photos: spot.candidate_photos } : {}),
+          ...(Object.keys(dishProvenance).length
+            ? {
+                dish_provenance: {
+                  ...((prevSignals.dish_provenance as Record<string, unknown>) || {}),
+                  ...dishProvenance,
+                },
+              }
+            : {}),
           ...(popupMeta ? { popup_meta: popupMeta } : {}),
         },
       })
@@ -385,6 +446,7 @@ async function syncSpotToSupabase(
             spot_type: spot.spot_type || "restaurant",
             ...(ingestedPlacePhotos.length ? { place_photos: ingestedPlacePhotos } : {}),
             ...(spot.candidate_photos?.length ? { candidate_photos: spot.candidate_photos } : {}),
+            ...(Object.keys(dishProvenance).length ? { dish_provenance: dishProvenance } : {}),
             ...(popupMeta ? { popup_meta: popupMeta } : {}),
           },
         })
@@ -520,9 +582,12 @@ export async function PATCH(req: NextRequest) {
         category: String(newDish.category || spot.food_category || "restaurant"),
         price_nok: typeof newDish.price_nok === "number" ? newDish.price_nok : null,
         dish_image: String(newDish.dish_image || ""),
-        is_verified_food_photo: isValidSeedPhotoUrl(String(newDish.dish_image || "")),
+        is_verified_food_photo:
+          isValidSeedPhotoUrl(String(newDish.dish_image || "")) &&
+          !isDeliveryAppImageUrl(String(newDish.dish_image || "")),
         review_text: String(newDish.review_text || spot.why_curated || ""),
         taste_tags: Array.isArray(newDish.taste_tags) ? newDish.taste_tags : [],
+        image_source: detectImageSource(String(newDish.dish_image || "")),
       };
       spot.dish_highlights.push(created);
     }
@@ -539,10 +604,10 @@ export async function PATCH(req: NextRequest) {
 
       Object.assign(spot, updates);
 
-      // When curator explicitly clicks Approve, mark all dishes with valid images as verified
+      // When curator explicitly clicks Approve, mark all dishes with valid non-delivery images as verified
       if (updates.verification_status === "approved") {
         for (const d of spot.dish_highlights) {
-          if (isValidSeedPhotoUrl(d.dish_image)) {
+          if (isValidSeedPhotoUrl(d.dish_image) && !isDeliveryAppImageUrl(d.dish_image)) {
             d.is_verified_food_photo = true;
           }
         }
@@ -554,18 +619,29 @@ export async function PATCH(req: NextRequest) {
       const dish = spot.dish_highlights.find((d) => d.id === dishId);
       if (dish) {
         previousDishNames[dish.id] = dish.dish_name;
+        const incomingUrl =
+          typeof dishUpdates.dish_image === "string" ? dishUpdates.dish_image : null;
         if (
-          typeof dishUpdates.dish_image === "string" &&
-          (dishUpdates.dish_image.includes("/api/places/photos") ||
-            dishUpdates.dish_image.startsWith("places/"))
+          incomingUrl &&
+          (incomingUrl.includes("/api/places/photos") || incomingUrl.startsWith("places/"))
         ) {
-          dishUpdates.dish_image = await ingestGooglePhotoToSupabase(dishUpdates.dish_image);
+          if (!dishUpdates.source_url) dishUpdates.source_url = incomingUrl;
+          if (!dishUpdates.image_source) dishUpdates.image_source = "google";
+          dishUpdates.dish_image = await ingestGooglePhotoToSupabase(incomingUrl);
         }
 
         Object.assign(dish, dishUpdates);
 
         if (typeof dishUpdates.dish_image === "string") {
-          const valid = isValidSeedPhotoUrl(dish.dish_image);
+          const detected = detectImageSource(dish.dish_image, dish.image_source);
+          if (!dishUpdates.image_source) {
+            dish.image_source = detected;
+          }
+          if (detected === "ai_polish") {
+            dish.is_ai_enhanced = true;
+          }
+          const valid =
+            isValidSeedPhotoUrl(dish.dish_image) && !isDeliveryAppImageUrl(dish.dish_image);
           if (dishUpdates.is_verified_food_photo === undefined) {
             dish.is_verified_food_photo = valid;
           }
@@ -654,6 +730,25 @@ export async function POST(req: NextRequest) {
     }
 
     // Pre-flight Guardrail Check
+    const deliveryBlocked: string[] = [];
+    for (const spot of approved) {
+      const blockedDishNames = spot.dish_highlights
+        .filter((d) => isDeliveryAppImageUrl(d.dish_image))
+        .map((d) => d.dish_name);
+      if (blockedDishNames.length > 0) {
+        deliveryBlocked.push(`${spot.name}: ${blockedDishNames.join(", ")}`);
+      }
+    }
+    if (deliveryBlocked.length > 0) {
+      return NextResponse.json(
+        {
+          error: `Pre-flight Guardrail Blocked — replace Wolt/Foodora dish photos before committing: ${deliveryBlocked.join(" | ")}`,
+          blockedDishes: deliveryBlocked,
+        },
+        { status: 400 }
+      );
+    }
+
     for (const spot of approved) {
       for (const dish of spot.dish_highlights) {
         if (!dish.is_verified_food_photo || !isValidSeedPhotoUrl(dish.dish_image)) {

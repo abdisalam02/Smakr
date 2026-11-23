@@ -261,3 +261,90 @@ export function mockPlace(query: string, category = "all"): PlaceResult {
     description: `Standout ${category === "all" ? "culinary" : category.replace(/_/g, " ")} spot in ${inferNeighborhood(clean)} preparing fresh specialties daily.`,
   };
 }
+
+/**
+ * Fetches up to `maxCount` Google Places photo proxy URLs for a venue via
+ * Places API (New) `places:get` (when `googlePlaceId` is known) or `places:searchText`.
+ */
+export async function fetchGooglePlacePhotoUrls(params: {
+  spotName: string;
+  address?: string;
+  googlePlaceId?: string | null;
+  maxCount?: number;
+  widthPx?: number;
+}): Promise<{ photos: string[]; resolvedPlaceId: string | null }> {
+  const apiKey = process.env.GOOGLE_PLACES_API_KEY || "";
+  if (!apiKey) return { photos: [], resolvedPlaceId: params.googlePlaceId || null };
+
+  const maxCount = Math.min(10, Math.max(1, params.maxCount ?? 10));
+  const widthPx = params.widthPx ?? 800;
+
+  let photoRefs: string[] = [];
+  let resolvedPlaceId: string | null = params.googlePlaceId || null;
+
+  if (params.googlePlaceId && !params.googlePlaceId.startsWith("mock")) {
+    try {
+      const res = await fetch(
+        `${PLACES_API_BASE}/places/${encodeURIComponent(params.googlePlaceId)}?languageCode=en`,
+        {
+          headers: {
+            "X-Goog-Api-Key": apiKey,
+            "X-Goog-FieldMask": "id,photos.name",
+          },
+          cache: "no-store",
+        }
+      );
+      if (res.ok) {
+        const place = (await res.json()) as GooglePlaceNew;
+        resolvedPlaceId = place.id || resolvedPlaceId;
+        photoRefs = (place.photos ?? [])
+          .map((p) => p.name)
+          .filter((n): n is string => Boolean(n && n.startsWith("places/")))
+          .slice(0, maxCount);
+      }
+    } catch {
+      // Fall through to searchText
+    }
+  }
+
+  if (photoRefs.length === 0) {
+    const query = [params.spotName, params.address, "Oslo Norway"]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    try {
+      const res = await fetch(`${PLACES_API_BASE}/places:searchText`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": apiKey,
+          "X-Goog-FieldMask": "places.id,places.photos.name",
+        },
+        body: JSON.stringify({
+          textQuery: query,
+          maxResultCount: 1,
+          languageCode: "en",
+        }),
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { places?: GooglePlaceNew[] };
+        const first = data.places?.[0];
+        if (first) {
+          resolvedPlaceId = first.id || resolvedPlaceId;
+          photoRefs = (first.photos ?? [])
+            .map((p) => p.name)
+            .filter((n): n is string => Boolean(n && n.startsWith("places/")))
+            .slice(0, maxCount);
+        }
+      }
+    } catch {
+      // Return empty if searchText also fails
+    }
+  }
+
+  const photos = photoRefs.map(
+    (ref) => `/api/places/photos?ref=${encodeURIComponent(ref)}&w=${widthPx}`
+  );
+  return { photos, resolvedPlaceId };
+}

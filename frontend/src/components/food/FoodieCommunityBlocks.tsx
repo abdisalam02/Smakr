@@ -9,6 +9,7 @@ import { SmakrFoodIcon } from "@/components/food/FoodIcons";
 import { getPeepSpriteDataUri } from "@/lib/bustCrowdPeep";
 import { trackEvent } from "@/lib/analytics";
 import { formatOsloLocation } from "@/lib/location";
+import { KineticFeedLane } from "@/components/food/FeedMotionLanes";
 import type { FoodPost, Venue } from "@/types";
 
 /** Clean, verified Open Peeps sprite indices (zero flagged faces/limbs; includes pointing & mug poses). */
@@ -326,7 +327,7 @@ export function LocalsPicksSwimlane({
         </span>
       </div>
 
-      <div className="overflow-x-auto snap-x snap-mandatory flex gap-3 pb-1 no-scrollbar">
+      <KineticFeedLane driftDirection={1}>
         {localPickCards.map(({ post, venue, handle, quote, spriteIdx, customAvatarUrl }) => {
           let spriteUri = customAvatarUrl || sprites[spriteIdx];
           if (spriteUri && spriteUri.startsWith("data:image/svg+xml")) {
@@ -355,6 +356,7 @@ export function LocalsPicksSwimlane({
           return (
             <article
               key={`locals-pick-${post.id}`}
+              data-lane-card="true"
               onClick={() => {
                 if (post.spot_id) {
                   trackEvent("spot_opened", {
@@ -367,7 +369,7 @@ export function LocalsPicksSwimlane({
                   setIsVenueDetailModalOpen(true);
                 }
               }}
-              className="w-[210px] shrink-0 snap-start flex flex-col cursor-pointer group select-none"
+              className="w-[210px] shrink-0 snap-start flex flex-col cursor-pointer group select-none will-change-transform"
             >
               {/* Clean Photo Card Above with floating bottom-left mascot */}
               <div className="relative w-full h-[205px] rounded-[22px] overflow-hidden bg-[#EDE6DA] border border-black/[0.08] shadow-xs group-hover:shadow-md transition-shadow">
@@ -419,10 +421,13 @@ export function LocalsPicksSwimlane({
                   </button>
                 </div>
 
-                {/* Bottom row inside photo: floating Open Peeps mascot (no ring) + dish title */}
+                {/* Bottom row inside photo: floating Living Open Peeps mascot (no ring) + dish title */}
                 <div className="absolute bottom-0 inset-x-0 z-10 px-2.5 pb-2 flex items-end gap-2">
                   {spriteUri && (
-                    <div className="w-[46px] h-[52px] shrink-0 overflow-visible pointer-events-none">
+                    <div
+                      data-living-avatar="true"
+                      className="w-[46px] h-[52px] shrink-0 overflow-visible pointer-events-none origin-bottom will-change-transform"
+                    >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={spriteUri}
@@ -440,7 +445,10 @@ export function LocalsPicksSwimlane({
               </div>
 
               {/* Clean Warm Oat Outer Footer Below Card (spot + single price + quote) */}
-              <div className="mt-2 px-1 space-y-1">
+              <div
+                data-lane-footer="true"
+                className="mt-2 px-1 space-y-1 transition-opacity duration-150"
+              >
                 <p className="text-[11.5px] font-bold text-[#181615] dark:text-zinc-100 leading-snug truncate">
                   <span>{post.spot_name} · {neighborhood}</span>
                   {post.price_nok ? (
@@ -458,6 +466,7 @@ export function LocalsPicksSwimlane({
 
         {/* End-of-lane Foodie Invite Card matching exact outer-footer card height */}
         <article
+          data-lane-card="true"
           onClick={openCreateDish}
           role="button"
           tabIndex={0}
@@ -467,7 +476,7 @@ export function LocalsPicksSwimlane({
               openCreateDish();
             }
           }}
-          className="w-[210px] shrink-0 snap-start flex flex-col cursor-pointer group select-none"
+          className="w-[210px] shrink-0 snap-start flex flex-col cursor-pointer group select-none will-change-transform"
         >
           <div className="h-[205px] rounded-[22px] bg-[#F3EDE2] border border-[#181615]/15 group-hover:border-[#E84A27]/50 p-4 flex flex-col justify-between transition-colors">
             <div>
@@ -500,7 +509,7 @@ export function LocalsPicksSwimlane({
             </div>
           </div>
 
-          <div className="mt-2 px-0.5">
+          <div data-lane-footer="true" className="mt-2 px-0.5 transition-opacity duration-150">
             <span className="w-full inline-flex items-center justify-center gap-1.5 rounded-full bg-[#E84A27] group-hover:bg-[#d63e1c] text-[#FAF7F2] font-bold text-[11.5px] py-2 px-3 shadow-xs transition-colors">
               <Plus className="w-3.5 h-3.5" />
               <span>Drop a Pick</span>
@@ -508,7 +517,7 @@ export function LocalsPicksSwimlane({
             </span>
           </div>
         </article>
-      </div>
+      </KineticFeedLane>
     </section>
   );
 }

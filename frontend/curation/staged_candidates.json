@@ -235,6 +235,14 @@
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/935eb097001053e5bb2958ebc428.webp"
     ],
     "candidate_photos": [
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/90eac87e87192c72b777b46e.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/73494bb7ec08267c868ba4ac.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/035835192e5eb844dd8fb1fb.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/2af2b235854c2f310fa1cdc2.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/bde0613b62cb2734f6341c61.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/d77f848b7a1e31b76b77462f.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/2b98d9f0b3fddfd0cfc47457.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/90af23f9b44410b97bd8022a.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/1a201129eec4bc662507a4f185af.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/63b7f82bc01d2807100e7f0ce168.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/407df051ad0ecd899af18041cbb6.webp",
@@ -271,7 +279,9 @@
           "katsu-sando",
           "shokupan",
           "crispy"
-        ]
+        ],
+        "image_source": "google",
+        "is_ai_enhanced": false
       },
       {
         "id": "pan-by-bread-n-butter-dish-2",
@@ -285,9 +295,45 @@
           "japanese-bakery",
           "katsu-sando",
           "savory"
-        ]
+        ],
+        "image_source": "google",
+        "is_ai_enhanced": false
       }
-    ]
+    ],
+    "photo_vision_tags": {
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/90af23f9b44410b97bd8022a.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/035835192e5eb844dd8fb1fb.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/2b98d9f0b3fddfd0cfc47457.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/d77f848b7a1e31b76b77462f.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/bde0613b62cb2734f6341c61.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/2af2b235854c2f310fa1cdc2.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/73494bb7ec08267c868ba4ac.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/90eac87e87192c72b777b46e.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      }
+    }
   },
   {
     "id": "ugly-duckling-oslo",
@@ -562,12 +608,12 @@
     "food_category": "dumplings",
     "icon": "dumplings",
     "spot_type": "restaurant",
-    "cover_image_url": "",
+    "cover_image_url": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/cover_4d051b7db599a70efa6dbb26.webp",
     "price_level": "$",
     "google_rating": 4.9,
     "signature_dish": "Stekte Gyoza Dumplings (4 stk)",
     "why_curated": "Crisp-bottomed, pan-seared gyoza dumplings folded around savory minced filling, served hot from the counter for a quick St. Hanshaugen bite.",
-    "verification_status": "needs_photo",
+    "verification_status": "seeded",
     "notes": "Bucket: trending_70 | Source: @matmeg_oslo + Øya 2026 + Foodora/Wolt (4.9★ / 184 reviews) | Founder note: Strong creator momentum; candidate for manual Smakr Pick review.",
     "dish_highlights": [
       {
@@ -575,55 +621,181 @@
         "dish_name": "Stekte Gyoza Dumplings (4 stk)",
         "category": "dumplings",
         "price_nok": 129,
-        "dish_image": "",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/dish_50786954f644a668a6e13972.webp",
+        "is_verified_food_photo": true,
         "review_text": "Crisp-bottomed, pan-seared gyoza dumplings folded around savory minced filling, served hot from the counter.",
         "taste_tags": [
           "pan-seared",
           "crispy-bottom",
           "savory"
-        ]
+        ],
+        "image_source": "web_search",
+        "source_url": "https://rollsushi.no/wp-content/uploads/2026/01/IMG_4776-scaled-1.jpeg",
+        "vision_confidence": 95,
+        "vision_reason": "Exactly four golden fried gyoza dumplings served with dipping sauce in a takeaway container",
+        "is_ai_enhanced": false
       },
       {
         "id": "kims-kitchen-dish-2",
         "dish_name": "Vegetar Poke Bowl",
         "category": "dumplings",
         "price_nok": 199,
-        "dish_image": "https://imageproxy.wolt.com/assets/6992e6080edcf1136ce2093c",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/a3d5501b644b9203c6dd1433.webp",
+        "is_verified_food_photo": true,
         "review_text": "Ris, tempura egg, sesamfrø, salat, edamame bønner, syltede gulrøtter, syltet løk, agurk og kimchi reddik. Serveres med Chilimayo og teriyaki.",
         "taste_tags": [
           "plant-based"
-        ]
+        ],
+        "image_source": "web_search",
+        "source_url": "https://lookaside.instagram.com/seo/google_widget/crawler/?media_id=2420616097122649443",
+        "is_ai_enhanced": false
       },
       {
         "id": "kims-kitchen-dish-3",
         "dish_name": "Ponzumarinert laks",
         "category": "dumplings",
         "price_nok": 239,
-        "dish_image": "https://wolt-menu-images-cdn.wolt.com/menu-images/f3f35614-1854-11ea-b202-0a586468d96f_wolt_05__1_.jpeg",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/943d00a63e97ef2d1363ca6b.webp",
+        "is_verified_food_photo": true,
         "review_text": "Ris, ponzumarinert laks, salat, edamame bønner, syltet løk, syltede gulrøtter, mango, sesamfrø, sjøtang-salat og tobiko. Serveres med Chilim.",
         "taste_tags": [
           "dumplings",
           "oslo-favorite"
-        ]
+        ],
+        "image_source": "web_search",
+        "source_url": "https://lookaside.instagram.com/seo/google_widget/crawler/?media_id=2560527267851802215",
+        "is_ai_enhanced": false
       }
     ],
     "candidate_photos": [
-      "https://imageproxy.wolt.com/assets/6992e6080edcf1136ce2093c",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/f3f35614-1854-11ea-b202-0a586468d96f_wolt_05__1_.jpeg",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/afd623f8-1854-11ea-a348-0a58646a3202_wolt_01__1_.jpeg",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/d30cc6f6-1854-11ea-85bf-0a586465f4af_wolt_03__2_.jpeg",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/c0dee75c-1854-11ea-9af4-0a58646010fe_wolt_02__1_.jpeg",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/e380ee18-1854-11ea-b17e-0a58646a0b19_wolt_04__1_.jpeg",
-      "https://imageproxy.wolt.com/assets/6992e7f40edcf1136ce20a41",
-      "https://imageproxy.wolt.com/assets/6992e6dd0edcf1136ce209a1",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/0eac7814-1855-11ea-9863-0a58646a3707_wolt_06__1_.jpeg",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/1edcf998-1855-11ea-8153-0a58646a3202_wolt_07__1_.jpeg",
-      "https://imageproxy.wolt.com/assets/6992e62e0edcf1136ce2094c",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/55f1bdba-1855-11ea-b10d-0a58646005b1_wolt_10__1_.jpeg"
-    ]
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/943d00a63e97ef2d1363ca6b.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/a3d5501b644b9203c6dd1433.webp",
+      "https://rollsushi.no/wp-content/uploads/2026/01/IMG_4776-scaled-1.jpeg",
+      "https://www.kikkoman.no/fileadmin/_processed_/a/2/csm_1369-recipe-page-Gyoza-dumplings-stuffed-with-cranberry-sauce_Desktop_d44d8059fc.webp",
+      "https://www.kikkoman.no/fileadmin/_processed_/a/8/csm_80-recipe-page-Lightly-fried-gyoza-with-3-sauces_desktop_d7f412cb19.jpg",
+      "https://lookaside.instagram.com/seo/google_widget/crawler/?media_id=2420616097122649443",
+      "https://lookaside.instagram.com/seo/google_widget/crawler/?media_id=3699185581619166745",
+      "https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=283270539737650",
+      "https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=300498988014805",
+      "https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=605701468226288",
+      "https://lookaside.instagram.com/seo/google_widget/crawler/?media_id=2597556405443743380",
+      "https://lookaside.instagram.com/seo/google_widget/crawler/?media_id=2560527267851802215",
+      "https://lookaside.instagram.com/seo/google_widget/crawler/?media_id=3972831405556589933",
+      "https://lookaside.instagram.com/seo/google_widget/crawler/?media_id=2528426374763504226",
+      "https://g.acdn.no/obscura/API/dynamic/r1/ece5/tr_400_1200_s_f/0000/avio/2025/5/26/12/494817199_1423608889263778_1135825106122663030_n.jpg?chk=1A7569",
+      "https://d2joqs9jfh6k92.cloudfront.net/wp-content/uploads/2023/11/23164131/kims-kitchen-nov-2023-mcrfinest-8-1470x770.jpg",
+      "https://g.acdn.no/api/lumina/backend/ami-medium/ece5/avio/2025/5/16/16/Kims%252BKitchen%252B-%252BElin%252BHua%252B-%252BTiril%252BHartvin%252B29.jpg",
+      "https://g.acdn.no/api/lumina/backend/ami-medium/ece5/avio/2022/5/9/14/Kims+Kitchen+-+Elin+Hua+-+Tiril+Hartvin+%25289%2529.JPG"
+    ],
+    "place_photos": [
+      "https://d2joqs9jfh6k92.cloudfront.net/wp-content/uploads/2023/11/23164131/kims-kitchen-nov-2023-mcrfinest-8-1470x770.jpg",
+      "https://g.acdn.no/api/lumina/backend/ami-medium/ece5/avio/2022/5/9/14/Kims+Kitchen+-+Elin+Hua+-+Tiril+Hartvin+%25289%2529.JPG",
+      "https://g.acdn.no/api/lumina/backend/ami-medium/ece5/avio/2025/5/16/16/Kims%252BKitchen%252B-%252BElin%252BHua%252B-%252BTiril%252BHartvin%252B29.jpg",
+      "https://g.acdn.no/obscura/API/dynamic/r1/ece5/tr_400_1200_s_f/0000/avio/2025/5/26/12/494817199_1423608889263778_1135825106122663030_n.jpg?chk=1A7569",
+      "https://rollsushi.no/wp-content/uploads/2026/01/IMG_4776-scaled-1.jpeg",
+      "https://www.kikkoman.no/fileadmin/_processed_/a/8/csm_80-recipe-page-Lightly-fried-gyoza-with-3-sauces_desktop_d7f412cb19.jpg",
+      "https://www.kikkoman.no/fileadmin/_processed_/a/2/csm_1369-recipe-page-Gyoza-dumplings-stuffed-with-cranberry-sauce_Desktop_d44d8059fc.webp"
+    ],
+    "photo_vision_tags": {
+      "http://fudi.no/cdn/shop/files/4016337911205-bibigo-kimchi-chicken.png?v=1781101553": {
+        "bucket": "junk",
+        "description": "Commercial frozen Bibigo gyoza grocery product bag",
+        "source": "web_search"
+      },
+      "https://rollsushi.no/wp-content/uploads/2026/01/IMG_4776-scaled-1.jpeg": {
+        "bucket": "food",
+        "description": "Four fried gyoza dumplings with dipping sauce",
+        "source": "web_search"
+      },
+      "https://supermercado.no/cdn/shop/files/CJ-Bibigo-Gyoza-Dumplings-Kylling-Gronnsaker-600g-gomarked-1.jpg?v=1774360312&width=3840": {
+        "bucket": "junk",
+        "description": "Packaged Bibigo mandu dumplings retail grocery bag",
+        "source": "web_search"
+      },
+      "https://www.kikkoman.no/fileadmin/_processed_/a/2/csm_1369-recipe-page-Gyoza-dumplings-stuffed-with-cranberry-sauce_Desktop_d44d8059fc.webp": {
+        "bucket": "food",
+        "description": "Pan-fried dumplings arranged radially with dipping sauce",
+        "source": "web_search"
+      },
+      "https://www.kikkoman.no/fileadmin/_processed_/a/8/csm_80-recipe-page-Lightly-fried-gyoza-with-3-sauces_desktop_d7f412cb19.jpg": {
+        "bucket": "food",
+        "description": "Crisp pan-seared gyoza on blue ceramic platter",
+        "source": "web_search"
+      },
+      "https://lookaside.instagram.com/seo/google_widget/crawler/?media_id=2420616097122649443": {
+        "bucket": "food",
+        "description": "Kims Kitchen. Her kan du bestille rice bowl, sushi wrap, wok og mye digg 🤤  Jeg bestilte en rice bowl med ponzu marinert laks. Bestilte fra  @foodora.no. Jeg fikk så mye mat,",
+        "source": "web_search"
+      },
+      "https://lookaside.instagram.com/seo/google_widget/crawler/?media_id=3699185581619166745": {
+        "bucket": "food",
+        "description": "Anbefaler Kims Kitchen på Bislett! Saftige retter med ny vri! Kylling sushi  wrap var utrolig saftig og god med en krønsjy panering. Eller hva med en  ekstremt tasty risbolle med masse grønnsaker",
+        "source": "web_search"
+      },
+      "https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=283270539737650": {
+        "bucket": "food",
+        "description": "Kims Kitchen Bislett | Oslo",
+        "source": "web_search"
+      },
+      "https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=300498988014805": {
+        "bucket": "food",
+        "description": "Kims Kitchen Bislett | Oslo",
+        "source": "web_search"
+      },
+      "https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=605701468226288": {
+        "bucket": "food",
+        "description": "Kims Kitchen Bislett | Oslo",
+        "source": "web_search"
+      },
+      "https://lookaside.instagram.com/seo/google_widget/crawler/?media_id=2597556405443743380": {
+        "bucket": "food",
+        "description": "Kims Kitchen. Her kan du bestille rice bowl, sushi wrap, wok og mye digg 🤤  Jeg bestilte en rice bowl med ponzu marinert laks. Bestilte fra  @foodora.no. Jeg fikk så mye mat,",
+        "source": "web_search"
+      },
+      "https://lookaside.instagram.com/seo/google_widget/crawler/?media_id=2560527267851802215": {
+        "bucket": "food",
+        "description": "Kims Kitchen. Her kan du bestille rice bowl, sushi wrap, wok og mye digg 🤤  Jeg bestilte en rice bowl med ponzu marinert laks. Bestilte fra  @foodora.no. Jeg fikk så mye mat,",
+        "source": "web_search"
+      },
+      "https://lookaside.instagram.com/seo/google_widget/crawler/?media_id=3972831405556589933": {
+        "bucket": "food",
+        "description": "Kim's Kitchen (@kimskitchenbislett) • Instagram photos and videos",
+        "source": "web_search"
+      },
+      "https://lookaside.instagram.com/seo/google_widget/crawler/?media_id=2528426374763504226": {
+        "bucket": "food",
+        "description": "Kims Kitchen. Her kan du bestille rice bowl, sushi wrap, wok og mye digg 🤤  Jeg bestilte en rice bowl med ponzu marinert laks. Bestilte fra  @foodora.no. Jeg fikk så mye mat,",
+        "source": "web_search"
+      },
+      "https://g.acdn.no/obscura/API/dynamic/r1/ece5/tr_400_1200_s_f/0000/avio/2025/5/26/12/494817199_1423608889263778_1135825106122663030_n.jpg?chk=1A7569": {
+        "bucket": "venue_vibe",
+        "description": "Kim's Kitchen entrance with vibrant green signage",
+        "source": "web_search"
+      },
+      "https://d2joqs9jfh6k92.cloudfront.net/wp-content/uploads/2023/11/23164131/kims-kitchen-nov-2023-mcrfinest-8-1470x770.jpg": {
+        "bucket": "venue_vibe",
+        "description": "Interior bar area with illuminated Kim's Kitchen sign",
+        "source": "web_search"
+      },
+      "https://g.acdn.no/api/lumina/backend/ami-medium/ece5/avio/2025/5/16/16/Kims%252BKitchen%252B-%252BElin%252BHua%252B-%252BTiril%252BHartvin%252B29.jpg": {
+        "bucket": "venue_vibe",
+        "description": "Kims Kitchen, Restaurant | Spisestedet Kim's Kitchen på Bislett opplever  utfordrende tider",
+        "source": "web_search"
+      },
+      "https://g.acdn.no/api/lumina/backend/ami-medium/ece5/avio/2022/5/9/14/Kims+Kitchen+-+Elin+Hua+-+Tiril+Hartvin+%25289%2529.JPG": {
+        "bucket": "venue_vibe",
+        "description": "Kims Kitchen, Restaurant | Spisestedet Kim's Kitchen på Bislett opplever  utfordrende tider",
+        "source": "web_search"
+      },
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/a3d5501b644b9203c6dd1433.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/943d00a63e97ef2d1363ca6b.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      }
+    }
   },
   {
     "id": "jungel-pizza-torshov",
@@ -781,12 +953,12 @@
     "food_category": "street_food",
     "icon": "street_food",
     "spot_type": "restaurant",
-    "cover_image_url": "",
+    "cover_image_url": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/ce7a0cb20599aba4b739ad9f.webp",
     "price_level": "$",
     "google_rating": 4.6,
     "signature_dish": "Half & Half Corndog",
     "why_curated": "Crunchy Korean-style fried batter on a stick split half-and-half between stretchy mozzarella cheese and savory sausage.",
-    "verification_status": "needs_photo",
+    "verification_status": "seeded",
     "notes": "Bucket: trending_70 | Market stall at Mathallen | NEW_ICON_NEEDED: Korean half-mozzarella, half-sausage crispy batter corndog on a stick.",
     "dish_highlights": [
       {
@@ -794,54 +966,73 @@
         "dish_name": "Half & Half Corndog",
         "category": "street_food",
         "price_nok": 109,
-        "dish_image": "",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/ce7a0cb20599aba4b739ad9f.webp",
+        "is_verified_food_photo": true,
         "review_text": "Crunchy Korean-style fried batter on a stick split half-and-half between stretchy mozzarella cheese and savory sausage.",
         "taste_tags": [
           "crunchy",
           "cheesy",
           "street-food"
-        ]
+        ],
+        "image_source": "web_search",
+        "source_url": "https://korndokki.no/kd-17.webp",
+        "is_ai_enhanced": false
       },
       {
         "id": "korndokki-mathallen-dish-2",
         "dish_name": "Vegan Bibimbap",
         "category": "street_food",
         "price_nok": 229,
-        "dish_image": "https://imageproxy.wolt.com/assets/6820b7d1d145a32756ffe425",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/dish_82109fd6013a179910f6a39e.webp",
+        "is_verified_food_photo": true,
         "review_text": "Plant-based Korean rice bowl with colorful vegetables and fried tofu.",
         "taste_tags": [
           "plant-based"
-        ]
+        ],
+        "image_source": "web_search",
+        "source_url": "https://korndokki.no/bibimbap.webp",
+        "is_ai_enhanced": false
       },
       {
         "id": "korndokki-mathallen-dish-3",
         "dish_name": "Sausage Corndog",
         "category": "street_food",
         "price_nok": 99,
-        "dish_image": "https://wolt-menu-images-cdn.wolt.com/menu-images/shared/15e8cc30-822e-11ee-a683-66691998b6f1_korndokki_sausage.jpg",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/dish_5e3152d537421c18395787e7.webp",
+        "is_verified_food_photo": true,
         "review_text": "The sausage corndog with super crispy batter.",
         "taste_tags": [
           "crispy"
-        ]
+        ],
+        "image_source": "web_search",
+        "source_url": "https://mathallenoslo.no/wp-content/uploads/2023/02/2023-02-10-12.54.22-scaled.jpg",
+        "is_ai_enhanced": false
       }
     ],
     "candidate_photos": [
-      "https://imageproxy.wolt.com/assets/6820b7d1d145a32756ffe425",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/shared/15e8cc30-822e-11ee-a683-66691998b6f1_korndokki_sausage.jpg",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/shared/f80e0d60-822d-11ee-9131-b21be8e3a9a6_half_cheese_half_sausage.jpg",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/shared/2e8a197e-822e-11ee-b258-3e06e451680f_mozarella.jpg",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/shared/1832b906-822e-11ee-84b2-e2899015e15b_korndokki_octopus.jpg",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/shared/35d9f8ca-822e-11ee-bed1-b671863afcfd_tteokbokki.jpg",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/shared/41b6b6a6-822e-11ee-b469-ba99a34ea8fd_korndokki_kombojpg.jpg",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/shared/493cc73a-822e-11ee-a1c2-da0ad5079943_mandu.jpg",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/shared/c8060df2-822d-11ee-8d77-6a54b99b5b62_telemark_bonaqua_naturell.jpg",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/shared/e71f1580-822d-11ee-af87-fabc35fce415_telemark_bonaqua_kullsyre.jpg",
-      "https://imageproxy.wolt.com/assets/6820b69ed2824f23dc4f993b",
-      "https://imageproxy.wolt.com/assets/6820b667198d843f36f89770"
-    ]
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/ce7a0cb20599aba4b739ad9f.webp",
+      "https://mathallenoslo.no/wp-content/uploads/2023/02/2023-02-10-12.54.22-scaled.jpg",
+      "https://korndokki.no/bibimbap.webp",
+      "https://korndokki.no/thumbnail_IMG_6513.webp"
+    ],
+    "photo_vision_tags": {
+      "https://korndokki.no/bibimbap.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://korndokki.no/thumbnail_IMG_6513.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://mathallenoslo.no/wp-content/uploads/2023/02/2023-02-10-12.54.22-scaled.jpg": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/ce7a0cb20599aba4b739ad9f.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      }
+    }
   },
   {
     "id": "july-tea-and-food",
@@ -999,12 +1190,12 @@
     "food_category": "burger",
     "icon": "burger",
     "spot_type": "restaurant",
-    "cover_image_url": "",
+    "cover_image_url": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/dish_e5e8bcc4786957e600206a1e.webp",
     "price_level": "$$",
     "google_rating": 4.6,
     "signature_dish": "Oslohoma Smash",
     "why_curated": "Lacy-edged smashed beef patties seared with paper-thin shaved onions, melted American cheese, and tangy house sauce on a soft potato bun.",
-    "verification_status": "needs_photo",
+    "verification_status": "seeded",
     "notes": "Bucket: trending_70 | Source: Good Shit Oslo (8.9/10) + Foodora (4.6★ / 1000+) | Founder note: High-momentum Grünerløkka smash burger specialist.",
     "dish_highlights": [
       {
@@ -1012,52 +1203,99 @@
         "dish_name": "Oslohoma Smash",
         "category": "burger",
         "price_nok": 225,
-        "dish_image": "",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/dish_e5e8bcc4786957e600206a1e.webp",
+        "is_verified_food_photo": true,
         "review_text": "Lacy-edged smashed beef patties seared with paper-thin shaved onions, melted American cheese, and tangy house sauce on a soft potato bun.",
         "taste_tags": [
           "smash-burger",
           "crispy-edges",
           "cheesy"
-        ]
+        ],
+        "image_source": "web_search",
+        "source_url": "https://renderburger.no/assets/img/reel-3.jpg",
+        "is_ai_enhanced": false
       },
       {
         "id": "render-burger-dish-2",
         "dish_name": "Cheeseburger",
         "category": "burger",
         "price_nok": 245,
-        "dish_image": "https://imageproxy.wolt.com/assets/6aba4c9067e2b790c6476537",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/dish_cfaaec69ef6814432934f4f2.webp",
+        "is_verified_food_photo": true,
         "review_text": "Freshly ground Norwegian beef, salad, red onion, special sauce, aioli and double American cheddar in a toasted milk bun.",
         "taste_tags": [
           "cheesy"
-        ]
+        ],
+        "image_source": "web_search",
+        "source_url": "https://renderburger.no/assets/img/reel-5.jpg",
+        "is_ai_enhanced": false
       },
       {
         "id": "render-burger-dish-3",
         "dish_name": "Baconator",
         "category": "burger",
         "price_nok": 245,
-        "dish_image": "https://imageproxy.wolt.com/assets/6aba4cd009a230f4d956a006",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/dish_1bd791d807d6ce7d5c2e97d6.webp",
+        "is_verified_food_photo": true,
         "review_text": "Freshly ground Norwegian beef and bacon patty, onion & padron pepper relish, jalapeño cream cheese, mustard mayo and pepper cheddar in a toa.",
         "taste_tags": [
           "burger",
           "oslo-favorite"
-        ]
+        ],
+        "image_source": "web_search",
+        "source_url": "https://www.burgerdudes.se/wp-content/uploads/2025/05/render_baconator_25_mar_2025.jpg",
+        "is_ai_enhanced": false
       }
     ],
     "candidate_photos": [
-      "https://imageproxy.wolt.com/assets/6aba4d3e09a230f4d956a02a",
-      "https://imageproxy.wolt.com/assets/6aba4a87f5caea918587688d",
-      "https://imageproxy.wolt.com/assets/6aba4c9067e2b790c6476537",
-      "https://imageproxy.wolt.com/assets/6aba4cd009a230f4d956a006",
-      "https://imageproxy.wolt.com/assets/6aba4cfb67e2b790c647654e",
-      "https://imageproxy.wolt.com/assets/6aba4e6709a230f4d956a0bf",
-      "https://imageproxy.wolt.com/assets/6aba4d1c09a230f4d956a01c",
-      "https://imageproxy.wolt.com/assets/6af83b32aa2345a75a93a9ab",
-      "https://imageproxy.wolt.com/assets/6ae88ac61657b057050e25af"
-    ]
+      "https://renderburger.no/assets/img/reel-3.jpg",
+      "https://lookaside.instagram.com/seo/google_widget/crawler/?media_id=3180627818806072245",
+      "https://renderburger.no/assets/img/reel-2.jpg",
+      "https://www.burgerdudes.se/wp-content/uploads/2025/05/render_baconator_25_mar_2025.jpg",
+      "https://lookaside.instagram.com/seo/google_widget/crawler/?media_id=3729381518549527132",
+      "https://lookaside.instagram.com/seo/google_widget/crawler/?media_id=4019989933068752364",
+      "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/e9/22/97/god-burger.jpg?w=1100&h=1100&s=1",
+      "https://renderburger.no/assets/img/reel-5.jpg",
+      "https://www.tiktok.com/api/img/?itemId=7670894448955428118&location=0&aid=1988"
+    ],
+    "photo_vision_tags": {
+      "https://www.tiktok.com/api/img/?itemId=7670894448955428118&location=0&aid=1988": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://renderburger.no/assets/img/reel-5.jpg": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2b/e9/22/97/god-burger.jpg?w=1100&h=1100&s=1": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://lookaside.instagram.com/seo/google_widget/crawler/?media_id=4019989933068752364": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://www.burgerdudes.se/wp-content/uploads/2025/05/render_baconator_25_mar_2025.jpg": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://lookaside.instagram.com/seo/google_widget/crawler/?media_id=3729381518549527132": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://lookaside.instagram.com/seo/google_widget/crawler/?media_id=3180627818806072245": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://renderburger.no/assets/img/reel-2.jpg": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://renderburger.no/assets/img/reel-3.jpg": {
+        "bucket": "food",
+        "source": "web_search"
+      }
+    }
   },
   {
     "id": "mimis-scones",
@@ -1069,7 +1307,7 @@
     "food_category": "bakery",
     "icon": "bakery",
     "spot_type": "restaurant",
-    "cover_image_url": "",
+    "cover_image_url": "/uploads/candidates/mimi-s-scones/ig-5.jpg",
     "price_level": "$",
     "google_rating": 5,
     "signature_dish": "Blåbær & Sitron Scone",
@@ -1129,6 +1367,10 @@
       "/uploads/candidates/mimi-s-scones/ig-5.jpg",
       "/uploads/candidates/mimi-s-scones/ig-9.jpg",
       "https://imageproxy.wolt.com/assets/68be88a142da1c20b8c29f72"
+    ],
+    "place_photos": [
+      "/uploads/candidates/mimi-s-scones/ig-5.jpg",
+      "/uploads/candidates/mimi-s-scones/ig-1.jpg"
     ]
   },
   {
@@ -1633,31 +1875,39 @@
           "juicy",
           "umami-rich",
           "crusty"
-        ]
+        ],
+        "image_source": "google",
+        "is_ai_enhanced": false
       },
       {
         "id": "oslo-sandwich-shop-dish-2",
         "dish_name": "Smoked steakhouseburger 180g",
         "category": "street_food",
         "price_nok": 255,
-        "dish_image": "https://imageproxy.wolt.com/assets/6af6e1b480eb7a27315428b4",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/f220f7a044c2d40528674aa7.webp",
+        "is_verified_food_photo": true,
         "review_text": "Burger røkt på mesquite i 3 timer, med dobbel cheddar lagret i 11 uker, servert med vår ananas- og senneps-BBQ-saus, sylteagurk og rå løk på.",
         "taste_tags": [
           "savory"
-        ]
+        ],
+        "image_source": "web_search",
+        "source_url": "https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=122123780829274979",
+        "is_ai_enhanced": false
       },
       {
         "id": "oslo-sandwich-shop-dish-3",
         "dish_name": "Wagyu burger 150g",
         "category": "street_food",
         "price_nok": 255,
-        "dish_image": "https://imageproxy.wolt.com/assets/6af6e1a6b5ce4f748448da8c",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/4933d4b7a07109aa00ed3a8d.webp",
+        "is_verified_food_photo": true,
         "review_text": "150 g A4 wagyu-patty med svart trøffeldressing, karamellisert løk og klassisk sylteagurk i Martins bun.",
         "taste_tags": [
           "savory"
-        ]
+        ],
+        "image_source": "web_search",
+        "source_url": "https://cdn.prod.website-files.com/696df98516bdcc4d229ad07d/6aa280bb78d5aac30a6d5a00_Wagyu.png",
+        "is_ai_enhanced": false
       }
     ],
     "place_photos": [
@@ -1670,20 +1920,35 @@
     ],
     "google_place_id": "ChIJ7X_TMgBvQUYRhHyNAT8K-6E",
     "candidate_photos": [
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/4933d4b7a07109aa00ed3a8d.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/f220f7a044c2d40528674aa7.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/cde90addbc386df2c4444315.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/0799779e79a9e2071fa6d663bbde.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/58da5fd36b2c94849c1e49624a27.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/ccd6eda98cde6d7117a1971d9bee.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/0e7c6d54de5f10247682a2cd4d25.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/369e0c498e3d2fd1c05617c91137.webp",
-      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/f34bf265d1e6410ccf62bded3dba.webp",
-      "https://imageproxy.wolt.com/assets/6abe38460efc66dba7a92650",
-      "https://imageproxy.wolt.com/assets/6af6e1b480eb7a27315428b4",
-      "https://imageproxy.wolt.com/assets/6af6e1a6b5ce4f748448da8c",
-      "https://imageproxy.wolt.com/assets/6af6e1baaa2345a75a934993",
-      "https://imageproxy.wolt.com/assets/6af309e2d158345b5fce1fc6",
-      "https://imageproxy.wolt.com/assets/6af6e1c0b5ce4f748448da93"
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/f34bf265d1e6410ccf62bded3dba.webp"
     ],
-    "signature_dish": "Wagyu French Dip Sandwich"
+    "signature_dish": "Wagyu French Dip Sandwich",
+    "photo_vision_tags": {
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/cde90addbc386df2c4444315.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/4af008407d11470c73e2f4bc.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/f220f7a044c2d40528674aa7.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/4933d4b7a07109aa00ed3a8d.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      }
+    }
   },
   {
     "id": "ahaan",
@@ -1963,7 +2228,7 @@
         "dish_name": "Szechuan Braised Beef Noodles",
         "category": "street_food",
         "price_nok": 199,
-        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/8041cb4829361e17a17aab3e0aaf.webp",
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/1e8a7e2d3e08cacd3c2663c0.webp",
         "is_verified_food_photo": true,
         "review_text": "Chewy craft wheat noodles in a 12-hour simmered beef bone broth laced with homemade Sichuan chili oil, star anise, and braised beef.",
         "taste_tags": [
@@ -1971,33 +2236,26 @@
           "numbing",
           "rich-broth",
           "tender-beef"
-        ]
+        ],
+        "image_source": "web_search",
+        "is_ai_enhanced": false,
+        "source_url": "https://lookaside.instagram.com/seo/google_widget/crawler/?media_id=4012183800838018967"
       },
       {
         "id": "noods-norway-dish-2",
         "dish_name": "Kung Fu Burger",
         "category": "street_food",
         "price_nok": 89,
-        "dish_image": "https://imageproxy.wolt.com/assets/6aaa705cf21760a0ab577d7d",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/a6800865c363b5b4c511987e.webp",
+        "is_verified_food_photo": true,
         "review_text": "Scallion Pancake w/ Beef & Cheddar Rich cheddar cheese, slowcooked beef and a crispy, flaky crunch. East meets West in the ultimate fusion w.",
         "taste_tags": [
           "street_food",
           "oslo-favorite"
-        ]
-      },
-      {
-        "id": "noods-norway-dish-3",
-        "dish_name": "Noods Burger",
-        "category": "street_food",
-        "price_nok": 89,
-        "dish_image": "https://imageproxy.wolt.com/assets/6aaa7053f21760a0ab577d7a",
-        "is_verified_food_photo": false,
-        "review_text": "Scallion Pancake w/ Beef Savory slowcooked beef, aromatic scallion and a crispy finish. We’ve taken the legendary Chinese scallion pancake a.",
-        "taste_tags": [
-          "street_food",
-          "oslo-favorite"
-        ]
+        ],
+        "image_source": "web_search",
+        "source_url": "https://cdn.prod.website-files.com/693a8313d649593fd549a520/6ab12c5bbe336c922af1eec3_noods%20retter%20med%20hvit%20bolle%20(1).png",
+        "is_ai_enhanced": false
       }
     ],
     "place_photos": [
@@ -2010,20 +2268,36 @@
     ],
     "google_place_id": "ChIJf1mnXnRvQUYRtp-o_S8_42c",
     "candidate_photos": [
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/a6800865c363b5b4c511987e.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/f6785b72748a8bce2047d460.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/7dc350e5edf6a9f76311f8e5.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/1e8a7e2d3e08cacd3c2663c0.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/3388913cf5f986c3a2925291b706.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/77985f4be20f42c08ec79646df47.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/e9e8a37ba58a8437e15b44ba1c51.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/11cb16246776712380ab44450a0b.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/262f5a667bb88f807d95a71cc2b1.webp",
-      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/28e147fc245300cc3e47da241af1.webp",
-      "https://imageproxy.wolt.com/assets/6adaede6bf47ddd343eca1ca",
-      "https://imageproxy.wolt.com/assets/6a87fe0a0a874c6d81f5a387",
-      "https://imageproxy.wolt.com/assets/66dac4af0c913c3306cf53bd",
-      "https://imageproxy.wolt.com/assets/6a88001c0a874c6d81f5a40d",
-      "https://imageproxy.wolt.com/assets/6aaa705cf21760a0ab577d7d",
-      "https://imageproxy.wolt.com/assets/6aaa7053f21760a0ab577d7a"
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/28e147fc245300cc3e47da241af1.webp"
     ],
-    "signature_dish": "Szechuan Braised Beef Noodles"
+    "signature_dish": "Szechuan Braised Beef Noodles",
+    "photo_vision_tags": {
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/1e8a7e2d3e08cacd3c2663c0.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/7dc350e5edf6a9f76311f8e5.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/f6785b72748a8bce2047d460.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/a6800865c363b5b4c511987e.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      }
+    }
   },
   {
     "id": "szechuan-chengdu-restaurant",
@@ -2357,7 +2631,7 @@
     "food_category": "ramen",
     "icon": "ramen",
     "spot_type": "restaurant",
-    "cover_image_url": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/eac8c085e5063d02f13352b99dbb.webp",
+    "cover_image_url": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/7b10bec3e9d48fe71ce7db9fec93.webp",
     "why_curated": "The trailblazer of serious craft ramen in Norway, Koie imports flour and machines from Japan to make every single noodle and gyoza skin in-house daily. It sets the undisputed standard for Tokyo-grade ramen in Oslo.",
     "verification_status": "seeded",
     "dish_highlights": [
@@ -2374,35 +2648,26 @@
           "savory",
           "springy-noodles",
           "tender-chashu"
-        ]
+        ],
+        "image_source": "supabase",
+        "is_ai_enhanced": false
       },
       {
         "id": "koie-ramen-dish-2",
         "dish_name": "Classic Shoyu Ramen",
         "category": "ramen",
         "price_nok": 205,
-        "dish_image": "",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/dish_361ef141745f9120be477760.webp",
+        "is_verified_food_photo": true,
         "review_text": "Clean soy-braised broth with house-made chewy noodles, pork chashu, ajitama egg, and scallions.",
         "taste_tags": [
           "classic",
           "savory",
           "umami"
-        ]
-      },
-      {
-        "id": "koie-ramen-dish-3",
-        "dish_name": "Pork Gyoza",
-        "category": "ramen",
-        "price_nok": 95,
-        "dish_image": "",
-        "is_verified_food_photo": false,
-        "review_text": "Steamed and crispy pan-fried pork dumplings served hot with savory dipping sauce.",
-        "taste_tags": [
-          "crispy",
-          "dumplings",
-          "shareable"
-        ]
+        ],
+        "image_source": "web_search",
+        "source_url": "https://i.redd.it/dej59uwwtrn11.jpg",
+        "is_ai_enhanced": false
       }
     ],
     "price_level": "$$",
@@ -2410,28 +2675,136 @@
     "signature_dish": "Koie Tonkotsu Ramen",
     "place_photos": [
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/7b10bec3e9d48fe71ce7db9fec93.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/3f42740b39c9e1937dfd209a5974.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/315db8107b873bd044ba2d5bb66a.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/21b105db33d71fe84de73926ce62.webp",
-      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/3f42740b39c9e1937dfd209a5974.webp",
-      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/b334d34e6dfb02c7b4d533cab894.webp",
-      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/27bed653415230640ca12ad9921c.webp"
+      "/uploads/candidates/koie-ramen/ig-3.jpg",
+      "/uploads/candidates/koie-ramen/ig-4.jpg",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/b334d34e6dfb02c7b4d533cab894.webp"
     ],
     "google_place_id": "ChIJLa_z_GNuQUYRRhUe7WvM-Lk",
     "instagram_url": "https://www.instagram.com/koie.ramen",
     "candidate_photos": [
+      "https://i.redd.it/dej59uwwtrn11.jpg",
+      "https://koieramen.no/wp-content/uploads/2019/12/Koie_0919_0296.jpg",
+      "https://koieramen.no/wp-content/uploads/2019/12/Koie_0919_0317.jpg",
+      "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/10/ce/25/24/ramen.jpg?w=500&h=-1&s=1",
+      "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/24/7d/80/2c/koie-ramen-munch.jpg?w=900&h=500&s=1",
+      "https://images.squarespace-cdn.com/content/v1/5b4606ec96d4557cbd0f1e5d/15298185-218f-4389-b78e-5fb58a279a49/IMG_0718-min.jpg",
+      "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/10/ce/25/24/ramen.jpg?w=900&h=500&s=1",
+      "https://i0.wp.com/andershusa.com/wp-content/uploads/2017/10/koie-ramen-restaurant-review-oslo-norway-japanese-noodle-soup-miso-shio-shoyu-tonkotsu-broth-food-foodie-eat-eating-best-tips-recommendation-guide-travel-2017-1.jpg?fit=1600%2C1067&ssl=1",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/7b10bec3e9d48fe71ce7db9fec93.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/315db8107b873bd044ba2d5bb66a.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/21b105db33d71fe84de73926ce62.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/3f42740b39c9e1937dfd209a5974.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/b334d34e6dfb02c7b4d533cab894.webp",
-      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/27bed653415230640ca12ad9921c.webp",
-      "/uploads/candidates/koie-ramen/ig-1.jpg",
       "/uploads/candidates/koie-ramen/ig-3.jpg",
       "/uploads/candidates/koie-ramen/ig-4.jpg",
       "/uploads/candidates/koie-ramen/ig-5.jpg",
       "/uploads/candidates/koie-ramen/ig-6.jpg",
       "/uploads/candidates/koie-ramen/ig-7.jpg"
-    ]
+    ],
+    "photo_vision_tags": {
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/7b10bec3e9d48fe71ce7db9fec93.webp": {
+        "bucket": "venue_vibe",
+        "description": "Storefront exterior with illuminated Koie hanging blade sign",
+        "source": "google"
+      },
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/315db8107b873bd044ba2d5bb66a.webp": {
+        "bucket": "food",
+        "description": "Crispy Japanese fried chicken karaage with lemon wedge",
+        "source": "google"
+      },
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/21b105db33d71fe84de73926ce62.webp": {
+        "bucket": "food",
+        "description": "Two fresh bowls of ramen on dining table",
+        "source": "google"
+      },
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/3f42740b39c9e1937dfd209a5974.webp": {
+        "bucket": "food",
+        "description": "Milky tonkotsu ramen with pork chashu and egg",
+        "source": "google"
+      },
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/b334d34e6dfb02c7b4d533cab894.webp": {
+        "bucket": "venue_vibe",
+        "description": "Wooden counter dining setup with condiments and menu",
+        "source": "google"
+      },
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/27bed653415230640ca12ad9921c.webp": {
+        "bucket": "junk",
+        "description": "Close-up text shot of blue paper lunch menu",
+        "source": "google"
+      },
+      "/uploads/candidates/koie-ramen/ig-1.jpg": {
+        "bucket": "junk",
+        "description": "Flash party portrait of guest holding wine glass",
+        "source": "upload"
+      },
+      "/uploads/candidates/koie-ramen/ig-3.jpg": {
+        "bucket": "venue_vibe",
+        "description": "Staff in uniform pouring sake by drink cooler",
+        "source": "upload"
+      },
+      "/uploads/candidates/koie-ramen/ig-4.jpg": {
+        "bucket": "food",
+        "description": "Two brownie ice cream sandwiches on branded paper",
+        "source": "upload"
+      },
+      "/uploads/candidates/koie-ramen/ig-5.jpg": {
+        "bucket": "venue_vibe",
+        "description": "Close-up of blue staff uniform with embroidered logo",
+        "source": "upload"
+      },
+      "/uploads/candidates/koie-ramen/ig-6.jpg": {
+        "bucket": "venue_vibe",
+        "description": "Branded Japanese tea canisters displayed on metal shelf",
+        "source": "upload"
+      },
+      "/uploads/candidates/koie-ramen/ig-7.jpg": {
+        "bucket": "venue_vibe",
+        "description": "Guest eating edamame beside fried chicken at table",
+        "source": "upload"
+      },
+      "https://koieramen.no/wp-content/uploads/2019/12/Koie_0919_0296.jpg": {
+        "bucket": "food",
+        "description": "Koie Ramen 来家拉麺",
+        "source": "web_search"
+      },
+      "https://koieramen.no/wp-content/uploads/2019/12/Koie_0919_0317.jpg": {
+        "bucket": "food",
+        "description": "Koie Ramen 来家拉麺",
+        "source": "web_search"
+      },
+      "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/10/ce/25/24/ramen.jpg?w=500&h=-1&s=1": {
+        "bucket": "food",
+        "description": "KOIE RAMEN, Oslo - Restaurant Reviews & Photos - Tripadvisor",
+        "source": "web_search"
+      },
+      "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/24/7d/80/2c/koie-ramen-munch.jpg?w=900&h=500&s=1": {
+        "bucket": "food",
+        "description": "KOIE RAMEN MUNCH, Oslo - Gamle Oslo - Restaurant Reviews & Photos -  Tripadvisor",
+        "source": "web_search"
+      },
+      "https://images.squarespace-cdn.com/content/v1/5b4606ec96d4557cbd0f1e5d/15298185-218f-4389-b78e-5fb58a279a49/IMG_0718-min.jpg": {
+        "bucket": "food",
+        "description": "Tre gode ramen i Oslo: Koie Ramen, Hrimnir Ramen og Kanpai Izakaya | Mer av  Oslo",
+        "source": "web_search"
+      },
+      "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/10/ce/25/24/ramen.jpg?w=900&h=500&s=1": {
+        "bucket": "food",
+        "description": "KOIE RAMEN, Oslo - Restaurant Reviews & Photos - Tripadvisor",
+        "source": "web_search"
+      },
+      "https://i0.wp.com/andershusa.com/wp-content/uploads/2017/10/koie-ramen-restaurant-review-oslo-norway-japanese-noodle-soup-miso-shio-shoyu-tonkotsu-broth-food-foodie-eat-eating-best-tips-recommendation-guide-travel-2017-1.jpg?fit=1600%2C1067&ssl=1": {
+        "bucket": "food",
+        "description": "Review: Koie Ramen - Oslo's First Real Ramen Shop",
+        "source": "web_search"
+      },
+      "https://i.redd.it/dej59uwwtrn11.jpg": {
+        "bucket": "food",
+        "source": "web_search"
+      }
+    }
   },
   {
     "id": "vinoteket",
@@ -3486,6 +3859,7 @@
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/218f1d4a11f40577f180277a057a.webp"
     ],
     "candidate_photos": [
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/6283edf9ae9f1c0a8481ccb5.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/24c64f302ac62705e36b5888af59.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/30bfdcc21da6f69540e1d6fb835c.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/d1e8b6fcfbf34912dc93942789fa.webp",
@@ -3505,7 +3879,7 @@
     "google_rating": 4.5,
     "signature_dish": "Chicken korma",
     "why_curated": "Facing the buzz of Karl Johans gate, Masala Politics brings theatrical pan-Indian street kitchen vibrancy to central Oslo. The dynamic dining room pairs retro Bollywood posters with clay tandoor ovens churning out blistered naan, smoky kebabs, and slow-simmered regional curries. Its lively pace, creative cocktail pairings, and uncompromised spice levels draw both late-night city revelers and discerning spice fans.",
-    "verification_status": "seeded",
+    "verification_status": "needs_photo",
     "opening_hours": {},
     "dish_highlights": [
       {
@@ -3523,18 +3897,6 @@
         ]
       },
       {
-        "id": "masala-politics-dish-2",
-        "dish_name": "Cheese Naan",
-        "category": "naan",
-        "price_nok": 79,
-        "dish_image": "https://wolt-menu-images-cdn.wolt.com/menu-images/shared/30956954-cbfc-11ee-a2c9-76480d03f6de_naan_cheese.jpg",
-        "is_verified_food_photo": false,
-        "review_text": "Signature Cheese Naan prepared fresh at Masala Politics.",
-        "taste_tags": [
-          "cheesy"
-        ]
-      },
-      {
         "id": "masala-politics-dish-3",
         "dish_name": "Peshawari Naan",
         "category": "naan",
@@ -3547,7 +3909,13 @@
           "oslo-favorite"
         ]
       }
-    ]
+    ],
+    "photo_vision_tags": {
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/6283edf9ae9f1c0a8481ccb5.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      }
+    }
   },
   {
     "id": "fuglen-coffee-roasters",
@@ -3911,18 +4279,14 @@
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/baf2d56621b7b18bbf1869643125.webp"
     ],
     "candidate_photos": [
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/7c170797fb37fe3dd9eebad5.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/230bba94a1b940a730fefafc.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/9eed1d1d8ce4299ff66f76e111c6.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/da2f20d5b9da29c7a3f8c1935964.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/117762685fd848aaaf4c551c5be7.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/c723d5c4c221eb3dbbe116ae2216.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/9bc03a7f3ffee515d66483ba4881.webp",
-      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/baf2d56621b7b18bbf1869643125.webp",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/61f3cdc242d2d20af9eae09d/6ca969fc-8f06-11ec-b600-aeefdb675804_0com_chien_chay_vegetable.jpeg",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/3bbc8338-047a-11ea-abda-0a58646007c6_17.jpeg",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/95c853bc-0479-11ea-bc49-0a5864666909_10.jpeg",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/61f3cdc242d2d20af9eae09d/c7c1ff34-8f06-11ec-abf4-4eb21a452c18_0goi_cuon_chay_1.jpeg",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/61f3cdc242d2d20af9eae09d/d06a5fd2-8f06-11ec-a64e-da36dd027d43_0goi_cuon_chay_1.jpeg",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/61f3cdc242d2d20af9eae09d/e29619a8-8f06-11ec-a44c-5a619a28d11f_0nem_nuong_1.jpeg"
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/baf2d56621b7b18bbf1869643125.webp"
     ],
     "google_place_id": "ChIJH-ke3YJvQUYRfkFUWacAGoY",
     "google_reviews_count": 198,
@@ -3938,42 +4302,45 @@
         "dish_name": "Bánh Mì Sa Tế",
         "category": "vietnamese",
         "price_nok": 130,
-        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/a50c0733c3f26a27d6427baec9f0.webp",
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/230bba94a1b940a730fefafc.webp",
         "is_verified_food_photo": true,
         "review_text": "Warm, crackling baguette filled with savory roasted meat, rich liver pâté, crisp pickled daikon, and a fiery drizzle of house lemongrass chili oil.",
         "taste_tags": [
           "crunchy",
           "fiery",
           "tangy"
-        ]
+        ],
+        "image_source": "web_search",
+        "is_ai_enhanced": false,
+        "source_url": "https://d2cmxmf8wk4xur.cloudfront.net/laizai/mobile_cover/Laizaicovertest-1763816263584.jpeg"
       },
       {
         "id": "lai-zai-viet-street-food-dish-2",
         "dish_name": "Gỏi Cuốn",
         "category": "vietnamese",
         "price_nok": 105,
-        "dish_image": "https://wolt-menu-images-cdn.wolt.com/menu-images/61f3cdc242d2d20af9eae09d/c7c1ff34-8f06-11ec-abf4-4eb21a452c18_0goi_cuon_chay_1.jpeg",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/7c170797fb37fe3dd9eebad5.webp",
+        "is_verified_food_photo": true,
         "review_text": "2 pcs. Vietnamese fresh springrolls with scampi, pork, vermicelli noodles, salad, mint, coriander, bean sprouts and homemade cracker. Served.",
         "taste_tags": [
           "vietnamese",
           "oslo-favorite"
-        ]
-      },
-      {
-        "id": "lai-zai-viet-street-food-dish-3",
-        "dish_name": "Nem Nướng",
-        "category": "vietnamese",
-        "price_nok": 105,
-        "dish_image": "https://wolt-menu-images-cdn.wolt.com/menu-images/61f3cdc242d2d20af9eae09d/e29619a8-8f06-11ec-a44c-5a619a28d11f_0nem_nuong_1.jpeg",
-        "is_verified_food_photo": false,
-        "review_text": "2 pcs. Vietnamese fresh springrolls with grilled nem pork meatballs, salad, mint, coriander, bean sprouts and homemade cracker. Served with.",
-        "taste_tags": [
-          "vietnamese",
-          "oslo-favorite"
-        ]
+        ],
+        "image_source": "web_search",
+        "source_url": "https://landing-data.orderaapp.com/laizai/laizai-4.jpeg",
+        "is_ai_enhanced": false
       }
-    ]
+    ],
+    "photo_vision_tags": {
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/230bba94a1b940a730fefafc.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/7c170797fb37fe3dd9eebad5.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      }
+    }
   },
   {
     "id": "digg-pizza-gr-nland",
@@ -4330,18 +4697,14 @@
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/30dfd2ad9a71b74485c22b104d46.webp"
     ],
     "candidate_photos": [
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/e173cf4ed6851ca7eb6732a1.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/2d90769810010ba288c672d1.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/4713e43ddf832cd1000060e9b512.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/6732e611f6385c978110761bd651.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/34477803b611050564e1291b90d3.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/bbf979393b222ffdaf02490b80df.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/1b0c173518a2cfd3464e24ff84c4.webp",
-      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/30dfd2ad9a71b74485c22b104d46.webp",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/693feb577e6fc5f04ca0e484/677d813a-6589-11f1-8af0-8e794e87625a_ahr0chm6ly9jagvja291dc5jyxnwzwnvlnnll2fkbwlulwfwas8xljavaw1hz2uvogfjyzk4ztitmjcwzs00zgqxltgxntgtzwm2njbmytc1mzyw.jpeg",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/693feb577e6fc5f04ca0e484/eaa9b6b8-6585-11f1-a107-2e854faa6cdc_ahr0chm6ly9jagvja291dc5jyxnwzwnvlnnll2fkbwlulwfwas8xljavaw1hz2uvntrmogexmwutodezyy00yjgzlwfjogitmgy2mjy2zwq3nzji.jpeg",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/693feb577e6fc5f04ca0e484/eaac076a-6585-11f1-a107-2e854faa6cdc_ahr0chm6ly9jagvja291dc5jyxnwzwnvlnnll2fkbwlulwfwas8xljavaw1hz2uvnjdmmwy5njmtnwzimi00mgfiltgyymetoty1zdu2zdu1n2i4.jpeg",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/693feb577e6fc5f04ca0e484/1f9f9e64-6586-11f1-89a7-86242c8e9755_ahr0chm6ly9zdg9yywdllmdvb2dszwfwaxmuy29tl2lrb25hlwj1y2tldc1wcm9kdwn0aw9ul2ltywdlcy82otjly2m1mtkynjezzmzjmtiyymywzgmvd1buxzy5y2njotvjzthjnmrmnjkzmzq3ndjjnc02ytjhotc3njm0ntm3odfhm2rmm2zjnzauanbn.jpeg",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/693feb577e6fc5f04ca0e484/34310020-6586-11f1-91aa-528fe961ac6f_ahr0chm6ly9jagvja291dc5jyxnwzwnvlnnll2fkbwlulwfwas8xljavaw1hz2uvndzlndc0ytatowe0oc00zjczlwfkzmetodhlmzljmjhiodvm.jpeg",
-      "https://wolt-menu-images-cdn.wolt.com/menu-images/693feb577e6fc5f04ca0e484/9467b696-6586-11f1-a0b7-e6fb5cccdf56_ahr0chm6ly9jagvja291dc5jyxnwzwnvlnnll2fkbwlulwfwas8xljavaw1hz2uvztfinjhjyzatztg4oc00mdhiltlmyjitnmnmzjflyzfmodm0.jpeg"
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/30dfd2ad9a71b74485c22b104d46.webp"
     ],
     "google_place_id": "ChIJY2jslRRvQUYRVCH3CDnAeqI",
     "google_reviews_count": 78,
@@ -4364,34 +4727,52 @@
           "savory",
           "juicy",
           "crisp"
-        ]
+        ],
+        "image_source": "google",
+        "is_ai_enhanced": false
       },
       {
         "id": "dirty-taco-dish-2",
         "dish_name": "Spicy korean BOWL",
         "category": "tacos",
         "price_nok": 249,
-        "dish_image": "https://wolt-menu-images-cdn.wolt.com/menu-images/693feb577e6fc5f04ca0e484/677d813a-6589-11f1-8af0-8e794e87625a_ahr0chm6ly9jagvja291dc5jyxnwzwnvlnnll2fkbwlulwfwas8xljavaw1hz2uvogfjyzk4ztitmjcwzs00zgqxltgxntgtzwm2njbmytc1mzyw.jpeg",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/2d90769810010ba288c672d1.webp",
+        "is_verified_food_photo": true,
         "review_text": "Frityrstekt kylling vendt i søt og krydret koreansk saus. Vårløk, kimchi, chilisyltet agurk, dirty mayo og kimchi-ristede sesamfrø.",
         "taste_tags": [
           "spicy"
-        ]
+        ],
+        "image_source": "web_search",
+        "source_url": "https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=554192800553089",
+        "is_ai_enhanced": false
       },
       {
         "id": "dirty-taco-dish-3",
-        "dish_name": "Banh Mi",
+        "dish_name": "Banh Mi taco",
         "category": "tacos",
         "price_nok": 119,
-        "dish_image": "https://wolt-menu-images-cdn.wolt.com/menu-images/693feb577e6fc5f04ca0e484/9467b696-6586-11f1-a0b7-e6fb5cccdf56_ahr0chm6ly9jagvja291dc5jyxnwzwnvlnnll2fkbwlulwfwas8xljavaw1hz2uvztfinjhjyzatztg4oc00mdhiltlmyjitnmnmzjflyzfmodm0.jpeg",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/e173cf4ed6851ca7eb6732a1.webp",
+        "is_verified_food_photo": true,
         "review_text": "Marinert svinekam, hot spicy mayo, sriracha, syltet gulrot & reddik, koriander, ristet løk.",
         "taste_tags": [
           "tacos",
           "oslo-favorite"
-        ]
+        ],
+        "image_source": "web_search",
+        "source_url": "https://static.thatsup.co/content/img/place/stockholm/di/52e8fe4d-da94-11ed-930c-86d7fdd99ed5/user-photo/d301cd53.jpg?1688633622",
+        "is_ai_enhanced": false
       }
-    ]
+    ],
+    "photo_vision_tags": {
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/2d90769810010ba288c672d1.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/e173cf4ed6851ca7eb6732a1.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      }
+    }
   },
   {
     "id": "em-oi",
@@ -4413,18 +4794,16 @@
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/2795bb544b0d55e0afb863e52e96.webp"
     ],
     "candidate_photos": [
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/cb6fe1213dcdc73b36a522f7.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/dbb79a9e852efc272867ac5c.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/f8a9bcc4155d33ac69a952cf.webp",
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/c6b103d186acdacc16100b3c.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/1f143e464c23a471e31101b60434.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/8a9cecd0db37b5be16fb979120f1.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/a9a0e3504a607fc89892ee1fa22f.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/df32aa82a694298620270ff2de1f.webp",
       "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/6503b0a08997f211edc6164ce11e.webp",
-      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/2795bb544b0d55e0afb863e52e96.webp",
-      "https://imageproxy.wolt.com/assets/6a59fc2807d981ab44b8d8af",
-      "https://imageproxy.wolt.com/assets/6a59fc2807d981ab44b8d8ae",
-      "https://imageproxy.wolt.com/assets/6a59fc2807d981ab44b8d8b2",
-      "https://imageproxy.wolt.com/assets/6a59fc2807d981ab44b8d8b1",
-      "https://imageproxy.wolt.com/assets/6a59fbf1ca398677dbaf2433",
-      "https://imageproxy.wolt.com/assets/6a59fc2607d981ab44b8d8ac"
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/2795bb544b0d55e0afb863e52e96.webp"
     ],
     "google_place_id": "ChIJD2_7HwBvQUYRIvCPdJLygVQ",
     "google_reviews_count": 0,
@@ -4447,36 +4826,46 @@
           "aromatic",
           "comforting",
           "savory"
-        ]
+        ],
+        "image_source": "google",
+        "is_ai_enhanced": false
       },
       {
         "id": "em-oi-dish-2",
         "dish_name": "Coconut Coffee",
         "category": "coffee",
         "price_nok": 79,
-        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/google-cache/478e66c88c41e81d8771977ce87f.webp",
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/cb6fe1213dcdc73b36a522f7.webp",
         "is_verified_food_photo": true,
         "review_text": "Bittersweet dark Vietnamese robusta drip poured over an icy, velvety cloud of blended coconut cream and sweetened condensed milk.",
         "taste_tags": [
           "creamy",
           "roasted",
           "sweet"
-        ]
-      },
-      {
-        "id": "em-oi-dish-3",
-        "dish_name": "Wontonsuppe",
-        "category": "Street Food",
-        "price_nok": 153,
-        "dish_image": "https://imageproxy.wolt.com/assets/6a59fc2b07d981ab44b8d8b3",
-        "is_verified_food_photo": false,
-        "review_text": "Hjemmelaget wonton.",
-        "taste_tags": [
-          "Street Food",
-          "oslo-favorite"
-        ]
+        ],
+        "image_source": "web_search",
+        "is_ai_enhanced": false,
+        "source_url": "https://d2cmxmf8wk4xur.cloudfront.net/emoicafe/product/BacXiu-1780591884618.jpeg"
       }
-    ]
+    ],
+    "photo_vision_tags": {
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/f8a9bcc4155d33ac69a952cf.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/c6b103d186acdacc16100b3c.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/dbb79a9e852efc272867ac5c.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      },
+      "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/web-ingest/cb6fe1213dcdc73b36a522f7.webp": {
+        "bucket": "food",
+        "source": "web_search"
+      }
+    }
   },
   {
     "id": "h-ndbakt-t-yen",
@@ -4613,33 +5002,41 @@
           "tender",
           "fragrant",
           "smoky"
-        ]
+        ],
+        "image_source": "google",
+        "is_ai_enhanced": false
       },
       {
         "id": "mandi-house-restaurant-oslo-yemeni-restaurant-dish-2",
         "dish_name": "Fatta Moz m / Fisk",
         "category": "rice_bowls",
         "price_nok": 215,
-        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/dish_dffeda1b7b3ec588bf6e9fae.webp",
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/ai-remix/remix_dea964f7229a22676924.webp",
         "is_verified_food_photo": true,
         "review_text": "Yemeni brød med banan, laks og bukkehornkløver.",
         "taste_tags": [
           "rice_bowls",
           "oslo-favorite"
-        ]
+        ],
+        "image_source": "ai_polish",
+        "is_ai_enhanced": true,
+        "source_url": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/ai-remix/remix_dea964f7229a22676924.webp"
       },
       {
         "id": "mandi-house-restaurant-oslo-yemeni-restaurant-dish-3",
         "dish_name": "Sayadia",
         "category": "rice_bowls",
         "price_nok": 225,
-        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/dish_d76c4a63c8a7b60b82997997.webp",
-        "is_verified_food_photo": false,
+        "dish_image": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/ai-remix/remix_b4d08059a0f641cddb29.webp",
+        "is_verified_food_photo": true,
         "review_text": "Stekt laks i krydder med løk og ris laget på en spesiell måte.",
         "taste_tags": [
           "rice_bowls",
           "oslo-favorite"
-        ]
+        ],
+        "image_source": "ai_polish",
+        "source_url": "https://kkqesjlkmofsalmykixs.supabase.co/storage/v1/object/public/dish-photos/dish_d76c4a63c8a7b60b82997997.webp",
+        "is_ai_enhanced": true
       }
     ]
   },

@@ -12,6 +12,7 @@ import {
 import { ingestGooglePhotoToSupabase } from "@/lib/storage/ingestGooglePhoto";
 import { requireAdmin } from "@/app/api/admin/_auth";
 import { captureGeminiGeneration, createAiTraceId } from "@/lib/posthog-ai";
+import { isDeliveryAppImageUrl } from "@/lib/admin/imageSource";
 
 export const runtime = "nodejs";
 
@@ -71,6 +72,7 @@ async function fetchSourceImageBuffer(rawUrl: string, origin: string): Promise<B
 async function runMultimodalCameraShift(
   referenceJpegBase64: string,
   synthesisPrompt: string,
+  temperature: number,
   observability: { traceId: string; distinctId: string }
 ): Promise<{ imageBuffer: Buffer; visualReceipt: string; modelUsed: string }> {
   const modelsToTry = ["gemini-3.1-flash-lite-image", "gemini-2.5-flash-image"];
@@ -99,7 +101,7 @@ async function runMultimodalCameraShift(
           ],
           generationConfig: {
             responseModalities: ["TEXT", "IMAGE"],
-            temperature: 0.4,
+            temperature,
           },
         }),
       });
@@ -112,7 +114,7 @@ async function runMultimodalCameraShift(
           spanName: "transform_dish_image",
           model: modelName,
           input: [{ role: "user", content: [{ type: "image", image: referenceJpegBase64 }, { type: "text", text: synthesisPrompt }] }],
-          temperature: 0.4,
+          temperature,
           latencyMs: Date.now() - startedAt,
           status: res.status,
           error: lastError,
@@ -144,7 +146,7 @@ async function runMultimodalCameraShift(
           model: modelName,
           input: [{ role: "user", content: [{ type: "image", image: referenceJpegBase64 }, { type: "text", text: synthesisPrompt }] }],
           output: visualReceipt,
-          temperature: 0.4,
+          temperature,
           latencyMs: Date.now() - startedAt,
           status: res.status,
         });
@@ -162,7 +164,7 @@ async function runMultimodalCameraShift(
         model: modelName,
         input: [{ role: "user", content: [{ type: "image", image: referenceJpegBase64 }, { type: "text", text: synthesisPrompt }] }],
         output: textParts.join(" "),
-        temperature: 0.4,
+        temperature,
         latencyMs: Date.now() - startedAt,
         status: res.status,
         error: lastError,
@@ -174,7 +176,7 @@ async function runMultimodalCameraShift(
         spanName: "transform_dish_image",
         model: modelName,
         input: [{ role: "user", content: [{ type: "image", image: referenceJpegBase64 }, { type: "text", text: synthesisPrompt }] }],
-        temperature: 0.4,
+        temperature,
         latencyMs: 0,
         error: lastError,
       });
@@ -217,8 +219,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing source imageUrl" }, { status: 400 });
     }
 
+    if (isDeliveryAppImageUrl(imageUrl)) {
+      return NextResponse.json(
+        {
+          error:
+            "Wolt/Foodora photos cannot be AI-shifted — pick a Google Maps, kitchen, or uploaded photo instead.",
+        },
+        { status: 400 }
+      );
+    }
+
     const defaults = resolveCategoryRemixDefaults(category, dishName);
-    const chosenAngle: AnglePresetId = anglePreset || defaults.defaultAngle;
+    const chosenAngle: AnglePresetId = anglePreset || "preserve_food_clean_scene";
     const chosenEnvironment: EnvironmentPresetId =
       environmentPreset || defaults.defaultEnvironment;
 
@@ -231,19 +243,23 @@ export async function POST(req: NextRequest) {
       .toBuffer();
     const jpegBase64 = normalizedJpegBuffer.toString("base64");
 
-    // 2. Build Direct Multimodal Camera & Background Shift Prompt
-    const { prompt: synthesisPrompt, selectedAngleLabel, selectedSurfaceLabel } =
-      buildDishSynthesisPrompt({
-        dishName,
-        category,
-        anglePreset: chosenAngle,
-        environmentPreset: chosenEnvironment,
-        variationSeed: variationSeed || Math.floor(1000 + Math.random() * 9000),
-      });
+    // 2. Build Direct Multimodal Polish / Camera Shift Prompt
+    const {
+      prompt: synthesisPrompt,
+      selectedAngleLabel,
+      selectedSurfaceLabel,
+      recommendedTemperature,
+    } = buildDishSynthesisPrompt({
+      dishName,
+      category,
+      anglePreset: chosenAngle,
+      environmentPreset: chosenEnvironment,
+      variationSeed: variationSeed || Math.floor(1000 + Math.random() * 9000),
+    });
 
-    // 3. Run single-pass multimodal camera shift (Nano Banana Lite: gemini-3.1-flash-lite-image)
+    // 3. Run single-pass multimodal image transform (Nano Banana Lite)
     const { imageBuffer: generatedRawBuffer, visualReceipt, modelUsed } =
-      await runMultimodalCameraShift(jpegBase64, synthesisPrompt, {
+      await runMultimodalCameraShift(jpegBase64, synthesisPrompt, recommendedTemperature, {
         traceId: createAiTraceId(),
         distinctId: auth.userId,
       });
@@ -262,8 +278,9 @@ export async function POST(req: NextRequest) {
     const fileName = `remix_${hash}.webp`;
     const storagePath = `ai-remix/${fileName}`;
 
-    // 5. Upload to Supabase Storage `dish-photos/` (with local public/ fallback)
+    // 5. Upload to Supabase Storage `dish-photos/`
     let finalPublicUrl = "";
+    let storageFailureReason = "Supabase Storage client unavailable";
     const supabase = auth.adminClient;
     if (supabase) {
       const { error: uploadErr } = await supabase.storage
@@ -279,20 +296,41 @@ export async function POST(req: NextRequest) {
           .from(STORAGE_BUCKET)
           .getPublicUrl(storagePath).data.publicUrl;
       } else {
-        console.warn("[transform-dish-image] Supabase upload fallback:", uploadErr.message);
+        storageFailureReason = uploadErr.message;
+        console.warn("[transform-dish-image] Supabase upload failed:", uploadErr.message);
       }
     }
 
     if (!finalPublicUrl) {
-      const hasRootPublic = fs.existsSync(path.join(process.cwd(), "public"));
-      const localDir = hasRootPublic
-        ? path.join(process.cwd(), "public", "curation-remix")
-        : path.join(process.cwd(), "frontend", "public", "curation-remix");
-      if (!fs.existsSync(localDir)) {
-        fs.mkdirSync(localDir, { recursive: true });
+      const isProductionReadOnly =
+        process.env.VERCEL === "1" || process.env.NODE_ENV === "production";
+      if (isProductionReadOnly) {
+        return NextResponse.json(
+          {
+            error: `Supabase Storage upload failed in production (${storageFailureReason}). Cannot fall back to local filesystem.`,
+          },
+          { status: 502 }
+        );
       }
-      fs.writeFileSync(path.join(localDir, fileName), finalWebpBuffer);
-      finalPublicUrl = `/curation-remix/${fileName}`;
+
+      try {
+        const hasRootPublic = fs.existsSync(path.join(process.cwd(), "public"));
+        const localDir = hasRootPublic
+          ? path.join(process.cwd(), "public", "curation-remix")
+          : path.join(process.cwd(), "frontend", "public", "curation-remix");
+        if (!fs.existsSync(localDir)) {
+          fs.mkdirSync(localDir, { recursive: true });
+        }
+        fs.writeFileSync(path.join(localDir, fileName), finalWebpBuffer);
+        finalPublicUrl = `/curation-remix/${fileName}`;
+      } catch (fsErr: any) {
+        return NextResponse.json(
+          {
+            error: `Supabase upload failed (${storageFailureReason}) and local fallback failed (${fsErr?.message || "EROFS"}).`,
+          },
+          { status: 502 }
+        );
+      }
     }
 
     return NextResponse.json({

@@ -16,9 +16,19 @@ import {
   Upload,
   Pencil,
   Tag,
+  Globe,
 } from "lucide-react";
 import { uploadAdminImage } from "@/lib/adminUpload";
 import type { StagedDishHighlight } from "@/app/api/admin/seeding-lab/route";
+import {
+  detectImageSource,
+  getSourceBadgeMeta,
+  isDeliveryAppImageUrl,
+  type DishImageSource,
+  type PhotoVisionTag,
+} from "@/lib/admin/imageSource";
+import type { WebSearchImageResult } from "@/app/api/admin/search-dish-web-images/route";
+import type { ScrapedWebsitePhoto } from "@/app/api/admin/scrape-website-photos/route";
 import {
   ANGLE_PRESETS,
   ENVIRONMENT_PRESETS,
@@ -31,8 +41,14 @@ interface QuickDishEditModalProps {
   dish: StagedDishHighlight;
   spotName: string;
   spotId?: string;
+  neighborhood?: string;
+  websiteUrl?: string | null;
   isPopup?: boolean;
   candidatePhotos?: string[];
+  photoVisionTags?: Record<string, PhotoVisionTag>;
+  onPruneCandidatePhoto?: (photoUrl: string) => Promise<void> | void;
+  onSetSpotCover?: (photoUrl: string) => Promise<void> | void;
+  onAddCandidatePhotos?: (urls: string[], source: DishImageSource) => Promise<void> | void;
   onSave: (updated: Partial<StagedDishHighlight>) => Promise<void>;
   onClose: () => void;
 }
@@ -112,8 +128,14 @@ export function QuickDishEditModal({
   dish,
   spotName,
   spotId = "",
+  neighborhood = "",
+  websiteUrl = null,
   isPopup = false,
   candidatePhotos = [],
+  photoVisionTags = {},
+  onPruneCandidatePhoto,
+  onSetSpotCover,
+  onAddCandidatePhotos,
   onSave,
   onClose,
 }: QuickDishEditModalProps) {
@@ -125,18 +147,176 @@ export function QuickDishEditModal({
   const [reviewText, setReviewText] = useState(dish.review_text || "");
   const [tasteTagsStr, setTasteTagsStr] = useState((dish.taste_tags || []).join(", "));
   const [isVerified, setIsVerified] = useState(dish.is_verified_food_photo);
+  const [imageSource, setImageSource] = useState<DishImageSource>(
+    dish.image_source || detectImageSource(dish.dish_image)
+  );
+  const [sourceUrl, setSourceUrl] = useState<string | null>(dish.source_url || null);
+  const [isAiEnhanced, setIsAiEnhanced] = useState<boolean>(Boolean(dish.is_ai_enhanced));
   const [imgError, setImgError] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [coverToastUrl, setCoverToastUrl] = useState<string | null>(null);
+  const [pruningUrl, setPruningUrl] = useState<string | null>(null);
 
-  // Open on Photo Picker whenever a dish still needs photo confirmation
-  const [activeTab, setActiveTab] = useState<"upload" | "restyle" | "google" | "url" | "presets">(
-    isPopup
+  const hasFoodTagged = candidatePhotos.some((u) => photoVisionTags[u]?.bucket === "food");
+  const [poolFilter, setPoolFilter] = useState<"all" | "food" | "venue_vibe">(
+    hasFoodTagged ? "food" : "all"
+  );
+
+  // Default to Pool / Upload whenever candidate photos exist or for pop-ups
+  const [activeTab, setActiveTab] = useState<
+    "upload" | "web_search" | "website" | "restyle" | "google" | "url" | "presets"
+  >(
+    isPopup || candidatePhotos.length > 0
       ? "upload"
       : !dish.dish_image || !dish.is_verified_food_photo
-      ? "google"
+      ? "web_search"
       : "restyle"
   );
   const [activeField, setActiveField] = useState<"photo" | "name" | "price" | "meta">("photo");
+
+  // Per-Dish Web Image Search (Serper.dev / SerpApi fallback)
+  const [webMode, setWebMode] = useState<"dish" | "venue_cover">("dish");
+  const [webQuery, setWebQuery] = useState(`${spotName} ${dish.dish_name} Oslo`.trim());
+  const [webResults, setWebResults] = useState<WebSearchImageResult[]>([]);
+  const [isSearchingWeb, setIsSearchingWeb] = useState(false);
+  const [webSearchError, setWebSearchError] = useState<string | null>(null);
+  const [webProvider, setWebProvider] = useState<string | null>(null);
+  const [hasRunWebSearch, setHasRunWebSearch] = useState(false);
+
+  // Direct Restaurant Website Scraper
+  const cleanInitialWebsite =
+    websiteUrl && !/instagram\.com/i.test(websiteUrl) ? websiteUrl : "";
+  const [siteUrlInput, setSiteUrlInput] = useState(cleanInitialWebsite);
+  const [sitePhotos, setSitePhotos] = useState<ScrapedWebsitePhoto[]>([]);
+  const [isScrapingSite, setIsScrapingSite] = useState(false);
+  const [siteScrapeError, setSiteScrapeError] = useState<string | null>(null);
+  const [sitePagesCrawled, setSitePagesCrawled] = useState<number>(0);
+  const [isIngestingExternal, setIsIngestingExternal] = useState(false);
+
+  const handleSelectExternalPhoto = async (params: {
+    imageUrl: string;
+    thumbnailUrl?: string;
+    pageUrl?: string;
+    source: DishImageSource;
+    asCover?: boolean;
+  }) => {
+    const previewUrl = params.thumbnailUrl || params.imageUrl;
+    if (!params.asCover) {
+      // Show working preview immediately so Instagram/hotlink-blocked URLs never flash an error
+      handleSelectPhoto(previewUrl, params.source);
+    }
+    setIsIngestingExternal(true);
+    setWebSearchError(null);
+    try {
+      const res = await fetch("/api/admin/ingest-external-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imageUrl: params.imageUrl,
+          thumbnailUrl: params.thumbnailUrl,
+          pageUrl: params.pageUrl,
+        }),
+      });
+      const data = await res.json();
+      const finalUrl = res.ok && data?.publicUrl ? (data.publicUrl as string) : previewUrl;
+
+      if (params.asCover) {
+        if (onSetSpotCover) await onSetSpotCover(finalUrl);
+        if (onAddCandidatePhotos) void onAddCandidatePhotos([finalUrl], params.source);
+        setCoverToastUrl(params.imageUrl);
+        window.setTimeout(() => setCoverToastUrl(null), 1800);
+      } else {
+        setDishImage(finalUrl);
+        setOriginalBeforeRemixImage(finalUrl);
+        setTransformedImageUrl(null);
+        setImageSource(params.source);
+        setSourceUrl(params.imageUrl);
+        setImgError(false);
+        setIsVerified(true);
+        if (onAddCandidatePhotos) void onAddCandidatePhotos([finalUrl], params.source);
+      }
+    } catch {
+      if (params.asCover && onSetSpotCover) {
+        await onSetSpotCover(previewUrl);
+      }
+    } finally {
+      setIsIngestingExternal(false);
+    }
+  };
+
+  const handleRunWebSearch = async (opts?: {
+    overrideMode?: "dish" | "venue_cover";
+    overrideQuery?: string;
+    useStructuredDefault?: boolean;
+  }) => {
+    const modeToUse = opts?.overrideMode ?? webMode;
+    const queryToUse = (opts?.overrideQuery ?? webQuery).trim();
+    setIsSearchingWeb(true);
+    setWebSearchError(null);
+    setHasRunWebSearch(true);
+    try {
+      const res = await fetch("/api/admin/search-dish-web-images", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          spotName,
+          dishName,
+          neighborhood,
+          mode: modeToUse,
+          ...(opts?.useStructuredDefault ? {} : { customQuery: queryToUse }),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Web image search failed");
+      setWebResults(Array.isArray(data.results) ? data.results : []);
+      setWebProvider(data.provider || null);
+    } catch (err: any) {
+      setWebSearchError(err?.message || "Web search failed.");
+    } finally {
+      setIsSearchingWeb(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "web_search" && !hasRunWebSearch && !isSearchingWeb) {
+      void handleRunWebSearch({ useStructuredDefault: true });
+    }
+  }, [activeTab]);
+
+  const handleScrapeWebsite = async () => {
+    const target = siteUrlInput.trim();
+    if (!target) {
+      setSiteScrapeError("Paste the restaurant website URL first.");
+      return;
+    }
+    setIsScrapingSite(true);
+    setSiteScrapeError(null);
+    try {
+      const res = await fetch("/api/admin/scrape-website-photos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          websiteUrl: target,
+          spotName,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Website scrape failed");
+      const photos: ScrapedWebsitePhoto[] = Array.isArray(data.photos) ? data.photos : [];
+      setSitePhotos(photos);
+      setSitePagesCrawled(Array.isArray(data.pagesCrawled) ? data.pagesCrawled.length : 1);
+      if (photos.length > 0 && onAddCandidatePhotos) {
+        void onAddCandidatePhotos(
+          photos.slice(0, 12).map((p) => p.url),
+          "website"
+        );
+      }
+    } catch (err: any) {
+      setSiteScrapeError(err?.message || "Could not scrape website photos.");
+    } finally {
+      setIsScrapingSite(false);
+    }
+  };
 
   // Direct File Upload & Clipboard Paste state
   const [isUploading, setIsUploading] = useState(false);
@@ -159,6 +339,9 @@ export function QuickDishEditModal({
       setDishImage(newUrl);
       setOriginalBeforeRemixImage(newUrl);
       setTransformedImageUrl(null);
+      setImageSource("upload");
+      setSourceUrl(newUrl);
+      setIsAiEnhanced(false);
       setImgError(false);
       setIsVerified(true);
       setActiveTab("upload");
@@ -167,6 +350,9 @@ export function QuickDishEditModal({
       await onSave({
         dish_image: newUrl,
         is_verified_food_photo: true,
+        image_source: "upload",
+        source_url: newUrl,
+        is_ai_enhanced: false,
       });
     } catch (err: any) {
       setUploadError(err.message || "Failed to upload image.");
@@ -266,19 +452,32 @@ export function QuickDishEditModal({
     }
   }, [activeTab]);
 
-  const handleSelectPhoto = (url: string) => {
+  const handleSelectPhoto = (url: string, sourceHint?: DishImageSource) => {
+    const tagSource = photoVisionTags[url]?.source;
+    const detected = detectImageSource(url, sourceHint || tagSource);
     setDishImage(url);
     setOriginalBeforeRemixImage(url);
     setTransformedImageUrl(null);
+    setImageSource(detected);
+    setSourceUrl(url);
+    setIsAiEnhanced(detected === "ai_polish");
     setImgError(false);
-    setIsVerified(true);
+    setIsVerified(!isDeliveryAppImageUrl(url));
   };
 
-  // Run True Multimodal Camera & Background Shift (Nano Banana Lite)
+  const isBlockedForAiShift = isDeliveryAppImageUrl(originalBeforeRemixImage || dishImage);
+
+  // Run Direct Multimodal Polish / Camera Shift (Nano Banana Lite)
   const handleRunAiTransform = async () => {
-    const sourceUrl = originalBeforeRemixImage || dishImage;
-    if (!sourceUrl) {
-      setTransformError("Select or paste a reference dish image first before running AI Shift.");
+    const sourceCandidate = originalBeforeRemixImage || dishImage;
+    if (!sourceCandidate) {
+      setTransformError("Select or paste a reference dish image first before running AI Polish.");
+      return;
+    }
+    if (isDeliveryAppImageUrl(sourceCandidate)) {
+      setTransformError(
+        "Wolt/Foodora photos cannot be AI-shifted — pick a Google Maps, kitchen, or uploaded photo instead."
+      );
       return;
     }
 
@@ -290,7 +489,7 @@ export function QuickDishEditModal({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          imageUrl: sourceUrl,
+          imageUrl: sourceCandidate,
           dishName,
           category,
           anglePreset,
@@ -316,12 +515,16 @@ export function QuickDishEditModal({
   const handleAcceptRestyledImage = () => {
     if (!transformedImageUrl) return;
     setDishImage(transformedImageUrl);
+    setImageSource("ai_polish");
+    setIsAiEnhanced(true);
     setImgError(false);
     setIsVerified(true);
   };
 
   const handleRevertToOriginal = () => {
     setDishImage(originalBeforeRemixImage);
+    setImageSource(detectImageSource(originalBeforeRemixImage));
+    setIsAiEnhanced(false);
     setTransformedImageUrl(null);
     setImgError(false);
   };
@@ -336,15 +539,20 @@ export function QuickDishEditModal({
         .split(",")
         .map((t) => t.trim().toLowerCase())
         .filter(Boolean);
+      const trimmedImg = dishImage.trim();
+      const finalSource = detectImageSource(trimmedImg, imageSource);
 
       await onSave({
         dish_name: dishName.trim(),
         price_nok: isNaN(Number(parsedPrice)) ? null : parsedPrice,
         category: category.trim(),
-        dish_image: dishImage.trim(),
+        dish_image: trimmedImg,
         review_text: reviewText.trim(),
         taste_tags: parsedTags,
-        is_verified_food_photo: isVerified && !imgError,
+        is_verified_food_photo: isVerified && !imgError && !isDeliveryAppImageUrl(trimmedImg),
+        image_source: finalSource,
+        source_url: sourceUrl || trimmedImg || null,
+        is_ai_enhanced: isAiEnhanced || finalSource === "ai_polish",
       });
       onClose();
     } catch (err: any) {
@@ -354,6 +562,17 @@ export function QuickDishEditModal({
       setIsSaving(false);
     }
   };
+
+  const foodPoolCount = candidatePhotos.filter((u) => photoVisionTags[u]?.bucket === "food").length;
+  const vibePoolCount = candidatePhotos.filter(
+    (u) => photoVisionTags[u]?.bucket === "venue_vibe"
+  ).length;
+  const filteredPoolPhotos = candidatePhotos.filter((u) => {
+    if (poolFilter === "all") return true;
+    const tag = photoVisionTags[u];
+    if (poolFilter === "food") return tag?.bucket === "food";
+    return tag?.bucket === "venue_vibe";
+  });
 
   const presetsForCategory = CURATED_FOOD_PRESETS[category] || CURATED_FOOD_PRESETS.bakery;
 
@@ -395,7 +614,9 @@ export function QuickDishEditModal({
             <div className="space-y-3 p-4 rounded-2xl bg-white border-2 border-[#E84A27]/40 shadow-sm">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-black text-[#E84A27] uppercase tracking-wider">
-                  ✨ Before vs. After (Same Vessel & Food — New Angle & Surface)
+                  {anglePreset === "preserve_food_clean_scene"
+                    ? "✨ Before vs. After (Food Locked · Clean Surroundings)"
+                    : "✨ Before vs. After (Same Vessel & Food — New Angle & Surface)"}
                 </span>
                 {dishImage === transformedImageUrl && (
                   <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold">
@@ -697,78 +918,581 @@ export function QuickDishEditModal({
           {/* ── PHOTO & AI REMIX TABS (shown when Photo Studio active) ── */}
           {activeField !== "meta" && (
           <div className="space-y-3">
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-1 bg-[#EFEAE1] p-1 rounded-xl">
+            <div className="flex flex-wrap gap-1 bg-[#EFEAE1] p-1 rounded-xl">
               <button
                 type="button"
                 onClick={() => setActiveTab("upload")}
-                className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                className={`flex-1 min-w-[100px] py-1.5 px-2 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
                   activeTab === "upload"
                     ? "bg-[#E84A27] text-white shadow-xs"
                     : "text-[#181615] hover:bg-white/60"
                 }`}
               >
-                <Upload className="w-3.5 h-3.5" />
-                <span>Upload / Paste</span>
+                <Upload className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Pool / Upload{candidatePhotos.length > 0 ? ` (${candidatePhotos.length})` : ""}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("web_search")}
+                className={`flex-1 min-w-[100px] py-1.5 px-2 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                  activeTab === "web_search"
+                    ? "bg-teal-700 text-white shadow-xs"
+                    : "text-[#181615] hover:bg-white/60"
+                }`}
+              >
+                <Globe className="w-3.5 h-3.5 shrink-0" />
+                <span>🌐 Web Search</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("website")}
+                className={`flex-1 min-w-[100px] py-1.5 px-2 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                  activeTab === "website"
+                    ? "bg-amber-700 text-white shadow-xs"
+                    : "text-[#181615] hover:bg-white/60"
+                }`}
+              >
+                <span>🏠 Spot Website</span>
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("restyle")}
-                className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                className={`flex-1 min-w-[90px] py-1.5 px-2 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
                   activeTab === "restyle"
                     ? "bg-[#181615] text-white shadow-xs"
                     : "text-zinc-600 hover:text-[#181615]"
                 }`}
               >
-                <span>✨ AI Shift</span>
+                <span>✨ AI Polish</span>
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("google")}
-                className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                className={`py-1.5 px-2 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
                   activeTab === "google"
                     ? "bg-white text-[#181615] shadow-xs"
                     : "text-zinc-600 hover:text-[#181615]"
                 }`}
               >
-                <Camera className="w-3.5 h-3.5" />
-                <span>Pick Photo ({candidatePhotos.length + googlePhotos.length})</span>
+                <Camera className="w-3 h-3" />
+                <span>Maps ({googlePhotos.length})</span>
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("url")}
-                className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                className={`py-1.5 px-2 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
                   activeTab === "url"
                     ? "bg-white text-[#181615] shadow-xs"
                     : "text-zinc-600 hover:text-[#181615]"
                 }`}
               >
-                <LinkIcon className="w-3.5 h-3.5" />
-                <span>Direct URL</span>
+                <LinkIcon className="w-3 h-3" />
+                <span>URL</span>
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("presets")}
-                className={`py-1.5 px-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer col-span-2 sm:col-span-1 ${
+                className={`py-1.5 px-2 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
                   activeTab === "presets"
                     ? "bg-white text-[#181615] shadow-xs"
                     : "text-zinc-600 hover:text-[#181615]"
                 }`}
               >
-                <Sparkles className="w-3.5 h-3.5" />
+                <Sparkles className="w-3 h-3" />
                 <span>Presets</span>
               </button>
             </div>
 
-            {/* Tab: 📤 Upload & Clipboard Paste (Dropzone) */}
-            {activeTab === "upload" && (
-              <div className="p-4 rounded-2xl bg-white border border-[#EAE5DC] space-y-3.5 shadow-xs">
+            {/* Tab: 🌐 Web Image Search (Per-Dish Targeted Search via Serper / SerpApi) */}
+            {activeTab === "web_search" && (
+              <div className="p-4 rounded-2xl bg-white border border-[#EAE5DC] space-y-3 shadow-xs">
                 <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-[#FAF7F2]">
                   <div>
                     <span className="text-xs font-black text-[#181615] block">
-                      📤 Direct Image Upload & Clipboard Paste
+                      🌐 Targeted Web Image Search (Wolt &amp; Foodora Excluded)
                     </span>
                     <span className="text-[11px] text-zinc-500 block mt-0.5">
-                      Upload from disk, drag & drop, or press <kbd className="px-1.5 py-0.5 rounded bg-zinc-100 border border-zinc-300 font-mono text-[10px] text-zinc-800 font-bold">Ctrl+V</kbd> to paste a screenshot directly.
+                      Searches Oslo blogs, restaurant sites, news &amp; reviews. Click any photo to assign and add to spot pool.
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 rounded-xl bg-[#FAF7F2] p-0.5 border border-[#EAE5DC]">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setWebMode("dish");
+                        const q = `${spotName} ${dishName} Oslo`.trim();
+                        setWebQuery(q);
+                        void handleRunWebSearch({
+                          overrideMode: "dish",
+                          overrideQuery: q,
+                          useStructuredDefault: true,
+                        });
+                      }}
+                      className={`px-2 py-1 rounded-lg text-[10.5px] font-bold cursor-pointer ${
+                        webMode === "dish" ? "bg-[#181615] text-white" : "text-zinc-600 hover:text-[#181615]"
+                      }`}
+                    >
+                      🍽️ Dish Photo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setWebMode("venue_cover");
+                        const q = `${spotName} Oslo restaurant exterior interior`.trim();
+                        setWebQuery(q);
+                        void handleRunWebSearch({
+                          overrideMode: "venue_cover",
+                          overrideQuery: q,
+                          useStructuredDefault: true,
+                        });
+                      }}
+                      className={`px-2 py-1 rounded-lg text-[10.5px] font-bold cursor-pointer ${
+                        webMode === "venue_cover" ? "bg-[#181615] text-white" : "text-zinc-600 hover:text-[#181615]"
+                      }`}
+                    >
+                      🏠 Entrance / Interior Cover
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={webQuery}
+                    onChange={(e) => setWebQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void handleRunWebSearch({ overrideQuery: webQuery });
+                      }
+                    }}
+                    placeholder={`${spotName} ${dishName} Oslo`}
+                    className="flex-1 min-w-0 px-3 py-2 text-xs font-semibold rounded-xl bg-[#FAF7F2] border border-[#DDD6C9] text-[#181615] focus:outline-none focus:border-teal-700"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void handleRunWebSearch({ overrideQuery: webQuery })}
+                    disabled={isSearchingWeb}
+                    className="px-3.5 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold flex items-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
+                  >
+                    <Search className={`w-3.5 h-3.5 ${isSearchingWeb ? "animate-spin" : ""}`} />
+                    <span>{isSearchingWeb ? "Searching..." : "Search"}</span>
+                  </button>
+                </div>
+
+                {webSearchError && (
+                  <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>{webSearchError}</span>
+                  </div>
+                )}
+
+                {isSearchingWeb ? (
+                  <div className="py-8 text-center text-xs text-zinc-500 flex items-center justify-center gap-2">
+                    <RefreshCw className="w-4 h-4 animate-spin text-teal-700" />
+                    <span>Searching clean web photos (excluding Wolt/Foodora)...</span>
+                  </div>
+                ) : webResults.length === 0 ? (
+                  <p className="py-6 text-center text-xs text-zinc-500 bg-[#FAF7F2] rounded-xl border border-dashed border-[#DDD6C9]">
+                    No clean web photos found for this query. Try broadening the dish name or removing quotes.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-[10.5px] text-zinc-500 font-semibold">
+                      <span>{webResults.length} clean results{webProvider ? ` via ${webProvider}` : ""}</span>
+                      <span>
+                        {isIngestingExternal ? "Saving to Supabase CDN..." : "Click photo to assign · hover for Set Cover"}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-64 overflow-y-auto p-1">
+                      {webResults.map((item, idx) => {
+                        const isSelected =
+                          sourceUrl === item.imageUrl ||
+                          dishImage === item.imageUrl ||
+                          dishImage === item.thumbnailUrl;
+                        const isCoverJustSet = coverToastUrl === item.imageUrl;
+                        return (
+                          <div
+                            key={`web-${item.imageUrl}-${idx}`}
+                            className={`group/web relative aspect-[4/3] rounded-xl overflow-hidden border-2 bg-[#F3EFE7] transition-transform hover:scale-[1.02] ${
+                              isSelected
+                                ? "border-[#E84A27] ring-2 ring-[#E84A27]/30"
+                                : "border-transparent"
+                            }`}
+                          >
+                            <button
+                              type="button"
+                              title={`${item.title || "Web result"} — ${item.domain}`}
+                              onClick={() =>
+                                void handleSelectExternalPhoto({
+                                  imageUrl: item.imageUrl,
+                                  thumbnailUrl: item.thumbnailUrl,
+                                  pageUrl: item.pageUrl,
+                                  source: "web_search",
+                                })
+                              }
+                              className="relative w-full h-full block cursor-pointer"
+                            >
+                              <Image
+                                src={item.thumbnailUrl || item.imageUrl}
+                                alt={item.title || item.domain}
+                                fill
+                                unoptimized
+                                className="object-cover"
+                              />
+                              {isSelected && (
+                                <div className="absolute inset-0 bg-[#E84A27]/30 flex items-center justify-center">
+                                  <Check className="w-5 h-5 text-white drop-shadow-md" />
+                                </div>
+                              )}
+                            </button>
+
+                            {/* Domain pill */}
+                            <span
+                              title={item.pageUrl || item.domain}
+                              className="pointer-events-none absolute top-1 left-1 right-12 truncate z-10 px-1.5 py-0.5 rounded-md bg-black/80 text-white text-[9px] font-bold leading-none"
+                            >
+                              {item.domain}
+                            </span>
+
+                            {/* Dimensions pill */}
+                            {item.width && item.height && (
+                              <span className="pointer-events-none absolute top-1 right-1 z-10 px-1 py-0.5 rounded bg-black/65 text-white/90 text-[8px] font-mono leading-none">
+                                {item.width}×{item.height}
+                              </span>
+                            )}
+
+                            {/* Bottom title caption + Set Cover hover button */}
+                            <div className="pointer-events-none absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-1.5 pb-1 pt-4">
+                              <p className="text-[9.5px] font-semibold text-white truncate pr-14">
+                                {item.title || item.domain}
+                              </p>
+                            </div>
+
+                            {onSetSpotCover && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void handleSelectExternalPhoto({
+                                    imageUrl: item.imageUrl,
+                                    thumbnailUrl: item.thumbnailUrl,
+                                    pageUrl: item.pageUrl,
+                                    source: "web_search",
+                                    asCover: true,
+                                  });
+                                }}
+                                title="Set as restaurant cover"
+                                className={`absolute bottom-1 right-1 z-20 px-1.5 py-0.5 rounded-md text-[8.5px] font-black leading-none transition-opacity cursor-pointer ${
+                                  isCoverJustSet
+                                    ? "bg-emerald-600 text-white opacity-100"
+                                    : "bg-black/80 hover:bg-[#E84A27] text-white opacity-95 sm:opacity-0 sm:group-hover/web:opacity-100"
+                                }`}
+                              >
+                                {isCoverJustSet ? "✓ Cover" : "Set Cover"}
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Tab: 🏠 Direct Restaurant Website Scraper */}
+            {activeTab === "website" && (
+              <div className="p-4 rounded-2xl bg-white border border-[#EAE5DC] space-y-3 shadow-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-[#FAF7F2]">
+                  <div>
+                    <span className="text-xs font-black text-[#181615] block">
+                      🏠 Direct Restaurant Website Scraper
+                    </span>
+                    <span className="text-[11px] text-zinc-500 block mt-0.5">
+                      Crawls the homepage + up to 2 menu/gallery sub-pages for original restaurant photography (zero API cost).
+                    </span>
+                  </div>
+                  {sitePagesCrawled > 0 && (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-[10px] font-bold text-amber-800">
+                      {sitePagesCrawled} page{sitePagesCrawled === 1 ? "" : "s"} crawled
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="url"
+                    value={siteUrlInput}
+                    onChange={(e) => setSiteUrlInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void handleScrapeWebsite();
+                      }
+                    }}
+                    placeholder="https://restaurantwebsite.no"
+                    className="flex-1 min-w-0 px-3 py-2 text-xs font-semibold rounded-xl bg-[#FAF7F2] border border-[#DDD6C9] text-[#181615] focus:outline-none focus:border-amber-700"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void handleScrapeWebsite()}
+                    disabled={isScrapingSite || !siteUrlInput.trim()}
+                    className="px-3.5 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold flex items-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-45"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isScrapingSite ? "animate-spin" : ""}`} />
+                    <span>{isScrapingSite ? "Scraping..." : "Scrape Website"}</span>
+                  </button>
+                </div>
+
+                {siteScrapeError && (
+                  <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>{siteScrapeError}</span>
+                  </div>
+                )}
+
+                {isScrapingSite ? (
+                  <div className="py-8 text-center text-xs text-zinc-500 flex items-center justify-center gap-2">
+                    <RefreshCw className="w-4 h-4 animate-spin text-amber-700" />
+                    <span>Crawling restaurant homepage, menu &amp; gallery pages...</span>
+                  </div>
+                ) : sitePhotos.length === 0 ? (
+                  <p className="py-6 text-center text-xs text-zinc-500 bg-[#FAF7F2] rounded-xl border border-dashed border-[#DDD6C9]">
+                    {siteUrlInput.trim()
+                      ? "Click Scrape Website to extract original photos from this restaurant's site."
+                      : "No website URL saved on this spot yet — paste one above and click Scrape Website."}
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-64 overflow-y-auto p-1">
+                    {sitePhotos.map((photo, idx) => {
+                      const isSelected = dishImage === photo.url;
+                      const isCoverJustSet = coverToastUrl === photo.url;
+                      return (
+                        <div
+                          key={`site-${photo.url}-${idx}`}
+                          className={`group/site relative aspect-[4/3] rounded-xl overflow-hidden border-2 bg-[#F3EFE7] transition-transform hover:scale-[1.02] ${
+                            isSelected
+                              ? "border-[#E84A27] ring-2 ring-[#E84A27]/30"
+                              : "border-transparent"
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            title={photo.altText || photo.url}
+                            onClick={() =>
+                              void handleSelectExternalPhoto({
+                                imageUrl: photo.url,
+                                pageUrl: photo.pageUrl,
+                                source: "website",
+                              })
+                            }
+                            className="relative w-full h-full block cursor-pointer"
+                          >
+                            <Image
+                              src={photo.url}
+                              alt={photo.altText || `Website photo ${idx + 1}`}
+                              fill
+                              unoptimized
+                              className="object-cover"
+                            />
+                            {isSelected && (
+                              <div className="absolute inset-0 bg-[#E84A27]/30 flex items-center justify-center">
+                                <Check className="w-5 h-5 text-white drop-shadow-md" />
+                              </div>
+                            )}
+                          </button>
+
+                          <span className="pointer-events-none absolute top-1 left-1 z-10 px-1.5 py-0.5 rounded-md bg-amber-700/90 text-white text-[8.5px] font-black leading-none">
+                            WEB
+                          </span>
+
+                          {photo.altText && (
+                            <div className="pointer-events-none absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-1.5 pb-1 pt-4">
+                              <p className="text-[9.5px] font-semibold text-white truncate pr-14">
+                                {photo.altText}
+                              </p>
+                            </div>
+                          )}
+
+                          {onSetSpotCover && (
+                            <button
+                              type="button"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                await onSetSpotCover(photo.url);
+                                setCoverToastUrl(photo.url);
+                                window.setTimeout(() => setCoverToastUrl(null), 1800);
+                              }}
+                              title="Set as restaurant cover"
+                              className={`absolute bottom-1 right-1 z-20 px-1.5 py-0.5 rounded-md text-[8.5px] font-black leading-none transition-opacity cursor-pointer ${
+                                isCoverJustSet
+                                  ? "bg-emerald-600 text-white opacity-100"
+                                  : "bg-black/80 hover:bg-[#E84A27] text-white opacity-95 sm:opacity-0 sm:group-hover/site:opacity-100"
+                              }`}
+                            >
+                              {isCoverJustSet ? "✓ Cover" : "Set Cover"}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Tab: Pool & Direct Upload / Clipboard Paste */}
+            {activeTab === "upload" && (
+              <div className="p-4 rounded-2xl bg-white border border-[#EAE5DC] space-y-3.5 shadow-xs">
+                {candidatePhotos.length > 0 && (
+                  <div className="space-y-2.5 border-b border-[#EAE5DC] pb-3.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-[11px] font-black uppercase tracking-wider text-[#181615]">
+                        Spot Photo Pool ({filteredPoolPhotos.length}/{candidatePhotos.length})
+                      </span>
+                      <div className="flex items-center gap-1 rounded-xl bg-[#FAF7F2] p-0.5 border border-[#EAE5DC]">
+                        {(
+                          [
+                            { id: "all", label: `All (${candidatePhotos.length})` },
+                            { id: "food", label: `🍽️ Food (${foodPoolCount})` },
+                            { id: "venue_vibe", label: `🏠 Entrance & Vibe (${vibePoolCount})` },
+                          ] as const
+                        ).map((f) => (
+                          <button
+                            key={f.id}
+                            type="button"
+                            onClick={() => setPoolFilter(f.id)}
+                            className={`px-2 py-1 rounded-lg text-[10.5px] font-bold transition-colors cursor-pointer ${
+                              poolFilter === f.id
+                                ? "bg-[#181615] text-white"
+                                : "text-zinc-600 hover:text-[#181615]"
+                            }`}
+                          >
+                            {f.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {filteredPoolPhotos.length === 0 ? (
+                      <p className="text-[11px] text-zinc-500 py-3 text-center bg-[#FAF7F2] rounded-xl border border-dashed border-[#DDD6C9]">
+                        No photos tagged in this bucket yet. Switch to All or run Vision Auto-Match on the spot.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-56 overflow-y-auto p-1">
+                        {filteredPoolPhotos.map((photoUrl, idx) => {
+                          const tag = photoVisionTags[photoUrl];
+                          const srcType = detectImageSource(photoUrl, tag?.source);
+                          const badge = getSourceBadgeMeta(srcType);
+                          const isSelected = dishImage === photoUrl;
+                          const isCoverJustSet = coverToastUrl === photoUrl;
+
+                          return (
+                            <div
+                              key={`pool-${photoUrl}-${idx}`}
+                              className={`group/thumb relative aspect-[4/3] rounded-xl overflow-hidden border-2 transition-transform hover:scale-[1.02] ${
+                                isSelected
+                                  ? "border-[#E84A27] ring-2 ring-[#E84A27]/30"
+                                  : badge.isWarning
+                                  ? "border-rose-400/80"
+                                  : "border-transparent"
+                              }`}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => handleSelectPhoto(photoUrl, srcType)}
+                                title={tag?.description || photoUrl}
+                                className="relative w-full h-full block cursor-pointer"
+                              >
+                                <Image
+                                  src={photoUrl}
+                                  alt={tag?.description || `Pool photo ${idx + 1}`}
+                                  fill
+                                  unoptimized
+                                  className="object-cover"
+                                />
+                                {isSelected && (
+                                  <div className="absolute inset-0 bg-[#E84A27]/30 flex items-center justify-center">
+                                    <Check className="w-4 h-4 text-white drop-shadow-md" />
+                                  </div>
+                                )}
+                              </button>
+
+                              {/* Top-left Source Domain Pill */}
+                              <span
+                                className={`pointer-events-none absolute top-1 left-1 z-10 px-1.5 py-0.5 rounded-md border text-[8.5px] font-black leading-none tracking-wide shadow-xs ${badge.className}`}
+                              >
+                                {badge.label}
+                              </span>
+
+                              {/* Top-right Prune / Blacklist button */}
+                              {onPruneCandidatePhoto && (
+                                <button
+                                  type="button"
+                                  disabled={pruningUrl === photoUrl}
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    setPruningUrl(photoUrl);
+                                    try {
+                                      await onPruneCandidatePhoto(photoUrl);
+                                    } finally {
+                                      setPruningUrl(null);
+                                    }
+                                  }}
+                                  title="Remove bad photo from spot pool"
+                                  className="absolute top-1 right-1 z-20 grid h-5 w-5 place-items-center rounded-full bg-black/75 text-white hover:bg-rose-600 transition-colors cursor-pointer opacity-90 sm:opacity-0 sm:group-hover/thumb:opacity-100"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              )}
+
+                              {/* Bottom-left Vision Bucket indicator */}
+                              {tag?.bucket && (
+                                <span className="pointer-events-none absolute bottom-1 left-1 z-10 px-1.5 py-0.5 rounded-md bg-black/70 text-white text-[8.5px] font-bold leading-none">
+                                  {tag.bucket === "food"
+                                    ? "🍽️ Food"
+                                    : tag.bucket === "venue_vibe"
+                                    ? "🏠 Vibe"
+                                    : "🗑️ Junk"}
+                                </span>
+                              )}
+
+                              {/* Bottom-right Set as Spot Cover button */}
+                              {onSetSpotCover && !badge.isWarning && (
+                                <button
+                                  type="button"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    await onSetSpotCover(photoUrl);
+                                    setCoverToastUrl(photoUrl);
+                                    window.setTimeout(() => setCoverToastUrl(null), 1800);
+                                  }}
+                                  title="Set this photo as the restaurant cover"
+                                  className={`absolute bottom-1 right-1 z-20 px-1.5 py-0.5 rounded-md text-[8.5px] font-black leading-none transition-opacity cursor-pointer ${
+                                    isCoverJustSet
+                                      ? "bg-emerald-600 text-white opacity-100"
+                                      : "bg-black/75 hover:bg-[#E84A27] text-white opacity-90 sm:opacity-0 sm:group-hover/thumb:opacity-100"
+                                  }`}
+                                >
+                                  {isCoverJustSet ? "✓ Cover" : "Set Cover"}
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-[#FAF7F2]">
+                  <div>
+                    <span className="text-xs font-black text-[#181615] block">
+                      📤 Direct Image Upload &amp; Clipboard Paste
+                    </span>
+                    <span className="text-[11px] text-zinc-500 block mt-0.5">
+                      Upload from disk, drag &amp; drop, or press <kbd className="px-1.5 py-0.5 rounded bg-zinc-100 border border-zinc-300 font-mono text-[10px] text-zinc-800 font-bold">Ctrl+V</kbd> to paste a screenshot directly.
                     </span>
                   </div>
                   <span className="px-2.5 py-1 rounded-full bg-orange-50 border border-orange-200 text-[10px] font-extrabold text-[#E84A27]">
@@ -853,16 +1577,16 @@ export function QuickDishEditModal({
               </div>
             )}
 
-            {/* Tab 0: ✨ AI Angle & Background Shift (Multimodal Input) */}
+            {/* Tab 0: ✨ AI Polish / Camera & Background Shift */}
             {activeTab === "restyle" && (
               <div className="p-4 rounded-2xl bg-white border border-[#EAE5DC] space-y-3.5 shadow-xs">
                 <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-[#FAF7F2]">
                   <div>
                     <span className="text-xs font-black text-[#181615] block">
-                      ✨ AI Angle & Background Shift
+                      ✨ AI Polish · Preserve Food, Clean Surroundings
                     </span>
                     <span className="text-[11px] text-zinc-500 block mt-0.5">
-                      Passes reference image directly to Nano Banana Lite. Keeps 100% of original bowl/plate & food, zero added props.
+                      Default mode locks the exact plated food, portion, vessel &amp; camera angle while balancing Oslo daylight and cleaning tabletop clutter.
                     </span>
                   </div>
                   <span className="px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[10px] font-extrabold text-emerald-700">
@@ -870,27 +1594,48 @@ export function QuickDishEditModal({
                   </span>
                 </div>
 
-                {/* 1. Camera Angle Shift */}
+                {isBlockedForAiShift && (
+                  <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>
+                      Wolt/Foodora photos cannot be AI-polished. Pick a Google Maps, SerpApi, kitchen, or uploaded photo from Pool / Upload first.
+                    </span>
+                  </div>
+                )}
+
+                {/* 1. Polish / Camera Angle Mode */}
                 <div className="space-y-1.5">
                   <label className="block text-[11px] font-extrabold uppercase tracking-wider text-zinc-500">
-                    1. Camera Angle Shift
+                    1. Polish Mode / Camera Angle
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                     {(Object.keys(ANGLE_PRESETS) as AnglePresetId[]).map((id) => {
                       const opt = ANGLE_PRESETS[id];
                       const active = anglePreset === id;
+                      const isPrimary = id === "preserve_food_clean_scene";
                       return (
                         <button
                           key={id}
                           type="button"
                           onClick={() => setAnglePreset(id)}
                           className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                            isPrimary ? "col-span-2 sm:col-span-3 text-left flex items-center justify-between" : ""
+                          } ${
                             active
                               ? "bg-[#181615] text-white border-[#181615] shadow-xs"
                               : "bg-[#FAF7F2] text-zinc-700 border-[#DDD6C9] hover:border-[#181615]"
                           }`}
                         >
-                          {opt.shortLabel}
+                          <span>{isPrimary ? opt.label : opt.shortLabel}</span>
+                          {isPrimary && (
+                            <span
+                              className={`text-[9.5px] uppercase tracking-wider px-1.5 py-0.5 rounded-md ${
+                                active ? "bg-[#E84A27] text-white" : "bg-emerald-100 text-emerald-800"
+                              }`}
+                            >
+                              Recommended
+                            </span>
+                          )}
                         </button>
                       );
                     })}
@@ -900,7 +1645,7 @@ export function QuickDishEditModal({
                 {/* 2. Background Table Surface */}
                 <div className="space-y-1.5">
                   <label className="block text-[11px] font-extrabold uppercase tracking-wider text-zinc-500">
-                    2. Background Table Surface (Original Bowl/Vessel Locked)
+                    2. Background Table Surface (Original Dish &amp; Vessel Locked)
                   </label>
                   <div className="flex flex-wrap gap-1.5">
                     {(Object.keys(ENVIRONMENT_PRESETS) as EnvironmentPresetId[]).map((id) => {
@@ -933,67 +1678,40 @@ export function QuickDishEditModal({
                 <button
                   type="button"
                   onClick={handleRunAiTransform}
-                  disabled={isTransforming || !dishImage}
-                  className="w-full py-2.5 px-4 rounded-xl bg-[#E84A27] hover:bg-[#d03d1b] text-white font-black text-xs shadow-md shadow-[#E84A27]/20 flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
+                  disabled={isTransforming || !dishImage || isBlockedForAiShift}
+                  title={
+                    isBlockedForAiShift
+                      ? "Wolt/Foodora photos cannot be AI-shifted — pick a Google Maps, kitchen, or uploaded photo instead."
+                      : undefined
+                  }
+                  className="w-full py-2.5 px-4 rounded-xl bg-[#E84A27] hover:bg-[#d03d1b] text-white font-black text-xs shadow-md shadow-[#E84A27]/20 flex items-center justify-center gap-2 transition-all disabled:opacity-45 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {isTransforming ? (
                     <>
                       <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Shifting Camera Angle & Surface (Preserving Exact Vessel & Food)...</span>
+                      <span>
+                        {anglePreset === "preserve_food_clean_scene"
+                          ? "Polishing Daylight & Surroundings (Food Locked)..."
+                          : "Shifting Camera Angle & Surface (Vessel Locked)..."}
+                      </span>
                     </>
                   ) : (
                     <>
                       <Wand2 className="w-4 h-4" />
-                      <span>✨ Shift Camera Angle & Table Surface</span>
+                      <span>
+                        {anglePreset === "preserve_food_clean_scene"
+                          ? "✨ Polish Photo (Preserve Food · Clean Scene)"
+                          : "✨ Shift Camera Angle & Table Surface"}
+                      </span>
                     </>
                   )}
                 </button>
               </div>
             )}
 
-            {/* Tab 1: Pick Photo (Harvested Spot Gallery + Google Places) */}
+            {/* Tab 1: Live Google Places Search */}
             {activeTab === "google" && (
               <div className="p-3.5 rounded-2xl bg-white border border-[#EAE5DC] space-y-3">
-                {candidatePhotos.length > 0 && (
-                  <div className="space-y-2 border-b border-[#EAE5DC] pb-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-black uppercase tracking-wider text-[#181615]">
-                        Spot Menu &amp; IG Photo Pool ({candidatePhotos.length})
-                      </span>
-                      <span className="text-[10.5px] font-bold text-[#E84A27]">
-                        1-click select
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-40 overflow-y-auto p-1">
-                      {candidatePhotos.map((photoUrl, idx) => (
-                        <button
-                          key={`pool-${photoUrl}-${idx}`}
-                          type="button"
-                          onClick={() => handleSelectPhoto(photoUrl)}
-                          className={`relative aspect-[4/3] rounded-xl overflow-hidden border-2 transition-transform hover:scale-105 cursor-pointer ${
-                            dishImage === photoUrl
-                              ? "border-[#E84A27] ring-2 ring-[#E84A27]/30"
-                              : "border-transparent"
-                          }`}
-                        >
-                          <Image
-                            src={photoUrl}
-                            alt={`Harvested photo ${idx + 1}`}
-                            fill
-                            unoptimized
-                            className="object-cover"
-                          />
-                          {dishImage === photoUrl && (
-                            <div className="absolute inset-0 bg-[#E84A27]/30 flex items-center justify-center">
-                              <Check className="w-4 h-4 text-white drop-shadow-md" />
-                            </div>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 <div className="flex flex-wrap items-center gap-1.5">
                   <button
                     type="button"
@@ -1072,7 +1790,7 @@ export function QuickDishEditModal({
                       <button
                         key={photoUrl + idx}
                         type="button"
-                        onClick={() => handleSelectPhoto(photoUrl)}
+                        onClick={() => handleSelectPhoto(photoUrl, "google")}
                         className={`relative aspect-[4/3] rounded-xl overflow-hidden border-2 transition-transform hover:scale-105 cursor-pointer ${
                           dishImage === photoUrl
                             ? "border-[#E84A27] ring-2 ring-[#E84A27]/30"
@@ -1086,6 +1804,9 @@ export function QuickDishEditModal({
                           unoptimized
                           className="object-cover"
                         />
+                        <span className="pointer-events-none absolute top-1 left-1 z-10 px-1.5 py-0.5 rounded-md bg-zinc-900/85 text-white border border-zinc-700 text-[8.5px] font-black leading-none">
+                          GOOGLE
+                        </span>
                         {dishImage === photoUrl && (
                           <div className="absolute inset-0 bg-[#E84A27]/30 flex items-center justify-center">
                             <Check className="w-4 h-4 text-white drop-shadow-md" />
@@ -1102,7 +1823,7 @@ export function QuickDishEditModal({
             {activeTab === "url" && (
               <div className="p-3.5 rounded-2xl bg-white border border-[#EAE5DC] space-y-2">
                 <label className="block text-xs font-bold text-[#181615]">
-                  Paste Wolt, Foodora, or Website Reference Photo URL
+                  Paste restaurant website, Instagram, or approved photo URL (no Wolt/Foodora)
                 </label>
                 <input
                   type="url"
@@ -1112,23 +1833,32 @@ export function QuickDishEditModal({
                     setDishImage(val);
                     setOriginalBeforeRemixImage(val);
                     setTransformedImageUrl(null);
+                    setImageSource(detectImageSource(val));
+                    setSourceUrl(val);
+                    setIsAiEnhanced(false);
                     setImgError(false);
-                    if (val.startsWith("http")) setIsVerified(true);
+                    if (val.startsWith("http")) setIsVerified(!isDeliveryAppImageUrl(val));
                   }}
-                  placeholder="https://imageproxy.wolt.com/... or https://..."
+                  placeholder="Paste restaurant website, Instagram, or approved photo URL (no Wolt/Foodora)"
                   className="w-full px-3.5 py-2 text-xs rounded-xl bg-[#FAF7F2] border border-[#DDD6C9] text-[#181615] focus:outline-none focus:border-[#E84A27]"
                 />
-                <p className="text-[11px] text-zinc-500">
-                  Tip: Paste any Wolt/Foodora reference URL here, then switch to{" "}
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("restyle")}
-                    className="text-[#E84A27] font-bold underline cursor-pointer"
-                  >
-                    ✨ AI Angle Shift
-                  </button>{" "}
-                  to shift the camera angle and table surface.
-                </p>
+                {isDeliveryAppImageUrl(dishImage) ? (
+                  <p className="text-[11px] font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
+                    ⚠️ Wolt and Foodora URLs are blocked on commit and cannot be AI-polished. Use a Google Maps, restaurant website, or uploaded photo instead.
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-zinc-500">
+                    Tip: Paste an approved restaurant or diner URL here, then optionally open{" "}
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("restyle")}
+                      className="text-[#E84A27] font-bold underline cursor-pointer"
+                    >
+                      ✨ AI Polish
+                    </button>{" "}
+                    to clean daylight and surroundings while keeping the food locked.
+                  </p>
+                )}
               </div>
             )}
 

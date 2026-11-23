@@ -37,7 +37,12 @@ import { getVenueLiveOpenStatus } from "@/lib/openingHours";
 import { resolveEntityTaxonomy } from "@/lib/taxonomy";
 import { slugifyVenue } from "@/lib/slugify";
 import { formatOsloLocation } from "@/lib/location";
-import { PopupBrandWordmark } from "@/components/food/PopupBrandWordmark";
+import {
+  KineticFeedLane,
+  PopupRadarDeck,
+  POPUP_RADAR_LAYOUT_MODE,
+  type PopupRadarItem,
+} from "@/components/food/FeedMotionLanes";
 import { trackEvent } from "@/lib/analytics";
 
 function slugifySpotParam(value: string): string {
@@ -882,7 +887,8 @@ export function HomeView({
       title: React.ReactNode,
       _subtitle: string,
       items: React.ReactNode,
-      hasItems: boolean
+      hasItems: boolean,
+      driftDirection: -1 | 1 = -1
     ) => {
       if (!hasItems) return null;
       return (
@@ -895,9 +901,9 @@ export function HomeView({
               Swipe →
             </span>
           </div>
-          <div className="overflow-x-auto snap-x snap-mandatory flex gap-3 pb-1 no-scrollbar">
+          <KineticFeedLane driftDirection={driftDirection}>
             {items}
-          </div>
+          </KineticFeedLane>
         </section>
       );
     };
@@ -915,7 +921,7 @@ export function HomeView({
           <SmakrWeeklyPickSplitBanner />
         </div>
 
-        {/* 2. Horizontal Lane 1 — Oslo Pop-Up Radar (unified flagship pop-up lane) */}
+        {/* 2. Horizontal Lane 1 — Oslo Pop-Up Radar (Fanned Flyer Stack or Horizontal + Scout Card via POPUP_RADAR_LAYOUT_MODE) */}
         {(() => {
           const seenPopupVenues = new Set<string>();
           const rawPopupDishes = [
@@ -939,6 +945,54 @@ export function HomeView({
           const totalPopupCount = rawPopupDishes.length + extraPopupVenues.length;
           if (totalPopupCount === 0) return null;
 
+          const popupItems: PopupRadarItem[] = [
+            ...rawPopupDishes.map((post): PopupRadarItem => {
+              const v = venueById.get(post.spot_id) ?? null;
+              const lifecycle = v ? resolvePopupLifecycle(v) : null;
+              const loc = formatOsloLocation(v?.address || post.spot_address, v?.city);
+              const neighborhood = (
+                loc.neighborhood ||
+                (v?.neighborhood && v.neighborhood !== "all" ? v.neighborhood : post.spot_neighborhood) ||
+                ""
+              )
+                .replace(/_/g, " ")
+                .replace(/\b\w/g, (c) => c.toUpperCase());
+
+              const statusParts: string[] = [];
+              if (lifecycle?.state === "live") {
+                const lbl = lifecycle.shortDateLabel || "Live Now";
+                statusParts.push(/^live/i.test(lbl) ? lbl : `Live Now · ${lbl}`);
+              } else if (lifecycle?.state === "upcoming") {
+                const lbl = lifecycle.shortDateLabel || "Upcoming";
+                statusParts.push(/^upcoming/i.test(lbl) ? lbl : `Upcoming · ${lbl}`);
+              } else if (lifecycle?.state === "passed") {
+                statusParts.push(lifecycle.badgeLabel || "Next drop TBA");
+              } else if (lifecycle?.state === "tba") {
+                statusParts.push("Next drop TBA");
+              } else if (post.drop_badge) {
+                statusParts.push(post.drop_badge.replace(/\s*Drop$/i, "").trim());
+              } else {
+                statusParts.push("Next drop TBA");
+              }
+              if (neighborhood && lifecycle?.state !== "tba" && lifecycle?.state !== "passed") {
+                statusParts.push(neighborhood);
+              }
+
+              return {
+                kind: "dish",
+                id: `dish-${post.id}`,
+                post,
+                venue: v,
+                metaLine: statusParts.join(" · "),
+              };
+            }),
+            ...extraPopupVenues.map((venue): PopupRadarItem => ({
+              kind: "venue",
+              id: `venue-${venue.id}`,
+              venue,
+            })),
+          ];
+
           return (
             <section className="col-span-full -mx-3 px-3 py-1.5">
               <div className="flex items-center justify-between gap-2 mb-2">
@@ -948,87 +1002,11 @@ export function HomeView({
                 </h3>
                 {totalPopupCount > 1 && (
                   <span className="text-[#E84A27] font-comico text-[11px] whitespace-nowrap shrink-0">
-                    Swipe →
+                    {POPUP_RADAR_LAYOUT_MODE === "fanned_stack" ? "Flick flyer →" : "Swipe →"}
                   </span>
                 )}
               </div>
-              <div className="overflow-x-auto snap-x snap-mandatory flex gap-3 pb-2 no-scrollbar">
-                {rawPopupDishes.map((post) => {
-                  const v = venueById.get(post.spot_id) ?? null;
-                  const lifecycle = v ? resolvePopupLifecycle(v) : null;
-                  const loc = formatOsloLocation(v?.address || post.spot_address, v?.city);
-                  const neighborhood = (
-                    loc.neighborhood ||
-                    (v?.neighborhood && v.neighborhood !== "all" ? v.neighborhood : post.spot_neighborhood) ||
-                    ""
-                  )
-                    .replace(/_/g, " ")
-                    .replace(/\b\w/g, (c) => c.toUpperCase());
-
-                  const statusParts: string[] = [];
-                  if (lifecycle?.state === "live") {
-                    const lbl = lifecycle.shortDateLabel || "Live Now";
-                    statusParts.push(/^live/i.test(lbl) ? lbl : `Live Now · ${lbl}`);
-                  } else if (lifecycle?.state === "upcoming") {
-                    const lbl = lifecycle.shortDateLabel || "Upcoming";
-                    statusParts.push(/^upcoming/i.test(lbl) ? lbl : `Upcoming · ${lbl}`);
-                  } else if (lifecycle?.state === "passed") {
-                    statusParts.push(lifecycle.badgeLabel || "Next drop TBA");
-                  } else if (lifecycle?.state === "tba") {
-                    statusParts.push("Next drop TBA");
-                  } else if (post.drop_badge) {
-                    statusParts.push(post.drop_badge.replace(/\s*Drop$/i, "").trim());
-                  } else {
-                    statusParts.push("Next drop TBA");
-                  }
-                  if (neighborhood && lifecycle?.state !== "tba" && lifecycle?.state !== "passed") {
-                    statusParts.push(neighborhood);
-                  }
-                  const metaLine = statusParts.join(" · ");
-
-                  return (
-                    <div
-                      key={`popup-radar-${post.id}`}
-                      className="w-[210px] sm:w-[225px] shrink-0 snap-start flex flex-col"
-                    >
-                      <div className="w-full h-[205px] sm:h-[215px]">
-                        <FoodPostCard
-                          post={post}
-                          index={0}
-                          fillHeight
-                          cleanPhoto
-                          trackSource="popup_radar"
-                          linkedVenue={v}
-                        />
-                      </div>
-                      <div className="mt-2 px-1 space-y-0.5">
-                        <div className="flex items-center justify-between gap-1.5 min-w-0">
-                          <PopupBrandWordmark venueName={v?.name || post.spot_name} size="sm" />
-                          {typeof post.price_nok === "number" && post.price_nok > 0 && (
-                            <span className="font-comico font-normal text-[11.5px] text-[#E84A27] shrink-0 whitespace-nowrap">
-                              {post.price_nok} kr
-                            </span>
-                          )}
-                        </div>
-                        <p className="font-display text-[12.5px] font-bold text-[#181615] dark:text-zinc-100 leading-snug line-clamp-1">
-                          {post.dish_name}
-                        </p>
-                        <p className="text-[11px] font-medium text-[#181615]/65 dark:text-zinc-400 leading-snug line-clamp-1">
-                          {metaLine}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-                {extraPopupVenues.map((venue) => (
-                  <div
-                    key={`popup-radar-venue-${venue.id}`}
-                    className="w-[210px] sm:w-[225px] h-[205px] sm:h-[215px] shrink-0 snap-start overflow-hidden rounded-[22px]"
-                  >
-                    <PopupEventCard venue={venue} compact />
-                  </div>
-                ))}
-              </div>
+              <PopupRadarDeck items={popupItems} />
             </section>
           );
         })()}
@@ -1067,7 +1045,8 @@ export function HomeView({
             return (
               <div
                 key={`swimlane-matcha-${post.id}`}
-                className="w-[210px] shrink-0 snap-start flex flex-col"
+                data-lane-card="true"
+                className="w-[210px] shrink-0 snap-start flex flex-col will-change-transform"
               >
                 <div className="w-full h-[205px]">
                   <FoodPostCard
@@ -1081,7 +1060,10 @@ export function HomeView({
                     linkedVenue={v}
                   />
                 </div>
-                <div className="mt-2 px-1 space-y-0.5">
+                <div
+                  data-lane-footer="true"
+                  className="mt-2 px-1 space-y-0.5 transition-opacity duration-150"
+                >
                   <p className="font-display text-[13.5px] font-bold text-[#181615] dark:text-white leading-snug line-clamp-2">
                     {post.dish_name}
                   </p>
@@ -1098,7 +1080,8 @@ export function HomeView({
               </div>
             );
           }),
-          matchaLane.length > 0
+          matchaLane.length > 0,
+          -1
         )}
 
         {/* 7a. Vertical 2-Col Grid — Row 3a (2 posts above walkway) */}
@@ -1122,7 +1105,8 @@ export function HomeView({
             return (
               <div
                 key={`swimlane-kitchen-${venue.id}`}
-                className="w-[210px] shrink-0 snap-start"
+                data-lane-card="true"
+                className="w-[210px] shrink-0 snap-start will-change-transform"
               >
                 <FoodSpotCard
                   venue={venue}
@@ -1135,7 +1119,8 @@ export function HomeView({
               </div>
             );
           }),
-          kitchenLane.length > 0
+          kitchenLane.length > 0,
+          1
         )}
 
         {/* 10. Become a Foodie Banner (moved below Kitchens) */}
