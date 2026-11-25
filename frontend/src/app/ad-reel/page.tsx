@@ -45,6 +45,7 @@ import {
 import { SmakrMascotRig } from "@/components/studio/SmakrMascotRig";
 import { CarouselStoryDeck } from "@/components/studio/CarouselStoryDeck";
 import { AdPosterEditorLab } from "@/components/studio/AdPosterEditorLab";
+import { TikTokSafeReelStage } from "@/components/studio/TikTokSafeReelStage";
 import { FOOD_PIN_SVG_MAP } from "@/components/food/FoodIcons";
 import SmakrLogo from "@/components/ui/SmakrLogo";
 import { OfficialSmakrMascot, OFFICIAL_SMAKR_MASCOT_CONFIG } from "@/lib/officialSmakrMascot";
@@ -656,16 +657,22 @@ export default function AdReelStagePage() {
   const weeklyPick = useCityPulseStore((s) => s.weeklyPick);
   const venues = useCityPulseStore((s) => s.venues);
 
-  // Campaign switcher: Story Deck vs Poster Editor Lab vs Partner Ad vs Motion Reel
+  // Campaign switcher: Story Deck vs Poster Editor Lab vs Partner Ad vs Motion Reel vs Fried Chicken Reel
   const [activeCampaignTab, setActiveCampaignTab] = useState<
-    "story_deck" | "poster_lab" | "partner_ad" | "motion_reel"
+    "story_deck" | "poster_lab" | "partner_ad" | "motion_reel" | "chicken_reel"
   >("story_deck");
   const [showMobileHub, setShowMobileHub] = useState<boolean>(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const tab = new URLSearchParams(window.location.search).get("tab");
-    if (tab === "poster_lab" || tab === "story_deck" || tab === "partner_ad" || tab === "motion_reel") {
+    if (
+      tab === "poster_lab" ||
+      tab === "story_deck" ||
+      tab === "partner_ad" ||
+      tab === "motion_reel" ||
+      tab === "chicken_reel"
+    ) {
       setActiveCampaignTab(tab);
       setShowMobileHub(false);
     } else if (window.innerWidth < 768) {
@@ -1926,6 +1933,8 @@ export default function AdReelStagePage() {
                   ? "Story Deck"
                   : activeCampaignTab === "partner_ad"
                   ? "Partner Ad"
+                  : activeCampaignTab === "chicken_reel"
+                  ? "Fried Chicken Reel"
                   : "Motion Reel"}
               </span>
               <span className="font-comico text-xs tracking-wider text-[#e84a27]">SMAKR</span>
@@ -1997,6 +2006,22 @@ export default function AdReelStagePage() {
                 <Video className="w-3.5 h-3.5" />
                 <span>Motion Reel (Video)</span>
               </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveCampaignTab("chicken_reel");
+                  setIsPlaying(false);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
+                  activeCampaignTab === "chicken_reel"
+                    ? "bg-[#e84a27] text-white shadow-xs"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                <Flame className="w-3.5 h-3.5" />
+                <span>Chicken TikTok</span>
+              </button>
             </div>
           </div>
 
@@ -2007,6 +2032,10 @@ export default function AdReelStagePage() {
           ) : activeCampaignTab === "poster_lab" ? (
             <div className="text-[11px] font-bold text-zinc-400 px-2">
               Drag, Resize &amp; Rotate Components · Autosaved · @3x PNG
+            </div>
+          ) : activeCampaignTab === "chicken_reel" ? (
+            <div className="text-[11px] font-bold text-zinc-400 px-2">
+              20.4s Remotion Cut · TikTok Mobile Deadzones · Multi-Screen Check
             </div>
           ) : activeCampaignTab === "partner_ad" ? (
             <div className="flex items-center gap-2">
@@ -2380,12 +2409,20 @@ export default function AdReelStagePage() {
           <nav aria-label="Ad Studio Sections" className="flex flex-col gap-3">
             {[
               {
+                id: "chicken_reel" as const,
+                badge: "NEW · 20.4s TIKTOK SAFE",
+                title: "Oslo Fried Chicken — TikTok Reel",
+                desc: "Play, inspect TikTok mobile deadzones (9:16, 19.5:9, 20:9), & download MP4.",
+                Icon: Flame,
+                featured: true,
+              },
+              {
                 id: "poster_lab" as const,
-                badge: "NEW · 9:16 & 3:4",
+                badge: "9:16 & 3:4 · @3x PNG",
                 title: "Oslo Bánh Mì — Poster Lab",
                 desc: "Slide 1 & Slide 2 Map posters. View, tweak, and save @3x PNGs to Photos.",
                 Icon: Move,
-                featured: true,
+                featured: false,
               },
               {
                 id: "story_deck" as const,
@@ -2453,6 +2490,8 @@ export default function AdReelStagePage() {
             ))}
           </nav>
         </main>
+      ) : activeCampaignTab === "chicken_reel" ? (
+        <TikTokSafeReelStage videoSrc="/videos/oslo-fried-chicken-reel.mp4" />
       ) : activeCampaignTab === "story_deck" ? (
         <div className="flex-1 w-full overflow-y-auto">
           <CarouselStoryDeck />

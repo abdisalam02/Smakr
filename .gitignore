@@ -47,6 +47,7 @@ Thumbs.db
 
 # Recordings / debugging media
 *.mp4
+!frontend/public/videos/oslo-fried-chicken-reel.mp4
 
 # Scratch and test files
 scratch/

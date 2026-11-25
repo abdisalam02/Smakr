@@ -3,13 +3,14 @@
 Updated: 2026-11-25
 
 ## Now
-- Task: Fixed map spotlight card side-peek in `MapNeighborhoodDock.tsx` (`w-[calc(100vw-88px)] max-w-[308px]`, `sideScale = 0.86`, `gap = 10px`, `expandedStep` using actual scaled side width) so left/right neighbor cards visibly peek ~34–51px on mobile to cue horizontal swiping; also shipped reversible Skiper48 `PopupRadarDeck`.
-- Status: Running `npx tsc --noEmit`; all 7 standalone mascot SVGs saved in `/mascot-studio`.
+- Task: Shipped `KfcOsloAd` `v15` (`22.90s` / `1374f`): traced South Park Colonel face inside `#KfcProjectingBucketSign`, shortened & aligned spot tags (`29px` uniform italic, zero collision), deepened Scene 2/3 bottom Warm Oat fade (`345px`), & extended Scene 3 Finale hold to `5.0s` (`300f`); synced `/ad-reel?tab=chicken_reel`.
+- Staged `Hot Temper` (6 cached Supabase photos) + enriched `Down South Deli` (`Birdman's Burger 269 kr`, `Crispy Thighs 279 kr`) in `frontend/curation/staged_candidates.json`.
+- Status: Both `frontend/` & `video-studio/` `npx tsc --noEmit`, 4 `v15` QA stills (`f045`, `f440`, `f780`, `f1350`), `v15` MP4 (`28.2 MB` + `<20MB` `9.3 MiB`), & `/videos/oslo-fried-chicken-reel.mp4` exited 0; `v6`–`v14` preserved.
 
 ## Next (max 3)
-1. Preview and export the 2-slide Early Snowfall `@3x` PNG assets in `/ad-reel`.
-2. User to confirm Hrimnir (`270 kr`) & Sapporo (`195 kr`) seeding in `/admin/seeding-lab`.
-3. Curate and verify photos for remaining 9 staged pop-ups in `/admin/seeding-lab`.
+1. User to review & confirm KFC Storo storefront, VEKTER guard, spot logos/photos, and rendered 60fps motion preview (`kfc_ad_assets_and_motion_preview.md`).
+2. User to curate & seed `Hot Temper` + `Down South Deli` (and verify PAN's `149 kr` dish price) in `/admin/seeding-lab`.
+3. Add voiceover / beat audio track + any user motion tweaks in `video-studio/`, then export final cut.
 
 ## Decisions (don't reopen)
 - Product is Smakr; the app lives in `frontend/`.
