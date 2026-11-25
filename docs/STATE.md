@@ -1,10 +1,10 @@
 # STATE.md — CityPulse / Smakr (read first, keep <= 30 lines)
 
-Updated: 2026-11-23
+Updated: 2026-11-25
 
 ## Now
-- Task: Refined Feed motion (`FeedMotionLanes.tsx`, `HomeView.tsx`, `FoodieCommunityBlocks.tsx`): added automatic alternating-direction flyer flicking (every 3.8s, pauses on touch/hover) + alternating per-card tilts on `PopupRadarDeck`, increased vertical counter-drift to `48px` with live viewport progress, and made all horizontal shelves true edge-to-edge full-bleed with zero side clipping.
-- Status: Verified (`npx tsc --noEmit` exit 0).
+- Task: Fixed map spotlight card side-peek in `MapNeighborhoodDock.tsx` (`w-[calc(100vw-88px)] max-w-[308px]`, `sideScale = 0.86`, `gap = 10px`, `expandedStep` using actual scaled side width) so left/right neighbor cards visibly peek ~34–51px on mobile to cue horizontal swiping; also shipped reversible Skiper48 `PopupRadarDeck`.
+- Status: Running `npx tsc --noEmit`; all 7 standalone mascot SVGs saved in `/mascot-studio`.
 
 ## Next (max 3)
 1. Preview and export the 2-slide Early Snowfall `@3x` PNG assets in `/ad-reel`.

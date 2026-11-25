@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import { animate, motion, useMotionValue, useTransform, type MotionValue } from "motion/react";
 import { FoodPostCard } from "@/components/food/FoodPostCard";
 import { PopupEventCard } from "@/components/food/PopupEventCard";
 import { PopupBrandWordmark } from "@/components/food/PopupBrandWordmark";
@@ -372,7 +373,7 @@ function renderPopupCardBody(item: PopupRadarItem, isFanned: boolean) {
     return (
       <div
         className={`w-full overflow-hidden rounded-[20px] ${
-          isFanned ? "h-[268px] sm:h-[282px]" : "h-[205px] sm:h-[215px]"
+          isFanned ? "h-[262px] sm:h-[276px]" : "h-[205px] sm:h-[215px]"
         }`}
       >
         <PopupEventCard venue={item.venue} compact />
@@ -385,7 +386,7 @@ function renderPopupCardBody(item: PopupRadarItem, isFanned: boolean) {
     <>
       <div
         className={`w-full ${
-          isFanned ? "h-[206px] sm:h-[218px]" : "h-[205px] sm:h-[215px]"
+          isFanned ? "h-[196px] sm:h-[208px]" : "h-[205px] sm:h-[215px]"
         }`}
       >
         <FoodPostCard
@@ -417,203 +418,299 @@ function renderPopupCardBody(item: PopupRadarItem, isFanned: boolean) {
   );
 }
 
+/**
+ * Continuous shortest signed circular distance `t` in `[-n/2, +n/2)` for Skiper48 EffectCards physics.
+ */
+function wrapCircularDistance(index: number, progress: number, n: number): number {
+  if (n <= 1) return 0;
+  const half = n / 2;
+  let t = (((index - progress) % n) + n) % n;
+  if (t >= half) t -= n;
+  return t;
+}
+
+interface EffectCardPose {
+  x: number;
+  y: number;
+  rotate: number;
+  scale: number;
+  opacity: number;
+  zIndex: number;
+  dimOpacity: number;
+}
+
+/**
+ * Pure continuous Skiper48 / Swiper EffectCards curve evaluated from a single `progress` value:
+ * - `-1 <= t <= 0`: Active card arcs out LEFT (`x -> -188px` at `t=-0.5`), drops immediately
+ *   right behind the new front card (`zIndex: 50 -> 42`), and tucks neatly to `x = -22px`.
+ *   Swiping RIGHT reverses the exact same curve (`-1 -> -0.5 -> 0`), pulling that previously
+ *   swiped card straight back out from behind the left edge and onto the top of the deck.
+ * - `0 < t <= 1`: Upcoming card on the right glides smoothly forward (`+22px -> 0px`) to center.
+ * - `1 < |t| <= n/2`: Deeper fanned cards smoothly tuck behind center at `|t| = n/2` so wrapping
+ *   is mathematically continuous with zero visual jump for any deck size.
+ */
+function evalEffectCardPose(t: number, n: number): EffectCardPose {
+  const half = n / 2;
+  const absT = Math.abs(t);
+
+  // 1. Departing / previously-swiped card arc on the left (-1 <= t <= 0)
+  if (t <= 0 && t >= -1) {
+    const u = -t; // 0 -> 1
+    const arc = Math.sin(u * Math.PI);
+    return {
+      x: -22 * u - 166 * arc,
+      y: 5 * u - 10 * arc,
+      rotate: -4.5 * u - 8.5 * arc,
+      scale: 1 - 0.07 * u,
+      opacity: 1,
+      zIndex: u < 0.5 ? 50 : 42,
+      dimOpacity: u <= 0.5 ? 0 : (u - 0.5) * 0.24,
+    };
+  }
+
+  // 2. Incoming next card rising cleanly from the right (0 < t <= 1)
+  if (t > 0 && t <= 1) {
+    return {
+      x: 22 * t,
+      y: 5 * t,
+      rotate: 4.5 * t,
+      scale: 1 - 0.07 * t,
+      opacity: 1,
+      zIndex: t <= 0.5 ? 50 : 41,
+      dimOpacity: t <= 0.5 ? 0 : (t - 0.5) * 0.24,
+    };
+  }
+
+  // 3. Deeper cards beyond immediate ±1 neighbors (continuous meet at ±half behind center)
+  const sign = t < 0 ? -1 : 1;
+  if (half <= 1.55) {
+    // 3-card deck: smoothly tuck from ±22px at |t|=1 back to 0px behind center at |t|=1.5
+    const k = Math.min(1, (absT - 1) / Math.max(0.01, half - 1));
+    return {
+      x: sign * 22 * (1 - k),
+      y: 5 + 5 * k,
+      rotate: sign * 4.5 * (1 - k),
+      scale: 0.93 - 0.07 * k,
+      opacity: 1 - 0.25 * k,
+      zIndex: 30,
+      dimOpacity: 0.12 + 0.14 * k,
+    };
+  }
+
+  if (absT <= 1.75) {
+    // Visible 2nd-layer fan on 4+ card decks
+    const k = (absT - 1) / 0.75;
+    return {
+      x: sign * (22 + 16 * k),
+      y: 5 + 6 * k,
+      rotate: sign * (4.5 + 3.8 * k),
+      scale: 0.93 - 0.07 * k,
+      opacity: 1 - 0.1 * k,
+      zIndex: Math.round(35 - k * 5),
+      dimOpacity: 0.12 + 0.12 * k,
+    };
+  }
+
+  // Smoothly tuck & hide beyond 2nd layer so wrap across ±half is invisible
+  const hideSpan = Math.max(0.15, Math.min(0.45, half - 1.75));
+  const h = Math.min(1, (absT - 1.75) / hideSpan);
+  return {
+    x: sign * 38 * (1 - h),
+    y: 11 + 3 * h,
+    rotate: sign * 8.3 * (1 - h),
+    scale: 0.86 - 0.06 * h,
+    opacity: Math.max(0, 0.9 * (1 - h)),
+    zIndex: 15,
+    dimOpacity: 0.24 + 0.08 * h,
+  };
+}
+
+const PROGRESS_SPRING = {
+  type: "spring" as const,
+  stiffness: 290,
+  damping: 29,
+  mass: 0.85,
+};
+
+interface EffectDeckCardProps {
+  item: PopupRadarItem;
+  slotIndex: number;
+  deckLength: number;
+  progress: MotionValue<number>;
+  isTopRest: boolean;
+  restRel: number;
+  didDragRef: React.MutableRefObject<boolean>;
+  onTapPeeking: (rel: number) => void;
+}
+
+/**
+ * Single GPU-driven card subscribed directly to the deck's continuous `progress` MotionValue.
+ * Zero React re-renders during drag or spring settling — exact reversible Skiper48 EffectCards feel.
+ */
+function EffectDeckCard({
+  item,
+  slotIndex,
+  deckLength,
+  progress,
+  isTopRest,
+  restRel,
+  didDragRef,
+  onTapPeeking,
+}: EffectDeckCardProps) {
+  const x = useTransform(progress, (p) => evalEffectCardPose(wrapCircularDistance(slotIndex, p, deckLength), deckLength).x);
+  const y = useTransform(progress, (p) => evalEffectCardPose(wrapCircularDistance(slotIndex, p, deckLength), deckLength).y);
+  const rotate = useTransform(progress, (p) => evalEffectCardPose(wrapCircularDistance(slotIndex, p, deckLength), deckLength).rotate);
+  const scale = useTransform(progress, (p) => evalEffectCardPose(wrapCircularDistance(slotIndex, p, deckLength), deckLength).scale);
+  const opacity = useTransform(progress, (p) => evalEffectCardPose(wrapCircularDistance(slotIndex, p, deckLength), deckLength).opacity);
+  const zIndex = useTransform(progress, (p) => evalEffectCardPose(wrapCircularDistance(slotIndex, p, deckLength), deckLength).zIndex);
+  const dimOpacity = useTransform(progress, (p) => evalEffectCardPose(wrapCircularDistance(slotIndex, p, deckLength), deckLength).dimOpacity);
+
+  const isVisibleRest = Math.abs(restRel) <= 2;
+
+  return (
+    <motion.div
+      style={{
+        x,
+        y,
+        rotate,
+        scale,
+        opacity,
+        zIndex,
+        pointerEvents: isVisibleRest ? "auto" : "none",
+        touchAction: "pan-y",
+        transformOrigin: "50% 82%",
+      }}
+      onClickCapture={(e) => {
+        if (didDragRef.current) {
+          e.stopPropagation();
+          e.preventDefault();
+          return;
+        }
+        if (!isTopRest) {
+          e.stopPropagation();
+          e.preventDefault();
+          onTapPeeking(restRel);
+        }
+      }}
+      className={`absolute inset-x-0 top-0 rounded-[26px] bg-[#FAF7F2] dark:bg-[#1E1C1A] border p-1.5 pb-2 will-change-transform overflow-hidden ${
+        isTopRest
+          ? "border-black/[0.09] dark:border-white/12 shadow-[0_14px_32px_rgba(24,22,21,0.16)] cursor-grab active:cursor-grabbing"
+          : "border-black/[0.08] dark:border-white/10 shadow-[0_8px_20px_rgba(24,22,21,0.10)] cursor-pointer"
+      }`}
+    >
+      {renderPopupCardBody(item, true)}
+      {/* Skiper48-style depth shadow veil driven smoothly by continuous deck progress */}
+      <motion.div
+        aria-hidden="true"
+        style={{ opacity: dimOpacity }}
+        className="pointer-events-none absolute inset-0 rounded-[26px] bg-[#181615]"
+      />
+    </motion.div>
+  );
+}
+
 export function PopupRadarDeck({
   items,
   mode = POPUP_RADAR_LAYOUT_MODE,
 }: PopupRadarDeckProps) {
   const count = items.length;
-  const [activeIndex, setActiveIndex] = useState(0);
-  const safeIndex = count > 0 ? activeIndex % count : 0;
+  // Duplicate 2-card decks into 4 slots internally so infinite looping works smoothly in both directions without wrap flips
+  const deckSlots = React.useMemo(() => {
+    if (count === 2) {
+      return [
+        { key: `${items[0].id}-a`, item: items[0] },
+        { key: `${items[1].id}-a`, item: items[1] },
+        { key: `${items[0].id}-b`, item: items[0] },
+        { key: `${items[1].id}-b`, item: items[1] },
+      ];
+    }
+    return items.map((item) => ({ key: item.id, item }));
+  }, [count, items]);
+  const deckLen = deckSlots.length;
 
+  // Unbounded integer step counter so progress runs smoothly across ..., -1, 0, 1, 2, ...
+  const [step, setStep] = useState(0);
+  const stepRef = useRef(0);
+  const safeIndex = count > 0 ? ((step % count) + count) % count : 0;
+
+  const progress = useMotionValue(0);
+  const animControlsRef = useRef<ReturnType<typeof animate> | null>(null);
   const stageWrapRef = useRef<HTMLDivElement | null>(null);
-  const cardRefs = useRef<Array<HTMLDivElement | null>>([]);
   const didDragRef = useRef(false);
-  const isAnimatingOutRef = useRef(false);
   const isInteractingRef = useRef(false);
   const isInViewRef = useRef(true);
   const pauseAutoUntilRef = useRef<number>(0);
-  const autoDirRef = useRef<-1 | 1>(-1);
   const dragCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     return () => {
+      animControlsRef.current?.stop();
       dragCleanupRef.current?.();
     };
   }, []);
 
-  const getTopTiltDeg = (idx: number) => {
-    const pattern = [-1.8, 1.9, -1.5, 1.6];
-    return pattern[idx % pattern.length];
-  };
-
-  const getRestTransform = (slot: number, itemIdx: number) => {
-    if (slot === 0) {
-      const deg = getTopTiltDeg(itemIdx);
-      return `translate3d(0px, 0px, 0) rotate(${deg}deg) scale(1)`;
-    }
-    if (slot === 1) return "translate3d(22px, 7px, 0) rotate(5.2deg) scale(0.945)";
-    return "translate3d(-20px, 11px, 0) rotate(-5.4deg) scale(0.90)";
-  };
-
-  const cycleBy = useCallback(
-    (delta: number, flingDir?: -1 | 1, isAuto = false) => {
-      if (count <= 1 || isAnimatingOutRef.current) return;
+  const goToStep = useCallback(
+    (nextStep: number, isAuto = false) => {
+      if (count <= 1) return;
       if (!isAuto) {
-        pauseAutoUntilRef.current = Date.now() + 6000;
+        pauseAutoUntilRef.current = Date.now() + 6500;
+        if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+          navigator.vibrate(6);
+        }
       }
-      const topEl = cardRefs.current[0];
+      stepRef.current = nextStep;
+      setStep(nextStep);
+      animControlsRef.current?.stop();
 
-      if (prefersReducedMotion() || !topEl || !flingDir) {
-        setActiveIndex((prev) => (prev + delta + count) % count);
+      if (prefersReducedMotion()) {
+        progress.set(nextStep);
         return;
       }
-
-      isAnimatingOutRef.current = true;
-      if (!isAuto && typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-        navigator.vibrate(6);
-      }
-
-      topEl.style.transition =
-        "transform 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 230ms ease-out";
-      topEl.style.transform = `translate3d(${flingDir * 330}px, 16px, 0) rotate(${flingDir * 15}deg) scale(0.95)`;
-      topEl.style.opacity = "0";
-
-      const secondEl = cardRefs.current[1];
-      const nextIdx = (safeIndex + delta + count) % count;
-      if (secondEl) {
-        secondEl.style.transition = "transform 260ms cubic-bezier(0.22, 1, 0.36, 1)";
-        secondEl.style.transform = getRestTransform(0, nextIdx);
-      }
-
-      window.setTimeout(() => {
-        if (topEl) {
-          topEl.style.transition = "";
-          topEl.style.transform = "";
-          topEl.style.opacity = "";
-        }
-        if (secondEl) {
-          secondEl.style.transition = "";
-          secondEl.style.transform = "";
-        }
-        setActiveIndex((prev) => (prev + delta + count) % count);
-        isAnimatingOutRef.current = false;
-      }, 265);
+      animControlsRef.current = animate(progress, nextStep, PROGRESS_SPRING);
     },
-    [count, safeIndex]
+    [count, progress]
   );
 
-  // Track visibility & automatically flick the top flyer every ~3.8s (pauses during touch/hover)
-  useEffect(() => {
-    if (mode !== "fanned_stack" || count <= 1 || prefersReducedMotion()) return;
+  const cycleBy = useCallback(
+    (delta: number, isAuto = false) => {
+      goToStep(stepRef.current + delta, isAuto);
+    },
+    [goToStep]
+  );
 
-    const el = stageWrapRef.current;
-    let io: IntersectionObserver | null = null;
-    if (el && typeof IntersectionObserver !== "undefined") {
-      io = new IntersectionObserver(
-        (entries) => {
-          if (entries[0]) isInViewRef.current = entries[0].isIntersecting;
-        },
-        { threshold: 0.35 }
-      );
-      io.observe(el);
-    }
-
-    const timer = window.setInterval(() => {
-      if (
-        !isInViewRef.current ||
-        isInteractingRef.current ||
-        isAnimatingOutRef.current ||
-        Date.now() < pauseAutoUntilRef.current
-      ) {
-        return;
-      }
-      const dir = autoDirRef.current;
-      autoDirRef.current = dir === -1 ? 1 : -1;
-      cycleBy(1, dir, true);
-    }, 3800);
-
-    return () => {
-      window.clearInterval(timer);
-      io?.disconnect();
-    };
-  }, [count, cycleBy, mode]);
-
-  const handleTopPointerDown = useCallback(
+  // Live 1:1 continuous pointer drag driving `progress` directly (fully reversible mid-swipe!)
+  const handleStagePointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
-      if (count <= 1 || isAnimatingOutRef.current) return;
+      if (count <= 1) return;
       if (e.pointerType === "mouse" && e.button !== 0) return;
 
-      // Never intercept interactive bookmark/admin buttons inside the card
       const target = e.target as HTMLElement | null;
       if (target?.closest("button, a")) return;
 
       dragCleanupRef.current?.();
+      animControlsRef.current?.stop();
       isInteractingRef.current = true;
-      pauseAutoUntilRef.current = Date.now() + 6000;
+      pauseAutoUntilRef.current = Date.now() + 6500;
 
       const startX = e.clientX;
       const startY = e.clientY;
+      const startProgress = progress.get();
+      const baseStep = Math.round(startProgress);
       let lastX = startX;
       let prevX = startX;
       let lastT = performance.now();
       let prevT = lastT;
       let latestDx = 0;
-      let latestDy = 0;
       let lock: "x" | "y" | null = null;
-      let rafId: number | null = null;
 
-      const topEl = cardRefs.current[0];
-      const secondEl = cardRefs.current[1];
-      const thirdEl = cardRefs.current[2];
-      const baseTopTilt = getTopTiltDeg(safeIndex);
-
-      const applyDragFrame = () => {
-        rafId = null;
-        if (lock !== "x" || !topEl) return;
-
-        const rot = Math.max(-16, Math.min(16, baseTopTilt + latestDx * 0.045));
-        topEl.style.transition = "none";
-        topEl.style.transform = `translate3d(${latestDx.toFixed(1)}px, ${(latestDy * 0.08).toFixed(1)}px, 0) rotate(${rot.toFixed(2)}deg)`;
-
-        const progress = Math.min(1, Math.abs(latestDx) / 150);
-        if (secondEl) {
-          const tx = (22 * (1 - progress)).toFixed(1);
-          const ty = (7 * (1 - progress)).toFixed(1);
-          const r = (5.2 * (1 - progress)).toFixed(2);
-          const s = (0.945 + progress * 0.055).toFixed(3);
-          secondEl.style.transition = "none";
-          secondEl.style.transform = `translate3d(${tx}px, ${ty}px, 0) rotate(${r}deg) scale(${s})`;
-        }
-        if (thirdEl) {
-          const tx = (-20 + progress * 8).toFixed(1);
-          const ty = (11 - progress * 3).toFixed(1);
-          const s = (0.9 + progress * 0.03).toFixed(3);
-          thirdEl.style.transition = "none";
-          thirdEl.style.transform = `translate3d(${tx}px, ${ty}px, 0) rotate(-4.4deg) scale(${s})`;
-        }
-      };
-
-      const resetCards = () => {
-        if (topEl) {
-          topEl.style.transition = "transform 240ms cubic-bezier(0.22, 1, 0.36, 1)";
-          topEl.style.transform = getRestTransform(0, safeIndex);
-        }
-        if (secondEl) {
-          secondEl.style.transition = "transform 240ms cubic-bezier(0.22, 1, 0.36, 1)";
-          secondEl.style.transform = getRestTransform(1, (safeIndex + 1) % count);
-        }
-        if (thirdEl) {
-          thirdEl.style.transition = "transform 240ms cubic-bezier(0.22, 1, 0.36, 1)";
-          thirdEl.style.transform = getRestTransform(2, (safeIndex + 2) % count);
-        }
-      };
+      const DRAG_UNIT_PX = 225;
 
       const onMove = (ev: PointerEvent) => {
         const dx = ev.clientX - startX;
         const dy = ev.clientY - startY;
 
         if (!lock) {
-          if (Math.hypot(dx, dy) < 8) return;
+          if (Math.hypot(dx, dy) < 7) return;
           if (Math.abs(dy) > Math.abs(dx) * 1.15) {
             lock = "y";
             cleanup();
@@ -633,18 +730,13 @@ export function PopupRadarDeck({
         lastX = ev.clientX;
         lastT = now;
         latestDx = dx;
-        latestDy = dy;
 
-        if (rafId === null) {
-          rafId = requestAnimationFrame(applyDragFrame);
-        }
+        // Clamp single drag gesture to ±1.05 cards so fast drags never overshoot two cards at once
+        const deltaP = Math.max(-1.05, Math.min(1.05, -dx / DRAG_UNIT_PX));
+        progress.set(startProgress + deltaP);
       };
 
       const cleanup = () => {
-        if (rafId !== null) {
-          cancelAnimationFrame(rafId);
-          rafId = null;
-        }
         isInteractingRef.current = false;
         window.removeEventListener("pointermove", onMove);
         window.removeEventListener("pointerup", onEnd);
@@ -654,31 +746,30 @@ export function PopupRadarDeck({
 
       const onCancel = () => {
         cleanup();
-        resetCards();
+        animControlsRef.current = animate(progress, baseStep, PROGRESS_SPRING);
         window.setTimeout(() => {
           didDragRef.current = false;
-        }, 0);
+        }, 50);
       };
 
       const onEnd = () => {
         cleanup();
         window.setTimeout(() => {
           didDragRef.current = false;
-        }, 0);
+        }, 50);
 
         if (lock !== "x") return;
 
         const dt = Math.max(1, lastT - prevT);
-        const vx = (lastX - prevX) / dt;
-        const shouldCommit =
-          Math.abs(latestDx) > 58 || (Math.abs(latestDx) > 18 && Math.abs(vx) > 0.34);
+        const vx = (lastX - prevX) / dt; // px/ms
+        const committed =
+          Math.abs(latestDx) > 46 || (Math.abs(latestDx) > 16 && Math.abs(vx) > 0.32);
 
-        if (shouldCommit) {
-          const flingDir: -1 | 1 = latestDx < 0 ? -1 : 1;
+        if (committed) {
           const delta = latestDx < 0 ? 1 : -1;
-          cycleBy(delta, flingDir);
+          goToStep(baseStep + delta);
         } else {
-          resetCards();
+          animControlsRef.current = animate(progress, baseStep, PROGRESS_SPRING);
         }
       };
 
@@ -687,8 +778,41 @@ export function PopupRadarDeck({
       window.addEventListener("pointercancel", onCancel, { passive: true });
       dragCleanupRef.current = cleanup;
     },
-    [count, cycleBy, safeIndex]
+    [count, goToStep, progress]
   );
+
+  // Gently auto-shuffle forward every 4.2s when visible & idle
+  useEffect(() => {
+    if (mode !== "fanned_stack" || count <= 1 || prefersReducedMotion()) return;
+
+    const el = stageWrapRef.current;
+    let io: IntersectionObserver | null = null;
+    if (el && typeof IntersectionObserver !== "undefined") {
+      io = new IntersectionObserver(
+        (entries) => {
+          if (entries[0]) isInViewRef.current = entries[0].isIntersecting;
+        },
+        { threshold: 0.35 }
+      );
+      io.observe(el);
+    }
+
+    const timer = window.setInterval(() => {
+      if (
+        !isInViewRef.current ||
+        isInteractingRef.current ||
+        Date.now() < pauseAutoUntilRef.current
+      ) {
+        return;
+      }
+      cycleBy(1, true);
+    }, 4200);
+
+    return () => {
+      window.clearInterval(timer);
+      io?.disconnect();
+    };
+  }, [count, cycleBy, mode]);
 
   if (count === 0) return null;
 
@@ -710,13 +834,7 @@ export function PopupRadarDeck({
     );
   }
 
-  /* ── PRIMARY MODE: Tactile Fanned Editorial Flyer Stack ── */
-  const visibleSlots = Math.min(3, count);
-  const stackedSlots = Array.from({ length: visibleSlots }, (_, slot) => {
-    const itemIdx = (safeIndex + slot) % count;
-    return { slot, itemIdx, item: items[itemIdx] };
-  });
-
+  /* ── PRIMARY MODE: Continuous Skiper48 EffectCards Stack (reversible both ways!) ── */
   return (
     <div
       ref={stageWrapRef}
@@ -729,61 +847,37 @@ export function PopupRadarDeck({
       className="w-full pt-2 pb-2 overflow-x-clip"
     >
       <div
-        className="relative mx-auto w-full max-w-[308px] sm:max-w-[330px] h-[300px] sm:h-[314px] select-none"
-        style={{ touchAction: "pan-y" }}
+        onPointerDown={handleStagePointerDown}
+        className="relative mx-auto w-full max-w-[238px] sm:max-w-[252px] h-[292px] sm:h-[306px] select-none"
+        style={{ perspective: "1100px", touchAction: "pan-y" }}
       >
-        {/* Render back-to-front so slot 0 sits cleanly on top */}
-        {[...stackedSlots].reverse().map(({ slot, itemIdx, item }) => {
-          const isTop = slot === 0;
-          const zClass = slot === 0 ? "z-30" : slot === 1 ? "z-20" : "z-10";
-          const restTransform = getRestTransform(slot, itemIdx);
-
+        {deckSlots.map((slot, idx) => {
+          const restRel = wrapCircularDistance(idx, step, deckLen);
           return (
-            <div
-              key={`fanned-popup-${item.id}`}
-              ref={(el) => {
-                cardRefs.current[slot] = el;
+            <EffectDeckCard
+              key={`deck-card-${slot.key}`}
+              item={slot.item}
+              slotIndex={idx}
+              deckLength={deckLen}
+              progress={progress}
+              isTopRest={restRel === 0}
+              restRel={restRel}
+              didDragRef={didDragRef}
+              onTapPeeking={(rel) => {
+                const delta = rel > 0 ? 1 : -1;
+                cycleBy(delta);
               }}
-              onPointerDown={isTop ? handleTopPointerDown : undefined}
-              onClickCapture={
-                isTop
-                  ? (e) => {
-                      if (didDragRef.current) {
-                        e.stopPropagation();
-                        e.preventDefault();
-                      }
-                    }
-                  : (e) => {
-                      // Tapping a peeking flyer brings it cleanly to the front without opening details
-                      e.stopPropagation();
-                      e.preventDefault();
-                      pauseAutoUntilRef.current = Date.now() + 6000;
-                      setActiveIndex(itemIdx);
-                    }
-              }
-              style={{
-                transform: restTransform,
-                opacity: slot === 0 ? 1 : slot === 1 ? 0.94 : 0.84,
-                touchAction: "pan-y",
-              }}
-              className={`absolute inset-x-3 top-0 ${zClass} rounded-[26px] bg-[#FAF7F2] dark:bg-[#1E1C1A] border border-black/[0.08] dark:border-white/10 p-2 pb-2.5 will-change-transform transition-[transform,opacity,box-shadow] duration-200 ${
-                isTop
-                  ? "shadow-[0_12px_28px_rgba(24,22,21,0.13)] cursor-grab active:cursor-grabbing"
-                  : "shadow-[0_6px_16px_rgba(24,22,21,0.08)] cursor-pointer"
-              }`}
-            >
-              {renderPopupCardBody(item, true)}
-            </div>
+            />
           );
         })}
       </div>
 
       {/* Compact Flyer Counter & Tap Controls */}
       {count > 1 && (
-        <div className="mt-2.5 flex items-center justify-center gap-3">
+        <div className="mt-3 flex items-center justify-center gap-3">
           <button
             type="button"
-            onClick={() => cycleBy(-1, 1)}
+            onClick={() => cycleBy(-1)}
             aria-label="Previous pop-up flyer"
             className="grid h-7 w-7 place-items-center rounded-full border border-black/[0.08] dark:border-white/10 bg-[#FAF7F2] dark:bg-[#1E1C1A] text-[#181615] dark:text-zinc-200 hover:border-[#E84A27]/50 hover:text-[#E84A27] transition-colors active:scale-95 cursor-pointer"
           >
@@ -797,7 +891,10 @@ export function PopupRadarDeck({
                 <button
                   key={`dot-${it.id}`}
                   type="button"
-                  onClick={() => setActiveIndex(i)}
+                  onClick={() => {
+                    const diff = wrapCircularDistance(i, safeIndex, count);
+                    if (diff !== 0) cycleBy(diff);
+                  }}
                   aria-label={`Show pop-up ${i + 1} of ${count}`}
                   className={`h-1.5 rounded-full transition-all cursor-pointer ${
                     active
@@ -814,7 +911,7 @@ export function PopupRadarDeck({
 
           <button
             type="button"
-            onClick={() => cycleBy(1, -1)}
+            onClick={() => cycleBy(1)}
             aria-label="Next pop-up flyer"
             className="grid h-7 w-7 place-items-center rounded-full border border-black/[0.08] dark:border-white/10 bg-[#FAF7F2] dark:bg-[#1E1C1A] text-[#181615] dark:text-zinc-200 hover:border-[#E84A27]/50 hover:text-[#E84A27] transition-colors active:scale-95 cursor-pointer"
           >

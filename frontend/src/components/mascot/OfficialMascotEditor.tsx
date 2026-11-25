@@ -8,6 +8,10 @@ import {
   type MascotLayerTransform,
 } from "@/components/studio/SmakrMascotRig";
 import { OFFICIAL_SMAKR_MASCOT_CONFIG } from "@/lib/officialSmakrMascot";
+import {
+  SAVED_MASCOT_VARIATIONS,
+  type SavedMascotVariation,
+} from "@/lib/mascotVariations";
 
 interface OfficialMascotEditorProps {
   showToast: (msg: string) => void;
@@ -106,6 +110,7 @@ export function OfficialMascotEditor({ showToast }: OfficialMascotEditorProps) {
   } | null>(null);
 
   const [preset, setPreset] = useState<OutfitPresetId>("navy-sherpa");
+  const [selectedVariation, setSelectedVariation] = useState<SavedMascotVariation | null>(null);
   const [bodyPose, setBodyPose] = useState<"jacket-2" | "jacket-pockets">("jacket-2");
   const [jacketStyle, setJacketStyle] = useState<MascotJacketStyle>("navy-sherpa");
   const [jacketColor, setJacketColor] = useState("#1E2738");
@@ -133,6 +138,7 @@ export function OfficialMascotEditor({ showToast }: OfficialMascotEditorProps) {
   };
 
   const applyOutfitPreset = (nextPreset: OutfitPresetId) => {
+    setSelectedVariation(null);
     setPreset(nextPreset);
     if (nextPreset === "navy-sherpa") {
       setBodyPose("jacket-2");
@@ -158,7 +164,7 @@ export function OfficialMascotEditor({ showToast }: OfficialMascotEditorProps) {
   };
 
   const handleStagePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (jacketStyle !== "navy-sherpa") return;
+    if (selectedVariation || jacketStyle !== "navy-sherpa") return;
     e.currentTarget.setPointerCapture(e.pointerId);
     const current = selectedLayer === "sherpa" ? sherpaTransform : detailsTransform;
     dragRef.current = {
@@ -189,13 +195,26 @@ export function OfficialMascotEditor({ showToast }: OfficialMascotEditorProps) {
     dragRef.current = null;
   };
 
+  const getActiveSvgMarkup = async (): Promise<string> => {
+    if (selectedVariation) {
+      const res = await fetch(selectedVariation.svgUrl);
+      if (!res.ok) throw new Error("Could not load saved SVG file");
+      return await res.text();
+    }
+    if (!svgRef.current) throw new Error("Rig SVG unavailable");
+    return buildCleanSvgMarkup(svgRef.current);
+  };
+
   const handleDownloadPng = async () => {
-    if (!svgRef.current || exportingPng) return;
+    if (exportingPng || (!selectedVariation && !svgRef.current)) return;
     setExportingPng(true);
     try {
-      const markup = buildCleanSvgMarkup(svgRef.current);
-      await downloadSvgAsPng(markup, "smakr-official-mascot-1080.png");
-      showToast("Downloaded smakr-official-mascot-1080.png (1080×1080)");
+      const markup = await getActiveSvgMarkup();
+      const pngName = selectedVariation
+        ? `${selectedVariation.filename.replace(/\.svg$/i, "")}-1080.png`
+        : "smakr-official-mascot-1080.png";
+      await downloadSvgAsPng(markup, pngName);
+      showToast(`Downloaded ${pngName} (1080×1080)`);
     } catch {
       showToast("Could not export PNG. Please try again.");
     } finally {
@@ -204,12 +223,16 @@ export function OfficialMascotEditor({ showToast }: OfficialMascotEditorProps) {
   };
 
   const handleCopySvg = async () => {
-    if (!svgRef.current) return;
+    if (!selectedVariation && !svgRef.current) return;
     try {
-      const markup = buildCleanSvgMarkup(svgRef.current);
+      const markup = await getActiveSvgMarkup();
       await navigator.clipboard.writeText(markup);
       setCopiedSvg(true);
-      showToast("Official SVG markup copied to clipboard");
+      showToast(
+        selectedVariation
+          ? `Copied ${selectedVariation.filename} SVG markup`
+          : "Official SVG markup copied to clipboard"
+      );
       setTimeout(() => setCopiedSvg(false), 1800);
     } catch {
       showToast("Clipboard copy failed. Please allow clipboard access.");
@@ -217,10 +240,10 @@ export function OfficialMascotEditor({ showToast }: OfficialMascotEditorProps) {
   };
 
   const handleSyncToApp = async () => {
-    if (!svgRef.current || syncingSvg) return;
+    if (syncingSvg || (!selectedVariation && !svgRef.current)) return;
     setSyncingSvg(true);
     try {
-      const markup = buildCleanSvgMarkup(svgRef.current);
+      const markup = await getActiveSvgMarkup();
       const res = await fetch("/api/admin/save-mascot-svg", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -259,17 +282,23 @@ export function OfficialMascotEditor({ showToast }: OfficialMascotEditorProps) {
           <div className="flex items-center justify-between gap-2 mb-3">
             <div>
               <h2 className="text-sm font-bold text-zinc-900 tracking-tight">
-                Official Pointing Rig Stage
+                {selectedVariation ? selectedVariation.label : "Official Pointing Rig Stage"}
               </h2>
               <p className="text-[11px] text-zinc-500">
-                {jacketStyle === "navy-sherpa"
-                  ? `Drag on stage to offset ${selectedLayer === "sherpa" ? "SherpaCollar" : "WorkJacketDetails"}`
-                  : "Classic Paprika Speckled Blazer active"}
+                {selectedVariation
+                  ? `${selectedVariation.outfit} · ${selectedVariation.filename}`
+                  : jacketStyle === "navy-sherpa"
+                    ? `Drag on stage to offset ${selectedLayer === "sherpa" ? "SherpaCollar" : "WorkJacketDetails"}`
+                    : "Classic Paprika Speckled Blazer active"}
               </p>
             </div>
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#1E2738] text-[#FAF7F2] text-[10px] font-mono uppercase tracking-wider">
               <Sparkles className="w-3 h-3 text-[#e84a27]" />
-              {jacketStyle === "navy-sherpa" ? "Winter Sherpa" : "Classic Blazer"}
+              {selectedVariation
+                ? selectedVariation.pose
+                : jacketStyle === "navy-sherpa"
+                  ? "Winter Sherpa"
+                  : "Classic Blazer"}
             </span>
           </div>
 
@@ -279,33 +308,43 @@ export function OfficialMascotEditor({ showToast }: OfficialMascotEditorProps) {
             onPointerUp={handleStagePointerUp}
             onPointerCancel={handleStagePointerUp}
             className={`relative rounded-2xl border border-zinc-200/80 overflow-hidden flex items-center justify-center h-[410px] sm:h-[460px] select-none transition-colors ${
-              jacketStyle === "navy-sherpa" ? "cursor-grab active:cursor-grabbing touch-none" : ""
+              !selectedVariation && jacketStyle === "navy-sherpa"
+                ? "cursor-grab active:cursor-grabbing touch-none"
+                : ""
             }`}
             style={stageStyle}
           >
-            <SmakrMascotRig
-              svgRef={svgRef}
-              frameMode="bust-only"
-              bodyPose={bodyPose}
-              head={OFFICIAL_SMAKR_MASCOT_CONFIG.peepsHead || "afro"}
-              face="smile-big"
-              accessories={accessories}
-              facialHair="none"
-              skinColor={OFFICIAL_SMAKR_MASCOT_CONFIG.skinColor}
-              clothingColor={jacketColor}
-              innerClothingColor={innerTeeColor}
-              sherpaColor={sherpaColor}
-              glassesColor={glassesColor}
-              jacketStyle={jacketStyle}
-              sherpaTransform={sherpaTransform}
-              detailsTransform={detailsTransform}
-              headContrastColor={OFFICIAL_SMAKR_MASCOT_CONFIG.hairColor}
-              hatColor={OFFICIAL_SMAKR_MASCOT_CONFIG.hatColor}
-              size={370}
-              stickerOutline
-            />
+            {selectedVariation ? (
+              <img
+                src={selectedVariation.svgUrl}
+                alt={selectedVariation.label}
+                className="w-[370px] h-[370px] object-contain pointer-events-none select-none"
+              />
+            ) : (
+              <SmakrMascotRig
+                svgRef={svgRef}
+                frameMode="bust-only"
+                bodyPose={bodyPose}
+                head={OFFICIAL_SMAKR_MASCOT_CONFIG.peepsHead || "afro"}
+                face="smile-big"
+                accessories={accessories}
+                facialHair="none"
+                skinColor={OFFICIAL_SMAKR_MASCOT_CONFIG.skinColor}
+                clothingColor={jacketColor}
+                innerClothingColor={innerTeeColor}
+                sherpaColor={sherpaColor}
+                glassesColor={glassesColor}
+                jacketStyle={jacketStyle}
+                sherpaTransform={sherpaTransform}
+                detailsTransform={detailsTransform}
+                headContrastColor={OFFICIAL_SMAKR_MASCOT_CONFIG.hairColor}
+                hatColor={OFFICIAL_SMAKR_MASCOT_CONFIG.hatColor}
+                size={370}
+                stickerOutline
+              />
+            )}
 
-            {jacketStyle === "navy-sherpa" && (
+            {!selectedVariation && jacketStyle === "navy-sherpa" && (
               <div className="pointer-events-none absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/90 border border-zinc-200 shadow-xs text-[10px] font-semibold text-zinc-700">
                 <Move className="w-3 h-3 text-[#e84a27]" />
                 <span>
@@ -388,6 +427,64 @@ export function OfficialMascotEditor({ showToast }: OfficialMascotEditorProps) {
 
       {/* ================= RIGHT: Wardrobe, Colors & Layers ================= */}
       <div className="lg:col-span-6 space-y-4">
+        {/* 0. Saved Standalone Mascot Variations */}
+        <section className="rounded-3xl border border-zinc-200 bg-white p-4 shadow-xs space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+                Saved Mascot Variations ({SAVED_MASCOT_VARIATIONS.length})
+              </h3>
+              <p className="text-[11px] text-zinc-500">
+                All approved standalone SVGs in <span className="font-mono">public/mascot/</span>
+              </p>
+            </div>
+            {selectedVariation && (
+              <button
+                type="button"
+                onClick={() => setSelectedVariation(null)}
+                className="px-2.5 py-1 rounded-full text-[11px] font-semibold border border-zinc-200 text-zinc-600 hover:bg-zinc-50 cursor-pointer"
+              >
+                Back to Live Rig
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+            {SAVED_MASCOT_VARIATIONS.map((variation) => {
+              const active = selectedVariation?.id === variation.id;
+              return (
+                <button
+                  key={variation.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedVariation(variation);
+                    showToast(`Loaded ${variation.label}`);
+                  }}
+                  className={`group rounded-2xl border p-2 text-left transition-all cursor-pointer ${
+                    active
+                      ? "border-[#e84a27] bg-orange-50/60 ring-2 ring-[#e84a27]/15"
+                      : "border-zinc-200 bg-white hover:bg-zinc-50"
+                  }`}
+                >
+                  <div className="rounded-xl bg-[#F7F2E8] border border-zinc-200/70 h-24 flex items-center justify-center overflow-hidden mb-2 p-1.5">
+                    <img
+                      src={variation.svgUrl}
+                      alt={variation.label}
+                      className="h-full w-full object-contain group-hover:scale-[1.03] transition-transform"
+                    />
+                  </div>
+                  <span className="block text-[11px] font-bold text-zinc-900 leading-tight truncate">
+                    {variation.shortLabel}
+                  </span>
+                  <span className="block text-[10px] text-zinc-500 truncate mt-0.5">
+                    {variation.pose}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
         {/* 1. Outfit Presets */}
         <section className="rounded-3xl border border-zinc-200 bg-white p-4 shadow-xs space-y-3">
           <div className="flex items-center justify-between">

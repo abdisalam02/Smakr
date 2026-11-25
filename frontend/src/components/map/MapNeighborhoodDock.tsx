@@ -1549,14 +1549,26 @@ export const MapNeighborhoodDock = React.memo(function MapNeighborhoodDock({
   }, [cardVisible]);
 
   const getStageMetrics = useCallback(() => {
-    const stageW = stageWidthRef.current || 330;
-    const sideW = Math.min(260, Math.round(stageW * 0.8));
+    const stageW = stageWidthRef.current || 302;
+    const sideW = Math.min(256, Math.round(stageW * 0.84));
     const compactScale = sideW / stageW;
+    const sideScale = 0.86;
+    const sideRenderedW = stageW * sideScale;
     const compactUnscaledH = 118 / compactScale;
-    const gap = 12;
+    const gap = 10;
     const compactStep = sideW + gap;
-    const expandedStep = stageW / 2 + gap + sideW / 2;
-    return { stageW, sideW, compactScale, compactUnscaledH, gap, compactStep, expandedStep };
+    // Use actual scaled side-card width so left/right neighbors peek cleanly inside mobile viewports
+    const expandedStep = stageW / 2 + gap + sideRenderedW / 2;
+    return {
+      stageW,
+      sideW,
+      compactScale,
+      sideScale,
+      compactUnscaledH,
+      gap,
+      compactStep,
+      expandedStep,
+    };
   }, []);
 
   const applyStageFrame = useCallback(
@@ -1564,10 +1576,12 @@ export const MapNeighborhoodDock = React.memo(function MapNeighborhoodDock({
       coverStateRef.current = { u, openProgress, dragY };
       const {
         compactScale,
+        sideScale,
         compactStep,
         expandedStep,
       } = getStageMetrics();
       const slotStep = compactStep + (expandedStep - compactStep) * openProgress;
+      const baseSideScale = compactScale + (sideScale - compactScale) * openProgress;
       const slots = spotlightSlotsRef.current;
       const len = displayedVenues.length;
 
@@ -1590,15 +1604,15 @@ export const MapNeighborhoodDock = React.memo(function MapNeighborhoodDock({
         const dist = Math.abs(pos);
         const focus = Math.max(0, 1 - dist) * openProgress;
         // Pure GPU transform scaling from bottom-center (eliminates per-frame clip-path paint thrash)
-        const scale = (compactScale * 0.88) + (1 - compactScale * 0.88) * focus;
+        const scale = baseSideScale + (1 - baseSideScale) * focus;
         const x =
           dist <= 1
             ? pos * slotStep
             : Math.sign(pos) * (slotStep + (dist - 1) * compactStep);
-        const y = (effectiveSlot === 0 && dragY > 0 ? dragY * 0.75 : 0) + (1 - focus) * 14;
+        const y = (effectiveSlot === 0 && dragY > 0 ? dragY * 0.75 : 0) + (1 - focus) * 8;
         const dragFade =
           effectiveSlot === 0 && dragY > 0 ? Math.max(0.4, 1 - dragY / 420) : 1;
-        const cardOpacity = (0.72 + 0.28 * focus) * dragFade;
+        const cardOpacity = (0.86 + 0.14 * focus) * dragFade;
 
         const { el, closeEl, titleEl, storyEl, actionsEl, imgEl, arrowEl } = nodes;
         el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) scale(${scale.toFixed(4)})`;
@@ -2231,7 +2245,7 @@ export const MapNeighborhoodDock = React.memo(function MapNeighborhoodDock({
             carousel on screen: the center card grows up while side neighbors
             stay compact on the left/right edges, sizing up/down as you swipe. */}
         {cardVisible && (
-          <div className="absolute inset-x-0 bottom-2 z-40 flex justify-center pointer-events-none">
+          <div className="absolute inset-x-0 bottom-2 z-40 flex justify-center pointer-events-none overflow-x-clip">
             <div className="relative pointer-events-none">
               {isWeeklyPickSpot && (
                 <div
@@ -2287,7 +2301,7 @@ export const MapNeighborhoodDock = React.memo(function MapNeighborhoodDock({
                 }}
                 onPointerDown={handleSpotlightPointerDown}
                 style={{ touchAction: "none" }}
-                className="relative w-[calc(100vw-56px)] max-w-[336px] h-[246px] pointer-events-auto select-none"
+                className="relative w-[calc(100vw-88px)] max-w-[308px] h-[242px] pointer-events-auto select-none"
               >
                 {spotlightSlots.map(({ venue, slotIndex }) => {
                   const isActive = slotIndex === 0;
