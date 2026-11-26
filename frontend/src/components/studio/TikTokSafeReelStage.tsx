@@ -52,14 +52,14 @@ const RATIO_META: Record<
 
 export const TikTokSafeReelStage: React.FC<TikTokSafeReelStageProps> = ({
   videoSrc,
-  downloadFilename = "smakr-oslo-fried-chicken-reel.mp4",
+  downloadFilename = "smakr-oslo-fried-chicken-reel-v19.mp4",
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [speed, setSpeed] = useState<number>(1);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(22.9);
+  const [duration, setDuration] = useState(31.3);
   const [overlayMode, setOverlayMode] = useState<DeadzoneOverlayMode>("bounds");
   const [screenPreset, setScreenPreset] = useState<ScreenRatioPreset>("9:16");
   const [showPaidCtaLine, setShowPaidCtaLine] = useState(false);
@@ -156,7 +156,7 @@ export const TikTokSafeReelStage: React.FC<TikTokSafeReelStageProps> = ({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#e84a27] text-white text-[10px] font-extrabold uppercase tracking-wider">
-                22.9s · 60fps
+                {duration.toFixed(1)}s · 60fps · 1080×1920
               </span>
               <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
                 <ShieldCheck className="w-3.5 h-3.5" />

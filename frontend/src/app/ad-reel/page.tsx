@@ -2491,7 +2491,10 @@ export default function AdReelStagePage() {
           </nav>
         </main>
       ) : activeCampaignTab === "chicken_reel" ? (
-        <TikTokSafeReelStage videoSrc="/videos/oslo-fried-chicken-reel.mp4" />
+        <TikTokSafeReelStage
+          videoSrc="/videos/oslo-fried-chicken-reel.mp4?v=19"
+          downloadFilename="smakr-oslo-fried-chicken-reel-v19.mp4"
+        />
       ) : activeCampaignTab === "story_deck" ? (
         <div className="flex-1 w-full overflow-y-auto">
           <CarouselStoryDeck />
