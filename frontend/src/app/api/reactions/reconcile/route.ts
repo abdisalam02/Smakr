@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireAuthenticatedUser, checkIpRateLimit } from "@/app/api/_authHelpers";
 
 export const runtime = "nodejs";
 
@@ -27,6 +28,12 @@ function getAdminClient() {
  * the trigger itself for future writes.
  */
 export async function POST(req: NextRequest) {
+  const auth = await requireAuthenticatedUser();
+  if (!auth.ok) return auth.response;
+
+  const rate = checkIpRateLimit(req, "reactions-reconcile", 30, 60_000);
+  if (!rate.ok) return rate.response;
+
   const body = await req.json().catch(() => ({}));
   const postId = typeof body.postId === "string" ? body.postId.trim() : "";
 

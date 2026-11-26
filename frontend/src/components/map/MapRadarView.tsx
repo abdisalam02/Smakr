@@ -33,6 +33,27 @@ import {
  * (the card's perched mascot takes over) or a spot right next to it so it
  * never photobombs neighboring pins like King Falafel.
  */
+const escapeHtml = (str: unknown): string =>
+  String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+const sanitizeSafeUrl = (url: unknown): string => {
+  const s = String(url ?? "").trim();
+  if (!s) return "#";
+  if (s.startsWith("/")) return s;
+  try {
+    const parsed = new URL(s);
+    if (parsed.protocol === "https:" || parsed.protocol === "http:") return parsed.toString();
+  } catch {
+    return "#";
+  }
+  return "#";
+};
+
 function shouldSuppressMapMascot(
   selectedVenue: Venue | null | undefined,
   pick: { venue_id?: string | null; coords?: number[] },
@@ -2187,8 +2208,24 @@ export function MapRadarView({ isBooting = false }: { isBooting?: boolean } = {}
     const dishIconDisplay = getIconDisplay(dishIconKey);
     const dishChipIconHtml =
       dishIconDisplay.type === "webp"
-        ? `<img src="${dishIconDisplay.value}" width="16" height="16" style="object-fit:contain;display:inline-block;" alt="${dishIconDisplay.label}"/>`
+        ? `<img src="${escapeHtml(sanitizeSafeUrl(dishIconDisplay.value))}" width="16" height="16" style="object-fit:contain;display:inline-block;" alt="${escapeHtml(dishIconDisplay.label)}"/>`
         : `<span style="display:inline-flex;width:16px;height:16px;align-items:center;justify-content:center;">${dishIconDisplay.value}</span>`;
+
+    const safeVenueName = escapeHtml(selectedVenue.name);
+    const safeMainTag = escapeHtml(venueBadge.mainTag);
+    const safeFlag = venueBadge.flag ? escapeHtml(venueBadge.flag) : "";
+    const safePriceLevel = selectedVenue.price_level ? escapeHtml(selectedVenue.price_level) : "";
+    const safeDisplayImage = escapeHtml(sanitizeSafeUrl(displayImage));
+    const safeSignaturePrice = signaturePrice ? escapeHtml(signaturePrice) : "";
+    const safeRating = escapeHtml(String(ratingVal));
+    const safePopupLabel = isPopup ? escapeHtml(resolvePopupLifecycle(selectedVenue).badgeLabel) : "";
+    const safeStatusText = escapeHtml(openStatus.statusText);
+    const safeDistance = distanceText ? escapeHtml(distanceText) : "";
+    const safeSignatureDish = signatureDishName ? escapeHtml(signatureDishName) : "";
+    const safeWeeklyDish = weeklyPick.dish_name ? escapeHtml(weeklyPick.dish_name) : "";
+    const safeAddressText = escapeHtml(addressText);
+    const safeActionHref = escapeHtml(sanitizeSafeUrl(popupDormant && popupIgUrl ? popupIgUrl : googleMapsUrl));
+    const safeActionLabel = popupDormant && popupIgUrl ? (popupIgHandle ? `@${escapeHtml(popupIgHandle)}` : "@Instagram") : "Directions";
 
     popupNode.innerHTML = `
       <div style="
@@ -2247,18 +2284,18 @@ export function MapRadarView({ isBooting = false }: { isBooting?: boolean } = {}
               Pop-Up
             </span>
           ` : `
-            ${venueBadge.flag ? `
+            ${safeFlag ? `
               <span style="display:inline-flex;align-items:center;justify-content:center;font-size:14px;line-height:1;flex-shrink:0;">
-                ${venueBadge.flag}
+                ${safeFlag}
               </span>
             ` : ""}
             <span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:#e84a27;font-family:var(--font-comico, sans-serif);">
-              ${venueBadge.mainTag}
+              ${safeMainTag}
             </span>
           `}
-          ${selectedVenue.price_level ? `
+          ${safePriceLevel ? `
             <span style="font-size:10px;color:#78716c;font-weight:700;">
-              · ${selectedVenue.price_level}
+              · ${safePriceLevel}
             </span>
           ` : ""}
         </div>
@@ -2274,7 +2311,7 @@ export function MapRadarView({ isBooting = false }: { isBooting?: boolean } = {}
             background: #e4d9c8;
             border: 1px solid rgba(24, 22, 21, 0.08);
           ">
-            <img src="${displayImage}" alt="${selectedVenue.name}" style="width: 100%; height: 100%; object-fit: cover;" />
+            <img src="${safeDisplayImage}" alt="${safeVenueName}" style="width: 100%; height: 100%; object-fit: cover;" />
           </div>
 
           <div style="flex: 1; min-width: 0;">
@@ -2308,11 +2345,11 @@ export function MapRadarView({ isBooting = false }: { isBooting?: boolean } = {}
                 overflow: hidden;
                 text-overflow: ellipsis;
               ">
-                ${selectedVenue.name}
+                ${safeVenueName}
               </span>
               ${
-                signaturePrice
-                  ? `<span style="font-size: 11px; font-weight: 800; color: #e84a27; flex-shrink: 0; font-family: var(--font-comico, sans-serif);">${signaturePrice}</span>`
+                safeSignaturePrice
+                  ? `<span style="font-size: 11px; font-weight: 800; color: #e84a27; flex-shrink: 0; font-family: var(--font-comico, sans-serif);">${safeSignaturePrice}</span>`
                   : ""
               }
             </div>
@@ -2329,7 +2366,7 @@ export function MapRadarView({ isBooting = false }: { isBooting?: boolean } = {}
                 align-items: center;
                 gap: 2px;
               ">
-                <span style="color: #f59e0b;">★</span> ${ratingVal}
+                <span style="color: #f59e0b;">★</span> ${safeRating}
               </span>
               ${isPopup ? `
                 <span style="
@@ -2346,7 +2383,7 @@ export function MapRadarView({ isBooting = false }: { isBooting?: boolean } = {}
                   font-family: var(--font-comico, sans-serif);
                 ">
                   <span style="width: 5px; height: 5px; border-radius: 50%; background: #e84a27;"></span>
-                  ${resolvePopupLifecycle(selectedVenue).badgeLabel}
+                  ${safePopupLabel}
                 </span>
               ` : `
                 <span style="
@@ -2386,19 +2423,19 @@ export function MapRadarView({ isBooting = false }: { isBooting?: boolean } = {}
                       ? "#ef4444"
                       : "#a1a1aa"
                   };"></span>
-                  ${openStatus.statusText}
+                  ${safeStatusText}
                 </span>
               `}
-              ${distanceText ? `<span style="font-size: 9.5px; color: #059669; font-weight: 600;">· ${distanceText}</span>` : ""}
+              ${safeDistance ? `<span style="font-size: 9.5px; color: #059669; font-weight: 600;">· ${safeDistance}</span>` : ""}
             </div>
 
             <!-- Signature Dish Chip -->
             ${
-              signatureDishName
+              safeSignatureDish
                 ? `<div style="display:flex;align-items:center;gap:4px;margin-top:4px;padding:2px 6px;border-radius:8px;background:rgba(255,255,255,0.7);border:1px solid rgba(24,22,21,0.08);">
                     <span style="display:inline-flex;align-items:center;flex-shrink:0;">${dishChipIconHtml}</span>
                     <span style="font-size:10px;font-weight:700;color:#181615;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">
-                      ${signatureDishName}
+                      ${safeSignatureDish}
                     </span>
                   </div>`
                 : ""
@@ -2419,16 +2456,16 @@ export function MapRadarView({ isBooting = false }: { isBooting?: boolean } = {}
               text-overflow: ellipsis;
             ">
               ${
-                isWeeklyPickVenue && weeklyPick.dish_name
-                  ? `<span style="overflow:hidden;text-overflow:ellipsis;">✦ ${weeklyPick.dish_name} · ${addressText}</span>`
-                  : `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#E84A27" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg><span style="overflow:hidden;text-overflow:ellipsis;">${addressText}</span>`
+                isWeeklyPickVenue && safeWeeklyDish
+                  ? `<span style="overflow:hidden;text-overflow:ellipsis;">✦ ${safeWeeklyDish} · ${safeAddressText}</span>`
+                  : `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#E84A27" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg><span style="overflow:hidden;text-overflow:ellipsis;">${safeAddressText}</span>`
               }
             </div>
         </div>
 
         <!-- Floating Action Buttons (Outside card, matching exact card width) -->
         <div style="display: flex; gap: 7px; width: 100%; box-sizing: border-box;">
-          <a href="${popupDormant && popupIgUrl ? popupIgUrl : googleMapsUrl}" target="_blank" rel="noopener noreferrer" style="
+          <a href="${safeActionHref}" target="_blank" rel="noopener noreferrer" style="
             flex: 1;
             height: 36px;
             padding: 0 10px;
@@ -2450,7 +2487,7 @@ export function MapRadarView({ isBooting = false }: { isBooting?: boolean } = {}
             box-sizing: border-box;
             cursor: pointer;
           ">
-            <span>${popupDormant && popupIgUrl ? (popupIgHandle ? `@${popupIgHandle}` : "@Instagram") : "Directions"}</span> ↗
+            <span>${safeActionLabel}</span> ↗
           </a>
 
           <button id="smakr-popup-menu-btn" style="

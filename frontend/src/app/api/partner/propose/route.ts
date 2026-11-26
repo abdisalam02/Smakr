@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireAdmin } from "@/app/api/admin/_auth";
 import { curatedVenuePhotos } from "@/lib/places/curatedPhotos";
 import { ingestGooglePhotoToSupabase } from "@/lib/storage/ingestGooglePhoto";
 
@@ -71,6 +72,9 @@ function slugify(value: string): string {
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireAdmin();
+    if (!auth.ok) return auth.response;
+
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
     if (!checkRateLimit(ip)) {
       return NextResponse.json(
@@ -185,6 +189,13 @@ export async function POST(req: NextRequest) {
     if (!isValidImageUrl(imageUrl)) {
       return NextResponse.json(
         { success: false, error: "Invalid image URL. Must be HTTPS and from an allowed photo source." },
+        { status: 400 }
+      );
+    }
+
+    if (coverImageUrl && !isValidImageUrl(coverImageUrl)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid cover image URL. Must be HTTPS and from an allowed photo source." },
         { status: 400 }
       );
     }

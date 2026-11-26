@@ -67,6 +67,8 @@ export function detectTrafficSource(): {
 
 export function initPostHog(): boolean {
   if (typeof window === "undefined") return false;
+  const siteHostname = window.location.hostname;
+  if (siteHostname !== "smakr.no" && siteHostname !== "www.smakr.no") return false;
   if (initialized) return enabled;
   initialized = true;
 

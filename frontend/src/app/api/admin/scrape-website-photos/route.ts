@@ -272,19 +272,33 @@ function extractImagesFromHtml(html: string, pageUrl: string): ScrapedWebsitePho
 
 async function fetchPageHtml(url: string): Promise<{ html: string; finalUrl: string } | null> {
   try {
-    const res = await fetch(url, {
-      redirect: "follow",
-      signal: AbortSignal.timeout(8000),
-      headers: {
-        "User-Agent": BROWSER_UA,
-        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9,nb;q=0.8",
-      },
-    });
-    if (!res.ok) return null;
+    let currentUrl = await assertSafePublicUrl(url);
+    let res: Response | null = null;
+
+    for (let hop = 0; hop <= 3; hop++) {
+      res = await fetch(currentUrl.toString(), {
+        redirect: "manual",
+        signal: AbortSignal.timeout(8000),
+        headers: {
+          "User-Agent": BROWSER_UA,
+          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.9,nb;q=0.8",
+        },
+      });
+
+      if (res.status >= 300 && res.status < 400) {
+        const location = res.headers.get("location");
+        if (!location || hop === 3) return null;
+        currentUrl = await assertSafePublicUrl(new URL(location, currentUrl).toString());
+        continue;
+      }
+      break;
+    }
+
+    if (!res || !res.ok) return null;
     const ct = (res.headers.get("content-type") || "").toLowerCase();
     if (!ct.includes("text/html") && !ct.includes("application/xhtml")) return null;
-    const finalUrl = res.url || url;
+    const finalUrl = res.url || currentUrl.toString();
     await assertSafePublicUrl(finalUrl);
     const html = await res.text();
     return { html, finalUrl };

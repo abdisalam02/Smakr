@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireAuthenticatedUser, checkIpRateLimit } from "@/app/api/_authHelpers";
 import {
   PLACES_API_BASE,
   PLACE_DETAILS_FIELD_MASK,
@@ -34,6 +35,12 @@ function getSupabaseClient() {
 }
 
 export async function GET(request: Request) {
+  const auth = await requireAuthenticatedUser();
+  if (!auth.ok) return auth.response;
+
+  const rate = checkIpRateLimit(request, "places-details", 20, 60_000);
+  if (!rate.ok) return rate.response;
+
   const { searchParams } = new URL(request.url);
   const placeId = (searchParams.get("place_id") || "").trim();
   const q = (searchParams.get("q") || "").trim();

@@ -1,22 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, getAdminClient } from "@/app/api/admin/_auth";
+import { checkIpRateLimit } from "@/app/api/_authHelpers";
 import type { PendingSubmission } from "@/lib/pendingQueue";
 
-export const runtime = "nodejs";
-
-const MAKR_RATE_MAP = new Map<string, { count: number; expiresAt: number }>();
-
-function checkMakrRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const entry = MAKR_RATE_MAP.get(ip);
-  if (entry && entry.expiresAt > now) {
-    if (entry.count >= 12) return false;
-    entry.count++;
-    return true;
+function sanitizeMakrPhotoUrl(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.startsWith("https://") && trimmed.length <= 500) {
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.protocol === "https:") return trimmed;
+    } catch {
+      return undefined;
+    }
   }
-  MAKR_RATE_MAP.set(ip, { count: 1, expiresAt: now + 10 * 60 * 1000 });
-  return true;
+  if (/^data:image\/(jpeg|jpg|png|webp);base64,/i.test(trimmed) && trimmed.length <= 300_000) {
+    return trimmed;
+  }
+  return undefined;
 }
+
+export const runtime = "nodejs";
 
 async function getAnchorVenue(supabase: ReturnType<typeof getAdminClient>, preferredVenueId?: string) {
   if (!supabase) return null;
@@ -39,13 +44,8 @@ async function getAnchorVenue(supabase: ReturnType<typeof getAdminClient>, prefe
 /** Public submission endpoint for Smakr Foodie pending picks and no-login /makr drops. */
 export async function POST(req: NextRequest) {
   try {
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
-    if (!checkMakrRateLimit(ip)) {
-      return NextResponse.json(
-        { success: false, error: "Too many submissions. Please wait a few minutes." },
-        { status: 429 }
-      );
-    }
+    const rate = checkIpRateLimit(req, "makr-submit", 12, 10 * 60_000);
+    if (!rate.ok) return rate.response;
 
     const body = await req.json().catch(() => ({}));
     if (body.website && String(body.website).trim() !== "") {
@@ -88,8 +88,13 @@ export async function POST(req: NextRequest) {
       category: raw.category || "street_food",
       icon_key: raw.icon_key ? String(raw.icon_key).slice(0, 40) : undefined,
       dietary_tags: Array.isArray(raw.dietary_tags) ? raw.dietary_tags.slice(0, 8) : [],
-      photo_url: raw.photo_url ? String(raw.photo_url) : undefined,
-      extra_photos: Array.isArray(raw.extra_photos) ? raw.extra_photos.slice(0, 3).map(String) : [],
+      photo_url: sanitizeMakrPhotoUrl(raw.photo_url),
+      extra_photos: Array.isArray(raw.extra_photos)
+        ? raw.extra_photos
+            .slice(0, 3)
+            .map((p: unknown) => sanitizeMakrPhotoUrl(p))
+            .filter((p): p is string => Boolean(p))
+        : [],
       review_text: raw.review_text ? String(raw.review_text).slice(0, 300) : undefined,
       vibe_note: raw.vibe_note ? String(raw.vibe_note).slice(0, 300) : undefined,
       is_local_pick: kind === "foodie_dish" || Boolean(raw.is_local_pick),

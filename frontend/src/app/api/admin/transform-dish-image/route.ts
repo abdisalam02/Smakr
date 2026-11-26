@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
+import dns from "node:dns/promises";
 import fs from "fs";
+import net from "node:net";
 import path from "path";
 import sharp from "sharp";
 import {
@@ -20,17 +22,71 @@ const STORAGE_BUCKET = "dish-photos";
 const GEMINI_API_KEY =
   process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || "";
 
+function isPrivateIpAddress(ip: string): boolean {
+  const normalized = ip.replace(/^::ffff:/i, "");
+  if (net.isIPv4(normalized)) {
+    const parts = normalized.split(".").map(Number);
+    if (parts.length !== 4 || parts.some((p) => Number.isNaN(p))) return true;
+    const [a, b] = parts;
+    if (a === 10 || a === 127 || a === 0) return true;
+    if (a === 169 && b === 254) return true;
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    if (a === 192 && b === 168) return true;
+    if (a === 100 && b >= 64 && b <= 127) return true;
+    return false;
+  }
+  const lower = normalized.toLowerCase();
+  if (lower === "::1" || lower === "::") return true;
+  if (lower.startsWith("fe80:") || lower.startsWith("fc") || lower.startsWith("fd")) return true;
+  return false;
+}
+
+async function assertSafeRemoteImageUrl(rawUrl: string): Promise<URL> {
+  const parsed = new URL(rawUrl);
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("Only http/https image URLs are allowed.");
+  }
+  const host = parsed.hostname.toLowerCase();
+  if (
+    !host ||
+    host === "localhost" ||
+    host.endsWith(".localhost") ||
+    host.endsWith(".local") ||
+    host.endsWith(".internal") ||
+    host === "0.0.0.0" ||
+    host === "[::1]"
+  ) {
+    throw new Error("Blocked private or localhost URL.");
+  }
+  if (net.isIP(host)) {
+    if (isPrivateIpAddress(host)) throw new Error("Blocked private IP address.");
+    return parsed;
+  }
+  const records = await dns.lookup(host, { all: true });
+  if (!records?.length || records.some((rec) => isPrivateIpAddress(rec.address))) {
+    throw new Error("Blocked private DNS target.");
+  }
+  return parsed;
+}
+
 function resolveLocalPublicFile(relUrl: string): string | null {
-  const cleanRel = relUrl.replace(/^\//, "");
-  const p1 = path.join(process.cwd(), "public", cleanRel);
-  if (fs.existsSync(p1)) return p1;
-  const p2 = path.join(process.cwd(), "frontend", "public", cleanRel);
-  if (fs.existsSync(p2)) return p2;
+  const cleanRel = relUrl.replace(/^\/+/, "").split("?")[0];
+  const publicRoots = [
+    path.resolve(process.cwd(), "public"),
+    path.resolve(process.cwd(), "frontend", "public"),
+  ];
+  for (const root of publicRoots) {
+    const resolved = path.resolve(root, cleanRel);
+    if (resolved.startsWith(root + path.sep) && fs.existsSync(resolved)) {
+      return resolved;
+    }
+  }
   return null;
 }
 
 async function fetchSourceImageBuffer(rawUrl: string, origin: string): Promise<Buffer> {
   let targetUrl = rawUrl.trim();
+  let allowOriginFallback = false;
 
   if (targetUrl.startsWith("places/") || targetUrl.includes("/api/places/photos")) {
     const resolved = await ingestGooglePhotoToSupabase(targetUrl);
@@ -38,6 +94,7 @@ async function fetchSourceImageBuffer(rawUrl: string, origin: string): Promise<B
       targetUrl = resolved;
     } else if (targetUrl.startsWith("/")) {
       targetUrl = `${origin}${targetUrl}`;
+      allowOriginFallback = true;
     }
   } else if (targetUrl.startsWith("/")) {
     const localPublicPath = resolveLocalPublicFile(targetUrl);
@@ -45,18 +102,39 @@ async function fetchSourceImageBuffer(rawUrl: string, origin: string): Promise<B
       return fs.readFileSync(localPublicPath);
     }
     targetUrl = `${origin}${targetUrl}`;
+    allowOriginFallback = true;
   }
 
-  const res = await fetch(targetUrl, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-      Accept: "image/webp,image/apng,image/*,*/*;q=0.8",
-    },
-  });
+  let currentUrl = allowOriginFallback
+    ? new URL(targetUrl)
+    : await assertSafeRemoteImageUrl(targetUrl);
 
-  if (!res.ok) {
-    throw new Error(`Failed to fetch source image (${res.status}): ${targetUrl}`);
+  const headers = {
+    "User-Agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    Accept: "image/webp,image/apng,image/*,*/*;q=0.8",
+  };
+
+  let res: Response | null = null;
+  for (let hop = 0; hop <= 3; hop++) {
+    res = await fetch(currentUrl.toString(), {
+      redirect: "manual",
+      signal: AbortSignal.timeout(10000),
+      headers,
+    });
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers.get("location");
+      if (!location || hop === 3) {
+        throw new Error(`Blocked or excessive redirects fetching source image: ${targetUrl}`);
+      }
+      currentUrl = await assertSafeRemoteImageUrl(new URL(location, currentUrl).toString());
+      continue;
+    }
+    break;
+  }
+
+  if (!res || !res.ok) {
+    throw new Error(`Failed to fetch source image (${res?.status ?? "unknown"}): ${targetUrl}`);
   }
 
   return Buffer.from(await res.arrayBuffer());

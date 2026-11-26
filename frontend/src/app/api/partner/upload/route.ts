@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { requireAdmin } from "@/app/api/admin/_auth";
 import crypto from "crypto";
 
 export const runtime = "nodejs";
@@ -21,6 +22,9 @@ const uploadRateMap = new Map<string, { count: number; expiresAt: number }>();
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireAdmin();
+    if (!auth.ok) return auth.response;
+
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
     const now = Date.now();
     const rateData = uploadRateMap.get(ip);

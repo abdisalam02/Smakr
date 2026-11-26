@@ -1,11 +1,11 @@
 # STATE.md — CityPulse / Smakr (read first, keep <= 30 lines)
 
-Updated: 2026-11-25
+Updated: 2026-11-26
 
 ## Now
-- Task: Shipped `KfcOsloAd` `v15` (`22.90s` / `1374f`): traced South Park Colonel face inside `#KfcProjectingBucketSign`, shortened & aligned spot tags (`29px` uniform italic, zero collision), deepened Scene 2/3 bottom Warm Oat fade (`345px`), & extended Scene 3 Finale hold to `5.0s` (`300f`); synced `/ad-reel?tab=chicken_reel`.
-- Staged `Hot Temper` (6 cached Supabase photos) + enriched `Down South Deli` (`Birdman's Burger 269 kr`, `Crispy Thighs 279 kr`) in `frontend/curation/staged_candidates.json`.
-- Status: Both `frontend/` & `video-studio/` `npx tsc --noEmit`, 4 `v15` QA stills (`f045`, `f440`, `f780`, `f1350`), `v15` MP4 (`28.2 MB` + `<20MB` `9.3 MiB`), & `/videos/oslo-fried-chicken-reel.mp4` exited 0; `v6`–`v14` preserved.
+- Security hardening pass complete: gated `/api/partner/{upload,propose}`, `/api/places/details`, `/api/reactions/reconcile`, dev `NODE_ENV` bypasses in `/api/admin/save-{mascot-svg,studio-icon}`, & enforced `profiles.role === "admin"` + `/ad-reel` + lab routes in `middleware.ts`.
+- Added strict HSTS/CSP + tight `remotePatterns` in `next.config.ts`, `*.vercel.app` -> `smakr.no` redirect, PostHog host allowlist, `mappers.ts` `vibe_signals` token/queue strip, redirect SSRF checks, & desktop popup HTML escaping.
+- Prior uncommitted staging intact: `KfcOsloAd` `v17` + `Hot Temper`/`Down South Deli` staged in `frontend/curation/staged_candidates.json`.
 
 ## Next (max 3)
 1. User to review & confirm KFC Storo storefront, VEKTER guard, spot logos/photos, and rendered 60fps motion preview (`kfc_ad_assets_and_motion_preview.md`).

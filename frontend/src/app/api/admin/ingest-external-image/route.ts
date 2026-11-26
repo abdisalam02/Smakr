@@ -67,9 +67,9 @@ async function assertPublicHttpUrl(rawUrl: string): Promise<URL> {
 
 async function fetchValidImageBuffer(url: string, referer?: string): Promise<Buffer | null> {
   try {
-    const safeUrl = await assertPublicHttpUrl(url);
+    let currentUrl = await assertPublicHttpUrl(url);
     // Instagram/Facebook lookaside crawler URLs always redirect to HTML login pages
-    if (/lookaside\.(instagram|fbsbx)\.com/i.test(safeUrl.hostname)) {
+    if (/lookaside\.(instagram|fbsbx)\.com/i.test(currentUrl.hostname)) {
       return null;
     }
 
@@ -81,12 +81,27 @@ async function fetchValidImageBuffer(url: string, referer?: string): Promise<Buf
       headers.Referer = referer;
     }
 
-    const res = await fetch(safeUrl.toString(), {
-      redirect: "follow",
-      signal: AbortSignal.timeout(8000),
-      headers,
-    });
-    if (!res.ok) return null;
+    let res: Response | null = null;
+    for (let hop = 0; hop <= 3; hop++) {
+      res = await fetch(currentUrl.toString(), {
+        redirect: "manual",
+        signal: AbortSignal.timeout(8000),
+        headers,
+      });
+
+      if (res.status >= 300 && res.status < 400) {
+        const location = res.headers.get("location");
+        if (!location || hop === 3) return null;
+        const nextResolved = new URL(location, currentUrl).toString();
+        currentUrl = await assertPublicHttpUrl(nextResolved);
+        if (/lookaside\.(instagram|fbsbx)\.com/i.test(currentUrl.hostname)) {
+          return null;
+        }
+        continue;
+      }
+      break;
+    }
+    if (!res || !res.ok) return null;
 
     const ct = (res.headers.get("content-type") || "").toLowerCase();
     if (ct.includes("text/html") || ct.includes("application/json")) return null;

@@ -5,14 +5,9 @@ import { requireAdmin } from "@/app/api/admin/_auth";
 
 export async function POST(req: Request) {
   try {
-    if (process.env.NODE_ENV !== "development") {
-      const auth = await requireAdmin();
-      if (!auth.ok) {
-        return NextResponse.json(
-          { error: "Forbidden. Admin access required." },
-          { status: 403 }
-        );
-      }
+    const auth = await requireAdmin();
+    if (!auth.ok) {
+      return auth.response;
     }
 
     const body = await req.json();

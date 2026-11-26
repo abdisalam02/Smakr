@@ -20,6 +20,16 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
+  const hostHeader = (request.headers.get("host") || "").split(":")[0].toLowerCase();
+  if (
+    process.env.VERCEL_ENV === "production" &&
+    hostHeader.endsWith(".vercel.app") &&
+    !pathname.startsWith("/api/")
+  ) {
+    const canonicalUrl = new URL(request.nextUrl.pathname + request.nextUrl.search, "https://smakr.no");
+    return NextResponse.redirect(canonicalUrl, 308);
+  }
+
   // Partner Studio is paused for now — keep the code, hide the route.
   if (pathname === "/partner" || pathname.startsWith("/partner/")) {
     const url = request.nextUrl.clone();
@@ -66,9 +76,15 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const isAdminRoute =
-    request.nextUrl.pathname.startsWith("/admin") ||
-    request.nextUrl.pathname.startsWith("/studio") ||
-    request.nextUrl.pathname.startsWith("/mascot-studio");
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/studio") ||
+    pathname.startsWith("/mascot-studio") ||
+    pathname.startsWith("/ad-reel") ||
+    pathname.startsWith("/boot-lab") ||
+    pathname.startsWith("/email-preview") ||
+    pathname.startsWith("/font-lab") ||
+    pathname.startsWith("/food-icon-studio") ||
+    pathname.startsWith("/test-icon-picker");
 
   if (isAdminRoute && !user) {
     const redirectUrl = request.nextUrl.clone();
@@ -76,6 +92,21 @@ export async function middleware(request: NextRequest) {
     redirectUrl.search = "";
     redirectUrl.searchParams.set("auth", "required");
     return NextResponse.redirect(redirectUrl);
+  }
+
+  if (isAdminRoute && user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.role !== "admin") {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/";
+      redirectUrl.search = "";
+      return NextResponse.redirect(redirectUrl);
+    }
   }
 
   return response;

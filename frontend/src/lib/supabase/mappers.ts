@@ -430,7 +430,14 @@ export function mapVenueRow(row: VenueRow): Venue {
         ? signals.google_maps_uri
         : null),
     phone_number: row.phone_number || (signals.phone_number as string) || null,
-    vibe_signals: placePhotos ? { ...signals, place_photos: placePhotos } : signals,
+    vibe_signals: (() => {
+      const { pending_makr_queue: _pmq, pending_partner_claim: _ppc, ...rest } = signals;
+      if (rest.kitchen_status && typeof rest.kitchen_status === "object") {
+        const { kitchen_token: _kt, ...safeKitchenStatus } = rest.kitchen_status as Record<string, unknown>;
+        rest.kitchen_status = safeKitchenStatus;
+      }
+      return placePhotos ? { ...rest, place_photos: placePhotos } : rest;
+    })(),
     kitchen_status: parseKitchenLiveStatus(signals.kitchen_status),
     popup_meta:
       signals.popup_meta && typeof signals.popup_meta === "object" && !Array.isArray(signals.popup_meta)

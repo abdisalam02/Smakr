@@ -24,6 +24,9 @@ assert(nextConfigContent.includes('SAMEORIGIN'), 'X-Frame-Options set to SAMEORI
 assert(nextConfigContent.includes('X-Content-Type-Options') && nextConfigContent.includes('nosniff'), 'Configures X-Content-Type-Options: nosniff');
 assert(nextConfigContent.includes('Referrer-Policy'), 'Configures Referrer-Policy');
 assert(nextConfigContent.includes('Permissions-Policy'), 'Configures Permissions-Policy');
+assert(nextConfigContent.includes('Strict-Transport-Security'), 'Configures Strict-Transport-Security (HSTS)');
+assert(nextConfigContent.includes('Content-Security-Policy'), 'Configures top-level Content-Security-Policy header');
+assert(!nextConfigContent.includes('hostname: "**"') && !nextConfigContent.includes("hostname: '**'"), 'next/image remotePatterns avoids wildcard **');
 assert(nextConfigContent.includes('contentSecurityPolicy'), 'Configures SVG Image Sandbox Policy');
 
 // 2. Secret Key Isolation Test
@@ -76,21 +79,48 @@ for (const table of requiredTables) {
 
 // 4. Admin API Route Authorization Verification
 console.log('\n[Test 4] Admin Route Handlers Authorization Guards');
-const adminRoutesWithSharedGuard = [
-  ['ai-curate', ['src', 'app', 'api', 'admin', 'ai-curate', 'route.ts']],
-  ['bulk-enrich', ['src', 'app', 'api', 'admin', 'bulk-enrich', 'route.ts']],
-  ['kitchen-token', ['src', 'app', 'api', 'admin', 'kitchen-token', 'route.ts']],
-  ['partner-claims', ['src', 'app', 'api', 'admin', 'partner-claims', 'route.ts']],
-  ['partner-claims/resolve', ['src', 'app', 'api', 'admin', 'partner-claims', 'resolve', 'route.ts']],
-  ['sync-popups', ['src', 'app', 'api', 'admin', 'sync-popups', 'route.ts']],
-];
-for (const [label, segments] of adminRoutesWithSharedGuard) {
-  const code = fs.readFileSync(path.resolve(...segments), 'utf8');
+function collectAdminRoutes(dir) {
+  const found = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      found.push(...collectAdminRoutes(fullPath));
+    } else if (entry.name === 'route.ts') {
+      found.push(fullPath);
+    }
+  }
+  return found.sort();
+}
+
+const adminApiRoot = path.resolve('src', 'app', 'api', 'admin');
+for (const routeFile of collectAdminRoutes(adminApiRoot)) {
+  const label = path.relative(adminApiRoot, path.dirname(routeFile)).replace(/\\/g, '/') || '.';
+  const code = fs.readFileSync(routeFile, 'utf8');
   assert(code.includes('requireAdmin()'), `/api/admin/${label} enforces server-side admin check`);
+  assert(!code.includes('NODE_ENV !== "development"') && !code.includes("NODE_ENV !== 'development'"), `/api/admin/${label} has no development auth bypass`);
 }
 
 const middlewareCode = fs.readFileSync(path.resolve('src', 'middleware.ts'), 'utf8');
-assert(middlewareCode.includes('isAdminRoute') && middlewareCode.includes('!user'), 'Middleware intercepts unauthenticated access to /admin, /studio, /mascot-studio');
+assert(middlewareCode.includes('isAdminRoute') && middlewareCode.includes('!user'), 'Middleware intercepts unauthenticated access to admin and lab routes');
+assert(middlewareCode.includes('.from("profiles")') && middlewareCode.includes('"admin"'), 'Middleware verifies profiles.role === "admin" for admin and lab routes');
+assert(middlewareCode.includes('/ad-reel') && middlewareCode.includes('/boot-lab'), 'Middleware includes /ad-reel and /boot-lab in admin route protection');
+
+// 5. Sensitive Non-Admin Route Authorization Guards
+console.log('\n[Test 5] Sensitive Partner, Places, AI & Reaction Guards');
+const guardedRoutes = [
+  ['partner/upload', 'requireAdmin()', ['src', 'app', 'api', 'partner', 'upload', 'route.ts']],
+  ['partner/propose', 'requireAdmin()', ['src', 'app', 'api', 'partner', 'propose', 'route.ts']],
+  ['places/details', 'requireAuthenticatedUser()', ['src', 'app', 'api', 'places', 'details', 'route.ts']],
+  ['places/dish', 'requireAdmin()', ['src', 'app', 'api', 'places', 'dish', 'route.ts']],
+  ['places/search', 'requireAuthenticatedUser()', ['src', 'app', 'api', 'places', 'search', 'route.ts']],
+  ['places/photos/ingest', 'requireAdmin()', ['src', 'app', 'api', 'places', 'photos', 'ingest', 'route.ts']],
+  ['ai/extract-food-post', 'requireAdmin()', ['src', 'app', 'api', 'ai', 'extract-food-post', 'route.ts']],
+  ['reactions/reconcile', 'requireAuthenticatedUser()', ['src', 'app', 'api', 'reactions', 'reconcile', 'route.ts']],
+];
+for (const [label, guard, segments] of guardedRoutes) {
+  const code = fs.readFileSync(path.resolve(...segments), 'utf8');
+  assert(code.includes(guard), `/api/${label} enforces ${guard}`);
+}
 
 console.log(`\n==========================================`);
 console.log(`  Tests completed: ${passed + failed}`);
