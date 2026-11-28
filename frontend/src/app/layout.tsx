@@ -70,6 +70,8 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        <link rel="preload" as="image" href="/boot/oslo-map-backdrop.webp" fetchPriority="high" />
+        <link rel="preload" as="image" href="/boot/peeps-atlas-baked.webp" fetchPriority="high" />
         <link rel="preconnect" href="https://api.maptiler.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://api.maptiler.com" />
         {process.env.NEXT_PUBLIC_SUPABASE_URL && (

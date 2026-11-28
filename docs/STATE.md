@@ -1,6 +1,6 @@
 # STATE.md — CityPulse / Smakr (read first, keep <= 30 lines)
 
-Updated: 2026-11-26
+Updated: 2026-11-28
 
 ## Now
 - Security hardening pass complete: gated `/api/partner/{upload,propose}`, `/api/places/details`, `/api/reactions/reconcile`, dev `NODE_ENV` bypasses in `/api/admin/save-{mascot-svg,studio-icon}`, & enforced `profiles.role === "admin"` + `/ad-reel` + lab routes in `middleware.ts`.
@@ -22,8 +22,8 @@ Updated: 2026-11-26
 - TODO-VERIFY: confirm partner claim copy before launch.
 
 ## Recent (max 5, one line each)
+- 2026-11-28 — Boot screen Warm Oat + static Oslo map snapshot (`oslo-map-backdrop.webp`), solo `SMAKR` logo, sprite edge fade & +1s synchronized fade; fixed post-swipe `Details`/carousel tap deadtime, kept mobile Feed mounted, & hid restaurant/pop-up status pill on sheet scroll; tsc + security 70/70
+- 2026-11-28 — Fixed Seeding Lab third-party web-search image CSP/hotlink blocks via admin `/api/admin/proxy-web-image` + `toAdminPreviewImageUrl`, & added "Add with AI" (`/api/admin/suggest-dishes`) w/ live web search & deduplication; tsc + security 70/70
 - 2026-11-26 — Shipped `KfcOsloAd` `v19` (`31.25s`, `24.56 MiB` High@L4.2 bt709): centered short-neck Colonel bow tie, `STORO` sign, full right-exit/left-entry mascot w/ slower curtain unblur, endless 3-dish coverflow, bigger steady bubble, & `Discover more spots` CTA; `frontend` tsc clean
 - 2026-11-16 — Built hybrid pop-up scraper: Playwright CLI (`sync:popups`), Apify IG fallback, NO/EN date-time-location parser, `public/popup-sync-report.json`, and admin `sync-popups` queue route; tsc + security 23/23
 - 2026-11-16 — Fixed `/admin` persistence & admin APIs: makr pop-up UUID insert, kitchen-token link, official-pick/weekly-drop persistence, seeder author FK, publish/archive toggles, shared `requireAdmin()`; tsc + security clean
-- 2026-11-15 — Shipped 2-slide Early Snowfall (`oslo-snowfall-bowls`) Preset 2 + real bowl photos in `CarouselStoryDeck.tsx`; `npx tsc --noEmit` clean
-- 2026-11-15 — Audited `place_photos`, wired `place_photos` + `opening_hours` in seeding lab/`serverData.ts`, and expanded Hrimnir + Sapporo to 7 curated photos

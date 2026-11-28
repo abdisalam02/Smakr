@@ -282,19 +282,18 @@ export function HomeView({
   const setIsCreateBiteModalOpen = useCityPulseStore((state) => state.setIsCreateBiteModalOpen);
   const isVenueDetailModalOpen = useCityPulseStore((state) => state.isVenueDetailModalOpen);
 
-  // Full-feed mode: stop MapLibre's animation loop and hide the canvas so the
-  // WebGL surface does not burn GPU while the user scrolls the feed.
+  // Pause MapLibre updates when hidden behind desktop full-feed OR mobile Feed panel
   useEffect(() => {
     const map = (window as unknown as { __smakrMap?: { stop: () => void; resize: () => void } })
       .__smakrMap;
     if (!map) return;
-    if (viewMode === "feed") {
+    if (viewMode === "feed" || (!isDesktop && viewMode !== "map")) {
       map.stop();
       return;
     }
     const raf = requestAnimationFrame(() => map.resize());
     return () => cancelAnimationFrame(raf);
-  }, [viewMode]);
+  }, [viewMode, isDesktop]);
 
   // Deep linking: ?tab=popups / ?campaign=popups / ?view= / ?sheet= (once on mount)
   // and ?spot=<id-or-slug> auto-selects, flies, & opens VenueBottomSheet
@@ -1433,10 +1432,12 @@ export function HomeView({
 
       {/* ========================================================================= */}
       {/* MOBILE FULL-PAGE FEED VIEW (< lg screens)                                 */}
+      {/* Kept mounted during map navigation so Feed <-> Map glides smoothly.       */}
       {/* ========================================================================= */}
       {!isDesktop && (
         <div
-          className={`lg:hidden fixed inset-0 bg-[#FAF7F2]/[0.96] dark:bg-[#181615]/[0.96] z-30 overflow-hidden flex flex-col will-change-transform w-full max-w-[100vw] transition-[transform,opacity] duration-[260ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          aria-hidden={viewMode === "map"}
+          className={`lg:hidden fixed inset-0 bg-[#FAF7F2] dark:bg-[#181615] z-30 overflow-hidden flex flex-col will-change-transform w-full max-w-[100vw] transition-[transform,opacity] duration-[240ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
             viewMode === "map"
               ? "-translate-x-full opacity-0 pointer-events-none shadow-none"
               : "translate-x-0 opacity-100 pointer-events-auto shadow-2xl"
@@ -1460,12 +1461,12 @@ export function HomeView({
           />
 
           {/* Floating filter bar + Dishes/Spots toggle under the SMAKR header. */}
-          {viewMode !== "map" && (
-            <>
           <div
             ref={mobileFilterWrapRef}
-            className={`absolute inset-x-0 top-[64px] z-20 pointer-events-auto w-full max-w-full overflow-hidden transition-opacity duration-150 will-change-transform ${
-              isVenueDetailModalOpen ? "opacity-0 pointer-events-none" : "opacity-100"
+            className={`absolute inset-x-0 top-[64px] z-20 w-full max-w-full overflow-hidden transition-opacity duration-150 will-change-transform ${
+              viewMode === "map" || isVenueDetailModalOpen
+                ? "opacity-0 pointer-events-none"
+                : "opacity-100 pointer-events-auto"
             }`}
           >
             {isHydratingData && foodPosts.length === 0 ? (
@@ -1574,8 +1575,6 @@ export function HomeView({
               )
             )}
           </div>
-            </>
-          )}
         </div>
       )}
 

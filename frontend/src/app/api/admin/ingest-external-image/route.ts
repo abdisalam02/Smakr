@@ -1,118 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
-import dns from "dns/promises";
-import net from "net";
 import sharp from "sharp";
 import { requireAdmin } from "@/app/api/admin/_auth";
 import { isDeliveryAppImageUrl } from "@/lib/admin/imageSource";
+import { fetchSafeRemoteImage } from "@/lib/admin/safeRemoteImage";
 
 export const runtime = "nodejs";
 
 const STORAGE_BUCKET = "dish-photos";
-const BROWSER_UA =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
-
-function isPrivateIp(ip: string): boolean {
-  const family = net.isIP(ip);
-  if (family === 4) {
-    const parts = ip.split(".").map(Number);
-    if (parts.length !== 4 || parts.some(Number.isNaN)) return true;
-    const [a, b] = parts;
-    if (a === 0 || a === 10 || a === 127) return true;
-    if (a === 169 && b === 254) return true;
-    if (a === 172 && b >= 16 && b <= 31) return true;
-    if (a === 192 && b === 168) return true;
-    if (a === 100 && b >= 64 && b <= 127) return true;
-    if (a >= 224) return true;
-    return false;
-  }
-  if (family === 6) {
-    const lower = ip.toLowerCase();
-    if (lower === "::1" || lower === "::") return true;
-    if (lower.startsWith("fe80:") || lower.startsWith("fc") || lower.startsWith("fd")) return true;
-    if (lower.startsWith("::ffff:")) {
-      const mapped = lower.slice("::ffff:".length);
-      if (net.isIP(mapped) === 4) return isPrivateIp(mapped);
-    }
-    return false;
-  }
-  return true;
-}
-
-async function assertPublicHttpUrl(rawUrl: string): Promise<URL> {
-  const parsed = new URL(rawUrl.trim());
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    throw new Error("Only http/https URLs are supported.");
-  }
-  const host = parsed.hostname.toLowerCase();
-  if (
-    !host ||
-    host === "localhost" ||
-    host.endsWith(".localhost") ||
-    host.endsWith(".local") ||
-    host.endsWith(".internal")
-  ) {
-    throw new Error("Blocked private host.");
-  }
-  if (net.isIP(host)) {
-    if (isPrivateIp(host)) throw new Error("Blocked private IP.");
-    return parsed;
-  }
-  const records = await dns.lookup(host, { all: true });
-  if (!records.length || records.some((r) => isPrivateIp(r.address))) {
-    throw new Error("Blocked private DNS resolution.");
-  }
-  return parsed;
-}
 
 async function fetchValidImageBuffer(url: string, referer?: string): Promise<Buffer | null> {
+  const remote = await fetchSafeRemoteImage(url, { referer });
+  if (!remote || remote.buffer.length < 512) return null;
   try {
-    let currentUrl = await assertPublicHttpUrl(url);
-    // Instagram/Facebook lookaside crawler URLs always redirect to HTML login pages
-    if (/lookaside\.(instagram|fbsbx)\.com/i.test(currentUrl.hostname)) {
-      return null;
-    }
-
-    const headers: Record<string, string> = {
-      "User-Agent": BROWSER_UA,
-      Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
-    };
-    if (referer && /^https?:\/\//i.test(referer)) {
-      headers.Referer = referer;
-    }
-
-    let res: Response | null = null;
-    for (let hop = 0; hop <= 3; hop++) {
-      res = await fetch(currentUrl.toString(), {
-        redirect: "manual",
-        signal: AbortSignal.timeout(8000),
-        headers,
-      });
-
-      if (res.status >= 300 && res.status < 400) {
-        const location = res.headers.get("location");
-        if (!location || hop === 3) return null;
-        const nextResolved = new URL(location, currentUrl).toString();
-        currentUrl = await assertPublicHttpUrl(nextResolved);
-        if (/lookaside\.(instagram|fbsbx)\.com/i.test(currentUrl.hostname)) {
-          return null;
-        }
-        continue;
-      }
-      break;
-    }
-    if (!res || !res.ok) return null;
-
-    const ct = (res.headers.get("content-type") || "").toLowerCase();
-    if (ct.includes("text/html") || ct.includes("application/json")) return null;
-
-    const buf = Buffer.from(await res.arrayBuffer());
-    if (buf.length < 512) return null;
-
-    // Validate Sharp can decode it as a real image
-    const meta = await sharp(buf).metadata();
+    const meta = await sharp(remote.buffer).metadata();
     if (!meta.width || !meta.height) return null;
-    return buf;
+    return remote.buffer;
   } catch {
     return null;
   }

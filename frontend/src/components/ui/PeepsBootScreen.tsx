@@ -185,8 +185,6 @@ export function PeepsBootScreen({
   const [atlasBuilding, setAtlasBuilding] = useState(true);
   const [atlasVersion, setAtlasVersion] = useState(0);
   const [atlasUrl, setAtlasUrl] = useState<string | null>(null);
-  const [showLogo, setShowLogo] = useState(!useBakedAtlas);
-  const [showSubline, setShowSubline] = useState(false);
   const [deck, setDeck] = useState<number[]>([]);
   const [dismissing, setDismissing] = useState(false);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
@@ -231,7 +229,6 @@ export function PeepsBootScreen({
             atlasMetaRef.current = initialAtlas;
             atlasCanvasRef.current = initialAtlas.canvas;
             setAtlasReady(true);
-            setShowLogo(true);
             onAtlasReadyRef.current?.();
           },
           deckArg
@@ -242,13 +239,11 @@ export function PeepsBootScreen({
         setAtlasVersion((v) => v + 1);
         setAtlasBuilding(false);
         setAtlasReady(true);
-        setShowLogo(true);
         onAtlasReadyRef.current?.();
       } catch (err) {
         console.error("[PeepsBootScreen] atlas build failed", err);
         if (active) {
           setAtlasBuilding(false);
-          setShowLogo(true);
           onAtlasReadyRef.current?.();
           if (!persistentRef.current) onCompleteRef.current?.();
         }
@@ -262,7 +257,6 @@ export function PeepsBootScreen({
           bakedImgRef.current = img;
           setAtlasBuilding(false);
           setAtlasReady(true);
-          setShowLogo(true);
           onAtlasReadyRef.current?.();
         })
         .catch(() => {
@@ -356,17 +350,7 @@ export function PeepsBootScreen({
     setDismissing(false);
   }, [atlasReady, crowdCount, forceSeed, precomputedDeck]);
 
-  // ── 4. Reveal staggered subtitle once crowd atlas is ready ─
-  useEffect(() => {
-    if (!atlasReady) return;
-    setShowSubline(false);
-    const tSub = window.setTimeout(() => setShowSubline(true), 220);
-    return () => {
-      window.clearTimeout(tSub);
-    };
-  }, [atlasReady]);
-
-  // ── 5. Swap one peep's sprite live (mutates the render ref, no rAF restart) ─
+  // ── 4. Swap one peep's sprite live (mutates the render ref, no rAF restart) ─
   const applySpriteEdit = (memberIdx: number, nextSprite: number) => {
     const member = crowdRef.current.find((p) => p.id === memberIdx);
     if (member) member.spriteIndex = nextSprite;
@@ -430,11 +414,11 @@ export function PeepsBootScreen({
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Auto-dismiss (non-persistent production boot): 0.80s hold + 220ms GPU fade-out (~1.02s total)
-      if (!persistentRef.current && elapsed >= 0.80 && !dismissingRef.current) {
+      // Auto-dismiss (non-persistent production boot): 1.80s hold + 500ms synchronized fade-out
+      if (!persistentRef.current && elapsed >= 1.80 && !dismissingRef.current) {
         dismissingRef.current = true;
         setDismissing(true);
-        setTimeout(() => onCompleteRef.current?.(), 230);
+        setTimeout(() => onCompleteRef.current?.(), 540);
       }
 
       const bakedImg = bakedImgRef.current;
@@ -530,31 +514,36 @@ export function PeepsBootScreen({
 
   return (
     <div
-      style={{
-        background:
-          "radial-gradient(circle at 50% 38%, rgba(250, 247, 242, 0.88) 0%, rgba(250, 247, 242, 0.72) 100%)",
-      }}
       className={`${
         mobilePreview
           ? "absolute left-1/2 top-1/2 h-[760px] max-h-[92dvh] w-[390px] max-w-[94vw] -translate-x-1/2 -translate-y-1/2 rounded-[2.5rem] border-[10px] border-[#181615] shadow-2xl"
           : "fixed inset-0"
-      } z-[100] flex flex-col items-center justify-between select-none overflow-hidden transition-opacity duration-[220ms] ease-out will-change-opacity ${
+      } bg-[#FAF7F2] z-[100] flex flex-col items-center justify-between select-none overflow-hidden transition-opacity duration-[500ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-opacity ${
         dismissing ? "opacity-0 pointer-events-none" : "opacity-100"
       }`}
     >
+      {/* Static Oslo map backdrop softly visible beneath Warm Oat from frame 0 */}
+      <div aria-hidden="true" className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/boot/oslo-map-backdrop.webp"
+          alt=""
+          decoding="sync"
+          fetchPriority="high"
+          className="w-full h-full object-cover opacity-[0.26]"
+        />
+        <div className="absolute inset-0 bg-[#FAF7F2]/55" />
+      </div>
+
       <style>{`
         @keyframes smakr-toon-pop {
           0% {
             opacity: 0;
-            transform: translateY(34px) scale(0.32) rotate(-7deg);
+            transform: translateY(24px) scale(0.76) rotate(-4deg);
           }
-          55% {
+          60% {
             opacity: 1;
-            transform: translateY(-8px) scale(1.15) rotate(2.5deg);
-          }
-          78% {
-            opacity: 1;
-            transform: translateY(3px) scale(0.95) rotate(-1.2deg);
+            transform: translateY(-4px) scale(1.06) rotate(1.2deg);
           }
           100% {
             opacity: 1;
@@ -563,60 +552,43 @@ export function PeepsBootScreen({
         }
       `}</style>
 
-      {/* Upper-Center Stage: Cartoonish Pop-In Smakr Brand Lockup */}
+      {/* Upper-Center Stage: Immediate Standalone Smakr Wordmark */}
       <div
-        className={`absolute inset-x-4 ${
-          mobilePreview ? "top-[21%]" : "top-[24%] sm:top-[22%]"
-        } z-20 flex flex-col items-center text-center pointer-events-none transition-all duration-[360ms] ease-out will-change-[opacity,transform] ${
-          dismissing ? "opacity-0 -translate-y-7 scale-[1.12]" : "opacity-100 translate-y-0 scale-100"
+        className={`relative z-20 inset-x-0 mt-[22vh] sm:mt-[20vh] flex flex-col items-center text-center pointer-events-none transition-all duration-[500ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[opacity,transform] ${
+          dismissing ? "opacity-0 -translate-y-4 scale-[1.04]" : "opacity-100 translate-y-0 scale-100"
         }`}
       >
-        {/* Wordmark: font-comico all-caps Burnt Paprika + OSLO badge */}
         <div
-          className="relative flex items-baseline gap-2.5 sm:gap-3 will-change-transform"
-          style={
-            showLogo
-              ? {
-                  animation: "smakr-toon-pop 560ms cubic-bezier(0.22, 1, 0.36, 1) forwards",
-                }
-              : { opacity: 0 }
-          }
+          className="relative flex items-center justify-center will-change-transform"
+          style={{
+            animation: "smakr-toon-pop 460ms cubic-bezier(0.22, 1, 0.36, 1) forwards",
+          }}
         >
           <span
             className={`font-comico ${
-              mobilePreview ? "text-5xl" : "text-5xl sm:text-6xl md:text-7xl"
+              mobilePreview ? "text-6xl" : "text-6xl sm:text-7xl md:text-8xl"
             } tracking-wide text-[#e84a27] drop-shadow-[0_4px_0_rgba(43,24,16,0.14)]`}
           >
             SMAKR
           </span>
-          <span className="text-[10px] sm:text-xs font-sans font-bold tracking-[0.22em] uppercase text-[#181615]/55">
-            OSLO
-          </span>
         </div>
-
-        {/* Staggered subtitle */}
-        <p
-          className={`mt-2.5 ${
-            mobilePreview ? "text-xs" : "text-xs sm:text-sm"
-          } font-semibold text-[#181615]/75 transition-all duration-400 ease-out`}
-          style={{
-            opacity: showSubline ? 1 : 0,
-            transform: showSubline ? "translateY(0)" : "translateY(10px)",
-          }}
-        >
-          The curated dish drop &amp; live food radar
-        </p>
       </div>
 
-      {/* Main Marching Crowd Canvas (Skiper 39) */}
+      {/* Main Marching Crowd Canvas (Skiper 39) with soft left/right edge fade */}
       <canvas
         ref={canvasRef}
-        className={`w-full h-full block touch-none pointer-events-none transition-all duration-[400ms] ease-in will-change-[opacity,transform] ${
+        style={{
+          maskImage:
+            "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
+          WebkitMaskImage:
+            "linear-gradient(to right, transparent 0%, black 12%, black 88%, transparent 100%)",
+        }}
+        className={`relative z-10 w-full h-full block touch-none pointer-events-none transition-all duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[opacity,transform] ${
           dismissing
-            ? "opacity-0 translate-y-20"
+            ? "opacity-0 translate-y-6"
             : atlasReady
             ? "opacity-100 translate-y-0"
-            : "opacity-0 translate-y-3"
+            : "opacity-0 translate-y-2"
         }`}
       />
 

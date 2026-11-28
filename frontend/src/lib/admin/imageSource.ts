@@ -172,3 +172,43 @@ export function getSourceBadgeMeta(source: DishImageSource): {
       };
   }
 }
+
+const CSP_ALLOWED_IMAGE_HOST =
+  /(^|\.)supabase\.co$|(^|\.)googleusercontent\.com$|^images\.unsplash\.com$|^places\.googleapis\.com$|^flagcdn\.com$|^api\.dicebear\.com$/i;
+
+/**
+ * Returns a CSP-safe preview URL for admin Seeding Lab components.
+ * Hosts already permitted by `next.config.ts` (`img-src`) load directly; arbitrary
+ * external domains route through the admin-only `/api/admin/proxy-web-image` proxy.
+ */
+export function toAdminPreviewImageUrl(
+  rawUrl?: string | null,
+  opts?: { fallbackUrl?: string | null; pageUrl?: string | null }
+): string {
+  const trimmed = (rawUrl || "").trim();
+  if (!trimmed) return "";
+  if (trimmed.startsWith("/") || trimmed.startsWith("data:") || trimmed.startsWith("blob:")) {
+    return trimmed;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    if (CSP_ALLOWED_IMAGE_HOST.test(parsed.hostname)) {
+      return trimmed;
+    }
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      const params = new URLSearchParams({ url: trimmed });
+      const fallback = (opts?.fallbackUrl || "").trim();
+      const pageUrl = (opts?.pageUrl || "").trim();
+      if (fallback && fallback !== trimmed && /^https?:\/\//i.test(fallback)) {
+        params.set("fallback", fallback);
+      }
+      if (pageUrl && /^https?:\/\//i.test(pageUrl)) {
+        params.set("referer", pageUrl);
+      }
+      return `/api/admin/proxy-web-image?${params.toString()}`;
+    }
+  } catch {
+    return trimmed;
+  }
+  return trimmed;
+}

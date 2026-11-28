@@ -142,6 +142,10 @@ export function VenueBottomSheet() {
   const titleTranslateY = useTransform(scrollY, [0, 190], [190, 0], { clamp: true });
   const navScrimOpacity = useTransform(scrollY, [70, 190], [0, 1], { clamp: true });
   const imageParallaxY = useTransform(scrollY, [0, 260], [0, -35], { clamp: true });
+  // Smoothly collapse top Open/Closed or Pop-up status pill on scroll so title & address sit clearly above action buttons
+  const statusBadgeOpacity = useTransform(scrollY, [35, 115], [1, 0], { clamp: true });
+  const statusBadgeY = useTransform(scrollY, [35, 115], [0, -10], { clamp: true });
+  const titleShiftY = useTransform(scrollY, [40, 125], [0, -22], { clamp: true });
 
   const isDraggingRef = React.useRef(false);
   const dragStartYRef = React.useRef(0);
@@ -153,9 +157,11 @@ export function VenueBottomSheet() {
   const contentTouchStartYRef = React.useRef<number | null>(null);
   const contentTouchStartXRef = React.useRef<number | null>(null);
   const contentAxisLockRef = React.useRef<"x" | "y" | null>(null);
+  const modalOpenedAtRef = React.useRef(0);
 
   useEffect(() => {
     if (isVenueDetailModalOpen) {
+      modalOpenedAtRef.current = performance.now();
       sheetY.set(0);
       scrollY.set(0);
       if (contentScrollRef.current) {
@@ -501,8 +507,11 @@ export function VenueBottomSheet() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              onClick={handleClose}
-              className="fixed inset-0 bg-black/45 backdrop-blur-[2px] cursor-pointer"
+              onClick={() => {
+                if (performance.now() - modalOpenedAtRef.current < 360) return;
+                handleClose();
+              }}
+              className="fixed inset-0 bg-black/50 cursor-pointer"
             />
 
             {/* Pop out from bottom spring container */}
@@ -511,7 +520,7 @@ export function VenueBottomSheet() {
               initial={instantEntry ? false : { y: "100%" }}
               animate={{
                 y: 0,
-                transition: { type: "spring", stiffness: 360, damping: 32, mass: 0.8 },
+                transition: { type: "spring", stiffness: 420, damping: 36, mass: 0.7 },
               }}
               exit={{
                 y: "100%",
@@ -592,14 +601,14 @@ export function VenueBottomSheet() {
               {/* 2. TOP STICKY HEADER BAR & CONTINUOUS MORPHING TITLE */}
               {/* Shows Spot Name, Open/Closed status & Address with generous spacing in both resting & scrolled states */}
               <div className="absolute top-0 inset-x-0 z-30 pt-2 pb-2.5 px-4 rounded-t-3xl pointer-events-none">
-                {/* Dark Espresso docked header bar fading softly at bottom so white title stays crisp */}
+                {/* Dark Espresso docked header bar fading softly at bottom so white title & address stay crisp */}
                 <motion.div
                   style={{
                     opacity: navScrimOpacity,
                     background:
-                      "linear-gradient(to bottom, #181615 0%, rgba(24,22,21,0.92) 52%, rgba(24,22,21,0.38) 76%, rgba(24,22,21,0) 100%)",
+                      "linear-gradient(to bottom, #181615 0%, #181615 62%, rgba(24,22,21,0.92) 78%, rgba(24,22,21,0) 100%)",
                   }}
-                  className="absolute top-0 inset-x-0 h-[104px] sm:h-[108px] pointer-events-none rounded-t-3xl"
+                  className="absolute top-0 inset-x-0 h-[100px] sm:h-[104px] pointer-events-none rounded-t-3xl"
                 />
 
                 <motion.div
@@ -639,8 +648,11 @@ export function VenueBottomSheet() {
                       }
                       className="min-w-0 pr-24 pointer-events-none select-none will-change-transform flex flex-col gap-1"
                     >
-                      {/* Closed/Open live badge for restaurants, or 4-state lifecycle badge for pop-ups */}
-                      <div className="flex items-center gap-1.5 flex-wrap">
+                      {/* Closed/Open live badge for restaurants, or 4-state lifecycle badge for pop-ups (hides on scroll) */}
+                      <motion.div
+                        style={{ opacity: statusBadgeOpacity, y: statusBadgeY }}
+                        className="flex items-center gap-1.5 flex-wrap will-change-transform"
+                      >
                         {isPopup && popupLifecycle ? (
                           <span
                             className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-1.5 border shadow-xs ${
@@ -687,39 +699,44 @@ export function VenueBottomSheet() {
                             )}
                           </span>
                         )}
-                      </div>
+                      </motion.div>
 
-                      {isPopup ? (
-                        <PopupBrandWordmark
-                          venueName={selectedVenue.name}
-                          size="lg"
-                          tone="dark"
-                          className="drop-shadow-[0_1px_4px_rgba(0,0,0,0.28)]"
-                        />
-                      ) : (
-                        <h3
-                          className={`font-display font-bold text-[#FAF7F2] tracking-tight leading-[1.15] line-clamp-2 max-w-full drop-shadow-[0_1px_4px_rgba(0,0,0,0.22)] ${
-                            selectedVenue.name.length > 24
-                              ? "text-[18px] sm:text-2xl"
-                              : selectedVenue.name.length > 16
-                              ? "text-[20px] sm:text-2xl"
-                              : "text-2xl sm:text-3xl"
-                          }`}
-                        >
-                          {selectedVenue.name}
-                        </h3>
-                      )}
-                      <p className="text-xs sm:text-[13px] text-[#FAF7F2]/85 font-medium flex items-center gap-1.5 truncate max-w-full">
-                        <MapPin className="w-3.5 h-3.5 text-[#e84a27] shrink-0" />
-                        <span className="truncate">
-                          {formatVenueLocationLine(selectedVenue)}
-                        </span>
-                        {walkTimeText && !isDormant && (
-                          <span className="shrink-0 font-mono text-[11px] font-semibold text-emerald-300">
-                            · {walkTimeText}
-                          </span>
+                      <motion.div
+                        style={{ y: titleShiftY }}
+                        className="flex flex-col gap-0.5 will-change-transform"
+                      >
+                        {isPopup ? (
+                          <PopupBrandWordmark
+                            venueName={selectedVenue.name}
+                            size="lg"
+                            tone="dark"
+                            className="drop-shadow-[0_1px_4px_rgba(0,0,0,0.28)]"
+                          />
+                        ) : (
+                          <h3
+                            className={`font-display font-bold text-[#FAF7F2] tracking-tight leading-[1.15] line-clamp-2 max-w-full drop-shadow-[0_1px_4px_rgba(0,0,0,0.22)] ${
+                              selectedVenue.name.length > 24
+                                ? "text-[18px] sm:text-2xl"
+                                : selectedVenue.name.length > 16
+                                ? "text-[20px] sm:text-2xl"
+                                : "text-2xl sm:text-3xl"
+                            }`}
+                          >
+                            {selectedVenue.name}
+                          </h3>
                         )}
-                      </p>
+                        <p className="text-xs sm:text-[13px] text-[#FAF7F2]/85 font-medium flex items-center gap-1.5 truncate max-w-full">
+                          <MapPin className="w-3.5 h-3.5 text-[#e84a27] shrink-0" />
+                          <span className="truncate">
+                            {formatVenueLocationLine(selectedVenue)}
+                          </span>
+                          {walkTimeText && !isDormant && (
+                            <span className="shrink-0 font-mono text-[11px] font-semibold text-emerald-300">
+                              · {walkTimeText}
+                            </span>
+                          )}
+                        </p>
+                      </motion.div>
                     </motion.div>
 
                     {/* Share & Close Buttons — docked top-right */}

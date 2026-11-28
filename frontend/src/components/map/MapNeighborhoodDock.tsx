@@ -24,6 +24,42 @@ type VenueWithDishes = Venue & {
   dishes?: Array<{ image_url?: string | null }>;
 };
 
+/** Immediate touch tap handler so swipes/scroll momentum never swallow a single tap. */
+function useFastTap(onTap: () => void, stopProp = false) {
+  const startRef = useRef<{ x: number; y: number } | null>(null);
+  const lastTouchTapAtRef = useRef(0);
+
+  return {
+    onPointerDown: (e: React.PointerEvent<HTMLElement>) => {
+      if (stopProp) e.stopPropagation();
+      if (e.pointerType === "mouse") return;
+      startRef.current = { x: e.clientX, y: e.clientY };
+    },
+    onPointerUp: (e: React.PointerEvent<HTMLElement>) => {
+      if (stopProp) e.stopPropagation();
+      if (e.pointerType === "mouse") return;
+      const start = startRef.current;
+      startRef.current = null;
+      if (!start) return;
+      if (Math.hypot(e.clientX - start.x, e.clientY - start.y) < 10) {
+        lastTouchTapAtRef.current = performance.now();
+        onTap();
+      }
+    },
+    onPointerCancel: () => {
+      startRef.current = null;
+    },
+    onClick: (e: React.MouseEvent<HTMLElement>) => {
+      if (stopProp) e.stopPropagation();
+      if (performance.now() - lastTouchTapAtRef.current < 450) {
+        e.preventDefault();
+        return;
+      }
+      onTap();
+    },
+  };
+}
+
 /**
  * Venue thumbnail with a resilient fallback chain: cover image → first verified
  * dish photo → matching feed dish photo → warm paper placeholder tile.
@@ -129,11 +165,13 @@ const DockCarouselCard = React.memo(function DockCarouselCard({
         fallbackPhoto,
       ];
 
+  const selectTapHandlers = useFastTap(() => onSelect(venue));
+
   return (
     <div
       ref={(el) => onRef(venue.id, el)}
-      onClick={() => onSelect(venue)}
-      className={`relative w-[260px] h-[118px] shrink-0 snap-center rounded-2xl overflow-hidden cursor-pointer select-none bg-[#181615] shadow-lg will-change-transform ${
+      {...selectTapHandlers}
+      className={`relative w-[260px] h-[118px] shrink-0 snap-center rounded-2xl overflow-hidden cursor-pointer select-none touch-manipulation bg-[#181615] shadow-lg will-change-transform ${
         isPopup
           ? popupLifecycle?.state === "live" || popupLifecycle?.state === "upcoming"
             ? "border-2 border-[#E84A27]/85 hover:border-[#E84A27]"
@@ -251,6 +289,7 @@ const SpotlightCard = React.memo(function SpotlightCard({
   cardOpen,
   onDismiss,
   onOpenDetails,
+  onCardBodyOpenDetails,
   onSelectSide,
   cardRef,
 }: {
@@ -263,6 +302,7 @@ const SpotlightCard = React.memo(function SpotlightCard({
   cardOpen: boolean;
   onDismiss: () => void;
   onOpenDetails: () => void;
+  onCardBodyOpenDetails: () => void;
   onSelectSide: () => void;
   cardRef: (el: HTMLDivElement | null) => void;
 }) {
@@ -321,6 +361,8 @@ const SpotlightCard = React.memo(function SpotlightCard({
   const gallery = useVenueHeroGallery(venue, venue.cover_image_url, isActive);
   const activeHeroImage =
     isActive && gallery.activePhotoUrl ? gallery.activePhotoUrl : null;
+  const dismissTapHandlers = useFastTap(onDismiss, true);
+  const detailsTapHandlers = useFastTap(onOpenDetails, true);
 
   if (MAP_CARD_DESIGN === "design1") {
     return (
@@ -515,7 +557,7 @@ const SpotlightCard = React.memo(function SpotlightCard({
           onSelectSide();
         } else if (isActive && cardOpen) {
           e.stopPropagation();
-          onOpenDetails();
+          onCardBodyOpenDetails();
         }
       }}
       style={{
@@ -625,11 +667,7 @@ const SpotlightCard = React.memo(function SpotlightCard({
           <button
             type="button"
             data-slot-close="true"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              onDismiss();
-            }}
+            {...dismissTapHandlers}
             aria-label="Close venue card"
             className="w-7 h-7 flex items-center justify-center text-white/90 hover:text-white drop-shadow-[0_1px_6px_rgba(0,0,0,0.85)] text-[15px] font-bold active:scale-90 transition-[transform,opacity] cursor-pointer touch-manipulation"
           >
@@ -712,11 +750,7 @@ const SpotlightCard = React.memo(function SpotlightCard({
 
             <button
               type="button"
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpenDetails();
-              }}
+              {...detailsTapHandlers}
               className="group/btn touch-manipulation shrink-0 h-8 px-4 rounded-full bg-white hover:bg-white/95 text-[#181615] font-comico text-[11px] flex items-center justify-center gap-1 shadow-sm transition-all duration-150 ease-out active:scale-[0.94] active:brightness-90 cursor-pointer whitespace-nowrap"
             >
               <span>Details</span>
@@ -971,6 +1005,7 @@ export const MapNeighborhoodDock = React.memo(function MapNeighborhoodDock({
   const didDragRef = useRef(false);
   const dragCleanupRef = useRef<(() => void) | null>(null);
   const spotlightOpenRef = useRef(false);
+  const spotlightOpenedAtRef = useRef(0);
   const skipNextRecenterRef = useRef(false);
   const carouselAnimRef = useRef<number | null>(null);
 
@@ -1082,22 +1117,26 @@ export const MapNeighborhoodDock = React.memo(function MapNeighborhoodDock({
     return map;
   }, [foodPosts]);
 
+  const postsBySpotIdMap = useMemo(() => {
+    const map = new Map<string, FoodPost[]>();
+    for (const post of foodPosts) {
+      if (!post.spot_id || post.is_archived) continue;
+      const arr = map.get(post.spot_id);
+      if (arr) arr.push(post);
+      else map.set(post.spot_id, [post]);
+    }
+    return map;
+  }, [foodPosts]);
+
   // Filter venues by all active feed filters AND active neighborhood, then
   // order by nearest-neighbor proximity so swiping glides to nearby spots.
   const displayedVenues = useMemo(() => {
     const hood = OSLO_NEIGHBORHOODS.find((h) => h.id === activeHoodId);
-    const postsBySpotId = new Map<string, FoodPost[]>();
-    for (const post of foodPosts) {
-      if (!post.spot_id || post.is_archived) continue;
-      const arr = postsBySpotId.get(post.spot_id);
-      if (arr) arr.push(post);
-      else postsBySpotId.set(post.spot_id, [post]);
-    }
 
     const filtered = venues.filter((v) => {
       if (!isVisibleInFeed(v)) return false;
 
-      const vPosts = postsBySpotId.get(v.id) ?? [];
+      const vPosts = postsBySpotIdMap.get(v.id) ?? [];
       const tax = resolveEntityTaxonomy(v);
 
       if (selectedDishCategory) {
@@ -1231,7 +1270,7 @@ export const MapNeighborhoodDock = React.memo(function MapNeighborhoodDock({
     return allOrdered;
   }, [
     venues,
-    foodPosts,
+    postsBySpotIdMap,
     activeHoodId,
     selectedDishCategory,
     selectedGroup,
@@ -1396,7 +1435,7 @@ export const MapNeighborhoodDock = React.memo(function MapNeighborhoodDock({
     setSelectedVenue(null);
   }, [setSelectedVenue]);
 
-  // "Details" opens the full venue bottom sheet with its spring pop-up from the bottom.
+  // "Details" opens the full venue bottom sheet immediately on a single tap.
   const handleOpenFullDetails = useCallback(() => {
     if (!activeSpotlight) return;
     if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
@@ -1410,10 +1449,10 @@ export const MapNeighborhoodDock = React.memo(function MapNeighborhoodDock({
       spot_type: activeSpotlight.spot_type || "restaurant",
       source: "map",
     });
-    selectVenueById(activeSpotlight.id);
-    window.setTimeout(() => {
-      setIsVenueDetailModalOpen(true);
-    }, 45);
+    if (useCityPulseStore.getState().selectedVenue?.id !== activeSpotlight.id) {
+      selectVenueById(activeSpotlight.id);
+    }
+    setIsVenueDetailModalOpen(true);
   }, [activeSpotlight, selectVenueById, setIsVenueDetailModalOpen]);
 
   // Handle clicking a neighborhood pill: prioritize neighborhood cards first + camera animation + dismiss spotlight
@@ -1451,6 +1490,12 @@ export const MapNeighborhoodDock = React.memo(function MapNeighborhoodDock({
   const registerCardRef = useCallback((id: string, el: HTMLDivElement | null) => {
     cardRefs.current[id] = el;
   }, []);
+
+  // Open details when tapping the spotlight card body, ignoring delayed synthetic clicks right after opening
+  const handleCardBodyOpenDetails = useCallback(() => {
+    if (performance.now() - spotlightOpenedAtRef.current < 380) return;
+    handleOpenFullDetails();
+  }, [handleOpenFullDetails]);
 
   const slotNodesRef = useRef<
     Record<
@@ -1628,10 +1673,11 @@ export const MapNeighborhoodDock = React.memo(function MapNeighborhoodDock({
             arrowEl.style.transform = `translate3d(-50%, ${((1 - focus) * 6).toFixed(1)}px, 0) scale(${(0.75 + 0.25 * focus).toFixed(3)})`;
           }
         }
+        const isCentered = effectiveSlot === 0;
         if (closeEl) {
-          const closeAlpha = Math.max(0, (focus - 0.5) / 0.5);
+          const closeAlpha = isCentered ? Math.max(0.25, (focus - 0.25) / 0.75) : Math.max(0, (focus - 0.5) / 0.5);
           closeEl.style.opacity = closeAlpha.toFixed(3);
-          closeEl.style.pointerEvents = focus > 0.65 ? "auto" : "none";
+          closeEl.style.pointerEvents = isCentered || focus > 0.65 ? "auto" : "none";
         }
         if (titleEl) {
           titleEl.style.transform = `translate3d(0, ${((1 - focus) * 26).toFixed(1)}px, 0)`;
@@ -1640,9 +1686,9 @@ export const MapNeighborhoodDock = React.memo(function MapNeighborhoodDock({
           storyEl.style.opacity = Math.max(0, (focus - 0.35) / 0.65).toFixed(3);
         }
         if (actionsEl) {
-          const actAlpha = Math.max(0, (focus - 0.45) / 0.55);
+          const actAlpha = isCentered ? Math.max(0.2, (focus - 0.2) / 0.8) : Math.max(0, (focus - 0.45) / 0.55);
           actionsEl.style.opacity = actAlpha.toFixed(3);
-          actionsEl.style.pointerEvents = focus > 0.65 ? "auto" : "none";
+          actionsEl.style.pointerEvents = isCentered || focus > 0.65 ? "auto" : "none";
         }
         if (imgEl) {
           const parallax = Math.max(-1.4, Math.min(1.4, pos)) * -18;
@@ -1702,31 +1748,32 @@ export const MapNeighborhoodDock = React.memo(function MapNeighborhoodDock({
       if (skipNextRecenterRef.current) {
         skipNextRecenterRef.current = false;
       } else {
-        animateCarouselToVenue(selectedVenue.id, 340);
+        animateCarouselToVenue(selectedVenue.id, 220);
       }
 
       if (pendingCoverOffsetRef.current !== null) {
         const startU = pendingCoverOffsetRef.current;
         pendingCoverOffsetRef.current = null;
         applyStageFrame(startU, 1, 0);
-        animateStageTo(0, 1, 340);
+        animateStageTo(0, 1, 220);
       } else {
         applyStageFrame(0, 0.82, 0);
-        animateStageTo(0, 1, 320);
+        animateStageTo(0, 1, 220);
       }
       return;
     }
 
     if (isOpening) {
+      spotlightOpenedAtRef.current = performance.now();
       scrollCarouselToVenue(venueId);
       applyStageFrame(0, 0, 0);
-      animateStageTo(0, 1, 360);
+      animateStageTo(0, 1, 280);
       return;
     }
 
     if (isClosing) {
       scrollCarouselToVenue(venueId);
-      animateStageTo(0, 0, 340, 0);
+      animateStageTo(0, 0, 260, 0);
     }
   }, [
     selectedVenue?.id,
@@ -1741,7 +1788,7 @@ export const MapNeighborhoodDock = React.memo(function MapNeighborhoodDock({
   const commitSideSwitch = useCallback(
     (targetVenue: Venue, startU: number) => {
       pendingCoverOffsetRef.current = startU;
-      if (animateCarouselToVenue(targetVenue.id, 320)) {
+      if (animateCarouselToVenue(targetVenue.id, 220)) {
         skipNextRecenterRef.current = true;
       }
       handleCardClick(targetVenue);
@@ -1800,7 +1847,7 @@ export const MapNeighborhoodDock = React.memo(function MapNeighborhoodDock({
         const dy = ev.clientY - startY;
 
         if (!lock) {
-          if (Math.hypot(dx, dy) < 8) return;
+          if (Math.hypot(dx, dy) < 10) return;
           if (Math.abs(dx) >= Math.abs(dy)) {
             lock = "x";
           } else if (dy > 0) {
@@ -1914,18 +1961,8 @@ export const MapNeighborhoodDock = React.memo(function MapNeighborhoodDock({
   const FILTER_BUBBLE_PATH =
     "M 41.4 59.6 A 29 29 0 1 1 68.6 59.6 C 65.5 64 66 71.5 76 72 L 90.5 72 A 15.5 15.5 0 0 1 90.5 103 L 19.5 103 A 15.5 15.5 0 0 1 19.5 72 L 34 72 C 44 71.5 44.5 64 41.4 59.6 Z";
 
-  const postsBySpotIdMap = useMemo(() => {
-    const map = new Map<string, FoodPost[]>();
-    for (const post of foodPosts) {
-      if (!post.spot_id || post.is_archived) continue;
-      const arr = map.get(post.spot_id);
-      if (arr) arr.push(post);
-      else map.set(post.spot_id, [post]);
-    }
-    return map;
-  }, [foodPosts]);
-
   const mapFilterOptions = useMemo(() => {
+    if (!isFilterDeckOpen) return [];
     const visibleVenues = venues.filter((v) => isVisibleInFeed(v));
     const popupCount = visibleVenues.filter(
       (v) => v.spot_type === "popup" || resolveEntityTaxonomy(v).spotKind === "popup"
@@ -1985,7 +2022,7 @@ export const MapNeighborhoodDock = React.memo(function MapNeighborhoodDock({
       }
     }
     return options;
-  }, [venues, postsBySpotIdMap, hasActiveFilter, openNow, selectedSpotKind, selectedGroup]);
+  }, [isFilterDeckOpen, venues, postsBySpotIdMap, hasActiveFilter, openNow, selectedSpotKind, selectedGroup]);
 
   const handleSelectMapFilter = useCallback(
     (opt: { id: string; kind: "all" | "open" | "popup" | "group" }) => {
@@ -2318,6 +2355,7 @@ export const MapNeighborhoodDock = React.memo(function MapNeighborhoodDock({
                       cardOpen={cardOpen}
                       onDismiss={handleDismissSpotlight}
                       onOpenDetails={handleOpenFullDetails}
+                      onCardBodyOpenDetails={handleCardBodyOpenDetails}
                       onSelectSide={() => commitSideSwitch(venue, -slotIndex)}
                       cardRef={registerSlotNodes(venue.id, isActive)}
                     />

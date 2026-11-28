@@ -24,6 +24,7 @@ import {
   detectImageSource,
   getSourceBadgeMeta,
   isDeliveryAppImageUrl,
+  toAdminPreviewImageUrl,
   type DishImageSource,
   type PhotoVisionTag,
 } from "@/lib/admin/imageSource";
@@ -634,7 +635,7 @@ export function QuickDishEditModal({
                   <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-[#EAE5DC] border border-[#DDD6C9]">
                     {originalBeforeRemixImage && (
                       <Image
-                        src={originalBeforeRemixImage}
+                        src={toAdminPreviewImageUrl(originalBeforeRemixImage, { pageUrl: sourceUrl || websiteUrl })}
                         alt="Original Reference"
                         fill
                         unoptimized
@@ -651,7 +652,7 @@ export function QuickDishEditModal({
                   </span>
                   <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-[#EAE5DC] border-2 border-emerald-500 shadow-md">
                     <Image
-                      src={transformedImageUrl}
+                      src={toAdminPreviewImageUrl(transformedImageUrl, { pageUrl: sourceUrl || websiteUrl })}
                       alt="AI Re-Angled Dish"
                       fill
                       unoptimized
@@ -715,7 +716,7 @@ export function QuickDishEditModal({
               >
                 {dishImage && !imgError ? (
                   <Image
-                    src={dishImage}
+                    src={toAdminPreviewImageUrl(dishImage, { pageUrl: sourceUrl || websiteUrl })}
                     alt={dishName}
                     fill
                     unoptimized
@@ -1134,7 +1135,10 @@ export function QuickDishEditModal({
                               className="relative w-full h-full block cursor-pointer"
                             >
                               <Image
-                                src={item.thumbnailUrl || item.imageUrl}
+                                src={toAdminPreviewImageUrl(item.thumbnailUrl || item.imageUrl, {
+                                  fallbackUrl: item.imageUrl,
+                                  pageUrl: item.pageUrl,
+                                })}
                                 alt={item.title || item.domain}
                                 fill
                                 unoptimized
@@ -1290,7 +1294,9 @@ export function QuickDishEditModal({
                             className="relative w-full h-full block cursor-pointer"
                           >
                             <Image
-                              src={photo.url}
+                              src={toAdminPreviewImageUrl(photo.url, {
+                                pageUrl: photo.pageUrl || websiteUrl,
+                              })}
                               alt={photo.altText || `Website photo ${idx + 1}`}
                               fill
                               unoptimized
@@ -1406,7 +1412,7 @@ export function QuickDishEditModal({
                                 className="relative w-full h-full block cursor-pointer"
                               >
                                 <Image
-                                  src={photoUrl}
+                                  src={toAdminPreviewImageUrl(photoUrl, { pageUrl: websiteUrl })}
                                   alt={tag?.description || `Pool photo ${idx + 1}`}
                                   fill
                                   unoptimized
