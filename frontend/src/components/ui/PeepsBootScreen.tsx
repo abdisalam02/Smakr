@@ -414,8 +414,8 @@ export function PeepsBootScreen({
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Auto-dismiss (non-persistent production boot): 1.80s hold + 500ms synchronized fade-out
-      if (!persistentRef.current && elapsed >= 1.80 && !dismissingRef.current) {
+      // Auto-dismiss (non-persistent production boot): 1.30s hold + 500ms synchronized fade-out
+      if (!persistentRef.current && elapsed >= 1.30 && !dismissingRef.current) {
         dismissingRef.current = true;
         setDismissing(true);
         setTimeout(() => onCompleteRef.current?.(), 540);

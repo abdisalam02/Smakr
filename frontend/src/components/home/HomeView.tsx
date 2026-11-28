@@ -1111,7 +1111,7 @@ export function HomeView({
                   venue={venue}
                   index={idx}
                   editorial
-                  primaryDishPhoto={topPost?.photo}
+                  primaryDishPhoto={venue.cover_image_url || topPost?.photo}
                   topDishName={topPost?.dishName}
                   signaturePrice={topPost?.priceNok}
                 />

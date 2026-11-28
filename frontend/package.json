@@ -9,6 +9,8 @@
     "lint": "next lint",
     "security:audit": "npm audit",
     "test:security": "node scripts/test-security.mjs",
+    "test:perf": "node scripts/check-performance.mjs",
+    "verify": "npx tsc --noEmit && npm run test:security && npm run test:perf",
     "sync:popups": "npx tsx scripts/sync-popups.ts"
   },
   "dependencies": {

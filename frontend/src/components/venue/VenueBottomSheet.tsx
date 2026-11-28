@@ -378,17 +378,10 @@ export function VenueBottomSheet() {
     }
   };
 
-  // 2. Scrollable content pull-down to close when at top (scrollTop <= 0)
+  // 2. Scrollable content pull-down to close when at top (scrollTop <= 0).
+  // Touches inside horizontal carousels fall through to the x/y axis lock in handleContentTouchMove
+  // so horizontal swipes scroll the carousel while downward swipes pull down the sheet.
   const handleContentTouchStart = (e: React.TouchEvent) => {
-    const target = e.target as HTMLElement | null;
-    // Never hijack touches inside horizontal carousels (photo strip / dishes grid)
-    if (target?.closest('[data-horizontal-carousel="true"]')) {
-      contentTouchStartYRef.current = null;
-      contentTouchStartXRef.current = null;
-      contentAxisLockRef.current = "x";
-      return;
-    }
-
     const scrollTop = contentScrollRef.current ? contentScrollRef.current.scrollTop : 0;
     if (scrollTop <= 0) {
       contentTouchStartYRef.current = e.touches[0].clientY;
@@ -828,7 +821,8 @@ export function VenueBottomSheet() {
                     {/* Unified 4-State Pop-Up Header Strip (Live / Upcoming / Passed / TBA) */}
                     <div className="space-y-3">
                       <div className="space-y-2 py-2 border-y border-[#181615]/8 dark:border-white/10">
-                        {/* Line 1: Single non-duplicated Date & Hours */}
+                        {/* Fallback date & hours summary ONLY when no multi-date schedule pills exist */}
+                        {popupScheduleSessions.length === 0 && (
                         <div className="flex items-center flex-wrap gap-x-2.5 gap-y-1 text-xs font-semibold text-[#181615] dark:text-zinc-200">
                           {popupLifecycle?.state === "tba" ? (
                             <span className="inline-flex items-center gap-1.5 text-[#181615]/80 dark:text-zinc-300">
@@ -862,6 +856,7 @@ export function VenueBottomSheet() {
                             </>
                           )}
                         </div>
+                        )}
 
                         {/* Line 2: Host / Roaming Location + Directions */}
                         {popupHostVenue ? (

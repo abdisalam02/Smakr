@@ -167,6 +167,11 @@ SMAKR_ICON_SVG_BODIES.burger = `<image href="/icons/food/burger.webp" x="-1" y="
 SMAKR_ICON_SVG_BODIES.sushi = `<image href="/icons/food/sushi.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
 SMAKR_ICON_SVG_BODIES.curry = `<image href="/icons/food/curry.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
 SMAKR_ICON_SVG_BODIES.indian = SMAKR_ICON_SVG_BODIES.curry;
+SMAKR_ICON_SVG_BODIES.grilled_chicken = `<image href="/icons/food/grilled_chicken.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.peri_peri = SMAKR_ICON_SVG_BODIES.grilled_chicken;
+SMAKR_ICON_SVG_BODIES.korean_corndog = `<image href="/icons/food/korean_corndog.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
+SMAKR_ICON_SVG_BODIES.corn_dog = SMAKR_ICON_SVG_BODIES.korean_corndog;
+SMAKR_ICON_SVG_BODIES.corndog = SMAKR_ICON_SVG_BODIES.korean_corndog;
 SMAKR_ICON_SVG_BODIES.vietnamese = `<image href="/icons/food/vietnamese.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
 SMAKR_ICON_SVG_BODIES.pho = `<image href="/icons/food/vietnamese.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
 SMAKR_ICON_SVG_BODIES.street_food = `<image href="/icons/food/street_food.webp" x="-1" y="-1" width="26" height="26" preserveAspectRatio="xMidYMid meet"/>`;
@@ -231,6 +236,11 @@ export const DISH_ICON_WEBP: Record<string, string> = {
   pasta: "/icons/food/pasta.webp",
   k_chicken: "/icons/food/k_chicken.webp",
   fried_chicken: "/icons/food/fried_chicken.webp",
+  grilled_chicken: "/icons/food/grilled_chicken.webp",
+  peri_peri: "/icons/food/grilled_chicken.webp",
+  korean_corndog: "/icons/food/korean_corndog.webp",
+  corn_dog: "/icons/food/korean_corndog.webp",
+  corndog: "/icons/food/korean_corndog.webp",
   coffee: "/icons/food/coffee.webp",
   iced_coffee: "/icons/food/coffee.webp",
   viet_coffee: "/icons/food/viet_coffee.webp",
@@ -283,6 +293,11 @@ export const FILTER_CATEGORY_WEBP: Record<string, string> = {
 export const CUSTOM_VECTOR_ICONS = new Set([
   "k_chicken",
   "fried_chicken",
+  "grilled_chicken",
+  "peri_peri",
+  "korean_corndog",
+  "corn_dog",
+  "corndog",
   "naan",
   "flatbread",
   "bakery",

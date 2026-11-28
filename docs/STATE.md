@@ -22,8 +22,8 @@ Updated: 2026-11-28
 - TODO-VERIFY: confirm partner claim copy before launch.
 
 ## Recent (max 5, one line each)
+- 2026-11-28 — Fixed horizontal shelf left-edge clipping (`FeedMotionLanes.tsx`), switched Kitchens swimlane to venue covers (`HomeView.tsx`), hid redundant pop-up date row & allowed pull-down over carousels (`VenueBottomSheet.tsx`), trimmed boot hold to `1.30s`, & added `scripts/check-performance.mjs` + `npm run verify`
+- 2026-11-28 — Generated 512px WebP food icons (`grilled_chicken`, `korean_corndog`, `curry` + `indian`) via zero-shadow cutout pipeline and mapped Pele Pele, Korndokki, and Masala Politics in `FoodIcons.tsx`, `iconRegistry.ts`, & `taxonomy.ts`; tsc clean
 - 2026-11-28 — Boot screen Warm Oat + static Oslo map snapshot (`oslo-map-backdrop.webp`), solo `SMAKR` logo, sprite edge fade & +1s synchronized fade; fixed post-swipe `Details`/carousel tap deadtime, kept mobile Feed mounted, & hid restaurant/pop-up status pill on sheet scroll; tsc + security 70/70
 - 2026-11-28 — Fixed Seeding Lab third-party web-search image CSP/hotlink blocks via admin `/api/admin/proxy-web-image` + `toAdminPreviewImageUrl`, & added "Add with AI" (`/api/admin/suggest-dishes`) w/ live web search & deduplication; tsc + security 70/70
 - 2026-11-26 — Shipped `KfcOsloAd` `v19` (`31.25s`, `24.56 MiB` High@L4.2 bt709): centered short-neck Colonel bow tie, `STORO` sign, full right-exit/left-entry mascot w/ slower curtain unblur, endless 3-dish coverflow, bigger steady bubble, & `Discover more spots` CTA; `frontend` tsc clean
-- 2026-11-16 — Built hybrid pop-up scraper: Playwright CLI (`sync:popups`), Apify IG fallback, NO/EN date-time-location parser, `public/popup-sync-report.json`, and admin `sync-popups` queue route; tsc + security 23/23
-- 2026-11-16 — Fixed `/admin` persistence & admin APIs: makr pop-up UUID insert, kitchen-token link, official-pick/weekly-drop persistence, seeder author FK, publish/archive toggles, shared `requireAdmin()`; tsc + security clean

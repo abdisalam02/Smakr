@@ -97,7 +97,7 @@ export const FOOD_GROUPS: readonly FoodGroupDef[] = [
     label: "Sandwiches & Handhelds",
     shortLabel: "Sandwiches",
     heroIcon: "banh_mi",
-    childCategories: ["banh_mi", "burger", "tacos", "taco", "birria", "cheesesteak", "kebab_wrap", "street_sandwich", "street_food"],
+    childCategories: ["banh_mi", "burger", "korean_corndog", "corn_dog", "tacos", "taco", "birria", "cheesesteak", "kebab_wrap", "street_sandwich", "street_food"],
   },
   {
     id: "pizza_pasta",
@@ -111,7 +111,7 @@ export const FOOD_GROUPS: readonly FoodGroupDef[] = [
     label: "Chicken & Grill",
     shortLabel: "Grill",
     heroIcon: "k_chicken",
-    childCategories: ["k_chicken", "fried_chicken", "kbbq", "kebab", "shawarma"],
+    childCategories: ["k_chicken", "fried_chicken", "grilled_chicken", "kbbq", "kebab", "shawarma"],
   },
   {
     id: "rice_bowls",
@@ -314,6 +314,22 @@ export function resolveEntityTaxonomy(
     dishCategory = "pizza";
   } else if (candidateCat === "pasta" || allText.includes("pasta") || allText.includes("carbonara")) {
     dishCategory = "pasta";
+  } else if (
+    allText.includes("pele pele") ||
+    allText.includes("peri-peri") ||
+    allText.includes("peri peri") ||
+    candidateCat === "grilled_chicken" ||
+    candidateCat === "peri_peri"
+  ) {
+    dishCategory = "grilled_chicken";
+  } else if (
+    allText.includes("korndokki") ||
+    allText.includes("corndog") ||
+    allText.includes("corn dog") ||
+    candidateCat === "korean_corndog" ||
+    candidateCat === "corn_dog"
+  ) {
+    dishCategory = "korean_corndog";
   } else if (candidateCat === "k_chicken" || candidateCat === "fried_chicken" || allText.includes("k-chicken") || allText.includes("yangnyeom")) {
     dishCategory = "k_chicken";
   } else if (allText.includes("masala politics")) {
@@ -380,7 +396,7 @@ export function resolveEntityTaxonomy(
   if (allText.includes("vietnam") || allText.includes("em oi") || allText.includes("êm ôi") || allText.includes("lai zai") || (allText.includes("banh mi") && !allText.includes("burger"))) {
     cuisines.push("vietnamese");
   }
-  if (allText.includes("korean") || allText.includes("k-fried") || candidateCat === "kbbq" || allText.includes("175°c") || allText.includes("175 c")) {
+  if (allText.includes("korean") || allText.includes("k-fried") || candidateCat === "kbbq" || allText.includes("175°c") || allText.includes("175 c") || allText.includes("korndokki") || allText.includes("corndog")) {
     cuisines.push("korean");
   }
   if (allText.includes("japan") || allText.includes("miso ramen") || allText.includes("ochaya") || dishCategory === "ramen" || dishCategory === "matcha") {
@@ -461,7 +477,10 @@ export function resolveVenueDisplayBadge(venue?: Partial<Venue> | null): VenueDi
   const iconLower = (venue.icon || "").toLowerCase().trim();
 
   // 1. Specific Curated Spot Matches (Oslo Core DB)
-  if (nameLower.includes("masala politics") || catLower === "naan") {
+  if (nameLower.includes("masala politics")) {
+    return { flag: "🇮🇳", mainTag: "INDIAN", pinIcon: "curry", filterTags: ["indian", "curry", "halal", "dinner"] };
+  }
+  if (catLower === "naan") {
     return { flag: "🇮🇳", mainTag: "INDIAN", pinIcon: "naan", filterTags: ["indian", "curry", "halal", "dinner"] };
   }
   if (nameLower.includes("em oi") || nameLower.includes("êm ôi")) {
@@ -566,7 +585,10 @@ export function resolveVenueDisplayBadge(venue?: Partial<Venue> | null): VenueDi
     return { flag: "🇵🇰", mainTag: "MASALA CHAI", pinIcon: "masala_chai", filterTags: ["chai", "tea", "street_food", "coffee_tea"] };
   }
   if (nameLower.includes("pele pele")) {
-    return { flag: "🇬🇭", mainTag: "WEST AFRICAN", pinIcon: "k_chicken", filterTags: ["african", "street_food", "grill", "spicy", "halal"] };
+    return { flag: "🇬🇭", mainTag: "WEST AFRICAN", pinIcon: "grilled_chicken", filterTags: ["african", "street_food", "grill", "spicy", "halal"] };
+  }
+  if (nameLower.includes("korndokki")) {
+    return { flag: "🇰🇷", mainTag: "CORNDOG", pinIcon: "korean_corndog", filterTags: ["korean", "street_food", "korean_corndog"] };
   }
   if (nameLower.includes("noods")) {
     return { flag: "🇨🇳", mainTag: "NOODLES", pinIcon: "noodles", filterTags: ["noodles", "chinese", "asian", "spicy"] };
@@ -711,6 +733,12 @@ export function resolveDishIconKey(dishName?: string | null, dishCategory?: stri
   }
   if (name.includes("dumpling") || name.includes("wonton") || name.includes("har gow") || name.includes("siu mai") || name.includes("gyoza") || name.includes("bao") || name.includes("dim sum")) {
     return "dumplings";
+  }
+  if (name.includes("corndog") || name.includes("corn dog") || name.includes("korndokki") || cat === "korean_corndog" || cat === "corn_dog") {
+    return "korean_corndog";
+  }
+  if (name.includes("peri-peri") || name.includes("peri peri") || name.includes("suya") || name.includes("grilled chicken") || cat === "grilled_chicken") {
+    return "grilled_chicken";
   }
   if (name.includes("chicken") || name.includes("wings") || name.includes("k-fried") || name.includes("kylling") || name.includes("yangnyeom")) {
     return "k_chicken";

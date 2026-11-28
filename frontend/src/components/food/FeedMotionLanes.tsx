@@ -62,6 +62,7 @@ export function KineticFeedLane({
   }>({ clientWidth: 360, scrollWidth: 360, padLeft: 12 });
   const isVisibleRef = useRef<boolean>(true);
   const isHorizontalActiveRef = useRef<boolean>(false);
+  const hasUserScrolledRef = useRef<boolean>(false);
   const resumeDriftTimerRef = useRef<number | null>(null);
   const lastVerticalProgressRef = useRef<number | null>(null);
   const currentDriftPxRef = useRef<number>(0);
@@ -154,6 +155,17 @@ export function KineticFeedLane({
     }
   }, []);
 
+  const absorbDriftIntoScroll = useCallback(() => {
+    const drift = currentDriftPxRef.current;
+    if (drift === 0) return;
+    const track = scrollerRef.current;
+    const wrap = driftWrapRef.current;
+    if (!track || !wrap) return;
+    track.scrollLeft = Math.max(0, track.scrollLeft - drift);
+    currentDriftPxRef.current = 0;
+    wrap.style.transform = "translate3d(0px, 0, 0)";
+  }, []);
+
   const pauseDriftTemporarily = useCallback((resumeDelayMs = 420) => {
     isHorizontalActiveRef.current = true;
     if (resumeDriftTimerRef.current !== null) {
@@ -166,6 +178,8 @@ export function KineticFeedLane({
   }, []);
 
   const handleHorizontalScroll = useCallback(() => {
+    hasUserScrolledRef.current = true;
+    absorbDriftIntoScroll();
     pauseDriftTemporarily(420);
 
     if (hRafRef.current !== null) return;
@@ -173,15 +187,17 @@ export function KineticFeedLane({
       hRafRef.current = null;
       applyHorizontalFocus();
     });
-  }, [applyHorizontalFocus, pauseDriftTemporarily]);
+  }, [absorbDriftIntoScroll, applyHorizontalFocus, pauseDriftTemporarily]);
 
   const handlePointerStart = useCallback(() => {
+    hasUserScrolledRef.current = true;
+    absorbDriftIntoScroll();
     isHorizontalActiveRef.current = true;
     if (resumeDriftTimerRef.current !== null) {
       window.clearTimeout(resumeDriftTimerRef.current);
       resumeDriftTimerRef.current = null;
     }
-  }, []);
+  }, [absorbDriftIntoScroll]);
 
   const handlePointerRelease = useCallback(() => {
     pauseDriftTemporarily(320);
@@ -240,8 +256,8 @@ export function KineticFeedLane({
       const prevProgress = lastVerticalProgressRef.current;
       lastVerticalProgressRef.current = progress;
 
-      // Never slide cards while the user's thumb is touching or actively swiping horizontally
-      if (isHorizontalActiveRef.current) return;
+      // Never slide cards while the user is touching or after they have scrolled the shelf
+      if (isHorizontalActiveRef.current || hasUserScrolledRef.current) return;
 
       const minTx = -maxDriftPx;
       const maxTx = scrollerRef.current.scrollLeft > maxDriftPx ? maxDriftPx : 0;
